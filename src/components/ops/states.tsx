@@ -1,0 +1,57 @@
+import type { ReactNode } from "react";
+
+import { Skeleton } from "@/components/ui/skeleton";
+
+export function LoadingState({ label = "Loading" }: { label?: string }) {
+  return (
+    <div role="status" className="grid gap-3" aria-live="polite">
+      <Skeleton className="h-8 w-40" />
+      <Skeleton className="h-24 w-full" />
+      <span className="sr-only">{label}</span>
+    </div>
+  );
+}
+
+export function EmptyState({
+  title,
+  body,
+  action,
+}: {
+  title: string;
+  body: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed bg-card p-6 shadow-elev-1">
+      <h2 className="text-[length:var(--text-20)] font-semibold">{title}</h2>
+      <p className="mt-2 max-w-prose text-sm text-muted-foreground">{body}</p>
+      {action ? <div className="mt-4">{action}</div> : null}
+    </div>
+  );
+}
+
+export function ErrorState({
+  title = "Something went wrong",
+  body,
+  onRetry,
+}: {
+  title?: string;
+  body: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div role="alert" className="rounded-xl border border-destructive/40 bg-card p-6 shadow-elev-1">
+      <h2 className="text-[length:var(--text-20)] font-semibold">{title}</h2>
+      <p className="mt-2 max-w-prose text-sm text-muted-foreground">{body}</p>
+      {onRetry ? (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
+        >
+          Retry
+        </button>
+      ) : null}
+    </div>
+  );
+}

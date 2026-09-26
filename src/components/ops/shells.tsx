@@ -15,6 +15,7 @@ import {
   Shield,
   Store,
   Truck,
+  UserPlus,
   Users,
   UtensilsCrossed,
   Wallet,
@@ -46,6 +47,8 @@ const ICONS: Record<string, LucideIcon> = {
   "/app/qr": QrCode,
   "/app/brands": Store,
   "/app/staff": Users,
+  "/app/invitations": UserPlus,
+  "/app/team": UserPlus,
   "/app/features": Settings2,
   "/app/delivery": Truck,
   "/app/financials": Wallet,
@@ -61,7 +64,7 @@ function itemIcon(href: string): LucideIcon {
 async function signOut() {
   await fetch("/api/auth/logout", { method: "POST" });
   useWorkspace.getState().clear();
-  window.location.assign("/login");
+  window.location.assign("/");
 }
 
 function NavLinks({

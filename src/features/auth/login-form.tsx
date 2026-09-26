@@ -5,15 +5,15 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ENTRY_GROUPS, type EntryGroup } from "@/lib/auth/roles";
 
-const SEEDS = [
-  { label: "Super admin", email: "admin@gourmet.com", password: "Admin123!" },
-  { label: "Branch admin", email: "branchadmin@gourmet.com", password: "Admin123!" },
-  { label: "Cashier", email: "cashier@gourmet.com", password: "Admin123!" },
-  { label: "Brand admin", email: "admin.alezz@mezban.com", password: "Password123!" },
-] as const;
+/**
+ * Plain email + password. Credentials are never embedded here; accounts come
+ * from the App Admin bootstrap (API side) or an email invitation.
+ */
+export function LoginForm({ group }: { group: EntryGroup }) {
+  const allowedRoles = ENTRY_GROUPS[group].roles;
 
-export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -41,7 +41,7 @@ export function LoginForm() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, allowed_roles: allowedRoles }),
       });
       if (response.status === 429) {
         const delay = Math.min(1000 * 2 ** attempt.current, 16_000);
@@ -102,25 +102,6 @@ export function LoginForm() {
       <Button type="submit" className="min-h-11" disabled={pending || waitMs > 0}>
         {pending ? "Signing in…" : "Sign in"}
       </Button>
-      <fieldset className="grid gap-2">
-        <legend className="text-sm font-medium">Local seed accounts</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {SEEDS.map((seed) => (
-            <Button
-              key={seed.email}
-              type="button"
-              variant="outline"
-              className="min-h-11"
-              onClick={() => {
-                setEmail(seed.email);
-                setPassword(seed.password);
-              }}
-            >
-              {seed.label}
-            </Button>
-          ))}
-        </div>
-      </fieldset>
     </form>
   );
 }

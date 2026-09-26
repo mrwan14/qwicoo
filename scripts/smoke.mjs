@@ -1,4 +1,12 @@
-const base = process.env.SMOKE_BASE ?? "http://127.0.0.1:3000";
+const base = process.env.SMOKE_BASE ?? "http://127.0.0.1:3001";
+
+// App Admin is the only account that exists after a database reset. Override
+// for other environments; never commit real credentials.
+const adminEmail = process.env.SMOKE_ADMIN_EMAIL ?? "admin@qwicoo.com";
+const adminPassword = process.env.SMOKE_ADMIN_PASSWORD ?? "Qwicoo!Admin2026";
+// Optional second account (any invited staff role) for the menu read.
+const staffEmail = process.env.SMOKE_STAFF_EMAIL ?? "";
+const staffPassword = process.env.SMOKE_STAFF_PASSWORD ?? "";
 
 async function expectOk(path) {
   const response = await fetch(`${base}${path}`, { redirect: "manual" });
@@ -36,31 +44,45 @@ async function authed(path, cookie) {
 }
 
 await expectOk("/");
-await expectOk("/login");
+await expectOk("/admin");
+await expectOk("/restaurant-dashboard");
+await expectOk("/restaurant-dashboard?role=staff");
+await expectOk("/invite/accept");
 await expectOk("/t/demo");
 await expectOk("/order");
 await expectOk("/b/demo/pickup");
 
-const adminCookie = await login("admin@gourmet.com", "Admin123!");
+// Public invite preview must reject a junk token without a 5xx.
+const preview = await fetch(`${base}/api/invite/preview?token=not-a-real-token-value`);
+if (preview.status >= 500) throw new Error(`/api/invite/preview returned ${preview.status}`);
+console.log(`${preview.status} /api/invite/preview (junk token)`);
+
+const adminCookie = await login(adminEmail, adminPassword);
 const me = await authed("/api/v1/auth/me", adminCookie);
 console.log(`signed in as ${me.role}`);
 const brands = await authed("/api/v1/brands?limit=1", adminCookie);
 const branches = await authed("/api/v1/branches", adminCookie);
+const invitations = await authed("/api/v1/invitations", adminCookie);
+console.log(`invitations total ${invitations.total}`);
 const branchList = Array.isArray(branches) ? branches : branches.items ?? branches.records ?? [];
 const branchId = branchList[0]?.id ?? "";
 const brandId = brands.items?.[0]?.id ?? branchList[0]?.brand_id ?? "";
 
-const cashierCookie = await login("cashier@gourmet.com", "Admin123!");
-const cashier = await authed("/api/v1/auth/me", cashierCookie);
-console.log(`cashier role ${cashier.role}`);
-const menu = await fetch(`${base}/api/v1/menu/tree`, {
-  headers: {
-    cookie: cashierCookie,
-    ...(branchId ? { "X-Branch-ID": branchId } : {}),
-    ...(brandId ? { "X-Brand-ID": brandId } : {}),
-  },
-});
-if (!menu.ok) throw new Error(`/api/v1/menu/tree returned ${menu.status}`);
-console.log(`${menu.status} /api/v1/menu/tree`);
+if (staffEmail && staffPassword) {
+  const staffCookie = await login(staffEmail, staffPassword);
+  const staff = await authed("/api/v1/auth/me", staffCookie);
+  console.log(`staff role ${staff.role}`);
+  const menu = await fetch(`${base}/api/v1/menu/tree`, {
+    headers: {
+      cookie: staffCookie,
+      ...(branchId ? { "X-Branch-ID": branchId } : {}),
+      ...(brandId ? { "X-Brand-ID": brandId } : {}),
+    },
+  });
+  if (!menu.ok) throw new Error(`/api/v1/menu/tree returned ${menu.status}`);
+  console.log(`${menu.status} /api/v1/menu/tree`);
+} else {
+  console.log("skipping staff leg (set SMOKE_STAFF_EMAIL and SMOKE_STAFF_PASSWORD)");
+}
 
 console.log("smoke ok");

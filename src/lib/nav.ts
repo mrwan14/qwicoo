@@ -26,6 +26,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...BRAND_SCOPE],
   },
   {
+    href: "/app/invitations",
+    label: "People",
+    group: "Portfolio",
+    shell: "admin",
+    phase: 7,
+    roles: [...PLATFORM],
+  },
+  {
     href: "/app/features",
     label: "Features",
     group: "Portfolio",
@@ -64,6 +72,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     shell: "admin",
     phase: 5,
     roles: [...BRANCH_OPS],
+  },
+  {
+    href: "/app/team",
+    label: "Team",
+    group: "Brand ops",
+    shell: "admin",
+    phase: 7,
+    roles: ["BRAND_ADMIN", "BRANCH_ADMIN"],
   },
   {
     href: "/app/floor",

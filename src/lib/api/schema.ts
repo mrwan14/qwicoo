@@ -44,6 +44,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invitations/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview an invitation (public)
+         * @description Resolve an invitation token to the invitee email, role and scope so the frontend can render the accept page. Returns 404 for unknown/used/revoked tokens and 410 when expired.
+         */
+        get: operations["preview_invitation_api_v1_invitations_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept an invitation and set password (public)
+         * @description Consume a single-use invitation token, create the active user with the supplied password (min 8 chars) and return login tokens. Returns 404 for invalid/used tokens, 410 when expired.
+         */
+        post: operations["accept_invitation_api_v1_invitations_accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List invitations (scoped)
+         * @description SUPER_ADMIN sees all; BRAND_ADMIN sees their brand; BRANCH_ADMIN sees their branches. Optional status filter: pending | accepted | expired | revoked.
+         */
+        get: operations["list_invitations_api_v1_invitations_get"];
+        put?: never;
+        /**
+         * Invite a new user by email
+         * @description Create (or rotate a pending) invitation and deliver it via Resend. SUPER_ADMIN may invite BRAND_ADMIN and lower (brand_id required); BRAND_ADMIN may invite BRANCH_ADMIN / REGIONAL_MANAGER / branch staff within their own brand; BRANCH_ADMIN may invite CASHIER / WAITER / KITCHEN_STAFF / RUNNER into their own branch. If Resend rejects the email the invitation is not persisted (502). The raw token is only ever emailed.
+         */
+        post: operations["create_invitation_api_v1_invitations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/{invitation_id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend an invitation (rotates token)
+         * @description Mint a new token and expiry, invalidate the previous link, and redeliver via Resend.
+         */
+        post: operations["resend_invitation_api_v1_invitations__invitation_id__resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/{invitation_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke a pending invitation
+         * @description Permanently invalidate a pending (or expired) invitation link.
+         */
+        post: operations["revoke_invitation_api_v1_invitations__invitation_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/branches/{branch_id}/location": {
         parameters: {
             query?: never;
@@ -2126,8 +2230,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Provision staff under a brand
-         * @description Create a new staff account scoped to a specific brand. BRAND_ADMIN and SUPER_ADMIN only.
+         * Provision staff under a brand (break-glass, deprecated)
+         * @deprecated
+         * @description DEPRECATED break-glass path: creates an active account with a password chosen by the admin. New humans should be onboarded via POST /invitations (email invite -> set password -> login). BRAND_ADMIN and SUPER_ADMIN only.
          */
         post: operations["create_staff_under_brand_api_v1_brands__brand_id__staff_post"];
         delete?: never;
@@ -2150,8 +2255,9 @@ export interface paths {
         get: operations["list_branch_staff_api_v1_branches__branch_id__staff_get"];
         put?: never;
         /**
-         * Provision staff under a branch
-         * @description Create a new staff account for a specific branch. All admin levels permitted.
+         * Provision staff under a branch (break-glass, deprecated)
+         * @deprecated
+         * @description DEPRECATED break-glass path: creates an active account with a password chosen by the admin. New humans should be onboarded via POST /invitations (email invite -> set password -> login). All admin levels permitted.
          */
         post: operations["create_staff_under_branch_api_v1_branches__branch_id__staff_post"];
         delete?: never;
@@ -4439,6 +4545,137 @@ export interface components {
             checkout_url?: string | null;
             /** Idempotency Key */
             idempotency_key?: string | null;
+        };
+        /**
+         * InvitationAcceptRequest
+         * @description Payload for accepting an invitation and setting the initial password.
+         */
+        InvitationAcceptRequest: {
+            /** Token */
+            token: string;
+            /** Password */
+            password: string;
+            /** Full Name */
+            full_name?: string | null;
+        };
+        /**
+         * InvitationAcceptResponse
+         * @description Login tokens plus the newly activated user profile.
+         */
+        InvitationAcceptResponse: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+            /** Expires In */
+            expires_in: number;
+            user: components["schemas"]["UserResponse"];
+        };
+        /**
+         * InvitationCreateRequest
+         * @description Payload for inviting a new human into the platform.
+         */
+        InvitationCreateRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            role: components["schemas"]["UserRole"];
+            /** Brand Id */
+            brand_id?: string | null;
+            /** Branch Id */
+            branch_id?: string | null;
+            /** Full Name */
+            full_name?: string | null;
+        };
+        /**
+         * InvitationListResponse
+         * @description Scoped invitation listing.
+         */
+        InvitationListResponse: {
+            /** Total */
+            total: number;
+            /** Records */
+            records: components["schemas"]["InvitationResponse"][];
+        };
+        /**
+         * InvitationPreviewResponse
+         * @description Public, unauthenticated preview shown on the accept page.
+         */
+        InvitationPreviewResponse: {
+            /** Email */
+            email: string;
+            role: components["schemas"]["UserRole"];
+            /** Full Name */
+            full_name?: string | null;
+            /** Brand Name */
+            brand_name?: string | null;
+            /** Branch Name */
+            branch_name?: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /**
+         * InvitationResponse
+         * @description Invitation representation. The raw token is never included.
+         */
+        InvitationResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name?: string | null;
+            role: components["schemas"]["UserRole"];
+            /** Brand Id */
+            brand_id?: string | null;
+            /** Branch Id */
+            branch_id?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Invited By User Id */
+            invited_by_user_id?: string | null;
+            /** Accepted User Id */
+            accepted_user_id?: string | null;
+            /** Accepted At */
+            accepted_at?: string | null;
+            /** Revoked At */
+            revoked_at?: string | null;
+            /** Last Sent At */
+            last_sent_at?: string | null;
+            /**
+             * Send Count
+             * @default 0
+             */
+            send_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * ItemImageUploadResponse
@@ -7342,6 +7579,273 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    preview_invitation_api_v1_invitations_preview_get: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationPreviewResponse"];
+                };
+            };
+            /** @description Invalid, used or revoked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Expired */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_invitation_api_v1_invitations_accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationAcceptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationAcceptResponse"];
+                };
+            };
+            /** @description Invalid or used */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Email already registered */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Expired */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_invitations_api_v1_invitations_get: {
+        parameters: {
+            query?: {
+                status?: ("pending" | "accepted" | "expired" | "revoked") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_invitation_api_v1_invitations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationResponse"];
+                };
+            };
+            /** @description Role/scope not permitted by the access matrix */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Email already has an account */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Email delivery failed; invitation not created */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resend_invitation_api_v1_invitations__invitation_id__resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationResponse"];
+                };
+            };
+            /** @description Invitation not pending */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Email delivery failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revoke_invitation_api_v1_invitations__invitation_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationResponse"];
+                };
+            };
+            /** @description Invitation not pending */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

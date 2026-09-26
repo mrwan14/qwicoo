@@ -200,7 +200,7 @@ async function uploadLogo(file: File, folder: "brands" | "items" | "general", af
   if (!signed.response.ok || !signed.data) throw asApiError(signed.error, signed.response, "Upload URL failed");
   const uploadUrl = signed.data.upload_url.startsWith("http")
     ? signed.data.upload_url
-    : `${process.env.NEXT_PUBLIC_API_BASE_URL ?? ""}${signed.data.upload_url}`;
+    : `${process.env.API_BASE_URL ?? ""}${signed.data.upload_url}`;
   const uploaded = await fetch(uploadUrl, { method: "PUT", body: file, headers: { "content-type": file.type || "image/png" } });
   if (!uploaded.ok) throw new Error("Upload failed");
   await after(signed.data.public_url);

@@ -20,5 +20,5 @@ export function POST() {
 }
 
 export function GET(request: NextRequest) {
-  return clearCookie(NextResponse.redirect(new URL("/login", request.url)));
+  return clearCookie(NextResponse.redirect(new URL("/", request.url)));
 }

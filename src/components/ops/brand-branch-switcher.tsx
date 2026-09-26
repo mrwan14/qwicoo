@@ -94,24 +94,33 @@ function Fields({
   idPrefix,
   brands,
   branches,
+  layout = "stacked",
 }: {
   idPrefix: string;
   brands: ReturnType<typeof useWorkspaceOptions>["brands"];
   branches: ReturnType<typeof useWorkspaceOptions>["branches"];
+  layout?: "inline" | "stacked";
 }) {
   const brandId = useWorkspace((state) => state.brandId);
   const branchId = useWorkspace((state) => state.branchId);
   const setBrandId = useWorkspace((state) => state.setBrandId);
   const setBranchId = useWorkspace((state) => state.setBranchId);
+  const inline = layout === "inline";
+  const fieldClass = inline ? "flex shrink-0 items-center gap-2" : "grid gap-1";
+  const selectClass = inline
+    ? "h-11 w-44 rounded-lg border border-input bg-background px-3 text-sm"
+    : "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className={inline ? "flex min-w-0 items-center gap-3" : "grid gap-3"}>
       {(brands.data ?? []).length > 0 ? (
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-brand`}>Brand</Label>
+        <div className={fieldClass}>
+          <Label htmlFor={`${idPrefix}-brand`} className="shrink-0">
+            Brand
+          </Label>
           <select
             id={`${idPrefix}-brand`}
-            className="h-11 rounded-lg border border-input bg-background px-3 text-sm"
+            className={selectClass}
             value={brandId ?? brands.data?.[0]?.id ?? ""}
             onChange={(event) => {
               setBrandId(event.target.value || null);
@@ -126,15 +135,17 @@ function Fields({
           </select>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p className={inline ? "min-w-0 truncate text-sm text-muted-foreground" : "text-sm text-muted-foreground"}>
           {brands.isFetching ? "Loading brands" : "Branch only. This account has no brand list."}
         </p>
       )}
-      <div className="grid gap-1">
-        <Label htmlFor={`${idPrefix}-branch`}>Branch</Label>
+      <div className={fieldClass}>
+        <Label htmlFor={`${idPrefix}-branch`} className="shrink-0">
+          Branch
+        </Label>
         <select
           id={`${idPrefix}-branch`}
-          className="h-11 rounded-lg border border-input bg-background px-3 text-sm"
+          className={selectClass}
           value={branchId ?? ""}
           onChange={(event) => setBranchId(event.target.value || null)}
         >
@@ -159,8 +170,8 @@ export function BrandBranchSwitcher() {
 
   return (
     <>
-      <div className="hidden min-w-0 lg:block">
-        <Fields idPrefix="desk" brands={options.brands} branches={options.branches} />
+      <div className="hidden min-w-0 items-center lg:flex">
+        <Fields idPrefix="desk" layout="inline" brands={options.brands} branches={options.branches} />
       </div>
       <Sheet>
         <SheetTrigger className="inline-flex h-11 max-w-[12rem] items-center truncate rounded-lg border px-3 text-sm lg:hidden">

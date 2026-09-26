@@ -48,6 +48,8 @@ await expectOk("/admin");
 await expectOk("/restaurant-dashboard");
 await expectOk("/restaurant-dashboard?role=staff");
 await expectOk("/invite/accept");
+await expectOk("/forgot-password");
+await expectOk("/reset-password");
 await expectOk("/t/demo");
 await expectOk("/order");
 await expectOk("/b/demo/pickup");

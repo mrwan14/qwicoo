@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,11 @@ export function LoginForm({ group }: { group: EntryGroup }) {
           onChange={(event) => setPassword(event.target.value)}
           className="h-11"
         />
+      </div>
+      <div className="flex justify-end">
+        <Link href="/forgot-password" className="text-sm font-medium underline underline-offset-4">
+          Forgot password?
+        </Link>
       </div>
       {error ? (
         <p role="alert" className="text-sm text-destructive">

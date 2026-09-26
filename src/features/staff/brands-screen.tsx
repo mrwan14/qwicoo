@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { EntityCard } from "@/components/ops/entity-card";
+import { LocaleText } from "@/components/ops/locale-text";
 import { PageHeader } from "@/components/ops/page-header";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
@@ -20,7 +21,6 @@ const control = "h-11 w-full rounded-lg border px-3 text-sm";
 export function BrandsScreen() {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const brands = useQuery({
@@ -33,14 +33,17 @@ export function BrandsScreen() {
   });
   const create = useMutation({
     mutationFn: async () => {
-      const body: components["schemas"]["BrandCreate"] = { name, slug, is_active: true };
-      const result = await browserApi.POST("/api/v1/brands", { body });
+      const body: Omit<components["schemas"]["BrandCreate"], "slug"> = { name, is_active: true };
+      // The API derives the slug from the name. Drop the cast once `npm run gen:api`
+      // picks up the schema where `slug` is no longer required.
+      const result = await browserApi.POST("/api/v1/brands", {
+        body: body as components["schemas"]["BrandCreate"],
+      });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Could not create brand");
     },
     onSuccess: () => {
       toast.success("Brand created");
       setName("");
-      setSlug("");
       setCreateOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["brands"] });
     },
@@ -97,7 +100,6 @@ export function BrandsScreen() {
           </DialogHeader>
           <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
             <input className={control} placeholder="Name" value={name} onChange={(event) => setName(event.target.value)} required />
-            <input className={control} placeholder="Slug" value={slug} onChange={(event) => setSlug(event.target.value)} required />
             <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground" type="submit" disabled={create.isPending}>Create brand</button>
           </form>
         </DialogContent>
@@ -110,7 +112,6 @@ export function BrandsScreen() {
 export function BrandDetailScreen({ brandId }: { brandId: string }) {
   const queryClient = useQueryClient();
   const [branchName, setBranchName] = useState("");
-  const [slug, setSlug] = useState("");
   const brand = useQuery({
     queryKey: ["brand", brandId],
     queryFn: async () => {
@@ -131,7 +132,6 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
     mutationFn: async () => {
       const body: components["schemas"]["BranchCreate"] = {
         name: { en: branchName, ar: branchName },
-        slug,
         currency: "EGP",
         timezone: "Africa/Cairo",
         geofence_radius_meters: 150,
@@ -149,6 +149,7 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
     },
     onSuccess: () => {
       toast.success("Branch created");
+      setBranchName("");
       void queryClient.invalidateQueries({ queryKey: ["brand-branches", brandId] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -174,15 +175,17 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
         Logo
         <input className="mt-1 block" type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) logo.mutate(file); }} />
       </label>
-      <form className="grid gap-2 sm:grid-cols-3" onSubmit={(event) => { event.preventDefault(); createBranch.mutate(); }}>
+      <form className="grid gap-2 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); createBranch.mutate(); }}>
         <input className={control} placeholder="Branch name" value={branchName} onChange={(event) => setBranchName(event.target.value)} required />
-        <input className={control} placeholder="Slug" value={slug} onChange={(event) => setSlug(event.target.value)} required />
         <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">Add branch</button>
       </form>
       <ul className="grid gap-2">
         {(branches.data ?? []).map((branch) => (
           <li key={branch.id}>
-            <Link className="inline-flex min-h-11 items-center underline" href={`/app/branches/${branch.id}`}>{branch.slug}</Link>
+            <Link className="inline-flex min-h-11 items-center gap-2 underline" href={`/app/branches/${branch.id}`}>
+              <LocaleText value={branch.name} />
+              <span className="text-sm text-muted-foreground no-underline">{branch.slug}</span>
+            </Link>
           </li>
         ))}
       </ul>

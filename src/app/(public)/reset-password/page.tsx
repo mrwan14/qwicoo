@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 
-import { AcceptInviteForm } from "@/features/auth/accept-invite-form";
 import { AuthShell } from "@/features/auth/auth-shell";
+import { ResetPasswordForm } from "@/features/auth/reset-password-form";
 
-export const metadata: Metadata = { title: "Accept your invitation" };
+export const metadata: Metadata = { title: "Reset password" };
 
 function pickToken(value: string | string[] | undefined): string {
   const candidate = Array.isArray(value) ? value[0] : value;
   return typeof candidate === "string" ? candidate.trim() : "";
 }
 
-export default async function AcceptInvitePage({
+export default async function ResetPasswordPage({
   searchParams,
 }: {
   searchParams: Promise<{ token?: string | string[] }>;
@@ -19,10 +19,10 @@ export default async function AcceptInvitePage({
 
   return (
     <AuthShell
-      title="Welcome to the team"
-      description="Set a password to finish creating your account. You will be signed in straight away."
+      title="Choose a new password"
+      description="Set a password for this account. You will be signed in straight away."
     >
-      <AcceptInviteForm token={token} />
+      <ResetPasswordForm token={token} />
     </AuthShell>
   );
 }

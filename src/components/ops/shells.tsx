@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   BarChart3,
   ClipboardList,
   ConciergeBell,
   LayoutGrid,
   Monitor,
+  PanelLeftClose,
+  PanelLeftOpen,
   QrCode,
   Receipt,
   Settings2,
@@ -25,6 +27,7 @@ import {
 import { BrandBranchSwitcher } from "@/components/ops/brand-branch-switcher";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { ConnectionBanner } from "@/components/ops/connection-banner";
+import { Logo } from "@/components/ops/logo";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { roleLabel, type UserRole } from "@/lib/auth/roles";
 import { isNavActive, navForRole, splitBottomNav, type NavItem } from "@/lib/nav";
@@ -35,6 +38,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+
+const SIDEBAR_STORAGE_KEY = "qwicoo-sidebar";
+
+type SidebarLayout = "full" | "compact" | "auto";
 
 const ICONS: Record<string, LucideIcon> = {
   "/app/floor": LayoutGrid,
@@ -70,15 +77,25 @@ async function signOut() {
 function NavLinks({
   items,
   pathname,
-  compact = false,
+  layout = "full",
   onNavigate,
 }: {
   items: readonly NavItem[];
   pathname: string;
-  compact?: boolean;
+  layout?: SidebarLayout;
   onNavigate?: () => void;
 }) {
   const groups = ["Portfolio", "Brand ops", "Insight"] as const;
+  const groupClass =
+    layout === "compact" ? "hidden" : layout === "auto" ? "hidden lg:block" : "";
+  const linkClass =
+    layout === "compact"
+      ? "justify-center"
+      : layout === "auto"
+        ? "justify-center lg:justify-start"
+        : "";
+  const labelClass =
+    layout === "compact" ? "sr-only" : layout === "auto" ? "sr-only lg:not-sr-only" : "truncate";
   return (
     <nav aria-label="Staff" className="grid gap-4">
       {groups.map((group) => {
@@ -86,9 +103,7 @@ function NavLinks({
         if (groupItems.length === 0) return null;
         return (
           <div key={group} className="grid gap-1">
-            {compact ? null : (
-              <p className="px-2 text-xs font-medium text-muted-foreground">{group}</p>
-            )}
+            <p className={`px-2 text-xs font-medium text-muted-foreground ${groupClass}`}>{group}</p>
             {groupItems.map((item) => {
               const Icon = itemIcon(item.href);
               const active = isNavActive(pathname, item.href);
@@ -102,10 +117,10 @@ function NavLinks({
                   onClick={onNavigate}
                   className={`flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm ${
                     active ? "bg-secondary font-medium" : "hover:bg-muted"
-                  } ${compact ? "justify-center" : ""}`}
+                  } ${linkClass}`}
                 >
                   <Icon aria-hidden className="size-4 shrink-0" />
-                  {compact ? <span className="sr-only">{item.label}</span> : item.label}
+                  <span className={`whitespace-nowrap ${labelClass}`}>{item.label}</span>
                 </Link>
               );
             })}
@@ -113,6 +128,87 @@ function NavLinks({
         );
       })}
     </nav>
+  );
+}
+
+function useSidebarLayout() {
+  const [collapsed, setCollapsed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    if (stored === "collapsed" || stored === "expanded") {
+      setCollapsed(stored === "collapsed");
+      return;
+    }
+
+    const media = window.matchMedia("(max-width: 1023px)");
+    setCollapsed(media.matches);
+    const onChange = () => {
+      if (window.localStorage.getItem(SIDEBAR_STORAGE_KEY)) return;
+      setCollapsed(media.matches);
+    };
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  function toggle() {
+    setCollapsed((current) => {
+      const narrow = window.matchMedia("(max-width: 1023px)").matches;
+      const next = !(current ?? narrow);
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, next ? "collapsed" : "expanded");
+      return next;
+    });
+  }
+
+  const layout: SidebarLayout = collapsed === null ? "auto" : collapsed ? "compact" : "full";
+  return { layout, toggle };
+}
+
+function AdminSidebar({ items, pathname }: { items: readonly NavItem[]; pathname: string }) {
+  const { layout, toggle } = useSidebarLayout();
+  const expanded = layout === "full";
+  const collapsed = layout === "compact";
+
+  return (
+    <aside
+      className={`sticky top-0 flex h-dvh shrink-0 flex-col overflow-x-hidden border-e bg-card print:hidden transition-[width,padding,gap] duration-200 ease-out ${
+        collapsed ? "w-16 gap-3 p-2" : expanded ? "w-60 gap-4 p-3" : "w-16 gap-3 p-2 lg:w-60 lg:gap-4 lg:p-3"
+      }`}
+    >
+      <div
+        className={`flex items-center ${
+          collapsed ? "justify-center" : expanded ? "justify-between gap-1" : "justify-center lg:justify-between lg:gap-1"
+        }`}
+      >
+        <div className={collapsed ? "hidden" : expanded ? "contents" : "hidden lg:contents"}>
+          <Logo
+            className="min-w-0 px-1 py-1"
+            markClassName="size-6 shrink-0 text-primary"
+            wordClassName="truncate text-base"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={expanded ? true : collapsed ? false : undefined}
+          aria-label={collapsed ? "Expand sidebar" : expanded ? "Collapse sidebar" : "Toggle sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <PanelLeftClose
+            aria-hidden
+            className={`size-4 ${collapsed ? "hidden" : layout === "auto" ? "hidden lg:block" : ""}`}
+          />
+          <PanelLeftOpen
+            aria-hidden
+            className={`size-4 ${expanded ? "hidden" : layout === "auto" ? "lg:hidden" : ""}`}
+          />
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <NavLinks items={items} pathname={pathname} layout={layout} />
+      </div>
+    </aside>
   );
 }
 
@@ -174,19 +270,7 @@ function ShellFrame({
         <ConnectionBanner />
       </div>
       <div className="flex min-h-dvh">
-        {variant === "admin" ? (
-          <>
-            <aside className="sticky top-0 flex h-dvh w-16 shrink-0 flex-col gap-3 border-e bg-card p-2 print:hidden lg:hidden">
-              <NavLinks items={items} pathname={pathname} compact />
-            </aside>
-            <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-4 border-e bg-card p-3 print:hidden lg:flex">
-              <p className="px-2 text-sm font-semibold">Qwicoo</p>
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <NavLinks items={items} pathname={pathname} />
-              </div>
-            </aside>
-          </>
-        ) : null}
+        {variant === "admin" ? <AdminSidebar items={items} pathname={pathname} /> : null}
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex min-h-12 items-center justify-between gap-3 border-b px-3 py-2 print:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-3">

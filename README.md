@@ -22,11 +22,13 @@ The dev server listens on `http://localhost:3001`. The API builds invitation lin
 
 ## Entry routes
 
-- `/` is the public landing page.
+- `/` is the public landing page. It is English by default and Arabic (RTL) at `?lang=ar`; the header switch links between the two and the page metadata follows the language.
 - `/admin` signs in `SUPER_ADMIN` only.
 - `/restaurant-dashboard` asks for a role first (Brand manager, Branch manager, Staff), then signs in. `?role=brand|branch|staff` keeps the choice on refresh.
 - `/login` redirects to `/restaurant-dashboard`.
 - `/invite/accept?token=…` is the public page an invited person opens from their email. It previews the invitation, asks for a password, then signs them in.
+- `/forgot-password` asks for an email. The API always answers the same way, so the page does not say whether that email has an account.
+- `/reset-password?token=…` is the page opened from the reset email. The token stays in the query string. A valid link sets a new password and signs the person in.
 - Sign-in rejects an account whose role is outside the chosen group. Brand manager is `BRAND_ADMIN` and `REGIONAL_MANAGER`; Branch manager is `BRANCH_ADMIN`; Staff is `CASHIER`, `WAITER`, `RUNNER`, `KITCHEN_STAFF`.
 
 The login form is plain email and password. No credentials are embedded in the client and nothing signs in automatically.

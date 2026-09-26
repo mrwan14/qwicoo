@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MapPin } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -8,6 +9,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { EntityCard } from "@/components/ops/entity-card";
 import { LocaleText } from "@/components/ops/locale-text";
+import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
 import { PageHeader } from "@/components/ops/page-header";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
@@ -110,8 +112,7 @@ export function BrandsScreen() {
 }
 
 export function BrandDetailScreen({ brandId }: { brandId: string }) {
-  const queryClient = useQueryClient();
-  const [branchName, setBranchName] = useState("");
+  const [branchOpen, setBranchOpen] = useState(false);
   const brand = useQuery({
     queryKey: ["brand", brandId],
     queryFn: async () => {
@@ -127,32 +128,6 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Branches failed");
       return result.data;
     },
-  });
-  const createBranch = useMutation({
-    mutationFn: async () => {
-      const body: components["schemas"]["BranchCreate"] = {
-        name: { en: branchName, ar: branchName },
-        currency: "EGP",
-        timezone: "Africa/Cairo",
-        geofence_radius_meters: 150,
-        sla_prep_time_minutes: 20,
-        is_geofence_enabled: true,
-        tax_rate: "0",
-        service_fee_rate: "0",
-        is_service_taxable: false,
-        is_tax_inclusive: false,
-        service_fee_dine_in_only: true,
-        is_active: true,
-      };
-      const result = await browserApi.POST("/api/v1/brands/{brand_id}/branches", { params: { path: { brand_id: brandId } }, body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not create branch");
-    },
-    onSuccess: () => {
-      toast.success("Branch created");
-      setBranchName("");
-      void queryClient.invalidateQueries({ queryKey: ["brand-branches", brandId] });
-    },
-    onError: (error: Error) => toast.error(error.message),
   });
   const logo = useMutation({
     mutationFn: async (file: File) => uploadLogo(file, "brands", async () => {
@@ -175,10 +150,13 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
         Logo
         <input className="mt-1 block" type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) logo.mutate(file); }} />
       </label>
-      <form className="grid gap-2 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); createBranch.mutate(); }}>
-        <input className={control} placeholder="Branch name" value={branchName} onChange={(event) => setBranchName(event.target.value)} required />
-        <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">Add branch</button>
-      </form>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">Branches</h2>
+        <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setBranchOpen(true)}>
+          Add branch
+        </button>
+      </div>
+      <CreateBranchDialog brandId={brandId} open={branchOpen} onOpenChange={setBranchOpen} />
       <ul className="grid gap-2">
         {(branches.data ?? []).map((branch) => (
           <li key={branch.id}>
@@ -190,6 +168,136 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const queryClient = useQueryClient();
+  const [nameEn, setNameEn] = useState("");
+  const [nameAr, setNameAr] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [address, setAddress] = useState("");
+  const [location, setLocation] = useState<PickedLocation | null>(null);
+  const [radius, setRadius] = useState(150);
+  const [prepMinutes, setPrepMinutes] = useState(20);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  function reset() {
+    setNameEn("");
+    setNameAr("");
+    setDisplayName("");
+    setAddress("");
+    setLocation(null);
+    setRadius(150);
+    setPrepMinutes(20);
+  }
+
+  const create = useMutation({
+    mutationFn: async () => {
+      if (!location) throw new Error("Pick the branch location on the map");
+      const body: components["schemas"]["BranchCreate"] = {
+        name: { en: nameEn.trim(), ar: nameAr.trim() || nameEn.trim() },
+        display_name: displayName.trim() || null,
+        address: address.trim() || location.address || null,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        currency: "EGP",
+        timezone: "Africa/Cairo",
+        geofence_radius_meters: radius,
+        sla_prep_time_minutes: prepMinutes,
+        is_geofence_enabled: true,
+        tax_rate: "0",
+        service_fee_rate: "0",
+        is_service_taxable: false,
+        is_tax_inclusive: false,
+        service_fee_dine_in_only: true,
+        is_active: true,
+      };
+      const result = await browserApi.POST("/api/v1/brands/{brand_id}/branches", { params: { path: { brand_id: brandId } }, body });
+      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not create branch");
+    },
+    onSuccess: () => {
+      toast.success("Branch created");
+      reset();
+      onOpenChange(false);
+      void queryClient.invalidateQueries({ queryKey: ["brand-branches", brandId] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add branch</DialogTitle>
+        </DialogHeader>
+        <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm">
+              Name (English)
+              <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
+            </label>
+            <label className="grid gap-1 text-sm">
+              Name (Arabic)
+              <input className={control} dir="rtl" value={nameAr} onChange={(event) => setNameAr(event.target.value)} placeholder={nameEn} />
+            </label>
+          </div>
+          <label className="grid gap-1 text-sm">
+            Display name
+            <input className={control} value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Shown to guests, optional" />
+          </label>
+
+          <div className="grid gap-1 text-sm">
+            <span>Location</span>
+            <button
+              type="button"
+              className="flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-start hover:border-primary/40"
+              onClick={() => setPickerOpen(true)}
+            >
+              <MapPin aria-hidden className="size-4 shrink-0 text-primary" />
+              {location ? (
+                <span className="grid gap-0.5">
+                  <span className="line-clamp-2">{location.address || "Pinned location"}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">{location.latitude}, {location.longitude}</span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Choose on map</span>
+              )}
+              <span className="ms-auto text-xs text-primary">{location ? "Change" : "Open map"}</span>
+            </button>
+          </div>
+          <label className="grid gap-1 text-sm">
+            Street address
+            <input className={control} value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Filled from the map, edit if needed" />
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm">
+              Geofence radius (m)
+              <input className={control} type="number" min={5} max={5000} value={radius} onChange={(event) => setRadius(Number(event.target.value))} required />
+            </label>
+            <label className="grid gap-1 text-sm">
+              Prep time (min)
+              <input className={control} type="number" min={1} value={prepMinutes} onChange={(event) => setPrepMinutes(Number(event.target.value))} required />
+            </label>
+          </div>
+
+          <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={create.isPending || !location}>
+            {create.isPending ? "Creating…" : "Create branch"}
+          </button>
+        </form>
+        <LocationPickerDialog
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          value={location}
+          radiusMeters={radius}
+          onConfirm={(picked) => {
+            setLocation(picked);
+            setAddress(picked.address);
+          }}
+        />
+      </DialogContent>
+    </Dialog>
   );
 }
 

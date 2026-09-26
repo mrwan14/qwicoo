@@ -1,10 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MapPin } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
+import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { ErrorState, LoadingState } from "@/components/ops/states";
@@ -38,7 +40,7 @@ export function BranchScreen({ branchId }: { branchId: string }) {
         ))}
       </div>
       {tab === "profile" ? <ProfileTab branchId={branchId} currency={branchRecord.currency} /> : null}
-      {tab === "location" ? <LocationTab branchId={branchId} /> : null}
+      {tab === "location" ? <LocationTab branch={branchRecord} /> : null}
       {tab === "financials" ? <FinancialsTab branchId={branchId} /> : null}
       {tab === "sla" ? <SlaTab branchId={branchId} /> : null}
       {tab === "pin" ? <PinTab branchId={branchId} /> : null}
@@ -69,32 +71,65 @@ function ProfileTab({ branchId, currency }: { branchId: string; currency: string
   );
 }
 
-function LocationTab({ branchId }: { branchId: string }) {
-  const [latitude, setLatitude] = useState("30.0444");
-  const [longitude, setLongitude] = useState("31.2357");
-  const [radius, setRadius] = useState(150);
+function LocationTab({ branch }: { branch: components["schemas"]["BranchResponse"] }) {
+  const queryClient = useQueryClient();
+  const saved = branch.latitude != null && branch.longitude != null
+    ? { latitude: Number(branch.latitude), longitude: Number(branch.longitude), address: branch.address ?? "" }
+    : null;
+  const [location, setLocation] = useState<PickedLocation | null>(saved);
+  const [radius, setRadius] = useState(branch.geofence_radius_meters);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const save = useMutation({
     mutationFn: async () => {
+      if (!location) throw new Error("Pick the branch location on the map");
       const body: components["schemas"]["UpdateBranchLocationRequest"] = {
-        latitude,
-        longitude,
+        latitude: location.latitude,
+        longitude: location.longitude,
         geofence_radius_meters: radius,
       };
       const result = await browserApi.PUT("/api/v1/branches/{branch_id}/location", {
-        params: { path: { branch_id: branchId } },
+        params: { path: { branch_id: branch.id } },
         body,
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Location failed");
+      if (location.address && location.address !== branch.address) {
+        const patched = await browserApi.PATCH("/api/v1/branches/{branch_id}", {
+          params: { path: { branch_id: branch.id } },
+          body: { address: location.address },
+        });
+        if (!patched.response.ok) throw asApiError(patched.error, patched.response, "Address failed");
+      }
     },
-    onSuccess: () => toast.success("Location saved"),
+    onSuccess: () => {
+      toast.success("Location saved");
+      void queryClient.invalidateQueries({ queryKey: ["branch", branch.id] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
   return (
-    <form className="grid max-w-lg gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
-      <input className={control} value={latitude} onChange={(event) => setLatitude(event.target.value)} />
-      <input className={control} value={longitude} onChange={(event) => setLongitude(event.target.value)} />
-      <input className={control} type="number" value={radius} onChange={(event) => setRadius(Number(event.target.value))} />
-      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">Save location</button>
+    <form className="grid max-w-lg gap-3" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
+      <button
+        type="button"
+        className="flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-start text-sm hover:border-primary/40"
+        onClick={() => setPickerOpen(true)}
+      >
+        <MapPin aria-hidden className="size-4 shrink-0 text-primary" />
+        {location ? (
+          <span className="grid gap-0.5">
+            <span className="line-clamp-2">{location.address || "Pinned location"}</span>
+            <span className="text-xs text-muted-foreground tabular-nums">{location.latitude}, {location.longitude}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground">No location yet</span>
+        )}
+        <span className="ms-auto text-xs text-primary">Open map</span>
+      </button>
+      <label className="grid gap-1 text-sm">
+        Geofence radius (m)
+        <input className={control} type="number" min={5} max={5000} value={radius} onChange={(event) => setRadius(Number(event.target.value))} />
+      </label>
+      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground disabled:opacity-50" type="submit" disabled={!location || save.isPending}>Save location</button>
+      <LocationPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} value={location} radiusMeters={radius} onConfirm={setLocation} />
     </form>
   );
 }

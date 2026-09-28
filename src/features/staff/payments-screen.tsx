@@ -4,17 +4,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
-import { ErrorState, LoadingState } from "@/components/ops/states";
+import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
-import { usePollingInterval } from "@/hooks/use-page-visible";
+import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
+import { useScope } from "@/stores/scope";
 
 export function PaymentsScreen() {
   const interval = usePollingInterval(7000);
+  const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
   const pending = useQuery({
-    queryKey: ["payments-pending"],
-    refetchInterval: interval,
+    queryKey: ["payments-pending", branchId],
+    refetchInterval: pollUnlessRoleDenied(interval),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/payments/branch/pending");
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Payments failed");
@@ -38,7 +40,7 @@ export function PaymentsScreen() {
   });
 
   if (pending.isLoading) return <LoadingState label="Loading payments" />;
-  if (pending.isError) return <ErrorState body={pending.error.message} onRetry={() => void pending.refetch()} />;
+  if (pending.isError) return <QueryErrorState error={pending.error} screen="Payments" onRetry={() => void pending.refetch()} />;
 
   return (
     <div className="grid gap-4">

@@ -6,7 +6,8 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Money } from "@/components/ops/money";
-import { LoadingState } from "@/components/ops/states";
+import { LoadingState, QueryErrorState } from "@/components/ops/states";
+import { StatusChip } from "@/components/ops/status-chip";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -25,6 +26,65 @@ type Line = {
   optionIds: string[];
   subtotal: string;
 };
+
+type Confirmation = {
+  id: string;
+  pickup: number | null;
+  total: string;
+  paid: boolean;
+  tender: components["schemas"]["PaymentMethod"];
+  orderType: components["schemas"]["OrderType"];
+};
+
+const TENDER_LABEL: Partial<Record<components["schemas"]["PaymentMethod"], string>> = {
+  CASH: "Cash",
+  POS_TERMINAL: "Card terminal",
+  CARD_TERMINAL: "Card terminal",
+};
+
+function paymentLabel(confirmation: Confirmation): string {
+  if (confirmation.paid) return `Paid · ${TENDER_LABEL[confirmation.tender] ?? "Card"}`;
+  return confirmation.orderType === "TAKEAWAY" ? "Payment pending" : "On the table's bill";
+}
+
+function OrderConfirmation({
+  confirmation,
+  onCancel,
+  onDismiss,
+}: {
+  confirmation: Confirmation;
+  onCancel: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <section role="status" aria-live="polite" className="grid gap-3 rounded-xl border bg-background p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">Order sent</p>
+        <StatusChip tone={confirmation.paid ? "available" : "ordered"}>{paymentLabel(confirmation)}</StatusChip>
+      </div>
+      {confirmation.pickup != null ? (
+        <p className="grid gap-0.5">
+          <span className="text-xs text-muted-foreground">Pickup number</span>
+          <span className="text-[length:var(--text-28)] leading-none font-semibold tabular-nums">#{confirmation.pickup}</span>
+        </p>
+      ) : null}
+      <p className="flex justify-between text-sm">
+        <span>{confirmation.paid ? "Collected" : "Total"}</span>
+        <span className="font-semibold">
+          <Money amount={confirmation.total} />
+        </span>
+      </p>
+      <div className="flex gap-2">
+        <button type="button" className="min-h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onClick={onDismiss}>
+          New order
+        </button>
+        <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm" onClick={onCancel}>
+          Cancel order
+        </button>
+      </div>
+    </section>
+  );
+}
 
 function moneyToCents(value: string): number {
   const negative = value.trim().startsWith("-");
@@ -74,8 +134,7 @@ export function PosScreen() {
   const [tender, setTender] = useState<components["schemas"]["PaymentMethod"]>("CASH");
   const [ticketOpen, setTicketOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
-  const [lastOrder, setLastOrder] = useState<string | null>(null);
-  const [lastPickup, setLastPickup] = useState<number | null>(null);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [configuring, setConfiguring] = useState<MenuItem | null>(null);
   const linesRef = useRef(lines);
   useEffect(() => {
@@ -163,23 +222,29 @@ export function PosScreen() {
       return result.data;
     },
     onSuccess: (order) => {
-      setLastOrder(order.id);
-      setLastPickup(order.pickup_number ?? null);
+      setConfirmation({
+        id: order.id,
+        pickup: order.pickup_number ?? null,
+        total: order.total_amount,
+        paid: order.is_paid,
+        tender,
+        orderType: order.order_type,
+      });
       setLines([]);
-      toast.success(`Pickup ${order.pickup_number ?? "—"} · ${order.id}`);
+      toast.success(order.pickup_number != null ? `Order sent · Pickup #${order.pickup_number}` : "Order sent");
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
   const cancel = useMutation({
     mutationFn: async () => {
-      if (!lastOrder) return;
+      if (!cancelId) return;
       const body: components["schemas"]["POSCancelOrderRequest"] = {
         reason: "Cashier cancel",
         refund_payment: true,
       };
       const result = await browserApi.POST("/api/v1/pos/orders/{order_id}/cancel", {
-        params: { path: { order_id: lastOrder } },
+        params: { path: { order_id: cancelId } },
         body,
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Cancel failed");
@@ -187,18 +252,26 @@ export function PosScreen() {
     onSuccess: () => {
       toast.success("Order cancelled");
       setCancelId(null);
-      setLastOrder(null);
+      setConfirmation(null);
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
   if (menu.isLoading) return <LoadingState label="Loading POS" />;
+  if (menu.isError) return <QueryErrorState error={menu.error} screen="POS" onRetry={() => void menu.refetch()} />;
 
   const total = centsToMoney(lines.reduce((sum, line) => sum + moneyToCents(line.subtotal), 0));
   const sendDisabled = lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim());
 
   const ticket = (
     <aside className="grid gap-3 rounded-xl border bg-card p-4">
+      {confirmation ? (
+        <OrderConfirmation
+          confirmation={confirmation}
+          onCancel={() => setCancelId(confirmation.id)}
+          onDismiss={() => setConfirmation(null)}
+        />
+      ) : null}
       <h2 className="text-lg font-semibold">Ticket</h2>
       {lines.length === 0 ? <p className="text-sm text-muted-foreground">No items yet.</p> : null}
       <ul className="grid gap-2">
@@ -213,12 +286,6 @@ export function PosScreen() {
         <p className="flex justify-between text-sm font-semibold">
           <span>Total</span>
           <Money amount={total} />
-        </p>
-      ) : null}
-      {lastOrder ? (
-        <p className="text-sm">
-          Last order <span className="font-medium">{lastOrder}</span>
-          {lastPickup != null ? <> · Pickup <span className="font-medium">{lastPickup}</span></> : null}
         </p>
       ) : null}
       <label className="grid gap-1 text-sm">
@@ -241,11 +308,6 @@ export function PosScreen() {
       <button type="button" className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground" disabled={sendDisabled} onClick={() => checkout.mutate()}>
         Send order
       </button>
-      {lastOrder ? (
-        <button type="button" className="min-h-12 rounded-lg border text-sm" onClick={() => setCancelId(lastOrder)}>
-          Cancel last order
-        </button>
-      ) : null}
     </aside>
   );
 

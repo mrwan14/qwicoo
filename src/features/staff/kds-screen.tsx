@@ -4,10 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
-import { usePollingInterval } from "@/hooks/use-page-visible";
+import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import type { components } from "@/lib/api/schema";
+import { useScope } from "@/stores/scope";
 import { useWorkspace } from "@/stores/workspace";
 
 function asStation(value: string): components["schemas"]["KitchenStation"] | null {
@@ -17,6 +19,7 @@ function asStation(value: string): components["schemas"]["KitchenStation"] | nul
 
 export function KdsScreen() {
   const interval = usePollingInterval(7000);
+  const branchId = useScope((state) => state.branchId);
   const sound = useWorkspace((state) => state.soundEnabled);
   const setSound = useWorkspace((state) => state.setSoundEnabled);
   const seen = useRef<Set<string>>(new Set());
@@ -24,8 +27,8 @@ export function KdsScreen() {
   const queryClient = useQueryClient();
 
   const tickets = useQuery({
-    queryKey: ["kds-tickets"],
-    refetchInterval: interval,
+    queryKey: ["kds-tickets", branchId],
+    refetchInterval: pollUnlessRoleDenied(interval),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/kds/tickets");
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Tickets failed");
@@ -71,6 +74,9 @@ export function KdsScreen() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["kds-tickets"] }),
     onError: (error: Error) => toast.error(error.message),
   });
+
+  if (tickets.isLoading) return <LoadingState label="Loading kitchen tickets" />;
+  if (tickets.isError) return <QueryErrorState error={tickets.error} screen="The kitchen display" onRetry={() => void tickets.refetch()} />;
 
   const columns = stationFilter === "ALL" ? groupBy(visible, (ticket) => ticket.station) : new Map([[stationFilter, visible]]);
 

@@ -2,15 +2,24 @@ import createClient, { type Middleware } from "openapi-fetch";
 
 import { getApiOrigin } from "@/lib/env";
 import type { paths } from "@/lib/api/schema";
+import type { LocaleCode } from "@/lib/i18n/locale-text";
+
+/** The guest's chosen language, sent by the guest client. Anything else gets English. */
+export function guestLocale(request: Request): LocaleCode {
+  return request.headers.get("accept-language")?.trim().toLowerCase().startsWith("ar") ? "ar" : "en";
+}
 
 export function createApiClient(options?: {
   token?: string | null;
   brandId?: string | null;
   branchId?: string | null;
+  locale?: LocaleCode;
 }) {
   const client = createClient<paths>({ baseUrl: getApiOrigin() });
   const middleware: Middleware = {
     onRequest({ request }) {
+      // The API defaults to Arabic when no language is asked for.
+      request.headers.set("accept-language", options?.locale ?? "en");
       if (options?.token) {
         request.headers.set("authorization", `Bearer ${options.token}`);
       }

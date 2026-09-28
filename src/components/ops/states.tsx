@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { isRoleDenied } from "@/lib/api/error";
 
 export function LoadingState({ label = "Loading" }: { label?: string }) {
   return (
@@ -54,4 +55,30 @@ export function ErrorState({
       ) : null}
     </div>
   );
+}
+
+export function RoleUnavailableState({ screen }: { screen: string }) {
+  return (
+    <EmptyState
+      title="Not available for your role"
+      body={`${screen} isn't open to your role yet. Pick another screen from the menu, or ask a branch admin.`}
+    />
+  );
+}
+
+/** A role refusal is expected, not a failure: show it calmly instead of as an error. */
+export function QueryErrorState({
+  error,
+  screen,
+  title,
+  onRetry,
+}: {
+  error: unknown;
+  screen: string;
+  title?: string;
+  onRetry?: () => void;
+}) {
+  if (isRoleDenied(error)) return <RoleUnavailableState screen={screen} />;
+  const body = error instanceof Error && error.message ? error.message : `${screen} couldn't load.`;
+  return <ErrorState title={title} body={body} onRetry={onRetry} />;
 }

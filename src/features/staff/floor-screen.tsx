@@ -6,11 +6,11 @@ import { toast } from "sonner";
 
 import { PageHeader } from "@/components/ops/page-header";
 import { occupancyTone, StatusChip, toneSurface } from "@/components/ops/status-chip";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
+import { EmptyState, ErrorState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
-import { usePollingInterval } from "@/hooks/use-page-visible";
+import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
 
@@ -23,8 +23,8 @@ export function FloorScreen() {
   const [status, setStatus] = useState<components["schemas"]["OrderStatus"]>("PREPARING");
   const queryClient = useQueryClient();
   const floor = useQuery({
-    queryKey: ["floor-live"],
-    refetchInterval: interval,
+    queryKey: ["floor-live", branchId],
+    refetchInterval: pollUnlessRoleDenied(interval),
     retry: false,
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/floor/tables/live", {
@@ -56,8 +56,7 @@ export function FloorScreen() {
 
   if (floor.isLoading) return <LoadingState label="Loading floor" />;
   if (floor.isError) {
-    const message = floor.error instanceof Error ? floor.error.message : "Floor failed";
-    return <ErrorState title="Floor unavailable" body={`${message} You can retry.`} onRetry={() => void floor.refetch()} />;
+    return <QueryErrorState error={floor.error} screen="Floor" title="Floor unavailable" onRetry={() => void floor.refetch()} />;
   }
 
   const data = floor.data;

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { guestLocale } from "@/lib/api/server-client";
 import { GUEST_TOKEN_COOKIE } from "@/lib/auth/cookies";
 import { getApiOrigin } from "@/lib/env";
 
@@ -18,6 +19,7 @@ async function proxy(
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
   headers.set("accept", request.headers.get("accept") ?? "application/json");
+  headers.set("accept-language", guestLocale(request));
   if (token) headers.set("authorization", `Bearer ${token}`);
   const brandId = request.headers.get("x-brand-id");
   const branchId = request.headers.get("x-branch-id");

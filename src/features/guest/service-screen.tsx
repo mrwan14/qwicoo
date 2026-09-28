@@ -24,7 +24,7 @@ const TYPES: components["schemas"]["ServiceRequestType"][] = [
 ];
 
 export function ServiceScreen() {
-  const { t } = useGuestCopy();
+  const { t, locale } = useGuestCopy();
   const interval = usePollingInterval(7000);
   const [type, setType] = useState<components["schemas"]["ServiceRequestType"]>("WAITER_CALL");
   const [note, setNote] = useState("");
@@ -47,7 +47,7 @@ export function ServiceScreen() {
     };
     try {
       const result = await guestApi.POST("/api/v1/service-requests", { body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry, locale);
       toast.success(t.service);
       setNote("");
       void active.refetch();

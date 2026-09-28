@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { asApiError } from "@/lib/api/error";
 import type { components } from "@/lib/api/schema";
-import { createApiClient } from "@/lib/api/server-client";
+import { createApiClient, guestLocale } from "@/lib/api/server-client";
 import { GUEST_TOKEN_COOKIE } from "@/lib/auth/cookies";
 
 export const dynamic = "force-dynamic";
@@ -22,12 +22,14 @@ export async function POST(
   }
 
   const body = (await request.json()) as components["schemas"]["TablePresenceVerifyRequest"];
+  const locale = guestLocale(request);
   try {
-    const client = createApiClient();
+    const client = createApiClient({ locale });
     const result = await client.POST(ACTIONS[action], { body });
     if (!result.response.ok || !result.data) {
-      const error = asApiError(result.error, result.response, "Could not verify the table.");
-      return NextResponse.json({ detail: error.message }, { status: error.status });
+      const fallback = locale === "ar" ? "تعذر التحقق من الطاولة." : "Could not verify the table.";
+      const error = asApiError(result.error, result.response, fallback, locale);
+      return NextResponse.json({ detail: error.message, code: error.code }, { status: error.status });
     }
 
     const { session_token: token, ...safe } = result.data;

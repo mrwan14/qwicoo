@@ -10,7 +10,8 @@ export const guestApi = createClient<paths>({
 
 guestApi.use({
   onRequest({ request }) {
-    const session = useGuest.getState().session;
+    const { session, locale } = useGuest.getState();
+    request.headers.set("accept-language", locale);
     if (session?.branchId) request.headers.set("x-branch-id", session.branchId);
     if (session?.brandId) request.headers.set("x-brand-id", session.brandId);
     return request;

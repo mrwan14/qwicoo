@@ -72,3 +72,15 @@ export async function switchBranch(branchId: string) {
   client.removeQueries({ predicate: (query) => query.queryKey[0] !== "auth" });
   useScope.getState().setActiveBranch(branchId);
 }
+
+/** App Admin's version of `switchBranch`: any branch, with the same cache reset. Null goes back to choosing. */
+export async function focusPlatformBranch(focus: { brandId: string | null; branchId: string | null }) {
+  const state = useScope.getState();
+  if (state.homeScope !== "platform") return;
+  if (focus.branchId === state.branchId && focus.brandId === state.brandId) return;
+  const client = getQueryClient();
+  await client.cancelQueries();
+  state.switchGuard?.close();
+  client.removeQueries({ predicate: (query) => query.queryKey[0] !== "auth" });
+  useScope.getState().focusPlatform(focus);
+}

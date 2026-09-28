@@ -28,7 +28,7 @@ export function TrackScreen() {
       const result = await guestApi.GET("/api/v1/orders/active");
       if (result.response.status === 404) return null;
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry);
+        throw asApiError(result.error, result.response, t.retry, locale);
       }
       return result.data;
     },
@@ -43,7 +43,7 @@ export function TrackScreen() {
         params: { path: { order_id: orderId } },
         body,
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry, locale);
     },
     onSuccess: () => {
       toast.success(t.cancelOrder);
@@ -55,7 +55,7 @@ export function TrackScreen() {
   const here = useMutation({
     mutationFn: async () => {
       const result = await guestApi.POST("/api/v1/sessions/verified-action");
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry, locale);
     },
     onSuccess: () => toast.success(t.here),
     onError: (error: Error) => toast.error(error.message),

@@ -3,20 +3,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { ErrorState, LoadingState } from "@/components/ops/states";
+import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
-import { usePollingInterval } from "@/hooks/use-page-visible";
+import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import type { components } from "@/lib/api/schema";
+import { useScope } from "@/stores/scope";
 
 const STATUSES: components["schemas"]["ServiceRequestStatus"][] = ["ACKNOWLEDGED", "COMPLETED", "DISMISSED"];
 
 export function RequestsScreen() {
   const interval = usePollingInterval(7000);
+  const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
   const queue = useQuery({
-    queryKey: ["service-queue"],
-    refetchInterval: interval,
+    queryKey: ["service-queue", branchId],
+    refetchInterval: pollUnlessRoleDenied(interval),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/service-requests/active");
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Queue failed");
@@ -47,7 +49,7 @@ export function RequestsScreen() {
   });
 
   if (queue.isLoading) return <LoadingState label="Loading requests" />;
-  if (queue.isError) return <ErrorState body={queue.error.message} onRetry={() => void queue.refetch()} />;
+  if (queue.isError) return <QueryErrorState error={queue.error} screen="Requests" onRetry={() => void queue.refetch()} />;
 
   return (
     <div className="grid gap-3">

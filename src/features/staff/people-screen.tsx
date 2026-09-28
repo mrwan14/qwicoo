@@ -77,7 +77,7 @@ export function StaffScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (!branchId) return <p className="text-sm">Choose a branch first.</p>;
+  if (!branchId) return null;
   if (staff.isLoading) return <LoadingState label="Loading staff" />;
   if (staff.isError || !staff.data) return <ErrorState body={staff.error?.message ?? "Staff missing"} onRetry={() => void staff.refetch()} />;
 

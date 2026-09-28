@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { errorDetail } from "@/lib/api/error";
 import { createApiClient } from "@/lib/api/server-client";
 import type { components } from "@/lib/api/schema";
 import { STAFF_TOKEN_COOKIE, staffCookieOptions } from "@/lib/auth/cookies";
@@ -38,10 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!result.data) {
-      const detail =
-        result.error && typeof result.error === "object" && "detail" in result.error
-          ? String(result.error.detail)
-          : "Sign-in failed.";
+      const detail = errorDetail(result.error, "Sign-in failed.");
       return NextResponse.json({ detail }, { status: result.response.status || 401 });
     }
 

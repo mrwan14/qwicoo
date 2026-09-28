@@ -2,10 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MapPin } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
+import { useStaffSession } from "@/components/ops/staff-session";
+import { PIN_ROLES } from "@/lib/auth/scope";
+import { useDenyWhenMissing } from "@/lib/auth/session-client";
+import { useScope } from "@/stores/scope";
 import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -14,28 +18,55 @@ import type { components } from "@/lib/api/schema";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
 
+const TAB_LABELS = {
+  profile: "Profile",
+  location: "Location",
+  financials: "Financials",
+  sla: "SLA",
+  pin: "Access PIN",
+  tables: "Tables",
+} as const;
+
+type BranchTab = keyof typeof TAB_LABELS;
+
 export function BranchScreen({ branchId }: { branchId: string }) {
-  const [tab, setTab] = useState<"profile" | "location" | "financials" | "sla" | "pin" | "tables">("profile");
+  const me = useStaffSession();
+  const [tab, setTab] = useState<BranchTab>("profile");
   const branch = useQuery({
     queryKey: ["branch", branchId],
+    retry: false,
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/branches/{branch_id}", { params: { path: { branch_id: branchId } } });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Branch failed");
       return result.data;
     },
   });
-  if (branch.isLoading) return <LoadingState label="Loading branch" />;
+  const missing = useDenyWhenMissing(branch.error);
+  useEffect(() => {
+    if (branch.data) {
+      useScope.getState().focusPlatform({ brandId: branch.data.brand_id ?? null, branchId: branch.data.id });
+    }
+  }, [branch.data]);
+  if (branch.isLoading || missing) return <LoadingState label="Loading branch" />;
   if (branch.isError || !branch.data) return <ErrorState body={branch.error?.message ?? "Branch missing"} onRetry={() => void branch.refetch()} />;
   const branchRecord = branch.data;
 
-  const tabs = ["profile", "location", "financials", "sla", "pin", "tables"] as const;
+  const canSeePin = Boolean(me && PIN_ROLES.includes(me.role));
+  const tabs = (Object.keys(TAB_LABELS) as BranchTab[]).filter((item) => item !== "pin" || canSeePin);
   return (
     <div className="grid gap-4">
       <h1 className="text-[length:var(--text-28)] font-semibold">{branchRecord.display_name || branchRecord.slug}</h1>
-      <div className="flex gap-2 overflow-x-auto">
+      <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Branch settings">
         {tabs.map((item) => (
-          <button key={item} type="button" className="min-h-11 shrink-0 rounded-full border px-3 text-sm capitalize" onClick={() => setTab(item)}>
-            {item}
+          <button
+            key={item}
+            type="button"
+            role="tab"
+            aria-selected={tab === item}
+            className={`min-h-11 shrink-0 rounded-full border px-3 text-sm ${tab === item ? "border-primary/40 bg-secondary font-medium" : ""}`}
+            onClick={() => setTab(item)}
+          >
+            {TAB_LABELS[item]}
           </button>
         ))}
       </div>
@@ -43,7 +74,7 @@ export function BranchScreen({ branchId }: { branchId: string }) {
       {tab === "location" ? <LocationTab branch={branchRecord} /> : null}
       {tab === "financials" ? <FinancialsTab branchId={branchId} /> : null}
       {tab === "sla" ? <SlaTab branchId={branchId} /> : null}
-      {tab === "pin" ? <PinTab branchId={branchId} /> : null}
+      {tab === "pin" && canSeePin ? <PinTab branchId={branchId} /> : null}
       {tab === "tables" ? <TablesTab branchId={branchId} /> : null}
     </div>
   );

@@ -24,14 +24,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { BrandBranchSwitcher } from "@/components/ops/brand-branch-switcher";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { ConnectionBanner } from "@/components/ops/connection-banner";
-import { Logo } from "@/components/ops/logo";
+import { BranchSwitcher, ScopeBadge } from "@/components/ops/scope-header";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { roleLabel, type UserRole } from "@/lib/auth/roles";
-import { isNavActive, navForRole, splitBottomNav, type NavItem } from "@/lib/nav";
-import { useWorkspace } from "@/stores/workspace";
+import { endStaffSession } from "@/lib/auth/session-client";
+import { isNavActive, navForUser, navKey, splitBottomNav, type NavItem } from "@/lib/nav";
+import { useScope } from "@/stores/scope";
 import {
   Sheet,
   SheetContent,
@@ -62,16 +62,12 @@ const ICONS: Record<string, LucideIcon> = {
   "/app/attendance": ClipboardList,
   "/app/analytics": BarChart3,
   "/app/audit": Shield,
+  "brand-dashboard": Store,
+  "branch-settings": Settings2,
 };
 
-function itemIcon(href: string): LucideIcon {
-  return ICONS[href] ?? Store;
-}
-
-async function signOut() {
-  await fetch("/api/auth/logout", { method: "POST" });
-  useWorkspace.getState().clear();
-  window.location.assign("/");
+function itemIcon(item: NavItem): LucideIcon {
+  return ICONS[navKey(item)] ?? Store;
 }
 
 function NavLinks({
@@ -105,11 +101,11 @@ function NavLinks({
           <div key={group} className="grid gap-1">
             <p className={`px-2 text-xs font-medium text-muted-foreground ${groupClass}`}>{group}</p>
             {groupItems.map((item) => {
-              const Icon = itemIcon(item.href);
+              const Icon = itemIcon(item);
               const active = isNavActive(pathname, item.href);
               return (
                 <Link
-                  key={item.href}
+                  key={navKey(item)}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   aria-label={item.label}
@@ -181,11 +177,9 @@ function AdminSidebar({ items, pathname }: { items: readonly NavItem[]; pathname
         }`}
       >
         <div className={collapsed ? "hidden" : expanded ? "contents" : "hidden lg:contents"}>
-          <Logo
-            className="min-w-0 px-1 py-1"
-            markClassName="size-6 shrink-0 text-primary"
-            wordClassName="truncate text-base"
-          />
+          <span className="min-w-0 px-1 py-1">
+            <ScopeBadge />
+          </span>
         </div>
         <button
           type="button"
@@ -235,7 +229,7 @@ function SignOutButton({ className }: { className?: string }) {
         pending={pending}
         onConfirm={() => {
           setPending(true);
-          void signOut();
+          void endStaffSession();
         }}
       />
     </>
@@ -251,10 +245,11 @@ function ShellFrame({
 }) {
   const pathname = usePathname();
   const me = useStaffSession();
+  const activeBranchId = useScope((state) => state.branchId);
   const [moreOpen, setMoreOpen] = useState(false);
   if (!me) return null;
 
-  const items = navForRole(me.role);
+  const items = navForUser(me, activeBranchId);
   const { primary, overflow } = splitBottomNav(me.role, items);
   const opsTabs = [...primary, ...overflow];
 
@@ -274,14 +269,24 @@ function ShellFrame({
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex min-h-12 items-center justify-between gap-3 border-b px-3 py-2 print:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-3">
-              <BrandBranchSwitcher />
               {variant === "ops" ? (
-                <nav aria-label="Ops" className="flex min-w-0 gap-1 overflow-x-auto">
+                <>
+                  <span className="sm:hidden">
+                    <ScopeBadge compact />
+                  </span>
+                  <span className="hidden sm:inline-flex">
+                    <ScopeBadge />
+                  </span>
+                </>
+              ) : null}
+              <BranchSwitcher />
+              {variant === "ops" ? (
+                <nav aria-label="Ops" className="hidden min-w-0 gap-1 overflow-x-auto sm:flex">
                   {opsTabs.map((item) => {
                     const active = isNavActive(pathname, item.href);
                     return (
                       <Link
-                        key={item.href}
+                        key={navKey(item)}
                         href={item.href}
                         aria-current={active ? "page" : undefined}
                         className={`inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 text-sm ${
@@ -313,11 +318,11 @@ function ShellFrame({
         className={`fixed inset-x-0 bottom-0 z-40 border-t bg-card pb-[env(safe-area-inset-bottom)] print:hidden sm:hidden ${variant === "admin" ? "hidden" : "flex"}`}
       >
         {primary.map((item) => {
-          const Icon = itemIcon(item.href);
+          const Icon = itemIcon(item);
           const active = isNavActive(pathname, item.href);
           return (
             <Link
-              key={item.href}
+              key={navKey(item)}
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-xs ${

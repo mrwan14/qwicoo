@@ -3,41 +3,31 @@ import { persist } from "zustand/middleware";
 
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
+/** Device preferences only. Brand and branch scope live in `useScope`, from `/auth/me`. */
 type WorkspaceState = {
-  brandId: string | null;
-  branchId: string | null;
   locale: LocaleCode;
   soundEnabled: boolean;
-  setBrandId: (brandId: string | null) => void;
-  setBranchId: (branchId: string | null) => void;
   setLocale: (locale: LocaleCode) => void;
   setSoundEnabled: (soundEnabled: boolean) => void;
-  clear: () => void;
-};
-
-const initial = {
-  brandId: null,
-  branchId: null,
-  locale: "en" as const,
-  soundEnabled: false,
 };
 
 export const useWorkspace = create<WorkspaceState>()(
   persist(
     (set) => ({
-      ...initial,
-      setBrandId: (brandId) => set({ brandId }),
-      setBranchId: (branchId) => set({ branchId }),
+      locale: "en",
+      soundEnabled: false,
       setLocale: (locale) => set({ locale }),
       setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
-      clear: () => set(initial),
     }),
     {
       name: "food-workspace",
+      version: 1,
       skipHydration: true,
+      migrate: (persisted) => {
+        const old = (persisted ?? {}) as Partial<WorkspaceState>;
+        return { locale: old.locale ?? "en", soundEnabled: old.soundEnabled ?? false } as WorkspaceState;
+      },
       partialize: (state) => ({
-        brandId: state.brandId,
-        branchId: state.branchId,
         locale: state.locale,
         soundEnabled: state.soundEnabled,
       }),

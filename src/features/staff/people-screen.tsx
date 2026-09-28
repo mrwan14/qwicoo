@@ -9,14 +9,14 @@ import { ErrorState, LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
-import { useWorkspace } from "@/stores/workspace";
+import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
 const ROLES: components["schemas"]["UserRole"][] = ["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER", "BRANCH_ADMIN"];
 
 export function StaffScreen() {
-  const branchId = useWorkspace((state) => state.branchId);
-  const brandId = useWorkspace((state) => state.brandId);
+  const branchId = useScope((state) => state.branchId);
+  const brandId = useScope((state) => state.brandId);
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -111,7 +111,7 @@ export function StaffScreen() {
 }
 
 export function FeaturesScreen() {
-  const brandId = useWorkspace((state) => state.brandId);
+  const brandId = useScope((state) => state.brandId);
   const queryClient = useQueryClient();
   const [key, setKey] = useState("");
   const [nameEn, setNameEn] = useState("");
@@ -190,8 +190,8 @@ export function FeaturesScreen() {
 }
 
 export function DeliveryScreen() {
-  const branchId = useWorkspace((state) => state.branchId);
-  const brandId = useWorkspace((state) => state.brandId);
+  const branchId = useScope((state) => state.branchId);
+  const brandId = useScope((state) => state.brandId);
   const queryClient = useQueryClient();
   const [nameEn, setNameEn] = useState("");
   const [nameAr, setNameAr] = useState("");

@@ -80,7 +80,7 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
               {t.nav.language}
             </Link>
             <Link
-              href="/restaurant-dashboard"
+              href="/login"
               className={`inline-flex min-h-11 items-center rounded-lg bg-primary px-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:px-4 ${FOCUS}`}
             >
               <span className="sm:hidden">{t.footer.signInLabel}</span>
@@ -261,16 +261,10 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
           </div>
           <nav aria-label={t.footer.signInLabel} className="flex flex-wrap gap-2">
             <Link
-              href="/restaurant-dashboard"
+              href="/login"
               className={`inline-flex min-h-11 items-center rounded-lg border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted ${FOCUS}`}
             >
               {t.footer.dashboard}
-            </Link>
-            <Link
-              href="/admin"
-              className={`inline-flex min-h-11 items-center rounded-lg px-4 text-sm text-muted-foreground transition-colors hover:bg-muted ${FOCUS}`}
-            >
-              {t.footer.admin}
             </Link>
           </nav>
         </div>

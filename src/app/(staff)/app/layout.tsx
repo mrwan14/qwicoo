@@ -12,6 +12,6 @@ export default async function StaffLayout({
   children: React.ReactNode;
 }) {
   const token = (await cookies()).get(STAFF_TOKEN_COOKIE)?.value;
-  if (!token) redirect("/restaurant-dashboard");
+  if (!token) redirect("/login");
   return <StaffRuntime>{children}</StaffRuntime>;
 }

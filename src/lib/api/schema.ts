@@ -24,6 +24,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request a password reset link
+         * @description Public. Any active staff role can request a reset. The response is the same whether the email exists, so accounts are not enumerated. A single-use link is emailed via Resend.
+         */
+        post: operations["forgot_password_api_v1_auth_forgot_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/reset-password/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview a password reset link
+         * @description Public. Returns the account email and expiry. 404 if invalid or used, 410 if expired.
+         */
+        get: operations["preview_password_reset_api_v1_auth_reset_password_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a new password from a reset link
+         * @description Public. Consumes a single-use token, sets the password (min 8 characters), and returns a login token. Works for every staff role.
+         */
+        post: operations["reset_password_api_v1_auth_reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/me": {
         parameters: {
             query?: never;
@@ -2511,6 +2571,19 @@ export interface components {
             seconds_remaining: number;
         };
         /**
+         * AccessibleBranch
+         * @description Branch the caller may open after login.
+         */
+        AccessibleBranch: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /**
          * AddCartItemRequest
          * @description Payload to add an item to the shared table cart.
          */
@@ -2804,7 +2877,10 @@ export interface components {
             } | null;
             /** Brand Id */
             brand_id?: string | null;
-            /** Slug */
+            /**
+             * Slug
+             * @description Optional. Generated from the name when omitted. When supplied it must contain only lowercase letters, numbers, and single hyphens, and is stored as given (after trimming and lowercasing); a slug that is already taken returns 409. Branch slugs are unique within the tenant.
+             */
             slug?: string | null;
             /**
              * Currency
@@ -2859,8 +2935,11 @@ export interface components {
             name: {
                 [key: string]: string;
             };
-            /** Slug */
-            slug: string;
+            /**
+             * Slug
+             * @description Optional. Generated from the name when omitted. When supplied it must contain only lowercase letters, numbers, and single hyphens, and is stored as given (after trimming and lowercasing); a slug that is already taken returns 409. Branch slugs are unique within the tenant.
+             */
+            slug?: string | null;
             /**
              * Currency
              * @default EGP
@@ -3045,74 +3124,6 @@ export interface components {
             logo_url: string;
         };
         /**
-         * BranchMenuCategoryGroup
-         * @description Category grouping for branch menu display.
-         */
-        BranchMenuCategoryGroup: {
-            /**
-             * Category Id
-             * Format: uuid
-             */
-            category_id: string;
-            /** Category Name */
-            category_name: string;
-            /**
-             * Display Order
-             * @default 0
-             */
-            display_order: number;
-            /** Items */
-            items?: components["schemas"]["BranchMenuItemResponse"][];
-        };
-        /**
-         * BranchMenuItemResponse
-         * @description Catalog item resolved with branch-specific overrides.
-         */
-        BranchMenuItemResponse: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Category Id
-             * Format: uuid
-             */
-            category_id: string;
-            /** Category Name */
-            category_name?: string | null;
-            /** Name */
-            name: string;
-            /** Description */
-            description?: string | null;
-            /** Base Price */
-            base_price: string;
-            /** Final Price */
-            final_price: string;
-            /** @default ALL_BRANCHES */
-            scope: components["schemas"]["MenuItemScope"];
-            /** Is Available */
-            is_available: boolean;
-            /**
-             * Is Visible
-             * @default true
-             */
-            is_visible: boolean;
-            /**
-             * Has Override
-             * @default false
-             */
-            has_override: boolean;
-            /** Price Override */
-            price_override?: string | null;
-            /** Image Url */
-            image_url?: string | null;
-            /** Allergens */
-            allergens?: string[];
-            /** Dietary Badges */
-            dietary_badges?: string[];
-        };
-        /**
          * BranchMenuOverrideUpdate
          * @description Payload for branch admin to modify branch-specific price or availability.
          */
@@ -3123,26 +3134,6 @@ export interface components {
             is_available?: boolean | null;
             /** Is Visible */
             is_visible?: boolean | null;
-        };
-        /**
-         * BranchMenuResponse
-         * @description Complete effective branch menu with categories and overridden items.
-         */
-        BranchMenuResponse: {
-            /**
-             * Branch Id
-             * Format: uuid
-             */
-            branch_id: string;
-            /** Brand Id */
-            brand_id?: string | null;
-            /**
-             * Currency
-             * @default EGP
-             */
-            currency: string;
-            /** Categories */
-            categories?: components["schemas"]["BranchMenuCategoryGroup"][];
         };
         /**
          * BranchPerformanceRow
@@ -3430,9 +3421,9 @@ export interface components {
             name: string;
             /**
              * Slug
-             * @description Unique brand slug
+             * @description Optional. Generated from the name when omitted. When supplied it must contain only lowercase letters, numbers, and single hyphens, and is stored as given (after trimming and lowercasing); a slug that is already taken returns 409. Brand slugs are globally unique.
              */
-            slug: string;
+            slug?: string | null;
             /** Logo Url */
             logo_url?: string | null;
             /** Cover Image Url */
@@ -4461,6 +4452,93 @@ export interface components {
              */
             pending_service_requests_count: number;
         };
+        /**
+         * ForgotPasswordRequest
+         * @description Email address that should receive a password reset link.
+         */
+        ForgotPasswordRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
+        /**
+         * ForgotPasswordResponse
+         * @description Same message whether or not the email belongs to an account.
+         */
+        ForgotPasswordResponse: {
+            /** Message */
+            message: string;
+        };
+        /** GuestBranchMenuCategoryGroup */
+        GuestBranchMenuCategoryGroup: {
+            /**
+             * Category Id
+             * Format: uuid
+             */
+            category_id: string;
+            /** Category Name */
+            category_name: string;
+            /**
+             * Display Order
+             * @default 0
+             */
+            display_order: number;
+            /** Items */
+            items?: components["schemas"]["GuestBranchMenuItemResponse"][];
+        };
+        /**
+         * GuestBranchMenuItemResponse
+         * @description Guest catalog item. Prices and availability only; no staff override internals.
+         */
+        GuestBranchMenuItemResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Category Id
+             * Format: uuid
+             */
+            category_id: string;
+            /** Category Name */
+            category_name?: string | null;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Base Price */
+            base_price: string;
+            /** Final Price */
+            final_price: string;
+            /** Is Available */
+            is_available: boolean;
+            /** Image Url */
+            image_url?: string | null;
+            /** Allergens */
+            allergens?: string[];
+            /** Dietary Badges */
+            dietary_badges?: string[];
+        };
+        /** GuestBranchMenuResponse */
+        GuestBranchMenuResponse: {
+            /**
+             * Branch Id
+             * Format: uuid
+             */
+            branch_id: string;
+            /** Brand Id */
+            brand_id?: string | null;
+            /**
+             * Currency
+             * @default EGP
+             */
+            currency: string;
+            /** Categories */
+            categories?: components["schemas"]["GuestBranchMenuCategoryGroup"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -5114,11 +5192,6 @@ export interface components {
              * @default HOT_KITCHEN
              */
             station: components["schemas"]["KitchenStation"];
-            /**
-             * Is Active
-             * @description Category active status
-             */
-            is_active: boolean;
             /**
              * Items
              * @description Items belonging to this category
@@ -6111,6 +6184,45 @@ export interface components {
              * @description Client device GPS longitude for server-side geofence validation
              */
             longitude?: number | null;
+        };
+        /**
+         * ResetPasswordPreviewResponse
+         * @description Public preview so the reset page can show which account the link belongs to.
+         */
+        ResetPasswordPreviewResponse: {
+            /** Email */
+            email: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /**
+         * ResetPasswordRequest
+         * @description Single-use reset token plus the new password.
+         */
+        ResetPasswordRequest: {
+            /** Token */
+            token: string;
+            /** Password */
+            password: string;
+        };
+        /**
+         * ResetPasswordResponse
+         * @description Login token plus the user whose password was just changed.
+         */
+        ResetPasswordResponse: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+            /** Expires In */
+            expires_in: number;
+            user: components["schemas"]["UserResponse"];
         };
         /**
          * ScheduleRulesSchema
@@ -7221,6 +7333,19 @@ export interface components {
             is_active: boolean;
             /** Allowed Branch Ids */
             allowed_branch_ids?: string[];
+            /** Brand Id */
+            brand_id?: string | null;
+            /** Brand Name */
+            brand_name?: string | null;
+            /** Brand Logo Url */
+            brand_logo_url?: string | null;
+            /** Accessible Branches */
+            accessible_branches?: components["schemas"]["AccessibleBranch"][];
+            /**
+             * Home Scope
+             * @default branch
+             */
+            home_scope: string;
         };
         /**
          * UserRole
@@ -7551,6 +7676,138 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TokenResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forgot_password_api_v1_auth_forgot_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForgotPasswordResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_password_reset_api_v1_auth_reset_password_preview_get: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResetPasswordPreviewResponse"];
+                };
+            };
+            /** @description Invalid or used */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Expired */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_api_v1_auth_reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResetPasswordResponse"];
+                };
+            };
+            /** @description Inactive account */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or used */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Expired */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -9297,7 +9554,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BranchMenuResponse"];
+                    "application/json": components["schemas"]["GuestBranchMenuResponse"];
                 };
             };
             /** @description Validation Error */

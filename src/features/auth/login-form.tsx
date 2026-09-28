@@ -6,15 +6,13 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ENTRY_GROUPS, type EntryGroup } from "@/lib/auth/roles";
 
 /**
- * Plain email + password. Credentials are never embedded here; accounts come
- * from the App Admin bootstrap (API side) or an email invitation.
+ * Plain email + password for every role. Credentials are never embedded here;
+ * accounts come from the App Admin bootstrap (API side) or an email invitation.
+ * Where the user lands is decided after sign-in from `/auth/me`.
  */
-export function LoginForm({ group }: { group: EntryGroup }) {
-  const allowedRoles = ENTRY_GROUPS[group].roles;
-
+export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -42,7 +40,7 @@ export function LoginForm({ group }: { group: EntryGroup }) {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password, allowed_roles: allowedRoles }),
+        body: JSON.stringify({ email, password }),
       });
       if (response.status === 429) {
         const delay = Math.min(1000 * 2 ** attempt.current, 16_000);

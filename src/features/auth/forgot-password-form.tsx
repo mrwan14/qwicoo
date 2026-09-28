@@ -80,7 +80,7 @@ export function ForgotPasswordForm() {
       </Button>
       <p className="text-center text-xs text-muted-foreground">
         Remembered it?{" "}
-        <Link href="/restaurant-dashboard" className="underline">
+        <Link href="/login" className="underline">
           Sign in
         </Link>
         .

@@ -26,7 +26,7 @@ type LandingCopy = {
   problems: { eyebrow: string; title: string; fixLabel: string; items: (Entry & { fix: string })[] };
   features: { eyebrow: string; title: string; items: Record<FeatureKey, Entry> };
   steps: { eyebrow: string; title: string; body: string; stepLabel: string; items: Entry[]; cta: string; note: string };
-  footer: { rights: string; dashboard: string; admin: string; signInLabel: string };
+  footer: { rights: string; dashboard: string; signInLabel: string };
 };
 
 export const landingCopy: Record<LocaleCode, LandingCopy> = {
@@ -152,8 +152,7 @@ export const landingCopy: Record<LocaleCode, LandingCopy> = {
     },
     footer: {
       rights: "All rights reserved",
-      dashboard: "Restaurant dashboard",
-      admin: "Platform admin",
+      dashboard: "Sign in",
       signInLabel: "Sign in",
     },
   },
@@ -273,8 +272,7 @@ export const landingCopy: Record<LocaleCode, LandingCopy> = {
     },
     footer: {
       rights: "جميع الحقوق محفوظة",
-      dashboard: "لوحة المطعم",
-      admin: "إدارة المنصة",
+      dashboard: "تسجيل الدخول",
       signInLabel: "تسجيل الدخول",
     },
   },

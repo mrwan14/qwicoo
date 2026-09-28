@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
 import { ErrorState, LoadingState } from "@/components/ops/states";
-import { useGuestCopy } from "@/features/guest/shell";
+import { useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
+import { useGuest } from "@/stores/guest";
 import { asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -34,6 +35,12 @@ export function PickupScreen({ branchId }: { branchId: string }) {
       return result.data;
     },
   });
+
+  // A stored table session may belong to another brand; start this branch clean.
+  useEffect(() => {
+    if (useGuest.getState().session?.branchId !== branchId) useGuest.getState().setBranding(null);
+  }, [branchId]);
+  useAbsorbBranding(menu.data);
 
   const govs = useQuery({
     queryKey: ["govs"],

@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 
 import { useGuestCopy } from "@/features/guest/shell";
 import type { components } from "@/lib/api/schema";
+import { mergeGuestBranding } from "@/lib/guest/branding";
 import { useGuest, type GuestSession } from "@/stores/guest";
 
 type PresenceResponse = Omit<components["schemas"]["TableSessionResponse"], "session_token">;
 
 function toSession(data: PresenceResponse): GuestSession {
+  const brandId = (data as { brand_id?: unknown }).brand_id;
   return {
     sessionId: data.session_id,
     branchId: data.branch_id,
-    brandId: null,
+    brandId: typeof brandId === "string" ? brandId : null,
     tableId: data.table_id,
     tableNumber: data.table_number,
     branchName: typeof data.branch_name === "string" ? data.branch_name : null,
@@ -55,6 +57,7 @@ export function PresenceForm({ token }: { token: string }) {
         return;
       }
       setSession(toSession(payload));
+      useGuest.getState().setBranding(mergeGuestBranding(null, payload));
       router.push("/order");
     } catch {
       setError(t.retry);

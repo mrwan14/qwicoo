@@ -34,7 +34,7 @@ function InvalidInvite({ message, expired }: { message: string; expired: boolean
       </div>
       <p className="text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/restaurant-dashboard" className="underline">
+        <Link href="/login" className="underline">
           Sign in
         </Link>
         .
@@ -226,7 +226,7 @@ export function AcceptInviteForm({ token }: { token: string }) {
       </Button>
       <p className="text-center text-xs text-muted-foreground">
         Wrong person?{" "}
-        <Link href="/restaurant-dashboard" className="underline">
+        <Link href="/login" className="underline">
           Sign in to a different account
         </Link>
         .

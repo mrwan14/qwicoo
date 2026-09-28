@@ -13,7 +13,7 @@ import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import type { components } from "@/lib/api/schema";
-import { useWorkspace } from "@/stores/workspace";
+import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
 const STATIONS = ["HOT_KITCHEN", "COLD_KITCHEN", "BEVERAGE", "DESSERT"] as const;
@@ -25,7 +25,7 @@ function names(en: string, ar: string) {
 }
 
 export function MenuAdmin() {
-  const branchId = useWorkspace((state) => state.branchId);
+  const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
   const [en, setEn] = useState("");
   const [ar, setAr] = useState("");
@@ -43,7 +43,7 @@ export function MenuAdmin() {
     queryKey: ["menu-tree", branchId],
     enabled: Boolean(branchId),
     queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/menu/tree");
+      const result = await browserApi.GET("/api/v1/menu/tree", { params: { query: { branch_id: branchId } } });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Menu failed");
       return result.data;
     },

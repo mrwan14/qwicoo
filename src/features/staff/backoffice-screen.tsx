@@ -12,7 +12,7 @@ import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import type { components } from "@/lib/api/schema";
-import { useWorkspace } from "@/stores/workspace";
+import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
 
@@ -118,7 +118,7 @@ export function ZReportScreen({ reportId }: { reportId: string }) {
 }
 
 export function AttendanceScreen() {
-  const branchId = useWorkspace((state) => state.branchId);
+  const branchId = useScope((state) => state.branchId);
   const [reason, setReason] = useState("");
   const [logId, setLogId] = useState<string | null>(null);
   const status = useQuery({

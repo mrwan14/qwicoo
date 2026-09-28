@@ -1,24 +1,14 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { useState, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
+import { getQueryClient } from "@/lib/query-client";
 
 export function AppProviders({ children }: { children: ReactNode }) {
-  const [client] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            retry: 1,
-            staleTime: 10_000,
-            refetchIntervalInBackground: false,
-          },
-        },
-      }),
-  );
+  const [client] = useState(getQueryClient);
 
   return (
     <QueryClientProvider client={client}>

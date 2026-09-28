@@ -4,7 +4,6 @@ import { errorDetail } from "@/lib/api/error";
 import type { components } from "@/lib/api/schema";
 import { createApiClient } from "@/lib/api/server-client";
 import { STAFF_TOKEN_COOKIE, staffCookieOptions } from "@/lib/auth/cookies";
-import { roleHome } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { access_token, expires_in, user } = result.data;
-    const response = NextResponse.json({ role: user.role, home: roleHome(user.role) });
+    const response = NextResponse.json({ role: user.role, home: "/app" });
     response.cookies.set(STAFF_TOKEN_COOKIE, access_token, staffCookieOptions(expires_in));
     return response;
   } catch {

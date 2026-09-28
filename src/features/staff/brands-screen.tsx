@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MapPin } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -17,6 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { useDenyWhenMissing } from "@/lib/auth/session-client";
+import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
 
@@ -113,16 +115,23 @@ export function BrandsScreen() {
 
 export function BrandDetailScreen({ brandId }: { brandId: string }) {
   const [branchOpen, setBranchOpen] = useState(false);
+  const isPlatform = useScope((state) => state.homeScope === "platform");
   const brand = useQuery({
     queryKey: ["brand", brandId],
+    retry: false,
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/brands/{brand_id}", { params: { path: { brand_id: brandId } } });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Brand failed");
       return result.data;
     },
   });
+  const missing = useDenyWhenMissing(brand.error);
+  useEffect(() => {
+    if (brand.data) useScope.getState().focusPlatform({ brandId: brand.data.id, branchId: null });
+  }, [brand.data]);
   const branches = useQuery({
     queryKey: ["brand-branches", brandId],
+    enabled: brand.isSuccess,
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/brands/{brand_id}/branches", { params: { path: { brand_id: brandId } } });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Branches failed");
@@ -140,12 +149,21 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (brand.isLoading) return <LoadingState label="Loading brand" />;
+  if (brand.isLoading || missing) return <LoadingState label="Loading brand" />;
   if (brand.isError || !brand.data) return <ErrorState body={brand.error?.message ?? "Brand missing"} onRetry={() => void brand.refetch()} />;
 
   return (
     <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">{brand.data.name}</h1>
+      <PageHeader
+        title={brand.data.name}
+        action={
+          isPlatform ? (
+            <Link href="/app/invitations" className="inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium hover:bg-muted">
+              Invite Brand Admin
+            </Link>
+          ) : undefined
+        }
+      />
       <label className="text-sm">
         Logo
         <input className="mt-1 block" type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) logo.mutate(file); }} />

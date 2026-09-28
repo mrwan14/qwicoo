@@ -2,12 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useGuestCopy } from "@/features/guest/shell";
+import { useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
 import { Money } from "@/components/ops/money";
 import { ErrorState, LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
@@ -57,6 +57,15 @@ export function MenuScreen() {
       return result.data;
     },
   });
+
+  useAbsorbBranding(branchMenu.data);
+  useEffect(() => {
+    const brandId = branchMenu.data?.brand_id;
+    const current = useGuest.getState().session;
+    if (brandId && current && current.branchId === branchMenu.data?.branch_id && current.brandId !== brandId) {
+      useGuest.getState().setSession({ ...current, brandId });
+    }
+  }, [branchMenu.data]);
 
   const cart = useQuery({
     queryKey: ["guest-cart", session?.sessionId],

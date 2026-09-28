@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import { LocaleText } from "@/components/ops/locale-text";
 import { Money } from "@/components/ops/money";
@@ -9,8 +9,9 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { browserApi } from "@/lib/api/browser";
 import { roleLabel } from "@/lib/auth/roles";
+import { denyAccess } from "@/lib/auth/session-client";
 import { getNavItem } from "@/lib/nav";
-import { useWorkspace } from "@/stores/workspace";
+import { useScope } from "@/stores/scope";
 
 export function RoleGate({
   href,
@@ -21,23 +22,20 @@ export function RoleGate({
 }) {
   const me = useStaffSession();
   const item = getNavItem(href);
+  const allowed = Boolean(me && item && item.roles.includes(me.role));
+  useEffect(() => {
+    if (me && item && !allowed) denyAccess();
+  }, [me, item, allowed]);
   if (!me || !item) return null;
-  if (!item.roles.includes(me.role)) {
-    return (
-      <EmptyState
-        title="Not available for your role"
-        body={`${roleLabel(me.role)} does not include ${item.label}.`}
-      />
-    );
-  }
+  if (!allowed) return <LoadingState label="Taking you to your workspace" />;
   return children;
 }
 
 export function Screen({ href }: { href: string }) {
   const me = useStaffSession();
   const item = getNavItem(href);
-  const brandId = useWorkspace((state) => state.brandId);
-  const branchId = useWorkspace((state) => state.branchId);
+  const brandId = useScope((state) => state.brandId);
+  const branchId = useScope((state) => state.branchId);
   const branch = useQuery({
     queryKey: ["branch", branchId, brandId],
     enabled: Boolean(branchId),
@@ -74,7 +72,7 @@ export function Screen({ href }: { href: string }) {
         <section className="rounded-xl border bg-card p-4 shadow-elev-1">
           <h2 className="text-sm font-medium">Working location</h2>
           {!branchId ? (
-            <p className="mt-2 text-sm text-muted-foreground">Choose a branch to attach request headers.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Open a branch from Brands to work in it.</p>
           ) : branch.isLoading ? (
             <div className="mt-3">
               <LoadingState label="Loading branch" />

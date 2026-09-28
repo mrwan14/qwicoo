@@ -1,4 +1,5 @@
-import type { UserRole } from "@/lib/auth/roles";
+import type { UserProfile, UserRole } from "@/lib/auth/roles";
+import { homeScopeOf } from "@/lib/auth/scope";
 
 export type AppShell = "admin" | "ops";
 export type NavGroup = "Portfolio" | "Brand ops" | "Insight";
@@ -10,7 +11,13 @@ export type NavItem = {
   shell: AppShell;
   phase: number;
   roles: readonly UserRole[];
+  /** Stable id for icons and bottom-bar order when `href` holds an id. Defaults to `href`. */
+  key?: string;
 };
+
+export function navKey(item: NavItem): string {
+  return item.key ?? item.href;
+}
 
 const PLATFORM = ["SUPER_ADMIN"] as const satisfies readonly UserRole[];
 const BRAND_SCOPE = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER"] as const satisfies readonly UserRole[];
@@ -23,7 +30,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Portfolio",
     shell: "admin",
     phase: 5,
-    roles: [...BRAND_SCOPE],
+    roles: [...PLATFORM],
   },
   {
     href: "/app/invitations",
@@ -165,8 +172,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
 
 const BOTTOM_PRIORITY: Record<UserRole, readonly string[]> = {
   SUPER_ADMIN: ["/app/brands", "/app/menu", "/app/floor", "/app/analytics"],
-  BRAND_ADMIN: ["/app/brands", "/app/menu", "/app/staff", "/app/analytics"],
-  REGIONAL_MANAGER: ["/app/brands", "/app/menu", "/app/staff", "/app/analytics"],
+  BRAND_ADMIN: ["brand-dashboard", "/app/menu", "/app/staff", "/app/analytics"],
+  REGIONAL_MANAGER: ["/app/floor", "/app/menu", "/app/staff", "/app/analytics"],
   BRANCH_ADMIN: ["/app/floor", "/app/pos", "/app/kds", "/app/payments"],
   CASHIER: ["/app/pos", "/app/payments", "/app/floor", "/app/attendance"],
   WAITER: ["/app/floor", "/app/floor/requests"],
@@ -174,8 +181,38 @@ const BOTTOM_PRIORITY: Record<UserRole, readonly string[]> = {
   RUNNER: ["/app/kds/expo", "/app/floor/requests", "/app/floor"],
 };
 
-export function navForRole(role: UserRole): NavItem[] {
-  return NAV_ITEMS.filter((item) => item.roles.includes(role));
+/**
+ * Nav for this user in this scope. Brand admins get their own brand's
+ * dashboard instead of the all-brands grid; branch admins get a link to
+ * their active branch's settings.
+ */
+export function navForUser(me: UserProfile, activeBranchId: string | null): NavItem[] {
+  const items = NAV_ITEMS.filter((item) => item.roles.includes(me.role));
+  const scope = homeScopeOf(me);
+  const extra: NavItem[] = [];
+  if (scope === "brand" && me.brand_id) {
+    extra.push({
+      key: "brand-dashboard",
+      href: `/app/brands/${me.brand_id}`,
+      label: "Dashboard",
+      group: "Portfolio",
+      shell: "admin",
+      phase: 5,
+      roles: ["BRAND_ADMIN"],
+    });
+  }
+  if (me.role === "BRANCH_ADMIN" && activeBranchId) {
+    extra.push({
+      key: "branch-settings",
+      href: `/app/branches/${activeBranchId}`,
+      label: "Branch settings",
+      group: "Brand ops",
+      shell: "admin",
+      phase: 5,
+      roles: ["BRANCH_ADMIN"],
+    });
+  }
+  return [...extra, ...items];
 }
 
 export function getNavItem(href: string): NavItem | undefined {
@@ -183,13 +220,12 @@ export function getNavItem(href: string): NavItem | undefined {
 }
 
 export function splitBottomNav(role: UserRole, items: readonly NavItem[]) {
-  const allowed = new Set(items.map((item) => item.href));
+  const byKey = new Map(items.map((item) => [navKey(item), item]));
   const primary = BOTTOM_PRIORITY[role]
-    .filter((href) => allowed.has(href))
-    .map((href) => items.find((item) => item.href === href))
+    .map((key) => byKey.get(key))
     .filter((item): item is NavItem => Boolean(item));
-  const primaryHrefs = new Set(primary.map((item) => item.href));
-  const overflow = items.filter((item) => !primaryHrefs.has(item.href));
+  const primaryKeys = new Set(primary.map(navKey));
+  const overflow = items.filter((item) => !primaryKeys.has(navKey(item)));
   return { primary, overflow };
 }
 

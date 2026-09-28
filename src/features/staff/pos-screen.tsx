@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -13,7 +13,7 @@ import { browserApi } from "@/lib/api/browser";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { mediaUrl } from "@/lib/media";
 import type { components } from "@/lib/api/schema";
-import { useWorkspace } from "@/stores/workspace";
+import { useScope } from "@/stores/scope";
 
 type MenuItem = components["schemas"]["MenuItemResponse"];
 type ModifierGroup = components["schemas"]["ModifierGroupResponse"];
@@ -65,7 +65,7 @@ function previewSubtotal(item: MenuItem, quantity: number, selected: Record<stri
 }
 
 export function PosScreen() {
-  const branchId = useWorkspace((state) => state.branchId);
+  const branchId = useScope((state) => state.branchId);
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
@@ -77,12 +77,28 @@ export function PosScreen() {
   const [lastOrder, setLastOrder] = useState<string | null>(null);
   const [lastPickup, setLastPickup] = useState<number | null>(null);
   const [configuring, setConfiguring] = useState<MenuItem | null>(null);
+  const linesRef = useRef(lines);
+  useEffect(() => {
+    linesRef.current = lines;
+  }, [lines]);
+
+  useEffect(() => {
+    useScope.getState().setSwitchGuard({
+      pendingItems: () => linesRef.current.reduce((sum, line) => sum + line.quantity, 0),
+      close: () => {
+        setLines([]);
+        setTicketOpen(false);
+        setConfiguring(null);
+      },
+    });
+    return () => useScope.getState().setSwitchGuard(null);
+  }, []);
 
   const menu = useQuery({
     queryKey: ["pos-menu", branchId],
     enabled: Boolean(branchId),
     queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/menu/tree");
+      const result = await browserApi.GET("/api/v1/menu/tree", { params: { query: { branch_id: branchId } } });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Menu failed");
       return result.data;
     },
@@ -128,6 +144,9 @@ export function PosScreen() {
 
   const checkout = useMutation({
     mutationFn: async () => {
+      if (!branchId || useScope.getState().branchId !== branchId) {
+        throw new Error("The branch changed. Check the ticket before sending.");
+      }
       const body: components["schemas"]["POSCheckoutRequest"] = {
         order_type: orderType,
         table_id: orderType === "DINE_IN" ? tableId : null,

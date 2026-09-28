@@ -12,13 +12,13 @@ import { ApiError, asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { usePollingInterval } from "@/hooks/use-page-visible";
 import type { components } from "@/lib/api/schema";
-import { useWorkspace } from "@/stores/workspace";
+import { useScope } from "@/stores/scope";
 
 const NEXT: components["schemas"]["OrderStatus"][] = ["PREPARING", "READY", "SERVED", "DELIVERED", "CLOSED"];
 
 export function FloorScreen() {
   const interval = usePollingInterval(7000);
-  const branchId = useWorkspace((state) => state.branchId);
+  const branchId = useScope((state) => state.branchId);
   const [selected, setSelected] = useState<components["schemas"]["FloorTableLiveResponse"] | null>(null);
   const [status, setStatus] = useState<components["schemas"]["OrderStatus"]>("PREPARING");
   const queryClient = useQueryClient();

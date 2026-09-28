@@ -8,11 +8,11 @@ import { LocaleText } from "@/components/ops/locale-text";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { usePollingInterval } from "@/hooks/use-page-visible";
-import { useWorkspace } from "@/stores/workspace";
+import { useScope } from "@/stores/scope";
 
 export function ExpoScreen() {
   const interval = usePollingInterval(7000);
-  const branchId = useWorkspace((state) => state.branchId);
+  const branchId = useScope((state) => state.branchId);
   const [token, setToken] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();

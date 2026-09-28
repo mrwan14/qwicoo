@@ -3,10 +3,11 @@ import type { components } from "@/lib/api/schema";
 export type UserRole = components["schemas"]["UserRole"];
 export type UserProfile = components["schemas"]["UserResponse"];
 
+/** Landing screen per role. Brand and platform homes come from `scopeHome`. */
 const ROLE_HOME: Record<UserRole, string> = {
   SUPER_ADMIN: "/app/brands",
   BRAND_ADMIN: "/app/brands",
-  REGIONAL_MANAGER: "/app/brands",
+  REGIONAL_MANAGER: "/app/floor",
   BRANCH_ADMIN: "/app/floor",
   CASHIER: "/app/pos",
   WAITER: "/app/floor",
@@ -16,26 +17,6 @@ const ROLE_HOME: Record<UserRole, string> = {
 
 export function roleHome(role: UserRole): string {
   return ROLE_HOME[role];
-}
-
-/**
- * Entry groups. `/admin` uses `admin`; `/restaurant-dashboard` lets the
- * user pick one of the other three. The login API rejects accounts whose
- * role is outside the chosen group.
- */
-export type EntryGroup = "admin" | "brand" | "branch" | "staff";
-
-export const ENTRY_GROUPS: Record<EntryGroup, { label: string; roles: readonly UserRole[] }> = {
-  admin: { label: "Platform admin", roles: ["SUPER_ADMIN"] },
-  brand: { label: "Brand manager", roles: ["BRAND_ADMIN", "REGIONAL_MANAGER"] },
-  branch: { label: "Branch manager", roles: ["BRANCH_ADMIN"] },
-  staff: { label: "Staff", roles: ["CASHIER", "WAITER", "RUNNER", "KITCHEN_STAFF"] },
-};
-
-export const RESTAURANT_GROUPS = ["brand", "branch", "staff"] as const satisfies readonly EntryGroup[];
-
-export function isEntryGroup(value: unknown): value is EntryGroup {
-  return typeof value === "string" && value in ENTRY_GROUPS;
 }
 
 export function isUserRole(value: unknown): value is UserRole {

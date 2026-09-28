@@ -17,7 +17,7 @@ import { ApiError, asApiError } from "@/lib/api/error";
 import type { components } from "@/lib/api/schema";
 import { invitableRoles, isBranchScopedRole, roleLabel, type UserRole } from "@/lib/auth/roles";
 import { pickLocale } from "@/lib/i18n/locale-text";
-import { useWorkspace } from "@/stores/workspace";
+import { useScope } from "@/stores/scope";
 
 type Invitation = components["schemas"]["InvitationResponse"];
 type InvitationStatus = Invitation["status"];
@@ -73,27 +73,28 @@ function inviteErrorMessage(error: unknown): string {
 export function InvitationsScreen({ title }: { title: string }) {
   const me = useStaffSession();
   const queryClient = useQueryClient();
-  const workspaceBrandId = useWorkspace((state) => state.brandId);
-  const workspaceBranchId = useWorkspace((state) => state.branchId);
+  const isSuper = useScope((state) => state.homeScope === "platform");
+  const scopeBrandId = useScope((state) => state.brandId);
+  const scopeBranchId = useScope((state) => state.branchId);
+  const scopeBranches = useScope((state) => state.branches);
 
   const actorRole = me?.role ?? "CASHIER";
   const roles = invitableRoles(actorRole);
-  const isSuper = actorRole === "SUPER_ADMIN";
-  const isBranchAdmin = actorRole === "BRANCH_ADMIN";
 
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<UserRole>(roles[0] ?? "CASHIER");
-  const [brandId, setBrandId] = useState<string>(workspaceBrandId ?? "");
-  const [branchId, setBranchId] = useState<string>(workspaceBranchId ?? "");
+  const [brandId, setBrandId] = useState<string>(isSuper ? (scopeBrandId ?? "") : "");
+  const [branchId, setBranchId] = useState<string>(scopeBranchId ?? "");
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [revokeTarget, setRevokeTarget] = useState<Invitation | null>(null);
 
   const branchScoped = isBranchScopedRole(role);
 
+  // App Admin only: the all-brands list, then the chosen brand's branches.
   const brands = useQuery({
     queryKey: ["brands"],
-    enabled: Boolean(me),
+    enabled: isSuper,
     queryFn: async () => {
       const { data, response } = await browserApi.GET("/api/v1/brands", { params: { query: { limit: 100 } } });
       if (!response.ok) return [];
@@ -101,25 +102,27 @@ export function InvitationsScreen({ title }: { title: string }) {
     },
   });
 
-  const branches = useQuery({
-    queryKey: ["invite-branches"],
-    enabled: Boolean(me),
+  const brandBranches = useQuery({
+    queryKey: ["brand-branches", brandId],
+    enabled: isSuper && Boolean(brandId),
     queryFn: async () => {
-      const { data, response } = await browserApi.GET("/api/v1/branches", { params: { query: { limit: 100 } } });
+      const { data, response } = await browserApi.GET("/api/v1/brands/{brand_id}/branches", {
+        params: { path: { brand_id: brandId } },
+      });
       if (!response.ok || !data) return [];
       return data;
     },
   });
 
+  // Everyone else invites only into branches `/auth/me` says they can reach.
   const branchOptions = useMemo(() => {
-    const all = branches.data ?? [];
-    const allowed = new Set(me?.allowed_branch_ids ?? []);
-    return all.filter((branch) => {
-      if (isBranchAdmin && allowed.size > 0 && !allowed.has(branch.id)) return false;
-      if (isSuper && brandId) return branch.brand_id === brandId;
-      return true;
-    });
-  }, [branches.data, me?.allowed_branch_ids, isBranchAdmin, isSuper, brandId]);
+    if (!isSuper) return scopeBranches;
+    return (brandBranches.data ?? []).map((branch) => ({
+      id: branch.id,
+      name: pickLocale(branch.name, "en") || branch.slug,
+    }));
+  }, [isSuper, scopeBranches, brandBranches.data]);
+  const branchesLoading = isSuper && brandBranches.isFetching;
 
   const invitations = useQuery({
     queryKey: ["invitations", filter],
@@ -188,13 +191,12 @@ export function InvitationsScreen({ title }: { title: string }) {
 
   if (!me) return null;
 
-  const brandName = (id: string | null | undefined) =>
-    (brands.data ?? []).find((brand) => brand.id === id)?.name ?? null;
-  const branchName = (id: string | null | undefined) => {
-    const branch = (branches.data ?? []).find((item) => item.id === id);
-    if (!branch) return null;
-    return branch.display_name || pickLocale(branch.name, "en") || "Branch";
+  const brandName = (id: string | null | undefined) => {
+    if (!id) return null;
+    if (!isSuper) return id === me.brand_id ? (me.brand_name ?? null) : null;
+    return (brands.data ?? []).find((brand) => brand.id === id)?.name ?? null;
   };
+  const branchName = (id: string | null | undefined) => branchOptions.find((item) => item.id === id)?.name ?? null;
 
   const noBrandsYet = isSuper && brands.isSuccess && brands.data.length === 0;
   const missingBrand = isSuper && !brandId;
@@ -285,15 +287,15 @@ export function InvitationsScreen({ title }: { title: string }) {
                 <Label htmlFor="invite-branch">Branch</Label>
                 <select id="invite-branch" className={select} required value={branchId} onChange={(event) => setBranchId(event.target.value)}>
                   <option value="">
-                    {branches.isFetching ? "Loading branches…" : branchOptions.length === 0 ? "No branches yet" : "Choose a branch"}
+                    {branchesLoading ? "Loading branches…" : branchOptions.length === 0 ? "No branches yet" : "Choose a branch"}
                   </option>
                   {branchOptions.map((branch) => (
                     <option key={branch.id} value={branch.id}>
-                      {branch.display_name || pickLocale(branch.name, "en") || "Branch"}
+                      {branch.name}
                     </option>
                   ))}
                 </select>
-                {isSuper && brandId && branches.isSuccess && branchOptions.length === 0 ? (
+                {isSuper && brandId && brandBranches.isSuccess && branchOptions.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
                     This brand has no branches.{" "}
                     <Link href={`/app/brands/${brandId}`} className="underline">

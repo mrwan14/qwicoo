@@ -7,12 +7,12 @@ import { toast } from "sonner";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
-import { useWorkspace } from "@/stores/workspace";
+import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
 
 export function QrScreen() {
-  const branchId = useWorkspace((state) => state.branchId);
+  const branchId = useScope((state) => state.branchId);
   const [tableId, setTableId] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [signed, setSigned] = useState<components["schemas"]["SingleTableQRResponse"] | null>(null);

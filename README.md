@@ -23,13 +23,10 @@ The dev server listens on `http://localhost:3001`. The API builds invitation lin
 ## Entry routes
 
 - `/` is the public landing page. It is English by default and Arabic (RTL) at `?lang=ar`; the header switch links between the two and the page metadata follows the language.
-- `/admin` signs in `SUPER_ADMIN` only.
-- `/restaurant-dashboard` asks for a role first (Brand manager, Branch manager, Staff), then signs in. `?role=brand|branch|staff` keeps the choice on refresh.
-- `/login` redirects to `/restaurant-dashboard`.
+- `/login` is the only sign-in, for every role. After sign-in the app reads `GET /auth/me` and sends the user to their home (see Scope below). `/admin` and `/restaurant-dashboard` answer 308 to `/login`.
 - `/invite/accept?token=…` is the public page an invited person opens from their email. It previews the invitation, asks for a password, then signs them in.
 - `/forgot-password` asks for an email. The API always answers the same way, so the page does not say whether that email has an account.
 - `/reset-password?token=…` is the page opened from the reset email. The token stays in the query string. A valid link sets a new password and signs the person in.
-- Sign-in rejects an account whose role is outside the chosen group. Brand manager is `BRAND_ADMIN` and `REGIONAL_MANAGER`; Branch manager is `BRANCH_ADMIN`; Staff is `CASHIER`, `WAITER`, `RUNNER`, `KITCHEN_STAFF`.
 
 The login form is plain email and password. No credentials are embedded in the client and nothing signs in automatically.
 
@@ -39,7 +36,7 @@ The API reset script (`scripts/reset_bootstrap_app_admin.py` in order-backend) w
 
 | Email | Password | Role | Sign in at | Lands on |
 | --- | --- | --- | --- | --- |
-| admin@qwicoo.com | Qwicoo!Admin2026 | App Admin (`SUPER_ADMIN`) | `/admin` | `/app/brands` |
+| admin@qwicoo.com | Qwicoo!Admin2026 | App Admin (`SUPER_ADMIN`) | `/login` | `/app/brands` |
 
 Local development only. The API's `APP_ADMIN_PASSWORD` overrides the seeded password; production must not keep the default.
 
@@ -59,14 +56,19 @@ Branch-scoped roles are `BRANCH_ADMIN` and the four operational roles. `SUPER_AD
 
 Accepting: `GET /api/invite/preview` and `POST /api/invite/accept` are public Next route handlers in front of `/invitations/preview` and `/invitations/accept`. On success the accept handler sets the same httpOnly `staff_token` cookie as login and the browser goes to the role home. API errors map to 404 (invalid or used link), 409 (email already registered), 410 (expired), 502 (email delivery failed, nothing saved).
 
-Kitchen staff lands on `/app/kds`. Waiter and runner land on `/app/floor`. Regional manager lands on `/app/brands`.
+## Scope and homes
 
-## Role homes
+`/auth/me` returns `home_scope`, `brand_id`, `brand_name`, `brand_logo_url`, and `accessible_branches`. That response is the only source of scope: it fills one store (`src/stores/scope.ts`), and `X-Brand-ID` / `X-Branch-ID` come only from there, never from the URL.
 
-- `SUPER_ADMIN`, `BRAND_ADMIN`, `REGIONAL_MANAGER` → `/app/brands`
-- `BRANCH_ADMIN`, `WAITER`, `RUNNER` → `/app/floor`
-- `CASHIER` → `/app/pos`
-- `KITCHEN_STAFF` → `/app/kds`
+- `platform` (`SUPER_ADMIN`) → `/app/brands`, the all-brands grid. Qwicoo branding.
+- `brand` (`BRAND_ADMIN`) → `/app/brands/{brand_id}`, their own dashboard. No brand picker; the brand grid redirects to the dashboard.
+- `branch` → by role: `CASHIER` `/app/pos`, `KITCHEN_STAFF` `/app/kds`, `BRANCH_ADMIN`, `REGIONAL_MANAGER`, `WAITER`, `RUNNER` `/app/floor`.
+- A branch switcher appears only when `accessible_branches` has more than one entry. Switching cancels in-flight queries, clears the cache, and asks before clearing an open POS ticket.
+- No brand (brand scope) or no branches (branch scope) shows "No access to any workspace" with sign out.
+
+Out-of-scope URLs: layouts under `/app/brands/[brandId]` and `/app/branches/[branchId]` check scope on the server before anything renders, and middleware checks `?brand=` / `?branch=` on any `/app` URL. Both redirect home with `?denied=1`, which shows a "You don't have access to that" toast. A scope 403 from the API does the same once; if home itself is refused the no-workspace screen shows instead of looping. Unknown `/app/...` bookmarks redirect to `/app`.
+
+Sign-out and a 401 clear the query cache, the scope store, and the saved active branch (stored per user id).
 
 Expo is a screen (`/app/kds/expo`), not a role. The staff UI is English. Guest pages are English and Arabic, with RTL when Arabic is selected. Bilingual menu fields are data, not a staff locale switch.
 
@@ -90,8 +92,9 @@ Expo is a screen (`/app/kds/expo`), not a role. The staff UI is English. Guest p
 | `/app/menu/overrides` | Menu admins | Branch price overrides |
 | `/app/qr` | Menu admins | Guest link, image, signed URL, batch zip |
 | `/app/payments` | Cashier | Pending offline payments |
-| `/app/brands` | Brand admins | Brands, branches, logo upload |
-| `/app/branches/[branchId]` | Brand admins | Profile, location, financials, SLA, PIN, tables |
+| `/app/brands` | App Admin | All brands, create brand |
+| `/app/brands/[brandId]` | App Admin, that brand's admin | Brand dashboard, branches, logo upload |
+| `/app/branches/[branchId]` | App Admin, brand admin, branch admin (own branches) | Profile, location, financials, SLA, tables; Access PIN for App, brand, and branch admins |
 | `/app/staff` | Branch admins | Staff accounts |
 | `/app/invitations` | App Admin | Invite people, list and manage invitations |
 | `/app/team` | Brand and branch admins | Same screen, scoped to their brand or branches |
@@ -135,10 +138,10 @@ Not called from the browser:
 
 ## Click test
 
-1. Open `/admin` and sign in as the App Admin. You land on `/app/brands`.
-2. Open People. With no brands you get a prompt to create one. Create a brand and a branch, then invite a `BRAND_ADMIN`. Open the emailed link, set a password, and confirm you land in the brand admin shell. As that brand admin, open Team and invite a `CASHIER` into the branch; after accepting, the cashier lands on `/app/pos`. Trying the cashier at `/admin` should be refused.
+1. Open `/login` and sign in as the App Admin. You land on `/app/brands`.
+2. Open People. With no brands you get a prompt to create one. Create a brand and a branch, then invite a `BRAND_ADMIN`. Open the emailed link, set a password, and confirm you land in the brand admin shell. As that brand admin, open Team and invite a `CASHIER` into the branch; after accepting, the cashier lands on `/app/pos`. Pasting another brand's `/app/brands/{id}` as the brand admin returns you home with the access toast.
 3. On a phone-width window, confirm the bottom bar and the More sheet.
-4. Change brand and branch. Confirm the working location updates.
+4. As a user with two branches, switch branch. Confirm the screen reloads for the new branch.
 5. Hide the tab. The banner should say updates are paused.
 6. Open `/t/demo` (or a real QR token), switch to Arabic, and confirm the page direction is RTL.
-7. Sign out. You land on `/`. A refresh of a staff route should return to `/restaurant-dashboard`.
+7. Sign out. You land on `/login`. A refresh of a staff route should return to `/login`.

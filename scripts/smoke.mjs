@@ -44,9 +44,17 @@ async function authed(path, cookie) {
 }
 
 await expectOk("/");
-await expectOk("/admin");
-await expectOk("/restaurant-dashboard");
-await expectOk("/restaurant-dashboard?role=staff");
+await expectOk("/login");
+
+// Old split sign-in pages must redirect to /login, not error.
+for (const legacy of ["/admin", "/restaurant-dashboard"]) {
+  const response = await fetch(`${base}${legacy}`, { redirect: "manual" });
+  const location = response.headers.get("location") ?? "";
+  if (response.status !== 308 || !location.endsWith("/login")) {
+    throw new Error(`${legacy} returned ${response.status} -> ${location}`);
+  }
+  console.log(`${response.status} ${legacy} -> /login`);
+}
 await expectOk("/invite/accept");
 await expectOk("/forgot-password");
 await expectOk("/reset-password");
@@ -62,18 +70,18 @@ console.log(`${preview.status} /api/invite/preview (junk token)`);
 const adminCookie = await login(adminEmail, adminPassword);
 const me = await authed("/api/v1/auth/me", adminCookie);
 console.log(`signed in as ${me.role}`);
-const brands = await authed("/api/v1/brands?limit=1", adminCookie);
-const branches = await authed("/api/v1/branches", adminCookie);
+console.log(`home scope ${me.home_scope}`);
+await authed("/api/v1/brands?limit=1", adminCookie);
 const invitations = await authed("/api/v1/invitations", adminCookie);
 console.log(`invitations total ${invitations.total}`);
-const branchList = Array.isArray(branches) ? branches : branches.items ?? branches.records ?? [];
-const branchId = branchList[0]?.id ?? "";
-const brandId = brands.items?.[0]?.id ?? branchList[0]?.brand_id ?? "";
 
 if (staffEmail && staffPassword) {
   const staffCookie = await login(staffEmail, staffPassword);
   const staff = await authed("/api/v1/auth/me", staffCookie);
-  console.log(`staff role ${staff.role}`);
+  console.log(`staff role ${staff.role}, home scope ${staff.home_scope}`);
+  // Scope headers come from the caller's own /auth/me, never from another account.
+  const branchId = staff.accessible_branches?.[0]?.id ?? "";
+  const brandId = staff.brand_id ?? "";
   const menu = await fetch(`${base}/api/v1/menu/tree`, {
     headers: {
       cookie: staffCookie,

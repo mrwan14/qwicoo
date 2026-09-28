@@ -1,16 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { Fragment, Suspense, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 
 import { RoleChrome } from "@/components/ops/shells";
-import { LoadingState } from "@/components/ops/states";
 import { StaffSessionProvider } from "@/components/ops/staff-session";
-import { WorkspaceBootstrap } from "@/components/ops/brand-branch-switcher";
+import { AccessDeniedToast, NoWorkspace, WorkspaceLoading } from "@/components/ops/workspace-states";
 import { browserApi } from "@/lib/api/browser";
+import { endStaffSession } from "@/lib/auth/session-client";
+import { useScope } from "@/stores/scope";
 import { useWorkspace } from "@/stores/workspace";
 
 export function StaffRuntime({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -18,14 +21,20 @@ export function StaffRuntime({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
+  useEffect(() => {
+    useScope.getState().setNavigate((href) => router.replace(href));
+    return () => useScope.getState().setNavigate(null);
+  }, [router]);
+
   const me = useQuery({
     queryKey: ["auth", "me"],
     enabled: hydrated,
     retry: false,
+    staleTime: Infinity,
     queryFn: async () => {
       const { data, response } = await browserApi.GET("/api/v1/auth/me");
       if (response.status === 401) {
-        window.location.assign("/api/auth/logout");
+        void endStaffSession();
         throw new Error("Unauthorized");
       }
       if (!response.ok || !data) throw new Error("Could not load your profile");
@@ -33,31 +42,43 @@ export function StaffRuntime({ children }: { children: ReactNode }) {
     },
   });
 
-  if (!hydrated || me.isLoading) {
-    return (
-      <main className="mx-auto max-w-3xl p-6">
-        <LoadingState label="Loading your session" />
-      </main>
-    );
+  // Layout effect: the scope must be in place before the first shell paint.
+  useLayoutEffect(() => {
+    if (me.data) useScope.getState().enter(me.data);
+  }, [me.data]);
+
+  const scopedUser = useScope((state) => state.userId);
+  const blocked = useScope((state) => state.blocked);
+  const branchKey = useScope((state) => (state.homeScope === "platform" ? "platform" : (state.branchId ?? "none")));
+
+  if (!hydrated || me.isLoading || (me.data && scopedUser !== me.data.id)) {
+    return <WorkspaceLoading />;
   }
 
   if (me.isError || !me.data) {
     return (
-      <main className="mx-auto max-w-3xl p-6">
+      <main className="grid min-h-dvh place-items-center p-6">
         <p className="text-sm" role="alert">
           Your session could not be loaded.{" "}
-          <a className="underline" href="/api/auth/logout">
+          <button type="button" className="underline" onClick={() => void endStaffSession()}>
             Sign in again
-          </a>
+          </button>
         </p>
       </main>
     );
   }
 
+  if (blocked) return <NoWorkspace />;
+
   return (
     <StaffSessionProvider value={me.data}>
-      <WorkspaceBootstrap />
-      <RoleChrome>{children}</RoleChrome>
+      <Suspense fallback={null}>
+        <AccessDeniedToast />
+      </Suspense>
+      <RoleChrome>
+        {/* Remount screens on branch change so no local state (tickets, filters) crosses branches. */}
+        <Fragment key={branchKey}>{children}</Fragment>
+      </RoleChrome>
     </StaffSessionProvider>
   );
 }

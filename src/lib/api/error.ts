@@ -24,6 +24,11 @@ const CATALOG: Record<string, Catalog> = {
     ar: "أنت خارج النطاق الجغرافي المسموح به للفرع",
     aliases: ["You are outside the permitted branch geofence radius"],
   },
+  INVALID_OR_EXPIRED_PIN: {
+    en: "That PIN isn't valid or has expired. Ask a staff member for the current PIN.",
+    ar: "الرمز غير صالح أو منتهي الصلاحية. اطلب الرمز الحالي من أحد الموظفين.",
+    aliases: ["The provided access PIN is invalid or has expired."],
+  },
   TABLE_INACTIVE: {
     en: "This table isn't available right now. Ask a staff member for help.",
     ar: "الطاولة أو الفرع غير متاح حالياً",
@@ -223,6 +228,9 @@ function rawDetail(error: unknown): string | null {
   if (!error || typeof error !== "object" || !("detail" in error)) return null;
   const detail = error.detail;
   if (typeof detail === "string" && detail.trim()) return detail.trim();
+  if (detail && typeof detail === "object" && "code" in detail && typeof detail.code === "string" && detail.code in CATALOG) {
+    return detail.code;
+  }
   if (detail && typeof detail === "object" && "detail" in detail) {
     const nested = detail.detail;
     if (typeof nested === "string" && nested.trim()) return nested.trim();

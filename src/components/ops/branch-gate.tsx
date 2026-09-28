@@ -121,7 +121,14 @@ function PlatformBranchPicker() {
     },
   });
   const list = brands.data ?? [];
-  const brandId = picked ?? (list.some((brand) => brand.id === focusedBrand) ? focusedBrand : (list[0]?.id ?? null));
+  const usable = list.filter((brand) => brand.is_active && (brand.branches?.length ?? 0) > 0);
+  const brandId =
+    picked ??
+    usable.find((brand) => brand.id === focusedBrand)?.id ??
+    usable[0]?.id ??
+    list.find((brand) => brand.is_active)?.id ??
+    list[0]?.id ??
+    null;
 
   const branches = useQuery({
     queryKey: ["brand-branches", brandId],
@@ -155,7 +162,7 @@ function PlatformBranchPicker() {
           <select className={control} value={brandId ?? ""} onChange={(event) => setPicked(event.target.value)}>
             {list.map((brand) => (
               <option key={brand.id} value={brand.id}>
-                {brand.name}
+                {brand.is_active ? brand.name : `${brand.name} (inactive)`}
               </option>
             ))}
           </select>

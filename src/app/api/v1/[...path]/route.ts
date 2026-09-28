@@ -24,6 +24,8 @@ async function proxy(
   if (contentType) headers.set("content-type", contentType);
   headers.set("accept", request.headers.get("accept") ?? "application/json");
   headers.set("authorization", `Bearer ${token}`);
+  // The staff UI is English; the API otherwise answers in Arabic.
+  headers.set("accept-language", "en");
 
   const brandId = request.headers.get("x-brand-id");
   const branchId = request.headers.get("x-branch-id");

@@ -121,7 +121,7 @@ export function MenuAdmin() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (!branchId) return <p className="text-sm">Choose a branch first.</p>;
+  if (!branchId) return null;
   if (menu.isLoading) return <LoadingState label="Loading menu" />;
   if (menu.isError || !menu.data) return <ErrorState body={menu.error?.message ?? "Menu missing"} onRetry={() => void menu.refetch()} />;
 

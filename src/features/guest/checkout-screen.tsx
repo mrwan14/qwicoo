@@ -29,7 +29,7 @@ export function CheckoutScreen() {
         params: { path: { session_id: session?.sessionId ?? "" } },
       });
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry);
+        throw asApiError(result.error, result.response, t.retry, locale);
       }
       return result.data;
     },
@@ -49,7 +49,7 @@ export function CheckoutScreen() {
       };
       const result = await guestApi.POST("/api/v1/orders/checkout", { body });
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry);
+        throw asApiError(result.error, result.response, t.retry, locale);
       }
       return result.data;
     },
@@ -66,7 +66,7 @@ export function CheckoutScreen() {
       const result = await guestApi.DELETE("/api/v1/sessions/{session_id}/cart", {
         params: { path: { session_id: session?.sessionId ?? "" } },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry, locale);
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["guest-cart"] }),
   });
@@ -76,7 +76,7 @@ export function CheckoutScreen() {
       const result = await guestApi.DELETE("/api/v1/sessions/{session_id}/cart/items/{cart_item_id}", {
         params: { path: { session_id: session?.sessionId ?? "", cart_item_id: cartItemId } },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry, locale);
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["guest-cart"] }),
   });

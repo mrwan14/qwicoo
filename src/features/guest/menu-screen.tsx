@@ -40,7 +40,7 @@ export function MenuScreen() {
     queryFn: async () => {
       const result = await guestApi.GET("/api/v1/menu/tree");
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry);
+        throw asApiError(result.error, result.response, t.retry, locale);
       }
       return result.data;
     },
@@ -75,7 +75,7 @@ export function MenuScreen() {
         params: { path: { session_id: session?.sessionId ?? "" } },
       });
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry);
+        throw asApiError(result.error, result.response, t.retry, locale);
       }
       return result.data;
     },
@@ -279,7 +279,7 @@ function ItemConfigurator({
       };
       const result = await guestApi.POST("/api/v1/menu/validate-item-selection", { body });
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry);
+        throw asApiError(result.error, result.response, t.retry, locale);
       }
       return result.data;
     },
@@ -304,7 +304,7 @@ function ItemConfigurator({
         params: { path: { session_id: session?.sessionId ?? "" } },
         body,
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry, locale);
       return result.data;
     },
     onSuccess: () => {

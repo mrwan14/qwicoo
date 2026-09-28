@@ -7,8 +7,8 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Money } from "@/components/ops/money";
-import { ErrorState, LoadingState } from "@/components/ops/states";
-import { asApiError } from "@/lib/api/error";
+import { ErrorState, LoadingState, QueryErrorState, RoleUnavailableState } from "@/components/ops/states";
+import { asApiError, isRoleDenied } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import type { components } from "@/lib/api/schema";
@@ -18,11 +18,12 @@ const control = "h-11 w-full rounded-lg border px-3 text-sm";
 
 export function FinancialsScreen() {
   const queryClient = useQueryClient();
+  const branchId = useScope((state) => state.branchId);
   const [opening, setOpening] = useState("0.00");
   const [counted, setCounted] = useState("0.00");
   const [closeOpen, setCloseOpen] = useState(false);
   const drawer = useQuery({
-    queryKey: ["drawer"],
+    queryKey: ["drawer", branchId],
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/financials/drawer/current");
       if (result.response.status === 404) return null;
@@ -52,7 +53,7 @@ export function FinancialsScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
   const reports = useQuery({
-    queryKey: ["z-reports"],
+    queryKey: ["z-reports", branchId],
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/financials/z-reports");
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Z reports failed");
@@ -68,11 +69,14 @@ export function FinancialsScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  if (isRoleDenied(drawer.error) && isRoleDenied(reports.error)) return <RoleUnavailableState screen="Financials" />;
+
   return (
     <div className="grid gap-4">
       <h1 className="text-[length:var(--text-28)] font-semibold">Financials</h1>
       {drawer.isLoading ? <LoadingState label="Loading drawer" /> : null}
-      {drawer.isError ? <ErrorState body={drawer.error.message} onRetry={() => void drawer.refetch()} /> : null}
+      {drawer.isError ? <QueryErrorState error={drawer.error} screen="The cash drawer" onRetry={() => void drawer.refetch()} /> : null}
+      {reports.isError ? <QueryErrorState error={reports.error} screen="Z reports" onRetry={() => void reports.refetch()} /> : null}
       <p className="text-sm">Drawer {drawer.data?.status ?? "none"}</p>
       <div className="flex flex-wrap gap-2">
         <input className={control} value={opening} onChange={(event) => setOpening(event.target.value)} />

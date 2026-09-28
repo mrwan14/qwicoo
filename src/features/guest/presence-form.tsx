@@ -24,7 +24,7 @@ function toSession(data: PresenceResponse): GuestSession {
 
 export function PresenceForm({ token }: { token: string }) {
   const router = useRouter();
-  const { t } = useGuestCopy();
+  const { t, locale } = useGuestCopy();
   const setSession = useGuest((state) => state.setSession);
   const guestName = useGuest((state) => state.guestName);
   const setGuestName = useGuest((state) => state.setGuestName);
@@ -45,13 +45,13 @@ export function PresenceForm({ token }: { token: string }) {
     try {
       const response = await fetch(`/api/guest/session/${action}`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "accept-language": locale },
         body: JSON.stringify(body),
       });
-      const payload = (await response.json()) as PresenceResponse & { detail?: string };
+      const payload = (await response.json()) as PresenceResponse & { detail?: string; code?: string | null };
       if (!response.ok) {
         const detail = typeof payload.detail === "string" ? payload.detail : t.retry;
-        if (detail === "OUT_OF_GEOFENCE") setError(t.outside);
+        if (payload.code === "OUT_OF_GEOFENCE" || payload.code === "GEOLOCATION_REQUIRED") setError(t.outside);
         else if (detail.toLowerCase().includes("pin")) setError(t.badPin);
         else setError(detail);
         return;

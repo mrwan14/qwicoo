@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import type { guestCopy } from "@/features/guest/copy";
 import { useGuestCopy } from "@/features/guest/shell";
 import type { components } from "@/lib/api/schema";
 import { mergeGuestBranding } from "@/lib/guest/branding";
@@ -22,6 +23,13 @@ function toSession(data: PresenceResponse): GuestSession {
   };
 }
 
+/** Only codes we have guest copy for get their own message; anything else is the same calm fallback. */
+function joinErrorMessage(code: string | null | undefined, t: (typeof guestCopy)[keyof typeof guestCopy]): string {
+  if (code === "OUT_OF_GEOFENCE" || code === "GEOLOCATION_REQUIRED") return t.outside;
+  if (code === "INVALID_OR_EXPIRED_PIN") return t.badPin;
+  return t.tableCodeFailed;
+}
+
 export function PresenceForm({ token }: { token: string }) {
   const router = useRouter();
   const { t, locale } = useGuestCopy();
@@ -31,8 +39,10 @@ export function PresenceForm({ token }: { token: string }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [lastAction, setLastAction] = useState<"verify" | "join">("join");
 
   async function submit(action: "verify" | "join", coords?: { latitude: number; longitude: number }) {
+    setLastAction(action);
     setPending(true);
     setError("");
     const body: components["schemas"]["TablePresenceVerifyRequest"] = {
@@ -48,19 +58,16 @@ export function PresenceForm({ token }: { token: string }) {
         headers: { "content-type": "application/json", "accept-language": locale },
         body: JSON.stringify(body),
       });
-      const payload = (await response.json()) as PresenceResponse & { detail?: string; code?: string | null };
+      const payload = (await response.json().catch(() => ({}))) as PresenceResponse & { code?: string | null };
       if (!response.ok) {
-        const detail = typeof payload.detail === "string" ? payload.detail : t.retry;
-        if (payload.code === "OUT_OF_GEOFENCE" || payload.code === "GEOLOCATION_REQUIRED") setError(t.outside);
-        else if (detail.toLowerCase().includes("pin")) setError(t.badPin);
-        else setError(detail);
+        setError(joinErrorMessage(payload.code, t));
         return;
       }
       setSession(toSession(payload));
       useGuest.getState().setBranding(mergeGuestBranding(null, payload));
       router.push("/order");
     } catch {
-      setError(t.retry);
+      setError(t.tableCodeFailed);
     } finally {
       setPending(false);
     }
@@ -112,9 +119,17 @@ export function PresenceForm({ token }: { token: string }) {
         <span className="font-normal text-muted-foreground">{t.pinHint}</span>
       </label>
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
+        <div role="alert" className="grid gap-2 rounded-xl border border-destructive/40 p-3">
+          <p className="text-sm text-destructive">{error}</p>
+          <button
+            type="button"
+            className="min-h-11 justify-self-start rounded-lg border px-4 text-sm font-medium disabled:opacity-50"
+            disabled={pending}
+            onClick={() => (lastAction === "verify" ? locate("verify") : void submit("join"))}
+          >
+            {t.retry}
+          </button>
+        </div>
       ) : null}
       <button
         type="button"

@@ -28,6 +28,7 @@ import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { ConnectionBanner } from "@/components/ops/connection-banner";
 import { BranchSwitcher, ScopeBadge } from "@/components/ops/scope-header";
 import { useStaffSession } from "@/components/ops/staff-session";
+import { usePendingConfirmationCount } from "@/hooks/use-floor-live";
 import { roleLabel, type UserRole } from "@/lib/auth/roles";
 import { endStaffSession } from "@/lib/auth/session-client";
 import { isNavActive, navForUser, navKey, splitBottomNav, type NavItem } from "@/lib/nav";
@@ -70,16 +71,37 @@ function itemIcon(item: NavItem): LucideIcon {
   return ICONS[navKey(item)] ?? Store;
 }
 
+type NavBadges = Readonly<Record<string, number>>;
+
+function NavBadge({ count, label, className = "" }: { count: number | undefined; label: string; className?: string }) {
+  if (!count) return null;
+  return (
+    <span
+      aria-label={`${count} ${label}`}
+      className={`inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold leading-5 text-white ${className}`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+function usePendingBadges(): NavBadges {
+  const pending = usePendingConfirmationCount();
+  return pending ? { "/app/floor": pending } : {};
+}
+
 function NavLinks({
   items,
   pathname,
   layout = "full",
   onNavigate,
+  badges = {},
 }: {
   items: readonly NavItem[];
   pathname: string;
   layout?: SidebarLayout;
   onNavigate?: () => void;
+  badges?: NavBadges;
 }) {
   const groups = ["Portfolio", "Brand ops", "Insight"] as const;
   const groupClass =
@@ -115,8 +137,22 @@ function NavLinks({
                     active ? "bg-secondary font-medium" : "hover:bg-muted"
                   } ${linkClass}`}
                 >
-                  <Icon aria-hidden className="size-4 shrink-0" />
+                  <span className="relative shrink-0">
+                    <Icon aria-hidden className="size-4" />
+                    {layout !== "full" ? (
+                      <NavBadge
+                        count={badges[navKey(item)]}
+                        label="to confirm"
+                        className={`absolute -end-2.5 -top-2 ${layout === "auto" ? "lg:hidden" : ""}`}
+                      />
+                    ) : null}
+                  </span>
                   <span className={`whitespace-nowrap ${labelClass}`}>{item.label}</span>
+                  <NavBadge
+                    count={badges[navKey(item)]}
+                    label="to confirm"
+                    className={`ms-auto ${layout === "compact" ? "hidden" : layout === "auto" ? "hidden lg:inline-flex" : ""}`}
+                  />
                 </Link>
               );
             })}
@@ -160,7 +196,7 @@ function useSidebarLayout() {
   return { layout, toggle };
 }
 
-function AdminSidebar({ items, pathname }: { items: readonly NavItem[]; pathname: string }) {
+function AdminSidebar({ items, pathname, badges }: { items: readonly NavItem[]; pathname: string; badges: NavBadges }) {
   const { layout, toggle } = useSidebarLayout();
   const expanded = layout === "full";
   const collapsed = layout === "compact";
@@ -200,7 +236,7 @@ function AdminSidebar({ items, pathname }: { items: readonly NavItem[]; pathname
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <NavLinks items={items} pathname={pathname} layout={layout} />
+        <NavLinks items={items} pathname={pathname} layout={layout} badges={badges} />
       </div>
     </aside>
   );
@@ -247,6 +283,7 @@ function ShellFrame({
   const me = useStaffSession();
   const activeBranchId = useScope((state) => state.branchId);
   const [moreOpen, setMoreOpen] = useState(false);
+  const badges = usePendingBadges();
   if (!me) return null;
 
   const items = navForUser(me, activeBranchId);
@@ -265,7 +302,7 @@ function ShellFrame({
         <ConnectionBanner />
       </div>
       <div className="flex min-h-dvh">
-        {variant === "admin" ? <AdminSidebar items={items} pathname={pathname} /> : null}
+        {variant === "admin" ? <AdminSidebar items={items} pathname={pathname} badges={badges} /> : null}
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex min-h-12 items-center justify-between gap-3 border-b px-3 py-2 print:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -289,11 +326,12 @@ function ShellFrame({
                         key={navKey(item)}
                         href={item.href}
                         aria-current={active ? "page" : undefined}
-                        className={`inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 text-sm ${
+                        className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm ${
                           active ? "bg-secondary font-semibold" : "hover:bg-muted"
                         }`}
                       >
                         {item.label}
+                        <NavBadge count={badges[navKey(item)]} label="to confirm" />
                       </Link>
                     );
                   })}
@@ -329,7 +367,10 @@ function ShellFrame({
                 active ? "font-semibold" : ""
               }`}
             >
-              <Icon aria-hidden className="size-5" />
+              <span className="relative">
+                <Icon aria-hidden className="size-5" />
+                <NavBadge count={badges[navKey(item)]} label="to confirm" className="absolute -end-3 -top-2" />
+              </span>
               {item.label}
             </Link>
           );
@@ -357,6 +398,7 @@ function ShellFrame({
                 items={overflow}
                 pathname={pathname}
                 onNavigate={() => setMoreOpen(false)}
+                badges={badges}
               />
             )}
           </div>

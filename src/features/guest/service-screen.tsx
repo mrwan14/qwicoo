@@ -47,12 +47,12 @@ export function ServiceScreen() {
     };
     try {
       const result = await guestApi.POST("/api/v1/service-requests", { body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry, locale);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
       toast.success(t.service);
       setNote("");
       void active.refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t.retry);
+      toast.error(error instanceof Error ? error.message : t.oops);
     } finally {
       setPending(false);
     }

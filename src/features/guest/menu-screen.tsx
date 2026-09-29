@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
+import { PresenceNote, useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
 import { Money } from "@/components/ops/money";
 import { ErrorState, LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
@@ -40,7 +40,7 @@ export function MenuScreen() {
     queryFn: async () => {
       const result = await guestApi.GET("/api/v1/menu/tree");
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry, locale);
+        throw asApiError(result.error, result.response, t.oops, locale);
       }
       return result.data;
     },
@@ -75,7 +75,7 @@ export function MenuScreen() {
         params: { path: { session_id: session?.sessionId ?? "" } },
       });
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry, locale);
+        throw asApiError(result.error, result.response, t.oops, locale);
       }
       return result.data;
     },
@@ -104,14 +104,17 @@ export function MenuScreen() {
   if (menu.isError) {
     return (
       <ErrorState
-        body={menu.error instanceof Error ? menu.error.message : t.retry}
+        title={t.oopsTitle}
+        body={menu.error instanceof Error ? menu.error.message : t.oops}
         onRetry={() => void menu.refetch()}
+        retryLabel={t.retry}
       />
     );
   }
 
   return (
     <div className="grid gap-4">
+      <PresenceNote />
       <label className="grid gap-1 text-sm font-medium">
         {t.yourName}
         <input
@@ -279,7 +282,7 @@ function ItemConfigurator({
       };
       const result = await guestApi.POST("/api/v1/menu/validate-item-selection", { body });
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry, locale);
+        throw asApiError(result.error, result.response, t.oops, locale);
       }
       return result.data;
     },
@@ -304,11 +307,11 @@ function ItemConfigurator({
         params: { path: { session_id: session?.sessionId ?? "" } },
         body,
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry, locale);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
       return result.data;
     },
     onSuccess: () => {
-      toast.success(t.add);
+      toast.success(t.added);
       onDone();
     },
     onError: (error: Error) => toast.error(error.message),

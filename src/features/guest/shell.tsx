@@ -26,6 +26,35 @@ export function useAbsorbBranding(payload: unknown) {
   }, [payload]);
 }
 
+/** Shown when the guest joined without a confirmed location, so staff confirm their orders. */
+export function PresenceNote() {
+  const { t } = useGuestCopy();
+  const unverified = useGuest((state) => state.session?.presenceVerified === false);
+  if (!unverified) return null;
+  return (
+    <p role="status" className="rounded-xl bg-secondary px-4 py-3 text-sm">
+      {t.locationNote}
+    </p>
+  );
+}
+
+export function LineDetails({ modifiers, note }: { modifiers: readonly string[]; note?: string | null }) {
+  const { t } = useGuestCopy();
+  const names = modifiers.filter(Boolean);
+  const text = note?.trim();
+  if (names.length === 0 && !text) return null;
+  return (
+    <div className="mt-1 grid gap-1 text-sm">
+      {names.length > 0 ? <p className="text-muted-foreground">+ {names.join(", ")}</p> : null}
+      {text ? (
+        <p className="break-words rounded-lg bg-secondary px-2 py-1">
+          <span className="font-medium">{t.note}:</span> {text}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function BrandHeader() {
   const branding = useGuest((state) => state.branding);
   const branchName = useGuest((state) => state.session?.branchName ?? null);

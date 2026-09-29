@@ -35,10 +35,12 @@ export function ErrorState({
   title = "Something went wrong",
   body,
   onRetry,
+  retryLabel = "Retry",
 }: {
   title?: string;
   body: string;
   onRetry?: () => void;
+  retryLabel?: string;
 }) {
   return (
     <div role="alert" className="rounded-xl border border-destructive/40 bg-card p-6 shadow-elev-1">
@@ -50,7 +52,7 @@ export function ErrorState({
           onClick={onRetry}
           className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
         >
-          Retry
+          {retryLabel}
         </button>
       ) : null}
     </div>

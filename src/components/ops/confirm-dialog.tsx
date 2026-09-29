@@ -18,6 +18,7 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   cancelLabel = "Cancel",
+  pendingLabel = "Working…",
   destructive = false,
   pending = false,
   onConfirm,
@@ -28,6 +29,7 @@ export function ConfirmDialog({
   description: string;
   confirmLabel: string;
   cancelLabel?: string;
+  pendingLabel?: string;
   destructive?: boolean;
   pending?: boolean;
   onConfirm: () => void;
@@ -46,7 +48,7 @@ export function ConfirmDialog({
             disabled={pending}
             onClick={onConfirm}
           >
-            {pending ? "Working…" : confirmLabel}
+            {pending ? pendingLabel : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

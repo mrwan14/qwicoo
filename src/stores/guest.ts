@@ -11,6 +11,8 @@ export type GuestSession = {
   tableId: string | null;
   tableNumber: string | null;
   branchName: string | null;
+  /** False when the guest joined without a location or PIN match; staff confirm their orders. */
+  presenceVerified?: boolean;
 };
 
 type GuestState = {

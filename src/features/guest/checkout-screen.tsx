@@ -8,8 +8,8 @@ import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
 import { ErrorState, LoadingState } from "@/components/ops/states";
-import { useGuestCopy } from "@/features/guest/shell";
-import { asApiError } from "@/lib/api/error";
+import { LineDetails, useGuestCopy } from "@/features/guest/shell";
+import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import type { components } from "@/lib/api/schema";
 import { useGuest } from "@/stores/guest";
@@ -29,7 +29,7 @@ export function CheckoutScreen() {
         params: { path: { session_id: session?.sessionId ?? "" } },
       });
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry, locale);
+        throw asApiError(result.error, result.response, t.oops, locale);
       }
       return result.data;
     },
@@ -49,7 +49,7 @@ export function CheckoutScreen() {
       };
       const result = await guestApi.POST("/api/v1/orders/checkout", { body });
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry, locale);
+        throw asApiError(result.error, result.response, t.oops, locale);
       }
       return result.data;
     },
@@ -58,7 +58,14 @@ export function CheckoutScreen() {
       toast.success(t.orderSent);
       router.push("/order/track");
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => {
+      if (error instanceof ApiError && error.status === 409 && error.code === "ACTIVE_ORDER_EXISTS") {
+        toast(t.activeOrderOpen);
+        router.push("/order/track");
+        return;
+      }
+      toast.error(error.message);
+    },
   });
 
   const clear = useMutation({
@@ -66,7 +73,7 @@ export function CheckoutScreen() {
       const result = await guestApi.DELETE("/api/v1/sessions/{session_id}/cart", {
         params: { path: { session_id: session?.sessionId ?? "" } },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry, locale);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["guest-cart"] }),
   });
@@ -76,7 +83,7 @@ export function CheckoutScreen() {
       const result = await guestApi.DELETE("/api/v1/sessions/{session_id}/cart/items/{cart_item_id}", {
         params: { path: { session_id: session?.sessionId ?? "", cart_item_id: cartItemId } },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.retry, locale);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["guest-cart"] }),
   });
@@ -84,7 +91,14 @@ export function CheckoutScreen() {
   if (!session) return <p className="text-sm">{t.scanAgain}</p>;
   if (cart.isLoading) return <LoadingState label={t.loading} />;
   if (cart.isError) {
-    return <ErrorState body={cart.error instanceof Error ? cart.error.message : t.retry} onRetry={() => void cart.refetch()} />;
+    return (
+      <ErrorState
+        title={t.oopsTitle}
+        body={cart.error instanceof Error ? cart.error.message : t.oops}
+        onRetry={() => void cart.refetch()}
+        retryLabel={t.retry}
+      />
+    );
   }
 
   const lines = cart.data?.items ?? [];
@@ -98,11 +112,12 @@ export function CheckoutScreen() {
         <ul className="grid gap-3">
           {lines.map((line) => (
             <li key={line.id} className="flex items-start justify-between gap-3 rounded-xl border p-3">
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium">{line.item_name}</p>
                 <p className="text-sm text-muted-foreground">
                   {line.quantity} · {line.guest_name}
                 </p>
+                <LineDetails modifiers={(line.modifiers ?? []).map((modifier) => modifier.name)} note={line.notes} />
               </div>
               <div className="text-end">
                 <Money amount={line.line_total} locale={locale} />

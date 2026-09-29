@@ -64,6 +64,11 @@ const CATALOG: Record<string, Catalog> = {
     ar: "جلسة الطاولة غير موجودة أو انتهت",
     aliases: ["Table session not found or no longer active", "Could not validate guest session credentials"],
   },
+  GUEST_SESSION_ENDED: {
+    en: "Your table session ended. Rejoin to keep ordering.",
+    ar: "انتهت جلسة الطاولة. انضم مجدداً لمتابعة الطلب.",
+    aliases: ["Guest session has ended"],
+  },
   INPUT_VALIDATION_FAILED: {
     en: "Some details are missing or invalid. Check the form and try again.",
     ar: "بيانات الطلب المدخلة غير صحيحة",
@@ -299,7 +304,8 @@ export class ApiError extends Error {
 
 export function asApiError(error: unknown, response: Response, fallback: string, locale: LocaleCode = "en"): ApiError {
   const raw = rawDetail(error);
-  return new ApiError(response.status, friendlyMessage(raw, fallback, locale), errorCode(raw));
+  const code = errorCode(raw) ?? (response.status === 410 ? "GUEST_SESSION_ENDED" : null);
+  return new ApiError(response.status, friendlyMessage(raw ?? code, fallback, locale), code);
 }
 
 /** The API refused this caller's role, as opposed to a scope, network, or data problem. */

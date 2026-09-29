@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
 import { LoadingState } from "@/components/ops/states";
+import { resumeIfSessionGone } from "@/features/guest/session";
 import { GuestQueryError, LineDetails, useGuestCopy } from "@/features/guest/shell";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
@@ -64,7 +65,13 @@ export function CheckoutScreen() {
         router.push("/order/track");
         return;
       }
-      toast.error(error.message);
+      void resumeIfSessionGone(error).then((gone) => {
+        if (gone) {
+          if (useGuest.getState().session) place.mutate();
+          return;
+        }
+        toast.error(error.message);
+      });
     },
   });
 

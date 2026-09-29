@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Money } from "@/components/ops/money";
 import { LoadingState } from "@/components/ops/states";
 import { guestStatus, PAYABLE_STATUSES } from "@/features/guest/copy";
-import { isGuestSessionGone } from "@/features/guest/session";
+import { isGuestSessionGone, resumeIfSessionGone } from "@/features/guest/session";
 import { GuestQueryError, LineDetails, PresenceNote, useGuestCopy } from "@/features/guest/shell";
 import { usePollingInterval } from "@/hooks/use-page-visible";
 import { ApiError, asApiError } from "@/lib/api/error";
@@ -28,6 +28,17 @@ function stepIndex(status: OrderStatus): number {
   if (status === "SERVED") return STEPS.indexOf("DELIVERED");
   if (status === "PAID" || status === "CLOSED") return STEPS.length;
   return STEPS.indexOf(status);
+}
+
+function shouldFetchHandover(order: GuestOrder): boolean {
+  if (order.status === "CANCELLED") return false;
+  const fulfillment = (order.fulfillment_type ?? "").toUpperCase();
+  return (
+    order.order_type === "TAKEAWAY" ||
+    fulfillment === "DRIVE_THRU" ||
+    fulfillment === "CURBSIDE" ||
+    fulfillment === "PICKUP"
+  );
 }
 
 function modifierNames(item: components["schemas"]["OrderItemResponse"]): string[] {
@@ -58,7 +69,8 @@ export function TrackScreen() {
         return null;
       }
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.oops, locale);
+        const error = asApiError(result.error, result.response, t.oops, locale);
+        throw error;
       }
       return result.data;
     },
@@ -108,7 +120,13 @@ export function TrackScreen() {
         setNotice(t.paymentRequested);
         return;
       }
-      toast.error(error.message);
+      void resumeIfSessionGone(error).then((gone) => {
+        if (gone) {
+          if (useGuest.getState().session) void order.refetch();
+          return;
+        }
+        toast.error(error.message);
+      });
     },
   });
 
@@ -130,7 +148,13 @@ export function TrackScreen() {
     },
     onError: (error: Error) => {
       setConfirmCancel(false);
-      toast.error(error.message);
+      void resumeIfSessionGone(error).then((gone) => {
+        if (gone) {
+          if (useGuest.getState().session) void order.refetch();
+          return;
+        }
+        toast.error(error.message);
+      });
     },
   });
 
@@ -145,7 +169,13 @@ export function TrackScreen() {
         setNotice(t.confirmTable);
         return;
       }
-      toast.error(error.message);
+      void resumeIfSessionGone(error).then((gone) => {
+        if (gone) {
+          if (useGuest.getState().session) void order.refetch();
+          return;
+        }
+        toast.error(error.message);
+      });
     },
   });
 
@@ -158,8 +188,8 @@ export function TrackScreen() {
   }, [order.data, cashRequestedOrderId, setCashRequestedOrderId]);
 
   const handover = useQuery({
-    queryKey: ["handover", order.data?.id],
-    enabled: Boolean(order.data?.id && order.data.status !== "CANCELLED"),
+    queryKey: ["handover", order.data?.id, order.data?.status],
+    enabled: Boolean(order.data && shouldFetchHandover(order.data)),
     queryFn: async () => {
       const result = await guestApi.GET("/api/v1/orders/{order_id}/handover-token", {
         params: { path: { order_id: order.data?.id ?? "" } },
@@ -188,11 +218,12 @@ export function TrackScreen() {
   const status = activeOrder.status;
   const pending = status === "PENDING_STAFF_CONFIRMATION" || status === "DRAFT";
   const rejected = status === "CANCELLED";
+  const finished = status === "CLOSED" || status === "DELIVERED";
   const paid = activeOrder.is_paid || status === "PAID" || status === "CLOSED";
   const cashRequested = !paid && (cashRequestedOrderId === activeOrder.id || notice === t.paymentRequested);
-  const canPay = PAYABLE_STATUSES.has(status) && !paid && !cashRequested;
+  const canPay = PAYABLE_STATUSES.has(status) && !paid && !cashRequested && !finished;
   const current = stepIndex(status);
-  const showKitchen = !rejected && !pending;
+  const showKitchen = !rejected && !pending && !finished;
   const reference =
     activeOrder.display_number?.trim() ||
     (activeOrder.pickup_number != null ? `#${activeOrder.pickup_number}` : null) ||
@@ -221,8 +252,10 @@ export function TrackScreen() {
             {t.startNewOrder}
           </Link>
         </div>
+      ) : finished ? (
+        <p className="text-[length:var(--text-20)] font-medium">{t.enjoyMeal}</p>
       ) : (
-        <p className="text-[length:var(--text-20)] font-medium">{guestStatus[locale][status === "PAID" || status === "CLOSED" ? "DELIVERED" : status]}</p>
+        <p className="text-[length:var(--text-20)] font-medium">{guestStatus[locale][status === "PAID" ? "DELIVERED" : status]}</p>
       )}
       {pending ? <PresenceNote /> : null}
       {showKitchen ? (
@@ -258,7 +291,7 @@ export function TrackScreen() {
           {t.handover}: {handover.data.token}
         </p>
       ) : null}
-      {rejected ? null : paid ? (
+      {rejected || finished ? null : paid ? (
         <p role="status" className="rounded-xl bg-secondary px-4 py-3 text-sm font-medium">
           {t.paid}
         </p>
@@ -271,7 +304,15 @@ export function TrackScreen() {
           {notice}
         </p>
       ) : null}
-      {rejected ? null : (
+      {finished ? (
+        <Link
+          href="/order"
+          className="inline-flex min-h-14 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground"
+        >
+          {t.orderElse}
+        </Link>
+      ) : null}
+      {rejected || finished ? null : (
         <div className="grid gap-2 sm:grid-cols-2">
           <Link href="/order/service" className="inline-flex min-h-14 items-center justify-center rounded-lg border text-sm font-medium">
             {t.call}

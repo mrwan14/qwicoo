@@ -13,7 +13,7 @@ const ORDER_STATUS: Record<OrderStatus, string> = {
   PREPARING: "Preparing",
   READY: "Ready",
   SERVED: "Served",
-  DELIVERED: "Served",
+  DELIVERED: "Delivered",
   PAID: "Paid",
   CLOSED: "Closed",
   CANCELLED: "Cancelled",

@@ -194,6 +194,14 @@ const CATALOG: Record<string, Catalog> = {
     ar: "لا يمكن سداد طلب تم إلغاؤه",
     aliases: ["Cannot process payment for a cancelled order"],
   },
+  PRESENCE_VERIFICATION_REQUIRED: {
+    en: "A staff member needs to confirm your table first. They'll be with you shortly.",
+    ar: "يحتاج أحد الموظفين إلى تأكيد طاولتك أولاً. سيكون معك خلال لحظات.",
+  },
+  ACTIVE_ORDER_EXISTS: {
+    en: "You already have an order with us. Here it is.",
+    ar: "لديك طلب مفتوح معنا بالفعل. ها هو.",
+  },
   CROSS_TENANT_ACCESS_FORBIDDEN: { en: "That brand is outside your workspace." },
   BRANCH_ACCESS_FORBIDDEN: { en: "That branch is outside your workspace." },
   BRANCH_NOT_FOUND: { en: "We couldn't find that branch." },

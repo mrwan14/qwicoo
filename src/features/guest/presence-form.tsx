@@ -20,6 +20,7 @@ function toSession(data: PresenceResponse): GuestSession {
     tableId: data.table_id,
     tableNumber: data.table_number,
     branchName: typeof data.branch_name === "string" ? data.branch_name : null,
+    presenceVerified: data.is_presence_verified,
   };
 }
 
@@ -59,6 +60,10 @@ export function PresenceForm({ token }: { token: string }) {
         body: JSON.stringify(body),
       });
       const payload = (await response.json().catch(() => ({}))) as PresenceResponse & { code?: string | null };
+      if (!response.ok && coords && !pin.trim() && payload.code === "OUT_OF_GEOFENCE") {
+        await submit(action);
+        return;
+      }
       if (!response.ok) {
         setError(joinErrorMessage(payload.code, t));
         return;

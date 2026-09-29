@@ -30,7 +30,7 @@ export function PickupScreen({ branchId }: { branchId: string }) {
         params: { path: { branch_id: branchId } },
       });
       if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.retry, locale);
+        throw asApiError(result.error, result.response, t.oops, locale);
       }
       return result.data;
     },
@@ -99,10 +99,10 @@ export function PickupScreen({ branchId }: { branchId: string }) {
     };
     try {
       const result = await guestApi.POST("/api/v1/orders/drive-thru", { body });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.retry, locale);
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.oops, locale);
       toast.success(`${t.orderSent} ${result.data.pickup_number ?? ""}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t.retry);
+      toast.error(error instanceof Error ? error.message : t.oops);
     } finally {
       setPending(false);
     }
@@ -110,7 +110,14 @@ export function PickupScreen({ branchId }: { branchId: string }) {
 
   if (menu.isLoading) return <LoadingState label={t.loading} />;
   if (menu.isError) {
-    return <ErrorState body={menu.error instanceof Error ? menu.error.message : t.retry} onRetry={() => void menu.refetch()} />;
+    return (
+      <ErrorState
+        title={t.oopsTitle}
+        body={menu.error instanceof Error ? menu.error.message : t.oops}
+        onRetry={() => void menu.refetch()}
+        retryLabel={t.retry}
+      />
+    );
   }
 
   return (

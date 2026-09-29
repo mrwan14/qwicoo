@@ -36,6 +36,13 @@ export const guestCopy = {
     payOnline: "Pay online",
     paying: "One moment…",
     cashRequested: "Thank you! A team member will come to your table to collect payment.",
+    paymentRequested: "Payment requested. A team member is on the way.",
+    paid: "Paid",
+    orderRejected: "Sorry, the restaurant couldn't accept this order.",
+    startNewOrder: "Start a new order",
+    sessionGone: "Your table session ended. Let's get you back to the table.",
+    rejoin: "Rejoin table",
+    rejoining: "Getting you back to the table…",
     payAfterConfirm: "You can pay as soon as our team confirms your order.",
     confirmTable: "A staff member needs to confirm your table first. They'll be with you shortly.",
     activeOrderOpen: "You already have an order with us. Here it is.",
@@ -104,6 +111,13 @@ export const guestCopy = {
     payOnline: "ادفع إلكترونياً",
     paying: "لحظة من فضلك…",
     cashRequested: "شكراً لك! سيأتي أحد أفراد فريقنا إلى طاولتك لاستلام المبلغ.",
+    paymentRequested: "تم طلب الدفع. أحد أفراد الفريق في الطريق إليك.",
+    paid: "مدفوع",
+    orderRejected: "عذراً، لم يتمكن المطعم من قبول هذا الطلب.",
+    startNewOrder: "ابدأ طلباً جديداً",
+    sessionGone: "انتهت جلسة الطاولة. لنعدك إلى طاولتك.",
+    rejoin: "العودة إلى الطاولة",
+    rejoining: "نعيدك إلى الطاولة…",
     payAfterConfirm: "يمكنك الدفع فور تأكيد فريقنا لطلبك.",
     confirmTable: "يحتاج أحد الموظفين إلى تأكيد طاولتك أولاً. سيكون معك خلال لحظات.",
     activeOrderOpen: "لديك طلب مفتوح معنا بالفعل. ها هو.",
@@ -154,7 +168,7 @@ export const guestStatus: Record<keyof typeof guestCopy, Record<OrderStatus, str
     DELIVERED: "Served. Enjoy your meal!",
     PAID: "Paid. Thank you!",
     CLOSED: "All done. Thanks for dining with us!",
-    CANCELLED: "This order was cancelled",
+    CANCELLED: "Sorry, the restaurant couldn't accept this order.",
   },
   ar: {
     DRAFT: "نجهز طلبك",
@@ -166,7 +180,49 @@ export const guestStatus: Record<keyof typeof guestCopy, Record<OrderStatus, str
     DELIVERED: "تم التقديم. بالهناء والشفاء!",
     PAID: "تم الدفع. شكراً لك!",
     CLOSED: "انتهينا. شكراً لزيارتك!",
-    CANCELLED: "تم إلغاء هذا الطلب",
+    CANCELLED: "عذراً، لم يتمكن المطعم من قبول هذا الطلب.",
+  },
+};
+
+export const guestServiceType: Record<keyof typeof guestCopy, Record<components["schemas"]["ServiceRequestType"], string>> = {
+  en: {
+    WAITER_CALL: "Call a waiter",
+    WATER: "Water",
+    WATER_REFILL: "Water refill",
+    CUTLERY: "Cutlery",
+    NAPKINS: "Napkins",
+    PLATES: "Plates",
+    PACK_LEFTOVERS: "Pack leftovers",
+    BILL_REQUEST: "Ask for the bill",
+    TAKEAWAY_ORDER: "Takeaway",
+    OTHER: "Something else",
+  },
+  ar: {
+    WAITER_CALL: "استدعاء النادل",
+    WATER: "ماء",
+    WATER_REFILL: "إعادة ملء الماء",
+    CUTLERY: "أدوات المائدة",
+    NAPKINS: "مناديل",
+    PLATES: "أطباق",
+    PACK_LEFTOVERS: "تغليف المتبقي",
+    BILL_REQUEST: "طلب الحساب",
+    TAKEAWAY_ORDER: "طلب للخارج",
+    OTHER: "طلب آخر",
+  },
+};
+
+export const guestServiceStatus: Record<keyof typeof guestCopy, Record<components["schemas"]["ServiceRequestStatus"], string>> = {
+  en: {
+    PENDING: "On the way",
+    ACKNOWLEDGED: "Seen by the team",
+    COMPLETED: "Done",
+    DISMISSED: "Closed",
+  },
+  ar: {
+    PENDING: "في الطريق",
+    ACKNOWLEDGED: "رآه الفريق",
+    COMPLETED: "تم",
+    DISMISSED: "أُغلق",
   },
 };
 

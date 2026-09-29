@@ -10,15 +10,23 @@ import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import { pickLocale } from "@/lib/i18n/locale-text";
+import { orderStatusLabel } from "@/lib/status-labels";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
 
 /** `display_number` and `items` come from the API but aren't in the generated schema yet. */
 type ExpoModifier = { name?: unknown; group_name?: unknown };
-type ExpoLineItem = { name: string; quantity: number; modifiers?: ExpoModifier[] | null; notes?: string | null };
+type ExpoLineItem = {
+  name: string;
+  quantity: number;
+  modifiers?: ExpoModifier[] | null;
+  notes?: string | null;
+  special_instructions?: string | null;
+};
 type ExpoOrder = components["schemas"]["KDSExpoOrderResponse"] & {
   display_number?: string | null;
   items?: ExpoLineItem[] | null;
+  customer_notes?: string | null;
 };
 
 type CardLine = {
@@ -51,7 +59,7 @@ function cardLines(order: ExpoOrder): CardLine[] {
       name: item.name,
       quantity: item.quantity,
       modifiers: modifierNames(item.modifiers),
-      note: item.notes?.trim() || null,
+      note: item.notes?.trim() || item.special_instructions?.trim() || null,
     }));
   }
   return (order.ticket_items ?? []).map((item) => ({
@@ -62,11 +70,6 @@ function cardLines(order: ExpoOrder): CardLine[] {
     note: null,
     ticketItemId: item.id,
   }));
-}
-
-function statusLabel(status: string): string {
-  const words = status.replaceAll("_", " ").toLowerCase();
-  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export function ExpoScreen() {
@@ -184,7 +187,7 @@ export function ExpoScreen() {
               <header className="flex items-start justify-between gap-2">
                 <p className="text-[length:var(--text-28)] leading-none font-semibold tabular-nums">{number ?? "No number"}</p>
                 <div className="grid justify-items-end gap-1 text-xs text-muted-foreground">
-                  <span className={ready ? "font-medium text-[var(--status-ready)]" : undefined}>{statusLabel(order.status)}</span>
+                  <span className={ready ? "font-medium text-[var(--status-ready)]" : undefined}>{orderStatusLabel(order.status)}</span>
                   {order.total_ticket_items > 0 ? (
                     <span className="tabular-nums">
                       {order.ready_ticket_items}/{order.total_ticket_items} ready
@@ -192,6 +195,11 @@ export function ExpoScreen() {
                   ) : null}
                 </div>
               </header>
+              {order.customer_notes?.trim() ? (
+                <p className={`rounded-md px-2 py-1 text-sm font-medium ${toneSurface("ordered")}`}>
+                  Order note: {order.customer_notes}
+                </p>
+              ) : null}
               {lines.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No items</p>
               ) : (

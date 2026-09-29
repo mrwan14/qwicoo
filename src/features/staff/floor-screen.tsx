@@ -14,11 +14,12 @@ import {
   fetchFloorLive,
   floorLiveQueryKey,
   needsConfirmation,
-  type FloorOrderItem,
   type FloorTable,
 } from "@/hooks/use-floor-live";
 import { asApiError } from "@/lib/api/error";
+import { getStaffOrder } from "@/lib/api/staff-order";
 import { browserApi } from "@/lib/api/browser";
+import { occupancyLabel, orderStatusLabel } from "@/lib/status-labels";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
@@ -27,14 +28,12 @@ type OrderStatus = components["schemas"]["OrderStatus"];
 
 const NEXT: OrderStatus[] = ["PREPARING", "READY", "SERVED", "DELIVERED", "CLOSED"];
 
-function humanize(value: string): string {
-  const text = value.replaceAll("_", " ").toLowerCase();
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-function itemModifiers(item: FloorOrderItem): string[] {
-  return (item.modifiers ?? [])
-    .map((modifier) => (typeof modifier === "string" ? modifier : (modifier.name ?? "")))
+function modifierNames(modifiers: { [key: string]: unknown }[] | null | undefined): string[] {
+  return (modifiers ?? [])
+    .map((modifier) => {
+      const name = modifier.name ?? modifier.option_name;
+      return typeof name === "string" ? name : "";
+    })
     .filter(Boolean);
 }
 
@@ -130,7 +129,7 @@ export function FloorScreen() {
                 onClick={() => setSelectedId(table.table_id)}
               >
                 <span className="block text-2xl font-semibold">{table.table_number}</span>
-                <span className="mt-2 block text-sm">{humanize(table.current_state)}</span>
+                <span className="mt-2 block text-sm">{occupancyLabel(table.current_state)}</span>
                 {pending ? (
                   <span className="mt-2 block">
                     <NeedsConfirmationBadge />
@@ -148,7 +147,7 @@ export function FloorScreen() {
           </SheetHeader>
           {selected ? (
             <div className="grid gap-3 px-4 pb-6">
-              <p className="text-sm">{humanize(selected.current_state)}</p>
+              <p className="text-sm">{occupancyLabel(selected.current_state)}</p>
               {needsConfirmation(selected) && selected.active_order_id ? (
                 <PendingOrder
                   table={selected}
@@ -167,13 +166,13 @@ export function FloorScreen() {
                 />
               ) : (
                 <>
-                  <p className="text-sm">Order: {selected.order_status ? humanize(selected.order_status) : "none"}</p>
+                  <p className="text-sm">Order: {orderStatusLabel(selected.order_status)}</p>
                   {selected.active_order_id ? (
                     <>
                       <select className="h-12 rounded-lg border px-3" value={status} onChange={(event) => setStatus(event.target.value as OrderStatus)}>
                         {NEXT.map((value) => (
                           <option key={value} value={value}>
-                            {humanize(value)}
+                            {orderStatusLabel(value)}
                           </option>
                         ))}
                       </select>
@@ -221,7 +220,15 @@ function PendingOrder({
   onReject: (orderId: string) => void;
 }) {
   const orderId = table.active_order_id ?? "";
-  const items = table.items ?? [];
+  const detail = useQuery({
+    queryKey: ["staff-order", orderId],
+    enabled: Boolean(orderId),
+    queryFn: () => getStaffOrder(orderId),
+  });
+  const items = detail.data?.items ?? [];
+  const customerNotes = detail.data?.customer_notes ?? table.customer_notes;
+  const total = detail.data?.total_amount ?? table.order_total;
+
   return (
     <div className="grid gap-3">
       <div>
@@ -230,15 +237,24 @@ function PendingOrder({
           A guest ordered without a confirmed location. Check the table, then confirm to send it to the kitchen.
         </p>
       </div>
-      {items.length > 0 ? (
+      {detail.isLoading ? (
+        <LoadingState label="Loading order" />
+      ) : detail.isError ? (
+        <p className="text-sm text-muted-foreground">
+          {detail.error instanceof Error ? detail.error.message : "Couldn't load this order."}{" "}
+          <button type="button" className="underline" onClick={() => void detail.refetch()}>
+            Try again
+          </button>
+        </p>
+      ) : (
         <ul className="grid gap-2">
-          {items.map((item, index) => {
-            const modifiers = itemModifiers(item);
-            const note = (item.notes ?? item.special_instructions)?.trim();
+          {items.map((item) => {
+            const modifiers = modifierNames(item.selected_modifiers);
+            const note = item.special_instructions?.trim();
             return (
-              <li key={`${item.name ?? item.item_name}-${index}`} className="rounded-lg border p-3 text-sm">
+              <li key={item.id} className="rounded-lg border p-3 text-sm">
                 <p className="font-medium">
-                  {item.quantity} × {item.name ?? item.item_name}
+                  {item.quantity} × {item.item_name}
                 </p>
                 {modifiers.length > 0 ? <p className="text-muted-foreground">+ {modifiers.join(", ")}</p> : null}
                 {note ? (
@@ -250,15 +266,13 @@ function PendingOrder({
             );
           })}
         </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">Item details aren&apos;t available for this order yet.</p>
       )}
-      {table.customer_notes?.trim() ? (
+      {customerNotes?.trim() ? (
         <p className={`rounded-md px-2 py-1 text-sm ${toneSurface("ordered")}`}>
-          <span className="font-medium">Order note:</span> {table.customer_notes}
+          <span className="font-medium">Order note:</span> {customerNotes}
         </p>
       ) : null}
-      {table.order_total ? <p className="text-sm font-medium">Total {table.order_total}</p> : null}
+      {total ? <p className="text-sm font-medium">Total {total}</p> : null}
       {canConfirm ? (
         rejecting ? (
           <div className="grid gap-2">

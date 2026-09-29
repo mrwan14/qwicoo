@@ -1,28 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { guestCopy } from "@/features/guest/copy";
+import { toGuestSession } from "@/features/guest/session";
 import { useGuestCopy } from "@/features/guest/shell";
 import type { components } from "@/lib/api/schema";
 import { mergeGuestBranding } from "@/lib/guest/branding";
-import { useGuest, type GuestSession } from "@/stores/guest";
+import { useGuest } from "@/stores/guest";
 
 type PresenceResponse = Omit<components["schemas"]["TableSessionResponse"], "session_token">;
-
-function toSession(data: PresenceResponse): GuestSession {
-  const brandId = (data as { brand_id?: unknown }).brand_id;
-  return {
-    sessionId: data.session_id,
-    branchId: data.branch_id,
-    brandId: typeof brandId === "string" ? brandId : null,
-    tableId: data.table_id,
-    tableNumber: data.table_number,
-    branchName: typeof data.branch_name === "string" ? data.branch_name : null,
-    presenceVerified: data.is_presence_verified,
-  };
-}
 
 /** Only codes we have guest copy for get their own message; anything else is the same calm fallback. */
 function joinErrorMessage(code: string | null | undefined, t: (typeof guestCopy)[keyof typeof guestCopy]): string {
@@ -41,6 +29,13 @@ export function PresenceForm({ token }: { token: string }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [lastAction, setLastAction] = useState<"verify" | "join">("join");
+  const storedToken = useGuest((state) => state.tableToken);
+
+  useEffect(() => {
+    if (storedToken === token) void submit("join");
+    // Rejoin this table automatically when we already have its token.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, storedToken]);
 
   async function submit(action: "verify" | "join", coords?: { latitude: number; longitude: number }) {
     setLastAction(action);
@@ -68,7 +63,8 @@ export function PresenceForm({ token }: { token: string }) {
         setError(joinErrorMessage(payload.code, t));
         return;
       }
-      setSession(toSession(payload));
+      setSession(toGuestSession(payload));
+      useGuest.getState().setTableToken(token);
       useGuest.getState().setBranding(mergeGuestBranding(null, payload));
       router.push("/order");
     } catch {

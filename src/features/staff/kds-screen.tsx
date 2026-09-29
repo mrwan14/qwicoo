@@ -5,9 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
+import { toneSurface } from "@/components/ops/status-chip";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
+import { stationLabel } from "@/lib/status-labels";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
 import { useWorkspace } from "@/stores/workspace";
@@ -91,7 +93,7 @@ export function KdsScreen() {
       <div className="flex gap-2 overflow-x-auto sm:hidden">
         {[...stations].map((station) => (
           <button key={station} type="button" className="min-h-11 shrink-0 rounded-full border px-3 text-sm" onClick={() => setStationFilter(station)}>
-            {station}
+            {station === "ALL" ? "All" : stationLabel(station)}
           </button>
         ))}
       </div>
@@ -131,15 +133,22 @@ function TicketColumn({
     station: string;
     table_number?: string | null;
     pickup_number?: number | null;
+    customer_notes?: string | null;
     created_at: string;
-    items?: Array<{ order_item_id: string; name: string; quantity: number; is_bumped?: boolean | null }> | null;
+    items?: Array<{
+      order_item_id: string;
+      name: string;
+      quantity: number;
+      is_bumped?: boolean | null;
+      special_instructions?: string | null;
+    }> | null;
   }>;
   onItem: (orderItemId: string) => void;
   onStation: (orderId: string, station: string) => void;
 }) {
   return (
     <section className="grid content-start gap-3">
-      <h2 className="text-[length:var(--text-20)] font-semibold">{station}</h2>
+      <h2 className="text-[length:var(--text-20)] font-semibold">{station === "ALL" ? "All" : stationLabel(station)}</h2>
       {tickets.map((ticket) => {
         const age = Math.max(0, Math.round((Date.now() - new Date(ticket.created_at).getTime()) / 60000));
         return (
@@ -147,12 +156,24 @@ function TicketColumn({
             <p className="text-[length:var(--text-20)] font-semibold">
               {ticket.pickup_number ?? ticket.table_number ?? "Order"} · {age} min
             </p>
+            {ticket.customer_notes?.trim() ? (
+              <p className={`rounded-md px-2 py-1 text-sm font-medium ${toneSurface("ordered")}`}>
+                Order note: {ticket.customer_notes}
+              </p>
+            ) : null}
             <ul className="grid gap-2">
               {(ticket.items ?? []).map((item) => (
                 <li key={item.order_item_id}>
-                  <button type="button" className="min-h-14 w-full rounded-lg border px-3 text-start text-base" onClick={() => onItem(item.order_item_id)}>
-                    {item.quantity} × {item.name}
-                    {item.is_bumped ? " · bumped" : ""}
+                  <button type="button" className="grid min-h-14 w-full gap-0.5 rounded-lg border px-3 py-2 text-start text-base" onClick={() => onItem(item.order_item_id)}>
+                    <span>
+                      {item.quantity} × {item.name}
+                      {item.is_bumped ? " · bumped" : ""}
+                    </span>
+                    {item.special_instructions?.trim() ? (
+                      <span className={`rounded-md px-2 py-1 text-sm font-medium ${toneSurface("ordered")}`}>
+                        Note: {item.special_instructions}
+                      </span>
+                    ) : null}
                   </button>
                 </li>
               ))}

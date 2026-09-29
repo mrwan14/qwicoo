@@ -20,10 +20,16 @@ type GuestState = {
   guestName: string;
   session: GuestSession | null;
   branding: GuestBranding | null;
+  /** QR token from /t/{token}, kept so a dropped session can rejoin. */
+  tableToken: string | null;
+  /** Order that already asked for cash collection, so pay buttons stay hidden. */
+  cashRequestedOrderId: string | null;
   setLocale: (locale: LocaleCode) => void;
   setGuestName: (guestName: string) => void;
   setSession: (session: GuestSession | null) => void;
   setBranding: (branding: GuestBranding | null) => void;
+  setTableToken: (tableToken: string | null) => void;
+  setCashRequestedOrderId: (orderId: string | null) => void;
   clear: () => void;
 };
 
@@ -34,11 +40,15 @@ export const useGuest = create<GuestState>()(
       guestName: "",
       session: null,
       branding: null,
+      tableToken: null,
+      cashRequestedOrderId: null,
       setLocale: (locale) => set({ locale }),
       setGuestName: (guestName) => set({ guestName }),
       setSession: (session) => set({ session }),
       setBranding: (branding) => set({ branding }),
-      clear: () => set({ session: null, branding: null }),
+      setTableToken: (tableToken) => set({ tableToken }),
+      setCashRequestedOrderId: (cashRequestedOrderId) => set({ cashRequestedOrderId }),
+      clear: () => set({ session: null, branding: null, tableToken: null, cashRequestedOrderId: null }),
     }),
     {
       name: "guest-session",
@@ -49,6 +59,8 @@ export const useGuest = create<GuestState>()(
         guestName: state.guestName,
         session: state.session,
         branding: state.branding,
+        tableToken: state.tableToken,
+        cashRequestedOrderId: state.cashRequestedOrderId,
       }),
     },
   ),

@@ -7,8 +7,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
-import { ErrorState, LoadingState } from "@/components/ops/states";
-import { LineDetails, useGuestCopy } from "@/features/guest/shell";
+import { LoadingState } from "@/components/ops/states";
+import { GuestQueryError, LineDetails, useGuestCopy } from "@/features/guest/shell";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import type { components } from "@/lib/api/schema";
@@ -88,17 +88,10 @@ export function CheckoutScreen() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["guest-cart"] }),
   });
 
-  if (!session) return <p className="text-sm">{t.scanAgain}</p>;
+  if (!session) return null;
   if (cart.isLoading) return <LoadingState label={t.loading} />;
   if (cart.isError) {
-    return (
-      <ErrorState
-        title={t.oopsTitle}
-        body={cart.error instanceof Error ? cart.error.message : t.oops}
-        onRetry={() => void cart.refetch()}
-        retryLabel={t.retry}
-      />
-    );
+    return <GuestQueryError error={cart.error} onRetry={() => void cart.refetch()} />;
   }
 
   const lines = cart.data?.items ?? [];

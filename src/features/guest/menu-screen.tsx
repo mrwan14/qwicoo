@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { resumeIfSessionGone } from "@/features/guest/session";
 import { GuestQueryError, PresenceNote, useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
 import { Money } from "@/components/ops/money";
 import { LoadingState } from "@/components/ops/states";
@@ -300,7 +301,15 @@ function ItemConfigurator({
       toast.success(t.added);
       onDone();
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error, validated) => {
+      void resumeIfSessionGone(error).then((gone) => {
+        if (gone) {
+          if (useGuest.getState().session) add.mutate(validated);
+          return;
+        }
+        toast.error(error.message);
+      });
+    },
   });
 
   return (

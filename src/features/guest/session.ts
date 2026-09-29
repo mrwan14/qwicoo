@@ -21,10 +21,11 @@ export function guestTableToken(): string | null {
 
 export function isGuestSessionGone(error: unknown): boolean {
   if (!(error instanceof ApiError)) return false;
+  if (error.status === 401 || error.status === 410) return true;
   return (
+    error.code === "GUEST_SESSION_ENDED" ||
     error.code === "SESSION_NOT_FOUND" ||
-    error.code === "SESSION_TERMINATED_TABLE_AVAILABLE" ||
-    error.status === 401
+    error.code === "SESSION_TERMINATED_TABLE_AVAILABLE"
   );
 }
 
@@ -58,14 +59,30 @@ export async function joinTable(token: string, locale: LocaleCode): Promise<Gues
   return session;
 }
 
-/** Rejoin with the stored or URL table token. Returns false when there is no token or join failed. */
+function dropEndedSession() {
+  useGuest.getState().setSession(null);
+  useGuest.getState().setCashRequestedOrderId(null);
+}
+
+/** Rejoin with the stored or URL table token. Drops a stale session if join fails. */
 export async function recoverGuestSession(): Promise<boolean> {
   const token = guestTableToken();
-  if (!token) return false;
+  if (!token) {
+    dropEndedSession();
+    return false;
+  }
   try {
     await joinTable(token, useGuest.getState().locale);
     return true;
   } catch {
+    dropEndedSession();
     return false;
   }
+}
+
+/** Clear a dead session and rejoin. Returns true when the error was a session-gone case (recovered or not). */
+export async function resumeIfSessionGone(error: unknown): Promise<boolean> {
+  if (!isGuestSessionGone(error)) return false;
+  await recoverGuestSession();
+  return true;
 }

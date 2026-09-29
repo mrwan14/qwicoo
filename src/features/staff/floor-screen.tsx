@@ -4,11 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Money } from "@/components/ops/money";
 import { PageHeader } from "@/components/ops/page-header";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { occupancyTone, StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import {
   CONFIRM_ROLES,
   fetchFloorLive,
@@ -17,10 +19,9 @@ import {
   type FloorTable,
 } from "@/hooks/use-floor-live";
 import { asApiError } from "@/lib/api/error";
-import { getStaffOrder } from "@/lib/api/staff-order";
 import { browserApi } from "@/lib/api/browser";
+import { getStaffOrder } from "@/lib/api/staff-order";
 import { occupancyLabel, orderStatusLabel } from "@/lib/status-labels";
-import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
 
@@ -129,12 +130,7 @@ export function FloorScreen() {
                 onClick={() => setSelectedId(table.table_id)}
               >
                 <span className="block text-2xl font-semibold">{table.table_number}</span>
-                <span className="mt-2 block text-sm">{occupancyLabel(table.current_state)}</span>
-                {pending ? (
-                  <span className="mt-2 block">
-                    <NeedsConfirmationBadge />
-                  </span>
-                ) : null}
+                <span className="mt-2 block text-sm">{pending ? "Needs confirmation" : occupancyLabel(table.current_state)}</span>
               </button>
             );
           })}
@@ -147,7 +143,9 @@ export function FloorScreen() {
           </SheetHeader>
           {selected ? (
             <div className="grid gap-3 px-4 pb-6">
-              <p className="text-sm">{occupancyLabel(selected.current_state)}</p>
+              <p className="text-sm">
+                {needsConfirmation(selected) ? "Needs confirmation" : occupancyLabel(selected.current_state)}
+              </p>
               {needsConfirmation(selected) && selected.active_order_id ? (
                 <PendingOrder
                   table={selected}
@@ -272,7 +270,11 @@ function PendingOrder({
           <span className="font-medium">Order note:</span> {customerNotes}
         </p>
       ) : null}
-      {total ? <p className="text-sm font-medium">Total {total}</p> : null}
+      {total ? (
+        <p className="text-sm font-medium">
+          Total <Money amount={String(total)} />
+        </p>
+      ) : null}
       {canConfirm ? (
         rejecting ? (
           <div className="grid gap-2">

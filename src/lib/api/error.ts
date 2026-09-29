@@ -59,6 +59,11 @@ const CATALOG: Record<string, Catalog> = {
     ar: "انتهت جلسة الطاولة وأصبحت الطاولة متاحة لضيوف جدد",
     aliases: ["Table session has terminated and the table is now available"],
   },
+  SESSION_NOT_FOUND: {
+    en: "Your table session ended. Rejoin to keep ordering.",
+    ar: "جلسة الطاولة غير موجودة أو انتهت",
+    aliases: ["Table session not found or no longer active", "Could not validate guest session credentials"],
+  },
   INPUT_VALIDATION_FAILED: {
     en: "Some details are missing or invalid. Check the form and try again.",
     ar: "بيانات الطلب المدخلة غير صحيحة",

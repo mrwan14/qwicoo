@@ -2,14 +2,15 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Money } from "@/components/ops/money";
-import { ErrorState, LoadingState } from "@/components/ops/states";
+import { LoadingState } from "@/components/ops/states";
 import { guestStatus, PAYABLE_STATUSES } from "@/features/guest/copy";
-import { LineDetails, PresenceNote, useGuestCopy } from "@/features/guest/shell";
+import { isGuestSessionGone } from "@/features/guest/session";
+import { GuestQueryError, LineDetails, PresenceNote, useGuestCopy } from "@/features/guest/shell";
 import { usePollingInterval } from "@/hooks/use-page-visible";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
@@ -39,6 +40,8 @@ function modifierNames(item: components["schemas"]["OrderItemResponse"]): string
 export function TrackScreen() {
   const { t, locale } = useGuestCopy();
   const session = useGuest((state) => state.session);
+  const cashRequestedOrderId = useGuest((state) => state.cashRequestedOrderId);
+  const setCashRequestedOrderId = useGuest((state) => state.setCashRequestedOrderId);
   const interval = usePollingInterval(7000);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -49,7 +52,11 @@ export function TrackScreen() {
     refetchInterval: interval,
     queryFn: async (): Promise<GuestOrder | null> => {
       const result = await guestApi.GET("/api/v1/orders/active");
-      if (result.response.status === 404) return null;
+      if (result.response.status === 404) {
+        const error = asApiError(result.error, result.response, t.oops, locale);
+        if (isGuestSessionGone(error)) throw error;
+        return null;
+      }
       if (!result.response.ok || !result.data) {
         throw asApiError(result.error, result.response, t.oops, locale);
       }
@@ -80,17 +87,25 @@ export function TrackScreen() {
       return result.data.checkout_url ?? null;
     },
     onMutate: () => setNotice(null),
-    onSuccess: (checkoutUrl, { method }) => {
+    onSuccess: (checkoutUrl, { method, activeOrder: paidOrder }) => {
       if (checkoutUrl) {
         window.location.assign(checkoutUrl);
         return;
       }
-      if (method === "CASH") setNotice(t.cashRequested);
+      if (method === "CASH") {
+        setCashRequestedOrderId(paidOrder.id);
+        setNotice(t.paymentRequested);
+      }
       void order.refetch();
     },
-    onError: (error: Error) => {
+    onError: (error: Error, { activeOrder: paidOrder }) => {
       if (error instanceof ApiError && error.code === "PRESENCE_VERIFICATION_REQUIRED") {
         setNotice(t.confirmTable);
+        return;
+      }
+      if (error instanceof ApiError && error.code === "ACTIVE_OFFLINE_PAYMENT_EXISTS") {
+        setCashRequestedOrderId(paidOrder.id);
+        setNotice(t.paymentRequested);
         return;
       }
       toast.error(error.message);
@@ -134,6 +149,14 @@ export function TrackScreen() {
     },
   });
 
+  useEffect(() => {
+    const current = order.data;
+    if (!current) return;
+    if (current.is_paid || current.status === "PAID" || current.status === "CLOSED") {
+      if (cashRequestedOrderId === current.id) setCashRequestedOrderId(null);
+    }
+  }, [order.data, cashRequestedOrderId, setCashRequestedOrderId]);
+
   const handover = useQuery({
     queryKey: ["handover", order.data?.id],
     enabled: Boolean(order.data?.id && order.data.status !== "CANCELLED"),
@@ -146,17 +169,10 @@ export function TrackScreen() {
     },
   });
 
-  if (!session) return <p className="text-sm">{t.scanAgain}</p>;
+  if (!session) return null;
   if (order.isLoading) return <LoadingState label={t.loading} />;
   if (order.isError) {
-    return (
-      <ErrorState
-        title={t.oopsTitle}
-        body={order.error instanceof Error ? order.error.message : t.oops}
-        onRetry={() => void order.refetch()}
-        retryLabel={t.retry}
-      />
-    );
+    return <GuestQueryError error={order.error} onRetry={() => void order.refetch()} />;
   }
   if (!order.data) {
     return (
@@ -171,8 +187,12 @@ export function TrackScreen() {
   const activeOrder = order.data;
   const status = activeOrder.status;
   const pending = status === "PENDING_STAFF_CONFIRMATION" || status === "DRAFT";
-  const canPay = PAYABLE_STATUSES.has(status) && !activeOrder.is_paid;
+  const rejected = status === "CANCELLED";
+  const paid = activeOrder.is_paid || status === "PAID" || status === "CLOSED";
+  const cashRequested = !paid && (cashRequestedOrderId === activeOrder.id || notice === t.paymentRequested);
+  const canPay = PAYABLE_STATUSES.has(status) && !paid && !cashRequested;
   const current = stepIndex(status);
+  const showKitchen = !rejected && !pending;
   const reference =
     activeOrder.display_number?.trim() ||
     (activeOrder.pickup_number != null ? `#${activeOrder.pickup_number}` : null) ||
@@ -188,9 +208,24 @@ export function TrackScreen() {
           </p>
         ) : null}
       </div>
-      <p className="text-[length:var(--text-20)] font-medium">{guestStatus[locale][status]}</p>
+      {rejected ? (
+        <div className="grid gap-3 rounded-xl bg-secondary px-4 py-4">
+          <p className="text-[length:var(--text-20)] font-medium">{t.orderRejected}</p>
+          {activeOrder.cancellation_reason ? (
+            <p className="text-sm text-muted-foreground">{activeOrder.cancellation_reason}</p>
+          ) : null}
+          <Link
+            href="/order"
+            className="inline-flex min-h-14 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground"
+          >
+            {t.startNewOrder}
+          </Link>
+        </div>
+      ) : (
+        <p className="text-[length:var(--text-20)] font-medium">{guestStatus[locale][status === "PAID" || status === "CLOSED" ? "DELIVERED" : status]}</p>
+      )}
       {pending ? <PresenceNote /> : null}
-      {status !== "CANCELLED" && !pending ? (
+      {showKitchen ? (
         <ol className="grid gap-2">
           {STEPS.map((step, index) => (
             <li key={step} className={`text-sm ${index <= current ? "font-semibold" : "text-muted-foreground"}`}>
@@ -223,44 +258,54 @@ export function TrackScreen() {
           {t.handover}: {handover.data.token}
         </p>
       ) : null}
-      {notice ? (
+      {rejected ? null : paid ? (
+        <p role="status" className="rounded-xl bg-secondary px-4 py-3 text-sm font-medium">
+          {t.paid}
+        </p>
+      ) : cashRequested || notice === t.paymentRequested ? (
+        <p role="status" className="rounded-xl bg-secondary px-4 py-3 text-sm">
+          {t.paymentRequested}
+        </p>
+      ) : notice ? (
         <p role="status" className="rounded-xl bg-secondary px-4 py-3 text-sm">
           {notice}
         </p>
       ) : null}
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Link href="/order/service" className="inline-flex min-h-14 items-center justify-center rounded-lg border text-sm font-medium">
-          {t.call}
-        </Link>
-        <button
-          type="button"
-          className="min-h-14 rounded-lg border text-sm font-medium disabled:opacity-50"
-          disabled={here.isPending}
-          onClick={() => here.mutate()}
-        >
-          {t.here}
-        </button>
-        {canPay ? (
-          <>
-            <button
-              type="button"
-              className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
-              disabled={pay.isPending}
-              onClick={() => pay.mutate({ method: "CASH", activeOrder })}
-            >
-              {pay.isPending && pay.variables?.method === "CASH" ? t.paying : t.payCash}
-            </button>
-            <button
-              type="button"
-              className="min-h-14 rounded-lg border text-sm font-medium disabled:opacity-50"
-              disabled={pay.isPending}
-              onClick={() => pay.mutate({ method: "ONLINE_CARD", activeOrder })}
-            >
-              {pay.isPending && pay.variables?.method === "ONLINE_CARD" ? t.paying : t.payOnline}
-            </button>
-          </>
-        ) : null}
-      </div>
+      {rejected ? null : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Link href="/order/service" className="inline-flex min-h-14 items-center justify-center rounded-lg border text-sm font-medium">
+            {t.call}
+          </Link>
+          <button
+            type="button"
+            className="min-h-14 rounded-lg border text-sm font-medium disabled:opacity-50"
+            disabled={here.isPending}
+            onClick={() => here.mutate()}
+          >
+            {t.here}
+          </button>
+          {canPay ? (
+            <>
+              <button
+                type="button"
+                className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
+                disabled={pay.isPending}
+                onClick={() => pay.mutate({ method: "CASH", activeOrder })}
+              >
+                {pay.isPending && pay.variables?.method === "CASH" ? t.paying : t.payCash}
+              </button>
+              <button
+                type="button"
+                className="min-h-14 rounded-lg border text-sm font-medium disabled:opacity-50"
+                disabled={pay.isPending}
+                onClick={() => pay.mutate({ method: "ONLINE_CARD", activeOrder })}
+              >
+                {pay.isPending && pay.variables?.method === "ONLINE_CARD" ? t.paying : t.payOnline}
+              </button>
+            </>
+          ) : null}
+        </div>
+      )}
       {pending ? <p className="text-sm text-muted-foreground">{t.payAfterConfirm}</p> : null}
       {GUEST_CANCELLABLE.has(status) ? (
         <div className="mt-4 border-t pt-4">

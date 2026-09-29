@@ -3,7 +3,9 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 import { Logo } from "@/components/ops/logo";
+import { ErrorState, LoadingState } from "@/components/ops/states";
 import { guestCopy } from "@/features/guest/copy";
+import { guestTableToken, isGuestSessionGone, recoverGuestSession } from "@/features/guest/session";
 import { initials } from "@/lib/auth/scope";
 import { accentForeground, mergeGuestBranding, sameBranding } from "@/lib/guest/branding";
 import { mediaUrl } from "@/lib/media";
@@ -78,7 +80,123 @@ function BrandHeader() {
   );
 }
 
-export function GuestShell({ children, neutral = false }: { children: ReactNode; neutral?: boolean }) {
+export function RejoinTable({ message }: { message?: string }) {
+  const { t } = useGuestCopy();
+  const token = useGuest((state) => state.tableToken) ?? (typeof window === "undefined" ? null : guestTableToken());
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function rejoin() {
+    if (!token) return;
+    setPending(true);
+    setFailed(false);
+    const ok = await recoverGuestSession();
+    setPending(false);
+    if (!ok) setFailed(true);
+  }
+
+  return (
+    <div className="grid gap-3">
+      <p className="text-sm">{message ?? t.sessionGone}</p>
+      {token ? (
+        <button
+          type="button"
+          className="min-h-14 justify-self-start rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          disabled={pending}
+          onClick={() => void rejoin()}
+        >
+          {pending ? t.rejoining : t.rejoin}
+        </button>
+      ) : (
+        <p className="text-sm text-muted-foreground">{t.scanAgain}</p>
+      )}
+      {failed ? <p className="text-sm text-muted-foreground">{t.tableCodeFailed}</p> : null}
+    </div>
+  );
+}
+
+/** Recovers a dropped guest cookie using the stored or URL table token. */
+export function GuestResume({ children }: { children: ReactNode }) {
+  const { t } = useGuestCopy();
+  const session = useGuest((state) => state.session);
+  const storedToken = useGuest((state) => state.tableToken);
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.resolve(useGuest.persist.rehydrate()).then(async () => {
+      if (cancelled) return;
+      const current = useGuest.getState();
+      if (current.session) {
+        setReady(true);
+        return;
+      }
+      const token = current.tableToken ?? guestTableToken();
+      if (!token) {
+        setReady(true);
+        return;
+      }
+      const ok = await recoverGuestSession();
+      if (cancelled) return;
+      if (!ok) setFailed(true);
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storedToken]);
+
+  if (!ready) return <LoadingState label={t.rejoining} />;
+  if (session) return children;
+  return <RejoinTable message={failed ? t.sessionGone : undefined} />;
+}
+
+export function GuestQueryError({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => void;
+}) {
+  const { t } = useGuestCopy();
+  const gone = isGuestSessionGone(error);
+  const token = useGuest((state) => state.tableToken);
+  const [retried, setRetried] = useState(false);
+
+  useEffect(() => {
+    if (!gone || !token || retried) return;
+    setRetried(true);
+    void recoverGuestSession().then((ok) => {
+      if (ok) onRetry();
+    });
+  }, [gone, token, retried, onRetry]);
+
+  if (gone) {
+    if (token && !retried) return <LoadingState label={t.rejoining} />;
+    return <RejoinTable />;
+  }
+
+  return (
+    <ErrorState
+      title={t.oopsTitle}
+      body={error instanceof Error ? error.message : t.oops}
+      onRetry={onRetry}
+      retryLabel={t.retry}
+    />
+  );
+}
+
+export function GuestShell({
+  children,
+  neutral = false,
+  resume = !neutral,
+}: {
+  children: ReactNode;
+  neutral?: boolean;
+  /** Recover a dropped table session. Off for pickup and the join form. */
+  resume?: boolean;
+}) {
   const { t, locale, dir, setLocale } = useGuestCopy();
   const accent = useGuest((state) => (neutral ? null : (state.branding?.accent ?? null)));
 
@@ -106,7 +224,7 @@ export function GuestShell({ children, neutral = false }: { children: ReactNode;
           {t.language}
         </button>
       </header>
-      <div className="mx-auto w-full max-w-3xl px-4 py-4 pb-28">{children}</div>
+      <div className="mx-auto w-full max-w-3xl px-4 py-4 pb-28">{resume ? <GuestResume>{children}</GuestResume> : children}</div>
     </div>
   );
 }

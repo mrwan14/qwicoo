@@ -7,9 +7,9 @@ import { toast } from "sonner";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { PresenceNote, useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
+import { GuestQueryError, PresenceNote, useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
 import { Money } from "@/components/ops/money";
-import { ErrorState, LoadingState } from "@/components/ops/states";
+import { LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -92,24 +92,10 @@ export function MenuScreen() {
   const active = items.find((item) => item.id === activeId) ?? null;
   const currency = branchMenu.data?.currency || "EGP";
 
-  if (!session) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        {t.scanAgain}
-      </p>
-    );
-  }
-
+  if (!session) return null;
   if (menu.isLoading) return <LoadingState label={t.loading} />;
   if (menu.isError) {
-    return (
-      <ErrorState
-        title={t.oopsTitle}
-        body={menu.error instanceof Error ? menu.error.message : t.oops}
-        onRetry={() => void menu.refetch()}
-        retryLabel={t.retry}
-      />
-    );
+    return <GuestQueryError error={menu.error} onRetry={() => void menu.refetch()} />;
   }
 
   return (

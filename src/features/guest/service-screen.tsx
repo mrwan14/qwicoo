@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { guestServiceStatus, guestServiceType } from "@/features/guest/copy";
 import { useGuestCopy } from "@/features/guest/shell";
 import { usePollingInterval } from "@/hooks/use-page-visible";
 import { asApiError } from "@/lib/api/error";
@@ -70,7 +71,7 @@ export function ServiceScreen() {
         >
           {TYPES.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {guestServiceType[locale][item]}
             </option>
           ))}
         </select>
@@ -90,7 +91,7 @@ export function ServiceScreen() {
       <ul className="grid gap-2">
         {(active.data ?? []).map((request) => (
           <li key={request.id} className="rounded-lg border p-3 text-sm">
-            {request.request_type} · {request.status}
+            {guestServiceType[locale][request.request_type]} · {guestServiceStatus[locale][request.status]}
           </li>
         ))}
       </ul>

@@ -8,6 +8,7 @@ import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
+import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
 import { useScope } from "@/stores/scope";
 
 export function PaymentsScreen() {
@@ -53,8 +54,8 @@ export function PaymentsScreen() {
         {(pending.data ?? []).map((payment) => (
           <li key={payment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
             <div>
-              <p className="font-medium">{payment.payment_method}</p>
-              <p className="text-sm text-muted-foreground">{payment.status}</p>
+              <p className="font-medium">{paymentMethodLabel(payment.payment_method)}</p>
+              <p className="text-sm text-muted-foreground">{paymentStatusLabel(payment.status)}</p>
             </div>
             <Money amount={payment.amount} currency={payment.currency} />
             <button type="button" className="min-h-11 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => verify.mutate(payment.id)}>

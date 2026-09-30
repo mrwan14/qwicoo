@@ -54,7 +54,10 @@ export function PaymentsScreen() {
         {(pending.data ?? []).map((payment) => (
           <li key={payment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
             <div>
-              <p className="font-medium">{paymentMethodLabel(payment.payment_method)}</p>
+              <p className="font-medium">
+                {paymentMethodLabel(payment.payment_method)}
+                {payment.pickup_number != null ? <span className="tabular-nums"> #{payment.pickup_number}</span> : null}
+              </p>
               <p className="text-sm text-muted-foreground">{paymentStatusLabel(payment.status)}</p>
             </div>
             <Money amount={payment.amount} currency={payment.currency} />

@@ -8,26 +8,14 @@ import { toneSurface } from "@/components/ops/status-chip";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { formatMoney } from "@/lib/format/money";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { orderStatusLabel } from "@/lib/status-labels";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
 
-/** `display_number` and `items` come from the API but aren't in the generated schema yet. */
-type ExpoModifier = { name?: unknown; group_name?: unknown };
-type ExpoLineItem = {
-  name: string;
-  quantity: number;
-  modifiers?: ExpoModifier[] | null;
-  notes?: string | null;
-  special_instructions?: string | null;
-};
-type ExpoOrder = components["schemas"]["KDSExpoOrderResponse"] & {
-  display_number?: string | null;
-  items?: ExpoLineItem[] | null;
-  customer_notes?: string | null;
-};
+type ExpoOrder = components["schemas"]["KDSExpoOrderResponse"];
 
 type CardLine = {
   key: string;
@@ -39,15 +27,31 @@ type CardLine = {
   ticketItemId?: string;
 };
 
+function paymentDueBeforeHandover(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const root = error as { code?: unknown; detail?: unknown };
+  const detail =
+    root.detail && typeof root.detail === "object"
+      ? (root.detail as { code?: unknown; amount_due?: unknown; currency?: unknown })
+      : null;
+  if (root.code !== "PAYMENT_REQUIRED_BEFORE_HANDOVER" && detail?.code !== "PAYMENT_REQUIRED_BEFORE_HANDOVER") return null;
+  if (typeof detail?.amount_due !== "string" || !detail.amount_due) return "";
+  const currency = typeof detail.currency === "string" && detail.currency ? detail.currency : "EGP";
+  return formatMoney(detail.amount_due, currency);
+}
+
 function displayNumber(order: ExpoOrder): string | null {
   if (order.pickup_number != null) return `#${order.pickup_number}`;
   const table = order.display_number?.trim();
   return table ? `Table ${table}` : null;
 }
 
-function modifierNames(modifiers: ExpoModifier[] | null | undefined): string[] {
+function modifierNames(modifiers: { [key: string]: unknown }[] | null | undefined): string[] {
   return (modifiers ?? [])
-    .map((modifier) => (typeof modifier.name === "string" ? modifier.name : pickLocale(modifier.name, "en")).trim())
+    .map((modifier) => {
+      const name = modifier.name;
+      return (typeof name === "string" ? name : pickLocale(name, "en")).trim();
+    })
     .filter(Boolean);
 }
 
@@ -59,7 +63,7 @@ function cardLines(order: ExpoOrder): CardLine[] {
       name: item.name,
       quantity: item.quantity,
       modifiers: modifierNames(item.modifiers),
-      note: item.notes?.trim() || item.special_instructions?.trim() || null,
+      note: item.notes?.trim() || null,
     }));
   }
   return (order.ticket_items ?? []).map((item) => ({
@@ -145,7 +149,15 @@ export function ExpoScreen() {
       const result = await browserApi.POST("/api/v1/orders/handover/verify", {
         body: { token, branch_id: branchId },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Handover failed");
+      if (!result.response.ok) {
+        const due = paymentDueBeforeHandover(result.error);
+        if (due != null) {
+          throw new Error(
+            due ? `Take ${due} first on the Payments screen, then scan again.` : "Take payment first, then scan again.",
+          );
+        }
+        throw asApiError(result.error, result.response, "Handover failed");
+      }
     },
     onSuccess: () => toast.success("Handover verified"),
     onError: (error: Error) => toast.error(error.message),

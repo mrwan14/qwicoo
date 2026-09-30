@@ -222,8 +222,8 @@ const CATALOG: Record<string, Catalog> = {
     ar: "حصّل المبلغ أولاً، ثم امسح الرمز مجدداً.",
   },
   RATE_LIMITED: {
-    en: "You're ordering a bit fast. Please wait a minute and try again.",
-    ar: "أنت تطلب بسرعة. يرجى الانتظار دقيقة ثم المحاولة مجدداً.",
+    en: "Too many attempts. Please wait a minute and try again.",
+    ar: "محاولات كثيرة. يرجى الانتظار دقيقة ثم المحاولة مجدداً.",
     aliases: [
       "Too many requests. Please wait a moment and try again.",
       "طلبات كثيرة جدًا. يُرجى الانتظار قليلًا ثم المحاولة مرة أخرى.",

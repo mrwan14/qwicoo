@@ -6,12 +6,6 @@ import { getApiOrigin } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-/** Socket address Next.js recorded, when the request did not already carry X-Forwarded-For. */
-function requestIp(request: NextRequest): string | null {
-  const ip = (request as NextRequest & { ip?: string | null }).ip;
-  return ip?.trim() || null;
-}
-
 async function proxy(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> },
@@ -35,7 +29,7 @@ async function proxy(
   if (orderAccessToken) headers.set("x-order-access-token", orderAccessToken);
   // The API rate-limits public pickup orders per client IP and only trusts
   // X-Forwarded-For when the socket peer is a trusted proxy (this server).
-  const forwardedFor = request.headers.get("x-forwarded-for") || requestIp(request);
+  const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) headers.set("x-forwarded-for", forwardedFor);
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";

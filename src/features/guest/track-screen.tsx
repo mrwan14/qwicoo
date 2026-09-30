@@ -191,7 +191,7 @@ export function TrackScreen() {
 
   const storedPickup = order.data && shouldFetchHandover(order.data) ? getPickupOrder(order.data.id) : null;
   const handover = useQuery({
-    queryKey: ["handover", order.data?.id, order.data?.status, storedPickup?.accessToken],
+    queryKey: ["handover", order.data?.id, order.data?.status],
     enabled: Boolean(order.data && shouldFetchHandover(order.data) && storedPickup),
     queryFn: async () => {
       const current = order.data;

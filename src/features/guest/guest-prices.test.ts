@@ -62,3 +62,23 @@ test("branch override of 65 plus size and milk and 14% tax renders 102.60", () =
   assert.equal(html.includes("60.00"), false);
   assert.equal(html.includes("115"), false);
 });
+
+test("a quote total of 95.20 renders as EGP 95.20", () => {
+  const pricing = {
+    subtotal: "80.00",
+    discount_total: "0.00",
+    service_fee_total: "0.00",
+    tax_total: "0.00",
+    total: "95.20",
+  };
+  const orderTotal = quotedOrderTotal(pricing);
+  const figures = guestQuoteFigures(pricing);
+  const html = renderToStaticMarkup(
+    createElement("p", null, formatMoney(orderTotal, "EGP", "en")),
+  );
+
+  assert.equal(orderTotal, pricing.total);
+  assert.equal(figures.total, "95.20");
+  assert.equal(orderTotal, "95.20");
+  assert.match(html, /EGP\s*95\.20/);
+});

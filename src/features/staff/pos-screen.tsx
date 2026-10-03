@@ -136,6 +136,17 @@ export function PosScreen() {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [configuring, setConfiguring] = useState<MenuItem | null>(null);
+  const tables = useQuery({
+    queryKey: ["branch-tables", branchId],
+    enabled: Boolean(branchId) && orderType === "DINE_IN",
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/branches/{branch_id}/tables", {
+        params: { path: { branch_id: branchId ?? "" } },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Tables failed");
+      return [...result.data].sort((a, b) => a.table_number.localeCompare(b.table_number, undefined, { numeric: true }));
+    },
+  });
   const linesRef = useRef(lines);
   useEffect(() => {
     linesRef.current = lines;
@@ -296,7 +307,16 @@ export function PosScreen() {
         </select>
       </label>
       {orderType === "DINE_IN" ? (
-        <input className="h-12 rounded-lg border px-3" placeholder="Table id" value={tableId} onChange={(event) => setTableId(event.target.value)} />
+        <label className="grid gap-1 text-sm">
+          Table
+          <select className="h-12 rounded-lg border px-3" value={tableId} onChange={(event) => setTableId(event.target.value)}>
+            <option value="">Select a table</option>
+            {(tables.data ?? []).map((table) => (
+              <option key={table.id} value={table.id}>{table.table_number}</option>
+            ))}
+          </select>
+          {tables.isError ? <span className="text-sm text-destructive">{tables.error instanceof Error ? tables.error.message : "Tables failed"}</span> : null}
+        </label>
       ) : null}
       <label className="grid gap-1 text-sm">
         Tender

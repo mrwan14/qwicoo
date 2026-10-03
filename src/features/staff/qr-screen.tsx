@@ -6,10 +6,12 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/ops/page-header";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { PIN_ROLES } from "@/lib/auth/scope";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
 
@@ -41,8 +43,22 @@ function fileSafe(value: string) {
 
 export function QrScreen() {
   const branchId = useScope((state) => state.branchId);
+  const me = useStaffSession();
+  const canSeePin = Boolean(me && PIN_ROLES.includes(me.role));
   const [origin, setOrigin] = useState("");
   useEffect(() => setOrigin(window.location.origin), []);
+
+  const pin = useQuery({
+    queryKey: ["access-pin", branchId],
+    enabled: Boolean(branchId) && canSeePin,
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/branches/{branch_id}/access-pin", {
+        params: { path: { branch_id: branchId ?? "" } },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "PIN failed");
+      return result.data;
+    },
+  });
 
   const tables = useQuery({
     queryKey: ["branch-tables", branchId],
@@ -74,6 +90,16 @@ export function QrScreen() {
   return (
     <div className="grid gap-6">
       <PageHeader title="QR codes" />
+
+      {canSeePin ? (
+        <section className="grid gap-2 rounded-xl border bg-card p-4 shadow-elev-1">
+          <h2 className="text-lg font-semibold">Guest PIN</h2>
+          <p className="text-sm text-muted-foreground">Guests enter this PIN after they scan a table QR.</p>
+          {pin.isLoading ? <LoadingState label="Loading PIN" /> : null}
+          {pin.isError ? <p className="text-sm text-destructive">{pin.error instanceof Error ? pin.error.message : "PIN failed"}</p> : null}
+          {pin.data ? <p className="text-2xl font-semibold tracking-widest">{pin.data.access_pin}</p> : null}
+        </section>
+      ) : null}
 
       <section className="grid gap-3 rounded-xl border bg-card p-4 shadow-elev-1">
         <h2 className="text-lg font-semibold">Pickup link</h2>

@@ -10,6 +10,7 @@ export function formatMoney(
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
+      currencyDisplay: "code",
     }).format(value);
   } catch {
     return `${amount} ${currency}`;

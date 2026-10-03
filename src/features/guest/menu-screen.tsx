@@ -11,6 +11,9 @@ import { resumeIfSessionGone } from "@/features/guest/session";
 import { GuestQueryError, PresenceNote, useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
 import { Money } from "@/components/ops/money";
 import { LoadingState } from "@/components/ops/states";
+import { GuestQuoteSummary } from "@/features/guest/guest-quote-summary";
+import { branchUnitPrice, quotedOrderTotal } from "@/features/guest/guest-prices";
+import { useGuestOrderQuote, type QuoteItemInput } from "@/features/guest/use-guest-quote";
 import { asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -54,7 +57,9 @@ export function MenuScreen() {
       const result = await guestApi.GET("/api/v1/menu/branch/{branch_id}", {
         params: { path: { branch_id: session?.branchId ?? "" } },
       });
-      if (!result.response.ok || !result.data) return null;
+      if (!result.response.ok || !result.data) {
+        throw asApiError(result.error, result.response, t.oops, locale);
+      }
       return result.data;
     },
   });
@@ -82,6 +87,16 @@ export function MenuScreen() {
     },
   });
 
+  const branchPrices = useMemo(() => {
+    const prices = new Map<string, string>();
+    for (const category of branchMenu.data?.categories ?? []) {
+      for (const item of category.items ?? []) {
+        prices.set(item.id, branchUnitPrice({ base_price: item.base_price, final_price: item.final_price }));
+      }
+    }
+    return prices;
+  }, [branchMenu.data]);
+
   const items = useMemo(() => {
     const list: MenuItem[] = [];
     for (const category of menu.data?.categories ?? []) {
@@ -92,11 +107,25 @@ export function MenuScreen() {
 
   const active = items.find((item) => item.id === activeId) ?? null;
   const currency = branchMenu.data?.currency || "EGP";
+  const cartQuoteItems = useMemo<QuoteItemInput[] | null>(() => {
+    const lines = cart.data?.items ?? [];
+    if (lines.length === 0) return null;
+    return lines.map((line) => ({
+      item_id: line.item_id,
+      quantity: line.quantity,
+      selected_option_ids: (line.modifiers ?? []).map((modifier) => modifier.option_id),
+      special_instructions: line.notes,
+    }));
+  }, [cart.data]);
+  const cartQuote = useGuestOrderQuote(cartQuoteItems, t.oops);
 
   if (!session) return null;
-  if (menu.isLoading) return <LoadingState label={t.loading} />;
+  if (menu.isLoading || branchMenu.isLoading) return <LoadingState label={t.loading} />;
   if (menu.isError) {
     return <GuestQueryError error={menu.error} onRetry={() => void menu.refetch()} />;
+  }
+  if (branchMenu.isError) {
+    return <GuestQueryError error={branchMenu.error} onRetry={() => void branchMenu.refetch()} />;
   }
 
   return (
@@ -152,7 +181,11 @@ export function MenuScreen() {
                     <span className="font-medium">{optionName(item.name, locale)}</span>
                     <span className="text-sm text-muted-foreground">
                       {item.is_available ? (
-                        <Money amount={item.base_price} currency={currency} locale={locale} />
+                        branchPrices.get(item.id) ? (
+                          <Money amount={branchPrices.get(item.id) ?? ""} currency={currency} locale={locale} />
+                        ) : (
+                          <span>{branchMenu.isLoading ? t.loading : t.validate}</span>
+                        )
                       ) : (
                         <span className="inline-flex rounded-full bg-[var(--status-soldout-bg)] px-2 py-0.5 text-xs font-medium text-[var(--status-soldout)]">{t.unavailable}</span>
                       )}
@@ -173,9 +206,11 @@ export function MenuScreen() {
             <ItemConfigurator
               item={active}
               currency={currency}
+              branchPrice={branchPrices.get(active.id) ?? null}
               onDone={() => {
                 setActiveId(null);
                 void queryClient.invalidateQueries({ queryKey: ["guest-cart"] });
+                void queryClient.invalidateQueries({ queryKey: ["guest-quote"] });
               }}
             />
           </DialogContent>
@@ -191,9 +226,11 @@ export function MenuScreen() {
               <ItemConfigurator
                 item={active}
                 currency={currency}
+                branchPrice={branchPrices.get(active.id) ?? null}
                 onDone={() => {
                   setActiveId(null);
                   void queryClient.invalidateQueries({ queryKey: ["guest-cart"] });
+                  void queryClient.invalidateQueries({ queryKey: ["guest-quote"] });
                 }}
               />
             </div>
@@ -205,7 +242,13 @@ export function MenuScreen() {
           <div>
             <p className="text-xs text-muted-foreground">{t.cart}</p>
             <p className="text-base font-semibold">
-              <Money amount={cart.data?.subtotal ?? "0.00"} currency={currency} locale={locale} />
+              {(cart.data?.total_items ?? 0) === 0 ? (
+                <Money amount="0.00" currency={currency} locale={locale} />
+              ) : cartQuote.data ? (
+                <Money amount={quotedOrderTotal(cartQuote.data)} currency={currency} locale={locale} />
+              ) : (
+                <span>{cartQuote.isError ? t.retry : t.validate}</span>
+              )}
             </p>
           </div>
           <Link
@@ -223,10 +266,12 @@ export function MenuScreen() {
 function ItemConfigurator({
   item,
   currency,
+  branchPrice,
   onDone,
 }: {
   item: MenuItem;
   currency: string;
+  branchPrice: string | null;
   onDone: () => void;
 }) {
   const { t, locale } = useGuestCopy();
@@ -235,8 +280,20 @@ function ItemConfigurator({
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const [selected, setSelected] = useState<Record<string, string[]>>({});
+  const [choiceError, setChoiceError] = useState("");
 
   const groups = (item.modifier_groups ?? []) as ModifierGroup[];
+
+  function missingGroup(): string | null {
+    for (const group of groups) {
+      const count = (selected[group.id] ?? []).length;
+      const minimum = group.is_required ? Math.max(1, group.min_choices ?? 1) : (group.min_choices ?? 0);
+      if (count < minimum) return optionName(group.name, locale);
+    }
+    return null;
+  }
+
+  const missing = missingGroup();
 
   function toggle(group: ModifierGroup, optionId: string) {
     setSelected((current) => {
@@ -256,8 +313,21 @@ function ItemConfigurator({
     .filter(([, optionIds]) => optionIds.length > 0)
     .map(([group_id, option_ids]) => ({ group_id, option_ids }));
 
+  const quoteItems = useMemo<QuoteItemInput[] | null>(() => {
+    if (missing !== null) return null;
+    const optionIds = Object.values(selected).flat();
+    return [{
+      item_id: item.id,
+      quantity,
+      selected_option_ids: optionIds,
+      special_instructions: notes || null,
+    }];
+  }, [item.id, missing, notes, quantity, selected]);
+  const quote = useGuestOrderQuote(quoteItems, t.oops);
+
   const priced = useQuery({
     queryKey: ["validate", item.id, quantity, selectedGroups, session?.tableId],
+    enabled: missing === null,
     queryFn: async () => {
       const body: components["schemas"]["ValidateItemSelectionRequest"] = {
         item_id: item.id,
@@ -281,7 +351,7 @@ function ItemConfigurator({
         guest_name: guestName || "Guest",
         item_id: validated.item_id,
         item_name: validated.item_name,
-        unit_price: validated.unit_price,
+        unit_price: branchPrice ?? validated.base_price,
         quantity: validated.quantity,
         notes: notes || null,
         modifiers: (validated.selected_modifiers ?? []).map((modifier) => ({
@@ -323,19 +393,32 @@ function ItemConfigurator({
             {optionName(group.name, locale)}
             {group.is_required ? ` · ${t.required}` : ""}
           </legend>
-          {(group.options ?? []).map((option) => (
-            <label key={option.id} className="flex min-h-12 items-center gap-3 text-sm">
-              <input
-                type={group.max_choices === 1 ? "radio" : "checkbox"}
-                name={group.id}
-                checked={(selected[group.id] ?? []).includes(option.id)}
-                disabled={option.is_available === false}
-                onChange={() => toggle(group, option.id)}
-              />
-              <span className="flex-1">{optionName(option.name, locale)}</span>
-              <span className="text-muted-foreground">{option.price_delta}</span>
-            </label>
-          ))}
+          {(group.options ?? []).map((option) => {
+            const soldOut = option.is_available === false;
+            const delta = Number(option.price_delta);
+            return (
+              <label key={option.id} className={`flex min-h-12 items-center gap-3 text-sm ${soldOut ? "text-muted-foreground" : ""}`}>
+                <input
+                  type={group.max_choices === 1 ? "radio" : "checkbox"}
+                  name={group.id}
+                  checked={(selected[group.id] ?? []).includes(option.id)}
+                  disabled={soldOut}
+                  onChange={() => {
+                    if (soldOut) return;
+                    setChoiceError("");
+                    toggle(group, option.id);
+                  }}
+                />
+                <span className="flex-1">
+                  {optionName(option.name, locale)}
+                  {soldOut ? ` · ${t.unavailable}` : ""}
+                </span>
+                {!soldOut && Number.isFinite(delta) && delta !== 0 ? (
+                  <Money amount={option.price_delta} currency={currency} locale={locale} />
+                ) : null}
+              </label>
+            );
+          })}
         </fieldset>
       ))}
       <label className="grid gap-1 text-sm font-medium">
@@ -356,18 +439,40 @@ function ItemConfigurator({
           onChange={(event) => setNotes(event.target.value)}
         />
       </label>
-      <p className="text-sm">
-        {priced.isLoading ? t.validate : priced.isError ? t.retry : priced.data ? (
-          <Money amount={priced.data.subtotal} currency={currency} locale={locale} />
-        ) : (
-          t.pricePending
-        )}
-      </p>
+      {choiceError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {choiceError}
+        </p>
+      ) : null}
+      {missing ? (
+        <p className="text-sm">{t.pricePending}</p>
+      ) : quote.isLoading ? (
+        <p className="text-sm">{t.validate}</p>
+      ) : quote.isError ? (
+        <p className="text-sm text-destructive">{quote.error instanceof Error ? quote.error.message : t.oops}</p>
+      ) : quote.data ? (
+        <GuestQuoteSummary
+          pricing={quote.data}
+          labels={{ subtotal: t.subtotal, discount: t.discount, serviceFee: t.serviceFee, tax: t.tax, total: t.total }}
+          locale={locale}
+          currency={currency}
+        />
+      ) : (
+        <p className="text-sm">{t.pricePending}</p>
+      )}
       <button
         type="button"
         className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
-        disabled={!priced.data || add.isPending || !guestName.trim()}
-        onClick={() => priced.data && add.mutate(priced.data)}
+        disabled={add.isPending || !guestName.trim()}
+        onClick={() => {
+          const needed = missingGroup();
+          if (needed) {
+            setChoiceError(t.chooseRequired.replace("{name}", needed));
+            return;
+          }
+          if (!priced.data || !quote.data) return;
+          add.mutate(priced.data);
+        }}
       >
         {t.add}
       </button>

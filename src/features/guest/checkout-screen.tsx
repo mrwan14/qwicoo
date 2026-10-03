@@ -3,13 +3,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
 import { LoadingState } from "@/components/ops/states";
+import { GuestQuoteSummary } from "@/features/guest/guest-quote-summary";
+import { quotedLineSubtotal } from "@/features/guest/guest-prices";
 import { resumeIfSessionGone } from "@/features/guest/session";
 import { GuestQueryError, LineDetails, useGuestCopy } from "@/features/guest/shell";
+import { useGuestOrderQuote, type QuoteItemInput } from "@/features/guest/use-guest-quote";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import type { components } from "@/lib/api/schema";
@@ -95,13 +98,24 @@ export function CheckoutScreen() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["guest-cart"] }),
   });
 
+  const lines = useMemo(() => cart.data?.items ?? [], [cart.data]);
+  const quoteItems = useMemo<QuoteItemInput[] | null>(() => {
+    if (lines.length === 0) return null;
+    return lines.map((line) => ({
+      item_id: line.item_id,
+      quantity: line.quantity,
+      selected_option_ids: (line.modifiers ?? []).map((modifier) => modifier.option_id),
+      special_instructions: line.notes,
+    }));
+  }, [lines]);
+  const quote = useGuestOrderQuote(quoteItems, t.oops);
+  const quotedLines = quote.data?.items ?? [];
+
   if (!session) return null;
   if (cart.isLoading) return <LoadingState label={t.loading} />;
   if (cart.isError) {
     return <GuestQueryError error={cart.error} onRetry={() => void cart.refetch()} />;
   }
-
-  const lines = cart.data?.items ?? [];
 
   return (
     <div className="grid gap-4">
@@ -110,7 +124,9 @@ export function CheckoutScreen() {
         <p className="text-sm text-muted-foreground">{t.emptyCart}</p>
       ) : (
         <ul className="grid gap-3">
-          {lines.map((line) => (
+          {lines.map((line, index) => {
+            const quoted = quotedLines[index];
+            return (
             <li key={line.id} className="flex items-start justify-between gap-3 rounded-xl border p-3">
               <div className="min-w-0">
                 <p className="font-medium">{line.item_name}</p>
@@ -120,18 +136,37 @@ export function CheckoutScreen() {
                 <LineDetails modifiers={(line.modifiers ?? []).map((modifier) => modifier.name)} note={line.notes} />
               </div>
               <div className="text-end">
-                <Money amount={line.line_total} locale={locale} />
+                {quoted ? (
+                  <Money
+                    amount={quotedLineSubtotal({
+                      unit_price: quoted.unit_price,
+                      subtotal: quoted.subtotal,
+                    })}
+                    currency={quote.data?.currency || "EGP"}
+                    locale={locale}
+                  />
+                ) : (
+                  <span className="text-sm text-muted-foreground">{quote.isError ? t.retry : t.validate}</span>
+                )}
                 <button type="button" className="mt-2 block min-h-11 text-sm underline" onClick={() => remove.mutate(line.id)}>
                   {t.remove}
                 </button>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
-      <p className="text-lg font-semibold">
-        {t.total} <Money amount={cart.data?.subtotal ?? "0.00"} locale={locale} />
-      </p>
+      {lines.length > 0 && quote.data ? (
+        <GuestQuoteSummary
+          pricing={quote.data}
+          labels={{ subtotal: t.subtotal, discount: t.discount, serviceFee: t.serviceFee, tax: t.tax, total: t.total }}
+          locale={locale}
+          currency={quote.data.currency || "EGP"}
+        />
+      ) : lines.length > 0 ? (
+        <p className="text-sm">{quote.isError ? (quote.error instanceof Error ? quote.error.message : t.oops) : t.validate}</p>
+      ) : null}
       <label className="grid gap-1 text-sm font-medium">
         {t.notes}
         <textarea className="min-h-20 rounded-lg border px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} />
@@ -139,7 +174,7 @@ export function CheckoutScreen() {
       <button
         type="button"
         className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
-        disabled={lines.length === 0 || place.isPending}
+        disabled={lines.length === 0 || place.isPending || !quote.data}
         onClick={() => place.mutate()}
       >
         {t.placeOrder}

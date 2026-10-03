@@ -7,6 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --experimental-strip-types --test src/features/guest/guest-prices.test.ts",
     "gen:api": "openapi-typescript ${API_BASE_URL:-http://127.0.0.1:8000}/api/v1/openapi.json -o src/lib/api/schema.ts",
     "smoke": "node scripts/smoke.mjs"
   },

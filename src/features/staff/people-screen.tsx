@@ -192,11 +192,20 @@ export function FeaturesScreen() {
 export function DeliveryScreen() {
   const branchId = useScope((state) => state.branchId);
   const brandId = useScope((state) => state.brandId);
+  const focusPlatform = useScope((state) => state.focusPlatform);
   const queryClient = useQueryClient();
   const [nameEn, setNameEn] = useState("");
   const [nameAr, setNameAr] = useState("");
   const [govId, setGovId] = useState("");
   const [fee, setFee] = useState("25.00");
+  const brands = useQuery({
+    queryKey: ["brands"],
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/brands", { params: { query: { limit: 100 } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Brands failed");
+      return result.data.items;
+    },
+  });
   const govs = useQuery({
     queryKey: ["delivery-govs", brandId],
     enabled: Boolean(brandId),
@@ -253,7 +262,20 @@ export function DeliveryScreen() {
   return (
     <div className="grid gap-4">
       <h1 className="text-[length:var(--text-28)] font-semibold">Delivery</h1>
-      {!brandId ? <p className="text-sm">Choose a brand first. Delivery belongs to the brand, and a branch with no brand cannot load it.</p> : null}
+      <label className="grid max-w-lg gap-1 text-sm">
+        Brand
+        <select
+          className={control}
+          value={brandId ?? ""}
+          onChange={(event) => focusPlatform({ brandId: event.target.value || null, branchId })}
+        >
+          <option value="">Select a brand</option>
+          {(brands.data ?? []).map((brand) => (
+            <option key={brand.id} value={brand.id}>{brand.name}</option>
+          ))}
+        </select>
+      </label>
+      {brands.isError ? <p className="text-sm text-destructive">{brands.error.message}</p> : null}
       {govs.isError ? <ErrorState body={govs.error.message} onRetry={() => void govs.refetch()} /> : null}
       <form className="grid gap-2 sm:grid-cols-3" onSubmit={(event) => { event.preventDefault(); createGov.mutate(); }}>
         <input className={control} placeholder="English" value={nameEn} onChange={(event) => setNameEn(event.target.value)} />

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { toneSurface } from "@/components/ops/status-chip";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -77,6 +78,8 @@ function cardLines(order: ExpoOrder): CardLine[] {
 }
 
 export function ExpoScreen() {
+  const me = useStaffSession();
+  const isRunner = me?.role === "RUNNER";
   const interval = usePollingInterval(7000);
   const branchId = useScope((state) => state.branchId);
   const [token, setToken] = useState("");
@@ -260,6 +263,7 @@ export function ExpoScreen() {
                 Save notes
               </button>
               {ready ? (
+                isRunner ? null : (
                 <button
                   type="button"
                   className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-60"
@@ -268,6 +272,7 @@ export function ExpoScreen() {
                 >
                   {handingOver ? "Handing over…" : "Handed over"}
                 </button>
+                )
               ) : (
                 <button
                   type="button"

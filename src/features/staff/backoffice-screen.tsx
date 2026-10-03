@@ -10,11 +10,24 @@ import { Money } from "@/components/ops/money";
 import { ErrorState, LoadingState, QueryErrorState, RoleUnavailableState } from "@/components/ops/states";
 import { asApiError, isRoleDenied } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { formatCairoDateTime } from "@/lib/format/time";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
+
+function attendanceStatusLabel(status: string | null | undefined): string {
+  const value = status?.trim();
+  if (!value || value.toLowerCase() === "unknown") return "Not checked in";
+  return value;
+}
+
+function attendanceHeading(name: string | null | undefined, status: string | null | undefined): string {
+  const label = attendanceStatusLabel(status);
+  const who = name?.trim();
+  return who ? `${who} · ${label}` : label;
+}
 
 export function FinancialsScreen() {
   const queryClient = useQueryClient();
@@ -188,15 +201,24 @@ export function AttendanceScreen() {
   return (
     <div className="grid gap-4">
       <h1 className="text-[length:var(--text-28)] font-semibold">Attendance</h1>
-      <p className="text-sm">{status.data?.employee_name} · {status.data?.attendance?.status ?? "unknown"}</p>
+      {status.isError ? (
+        <ErrorState body={status.error instanceof Error ? status.error.message : "Status failed"} onRetry={() => void status.refetch()} />
+      ) : (
+        <p className="text-sm">
+          {status.isLoading
+            ? "Loading your attendance…"
+            : attendanceHeading(status.data?.employee_name, status.data?.attendance?.status)}
+        </p>
+      )}
       <div className="flex gap-2">
         <button type="button" className="min-h-12 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => void punch("in")}>Check in</button>
         <button type="button" className="min-h-12 rounded-lg border px-4 text-sm" onClick={() => void punch("out")}>Check out</button>
       </div>
+      {logs.isError ? <ErrorState body={logs.error instanceof Error ? logs.error.message : "Logs failed"} onRetry={() => void logs.refetch()} /> : null}
       <ul className="grid gap-2">
         {(logs.data ?? []).map((log) => (
           <li key={log.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-            <span>{log.employee_name} · {log.status}</span>
+            <span>{log.employee_name} · {attendanceStatusLabel(log.status)}</span>
             <button type="button" className="min-h-11 underline" onClick={() => setLogId(log.id)}>Override</button>
           </li>
         ))}
@@ -346,7 +368,7 @@ export function AuditScreen() {
         {(logs.data?.items ?? []).map((item) => (
           <li key={item.id} className="rounded-lg border p-3 text-sm">
             <p className="font-medium">{item.action}</p>
-            <p>{item.actor_role} · {item.created_at}</p>
+            <p>{item.actor_role} · {formatCairoDateTime(item.created_at)}</p>
           </li>
         ))}
       </ul>
@@ -362,7 +384,7 @@ export function AuditScreen() {
         <tbody>
           {(logs.data?.items ?? []).map((item) => (
             <tr key={item.id} className="border-t">
-              <td className="p-2">{item.created_at}</td>
+              <td className="p-2">{formatCairoDateTime(item.created_at)}</td>
               <td className="p-2">{item.action}</td>
               <td className="p-2">{item.actor_role}</td>
               <td className="p-2">{item.status}</td>

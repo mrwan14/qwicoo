@@ -18,7 +18,10 @@ export function ConnectionBanner() {
     refetchInterval: interval,
     refetchIntervalInBackground: false,
     queryFn: async (): Promise<ReadyPayload> => {
-      const response = await fetch("/api/health/ready", { cache: "no-store" });
+      const response = await fetch("/api/health/ready", {
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      });
       if (!response.ok) throw new Error("offline");
       return (await response.json()) as ReadyPayload;
     },
@@ -43,6 +46,14 @@ export function ConnectionBanner() {
     );
   }
 
+  if (query.isPending) {
+    return (
+      <p className="bg-muted px-4 py-1 text-xs text-muted-foreground" role="status">
+        Checking service…
+      </p>
+    );
+  }
+
   if (query.data?.status === "ready") {
     return (
       <p className="px-4 py-1 text-xs text-muted-foreground" role="status">
@@ -53,8 +64,8 @@ export function ConnectionBanner() {
   }
 
   return (
-    <p className="px-4 py-1 text-xs text-muted-foreground" role="status">
-      Checking service…
+    <p className="bg-muted px-4 py-1 text-xs text-muted-foreground" role="status">
+      Service is not ready.
     </p>
   );
 }

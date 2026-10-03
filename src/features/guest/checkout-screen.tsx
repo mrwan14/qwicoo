@@ -3,13 +3,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
 import { LoadingState } from "@/components/ops/states";
+import { GuestQuoteSummary } from "@/features/guest/guest-quote-summary";
+import { quotedLineSubtotal } from "@/features/guest/guest-prices";
 import { resumeIfSessionGone } from "@/features/guest/session";
 import { GuestQueryError, LineDetails, useGuestCopy } from "@/features/guest/shell";
+import { useGuestOrderQuote, type QuoteItemInput } from "@/features/guest/use-guest-quote";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import type { components } from "@/lib/api/schema";
@@ -21,6 +24,8 @@ export function CheckoutScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState("");
+  const [promoDraft, setPromoDraft] = useState("");
+  const [promoCode, setPromoCode] = useState<string | null>(null);
 
   const cart = useQuery({
     queryKey: ["guest-cart", session?.sessionId],
@@ -41,6 +46,7 @@ export function CheckoutScreen() {
       const lines = cart.data?.items ?? [];
       const body: components["schemas"]["CheckoutRequest"] = {
         customer_notes: notes || null,
+        promo_code: promoCode,
         items: lines.map((line) => ({
           item_id: line.item_id,
           quantity: line.quantity,
@@ -95,13 +101,25 @@ export function CheckoutScreen() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["guest-cart"] }),
   });
 
+  const lines = useMemo(() => cart.data?.items ?? [], [cart.data]);
+  const quoteItems = useMemo<QuoteItemInput[] | null>(() => {
+    if (lines.length === 0) return null;
+    return lines.map((line) => ({
+      item_id: line.item_id,
+      quantity: line.quantity,
+      selected_option_ids: (line.modifiers ?? []).map((modifier) => modifier.option_id),
+      special_instructions: line.notes,
+    }));
+  }, [lines]);
+  const quote = useGuestOrderQuote(quoteItems, t.oops, promoCode);
+  const quoteReady = Boolean(quote.data) && !quote.isError && !quote.isFetching;
+  const quotedLines = quote.data?.items ?? [];
+
   if (!session) return null;
   if (cart.isLoading) return <LoadingState label={t.loading} />;
   if (cart.isError) {
     return <GuestQueryError error={cart.error} onRetry={() => void cart.refetch()} />;
   }
-
-  const lines = cart.data?.items ?? [];
 
   return (
     <div className="grid gap-4">
@@ -110,7 +128,9 @@ export function CheckoutScreen() {
         <p className="text-sm text-muted-foreground">{t.emptyCart}</p>
       ) : (
         <ul className="grid gap-3">
-          {lines.map((line) => (
+          {lines.map((line, index) => {
+            const quoted = quotedLines[index];
+            return (
             <li key={line.id} className="flex items-start justify-between gap-3 rounded-xl border p-3">
               <div className="min-w-0">
                 <p className="font-medium">{line.item_name}</p>
@@ -120,18 +140,68 @@ export function CheckoutScreen() {
                 <LineDetails modifiers={(line.modifiers ?? []).map((modifier) => modifier.name)} note={line.notes} />
               </div>
               <div className="text-end">
-                <Money amount={line.line_total} locale={locale} />
+                {quoted ? (
+                  <Money
+                    amount={quotedLineSubtotal({
+                      unit_price: quoted.unit_price,
+                      subtotal: quoted.subtotal,
+                    })}
+                    currency={quote.data?.currency || "EGP"}
+                    locale={locale}
+                  />
+                ) : (
+                  <span className="text-sm text-muted-foreground">{quote.isError ? t.retry : t.validate}</span>
+                )}
                 <button type="button" className="mt-2 block min-h-11 text-sm underline" onClick={() => remove.mutate(line.id)}>
                   {t.remove}
                 </button>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
-      <p className="text-lg font-semibold">
-        {t.total} <Money amount={cart.data?.subtotal ?? "0.00"} locale={locale} />
-      </p>
+      {lines.length > 0 ? (
+        <label className="grid gap-2 text-sm font-medium">
+          {t.promo}
+          <span className="flex gap-2">
+            <input
+              className="min-h-11 w-full rounded-lg border bg-background px-3"
+              value={promoDraft}
+              maxLength={32}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(event) => setPromoDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  setPromoCode(promoDraft.trim() || null);
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="min-h-11 shrink-0 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
+              onClick={() => setPromoCode(promoDraft.trim() || null)}
+            >
+              {t.applyPromo}
+            </button>
+          </span>
+          <span className="font-normal text-muted-foreground">{t.promoHint}</span>
+        </label>
+      ) : null}
+      {lines.length > 0 && quote.isError ? (
+        <p className="text-sm">{quote.error instanceof Error ? quote.error.message : t.oops}</p>
+      ) : lines.length > 0 && quote.data ? (
+        <GuestQuoteSummary
+          pricing={quote.data}
+          labels={{ subtotal: t.subtotal, discount: t.discount, serviceFee: t.serviceFee, tax: t.tax, total: t.total }}
+          locale={locale}
+          currency={quote.data.currency || "EGP"}
+        />
+      ) : lines.length > 0 ? (
+        <p className="text-sm">{t.validate}</p>
+      ) : null}
       <label className="grid gap-1 text-sm font-medium">
         {t.notes}
         <textarea className="min-h-20 rounded-lg border px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} />
@@ -139,7 +209,7 @@ export function CheckoutScreen() {
       <button
         type="button"
         className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
-        disabled={lines.length === 0 || place.isPending}
+        disabled={lines.length === 0 || place.isPending || !quoteReady}
         onClick={() => place.mutate()}
       >
         {t.placeOrder}

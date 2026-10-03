@@ -1552,6 +1552,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Price a guest order without placing it
+         * @description Guest session. Same item checks and the same totals as checkout, and it does not write an order. The unit price is the branch price (the branch override when one is set, otherwise the catalogue price) plus modifier deltas. Tax and the service fee use the branch rates via calculate_order_financials, the same function the mobile quote uses.
+         */
+        post: operations["quote_guest_order_api_v1_orders_quote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orders/active": {
         parameters: {
             query?: never;
@@ -3989,6 +4009,11 @@ export interface components {
              * @description General order-level guest notes
              */
             customer_notes?: string | null;
+            /**
+             * Promo Code
+             * @description Optional promo code. The discount comes off the item subtotal before tax and the service fee.
+             */
+            promo_code?: string | null;
         };
         /**
          * ComboComponentCreate
@@ -4725,6 +4750,45 @@ export interface components {
             currency: string;
             /** Categories */
             categories?: components["schemas"]["GuestBranchMenuCategoryGroup"][];
+        };
+        /**
+         * GuestQuoteLine
+         * @description One priced line. unit_price is the branch price plus modifier deltas.
+         */
+        GuestQuoteLine: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity: number;
+            /** Unit Price */
+            unit_price: string;
+            /** Subtotal */
+            subtotal: string;
+        };
+        /**
+         * GuestQuoteResponse
+         * @description Totals checkout will charge. Nothing is saved. Tax and the service fee come from the same function the mobile quote uses.
+         */
+        GuestQuoteResponse: {
+            /** Currency */
+            currency: string;
+            /** Subtotal */
+            subtotal: string;
+            /** Discount Total */
+            discount_total: string;
+            /** Service Fee Total */
+            service_fee_total: string;
+            /** Tax Total */
+            tax_total: string;
+            /** Total */
+            total: string;
+            /** Items */
+            items: components["schemas"]["GuestQuoteLine"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -11559,6 +11623,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quote_guest_order_api_v1_orders_quote_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestQuoteResponse"];
                 };
             };
             /** @description Validation Error */

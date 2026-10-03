@@ -20,7 +20,8 @@ type PickupCodeState =
   | { kind: "ready"; token: string }
   | { kind: "collected" }
   | { kind: "cancelled" }
-  | { kind: "missing" };
+  | { kind: "missing" }
+  | { kind: "error" };
 
 function pickupPollingSettled(state: PickupCodeState | undefined): boolean {
   return state?.kind === "collected" || state?.kind === "cancelled" || state?.kind === "missing";
@@ -161,7 +162,7 @@ export function PickupScreen({ branchId }: { branchId: string }) {
         if (result.response.status === 200 && result.data) {
           return result.data.is_used ? { kind: "collected" } : { kind: "ready", token: result.data.token };
         }
-        if (result.response.status === 400) return { kind: "preparing" };
+        if (result.response.status === 400) return { kind: "error" };
         if (result.response.status === 409) return { kind: "cancelled" };
         if (result.response.status === 404) return { kind: "missing" };
         return { kind: "preparing" };
@@ -204,6 +205,8 @@ export function PickupScreen({ branchId }: { branchId: string }) {
               <span className="text-sm text-muted-foreground">{t.pickupCodeReady}</span>
               <span className="text-[length:var(--text-40)] leading-none font-semibold tracking-wide break-all">{code.token}</span>
             </p>
+          ) : code?.kind === "error" ? (
+            <ErrorState title={t.oopsTitle} body={t.oops} onRetry={() => void pickupCode.refetch()} retryLabel={t.retry} />
           ) : (
             <p role="status" className="text-sm">
               {statusLine}
@@ -237,7 +240,7 @@ export function PickupScreen({ branchId }: { branchId: string }) {
       {(menuData.categories ?? []).map((category) => (
         <section key={category.category_id} className="grid gap-2">
           <h2 className="font-semibold">{pickLocale(category.category_name, locale)}</h2>
-          {(category.items ?? []).map((item) => (
+          {(category.items ?? []).filter((item) => item.is_available !== false).map((item) => (
             <label key={item.id} className="flex min-h-14 items-center justify-between gap-3 rounded-lg border px-3">
               <span>
                 {pickLocale(item.name, locale)} · <Money amount={item.final_price} currency={menuData.currency || "EGP"} locale={locale} />

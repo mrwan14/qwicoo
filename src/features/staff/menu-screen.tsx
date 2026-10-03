@@ -13,6 +13,7 @@ import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import type { components } from "@/lib/api/schema";
+import { formatMoney } from "@/lib/format/money";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
@@ -34,7 +35,8 @@ export function MenuAdmin() {
   const [price, setPrice] = useState("10.00");
   const [itemEn, setItemEn] = useState("");
   const [itemAr, setItemAr] = useState("");
-  const [selected, setSelected] = useState<Item | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [tab, setTab] = useState<"items" | "stations">("items");
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [itemOpen, setItemOpen] = useState(false);
@@ -103,6 +105,22 @@ export function MenuAdmin() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const deleteCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await browserApi.DELETE("/api/v1/staff/menu/categories/{category_id}", {
+        params: { path: { category_id: id } },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not delete category");
+    },
+    onSuccess: () => {
+      toast.success("Category deleted");
+      setCategoryToDelete(null);
+      setCategoryId("");
+      refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const catalog = useMutation({
     mutationFn: async () => {
       const body: components["schemas"]["ScopedItemCreateRequest"] = {
@@ -166,17 +184,24 @@ export function MenuAdmin() {
             ))}
           </aside>
           {active ? (
-            <ul className="grid gap-2">
-              {(active.items ?? []).map((item) => (
-                <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-card p-3 shadow-elev-1">
-                  <button type="button" className="min-h-11 text-start font-medium" onClick={() => setSelected(item)}>
-                    <LocaleText value={item.name} /> · {item.base_price}
-                  </button>
-                  <AvailabilityToggle item={item} onDone={refresh} />
-                </li>
-              ))}
-              {(active.items ?? []).length === 0 ? <EmptyState title="No items in this category" body="Add an item to show it on the guest menu." /> : null}
-            </ul>
+            <div className="grid gap-2">
+              <div className="flex justify-end">
+                <button type="button" className="min-h-11 rounded-lg border px-3 text-sm text-destructive" onClick={() => setCategoryToDelete(active.id)}>Delete category</button>
+              </div>
+              <ul className="grid gap-2">
+                {(active.items ?? []).map((item) => (
+                  <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-card p-3 shadow-elev-1">
+                    <button type="button" className="min-h-11 text-start font-medium" onClick={() => setSelectedId(item.id)}>
+                      <LocaleText value={item.name} /> · {formatMoney(String(item.base_price))}
+                    </button>
+                    <PriceField item={item} onDone={refresh} />
+                    <AvailabilityToggle item={item} onDone={refresh} />
+                    <DeleteItemButton item={item} onDone={refresh} />
+                  </li>
+                ))}
+                {(active.items ?? []).length === 0 ? <EmptyState title="No items in this category" body="Add an item to show it on the guest menu." /> : null}
+              </ul>
+            </div>
           ) : (
             <EmptyState title="No categories yet" body="Add a category, then add items to it." />
           )}
@@ -219,7 +244,19 @@ export function MenuAdmin() {
           </form>
         </SheetContent>
       </Sheet>
-      {selected ? <ModifierEditor item={selected} onClose={() => setSelected(null)} /> : null}
+      {(() => {
+        const selected = categories.flatMap((category) => category.items ?? []).find((item) => item.id === selectedId) ?? null;
+        return selected ? <ModifierEditor item={selected} onClose={() => setSelectedId(null)} onDone={refresh} /> : null;
+      })()}
+      <ConfirmDialog
+        open={categoryToDelete !== null}
+        onOpenChange={(open) => { if (!open) setCategoryToDelete(null); }}
+        title="Delete this category?"
+        description="Items in this category will no longer be listed."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => { if (categoryToDelete) deleteCategory.mutate(categoryToDelete); }}
+      />
     </div>
   );
 }
@@ -259,11 +296,13 @@ function AvailabilityToggle({ item, onDone }: { item: Item; onDone: () => void }
   );
 }
 
-function ModifierEditor({ item, onClose }: { item: Item; onClose: () => void }) {
+function ModifierEditor({ item, onClose, onDone }: { item: Item; onClose: () => void; onDone: () => void }) {
   const [en, setEn] = useState("Options");
   const [ar, setAr] = useState("خيارات");
   const [optionEn, setOptionEn] = useState("");
-  const [groupId, setGroupId] = useState("");
+  const [optionDelta, setOptionDelta] = useState("0.00");
+  const groups = item.modifier_groups ?? [];
+  const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
   const queryClient = useQueryClient();
 
   const createGroup = useMutation({
@@ -292,7 +331,7 @@ function ModifierEditor({ item, onClose }: { item: Item; onClose: () => void }) 
     mutationFn: async () => {
       const body: components["schemas"]["StaffModifierOptionCreate"] = {
         name: names(optionEn, optionEn),
-        price_delta: "0.00",
+        price_delta: optionDelta || "0.00",
         is_available: true,
       };
       const result = await browserApi.POST("/api/v1/staff/menu/modifier-groups/{group_id}/options", {
@@ -301,7 +340,12 @@ function ModifierEditor({ item, onClose }: { item: Item; onClose: () => void }) 
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Could not add option");
     },
-    onSuccess: () => toast.success("Option added"),
+    onSuccess: () => {
+      toast.success("Option added");
+      setOptionEn("");
+      void queryClient.invalidateQueries({ queryKey: ["menu-tree"] });
+      onDone();
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 
@@ -319,14 +363,126 @@ function ModifierEditor({ item, onClose }: { item: Item; onClose: () => void }) 
       <button type="button" className="min-h-11 rounded-lg border" onClick={() => createGroup.mutate()}>
         Add modifier group
       </button>
-      <input className={control} placeholder="Group id" value={groupId} onChange={(event) => setGroupId(event.target.value)} />
+      {groups.length > 0 ? (
+        <ul className="grid gap-3">
+          {groups.map((group) => (
+            <li key={group.id} className="grid gap-2 rounded-lg border p-3">
+              <p className="text-sm font-medium">{group.name}</p>
+              {(group.options ?? []).map((option) => (
+                <OptionPriceField key={option.id} option={option} onDone={onDone} />
+              ))}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <label className="grid gap-1 text-sm">
+        Modifier group
+        <select className={control} value={groupId} onChange={(event) => setGroupId(event.target.value)}>
+          <option value="">Choose a group</option>
+          {groups.map((group) => (
+            <option key={group.id} value={group.id}>{group.name}</option>
+          ))}
+        </select>
+      </label>
       <input className={control} placeholder="Option name" value={optionEn} onChange={(event) => setOptionEn(event.target.value)} />
-      <button type="button" className="min-h-11 rounded-lg border" onClick={() => createOption.mutate()}>
+      <input className={control} placeholder="Price change" value={optionDelta} onChange={(event) => setOptionDelta(event.target.value)} inputMode="decimal" />
+      <button type="button" className="min-h-11 rounded-lg border" onClick={() => createOption.mutate()} disabled={!groupId || !optionEn}>
         Add option
       </button>
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+
+function PriceField({ item, onDone }: { item: Item; onDone: () => void }) {
+  const [price, setPrice] = useState(String(item.base_price));
+  const save = useMutation({
+    mutationFn: async () => {
+      const body: components["schemas"]["StaffItemUpdate"] = { base_price: price };
+      const result = await browserApi.PATCH("/api/v1/staff/menu/items/{item_id}", {
+        params: { path: { item_id: item.id } },
+        body,
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not save price");
+    },
+    onSuccess: () => {
+      toast.success("Price saved");
+      onDone();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  return (
+    <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
+      <input className="h-11 w-28 rounded-lg border px-3 text-sm" aria-label="Base price" value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" />
+      <button className="min-h-11 rounded-lg border px-3 text-sm" type="submit">Save price</button>
+    </form>
+  );
+}
+
+function DeleteItemButton({ item, onDone }: { item: Item; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const remove = useMutation({
+    mutationFn: async () => {
+      const result = await browserApi.DELETE("/api/v1/staff/menu/items/{item_id}", {
+        params: { path: { item_id: item.id } },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not delete item");
+    },
+    onSuccess: () => {
+      toast.success("Item deleted");
+      setOpen(false);
+      onDone();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  return (
+    <>
+      <button type="button" className="min-h-11 rounded-lg border px-3 text-sm text-destructive" onClick={() => setOpen(true)}>Delete</button>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Delete this item?"
+        description="Guests will no longer see it on the menu."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => remove.mutate()}
+      />
+    </>
+  );
+}
+
+function OptionPriceField({
+  option,
+  onDone,
+}: {
+  option: components["schemas"]["ModifierOptionResponse"];
+  onDone: () => void;
+}) {
+  const [delta, setDelta] = useState(option.price_delta);
+  const save = useMutation({
+    mutationFn: async () => {
+      const body: components["schemas"]["StaffModifierOptionUpdate"] = { price_delta: delta };
+      const result = await browserApi.PATCH("/api/v1/staff/menu/modifier-options/{option_id}", {
+        params: { path: { option_id: option.id } },
+        body,
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not save option");
+    },
+    onSuccess: () => {
+      toast.success("Option saved");
+      onDone();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  return (
+    <form className="flex flex-wrap items-center gap-2 text-sm" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
+      <span className="min-w-24">{option.name}</span>
+      <input className="h-11 w-28 rounded-lg border px-3 text-sm" aria-label={`Price change for ${option.name}`} value={delta} onChange={(event) => setDelta(event.target.value)} inputMode="decimal" />
+      <span className="text-muted-foreground">{formatMoney(delta || "0")}</span>
+      <button className="min-h-11 rounded-lg border px-3 text-sm" type="submit">Save option</button>
+    </form>
   );
 }
 

@@ -4009,6 +4009,11 @@ export interface components {
              * @description General order-level guest notes
              */
             customer_notes?: string | null;
+            /**
+             * Promo Code
+             * @description Optional promo code. The discount comes off the item subtotal before tax and the service fee.
+             */
+            promo_code?: string | null;
         };
         /**
          * ComboComponentCreate

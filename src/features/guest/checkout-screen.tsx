@@ -24,6 +24,8 @@ export function CheckoutScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState("");
+  const [promoDraft, setPromoDraft] = useState("");
+  const [promoCode, setPromoCode] = useState<string | null>(null);
 
   const cart = useQuery({
     queryKey: ["guest-cart", session?.sessionId],
@@ -44,6 +46,7 @@ export function CheckoutScreen() {
       const lines = cart.data?.items ?? [];
       const body: components["schemas"]["CheckoutRequest"] = {
         customer_notes: notes || null,
+        promo_code: promoCode,
         items: lines.map((line) => ({
           item_id: line.item_id,
           quantity: line.quantity,
@@ -108,7 +111,8 @@ export function CheckoutScreen() {
       special_instructions: line.notes,
     }));
   }, [lines]);
-  const quote = useGuestOrderQuote(quoteItems, t.oops);
+  const quote = useGuestOrderQuote(quoteItems, t.oops, promoCode);
+  const quoteReady = Boolean(quote.data) && !quote.isError && !quote.isFetching;
   const quotedLines = quote.data?.items ?? [];
 
   if (!session) return null;
@@ -157,7 +161,38 @@ export function CheckoutScreen() {
           })}
         </ul>
       )}
-      {lines.length > 0 && quote.data ? (
+      {lines.length > 0 ? (
+        <label className="grid gap-2 text-sm font-medium">
+          {t.promo}
+          <span className="flex gap-2">
+            <input
+              className="min-h-11 w-full rounded-lg border bg-background px-3"
+              value={promoDraft}
+              maxLength={32}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(event) => setPromoDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  setPromoCode(promoDraft.trim() || null);
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="min-h-11 shrink-0 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
+              onClick={() => setPromoCode(promoDraft.trim() || null)}
+            >
+              {t.applyPromo}
+            </button>
+          </span>
+          <span className="font-normal text-muted-foreground">{t.promoHint}</span>
+        </label>
+      ) : null}
+      {lines.length > 0 && quote.isError ? (
+        <p className="text-sm">{quote.error instanceof Error ? quote.error.message : t.oops}</p>
+      ) : lines.length > 0 && quote.data ? (
         <GuestQuoteSummary
           pricing={quote.data}
           labels={{ subtotal: t.subtotal, discount: t.discount, serviceFee: t.serviceFee, tax: t.tax, total: t.total }}
@@ -165,7 +200,7 @@ export function CheckoutScreen() {
           currency={quote.data.currency || "EGP"}
         />
       ) : lines.length > 0 ? (
-        <p className="text-sm">{quote.isError ? (quote.error instanceof Error ? quote.error.message : t.oops) : t.validate}</p>
+        <p className="text-sm">{t.validate}</p>
       ) : null}
       <label className="grid gap-1 text-sm font-medium">
         {t.notes}
@@ -174,7 +209,7 @@ export function CheckoutScreen() {
       <button
         type="button"
         className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
-        disabled={lines.length === 0 || place.isPending || !quote.data}
+        disabled={lines.length === 0 || place.isPending || !quoteReady}
         onClick={() => place.mutate()}
       >
         {t.placeOrder}

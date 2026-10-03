@@ -82,3 +82,26 @@ test("a quote total of 95.20 renders as EGP 95.20", () => {
   assert.equal(orderTotal, "95.20");
   assert.match(html, /EGP\s*95\.20/);
 });
+
+test("a quote discount of 10.00 renders as EGP 10.00 and the total stays the quote total", () => {
+  const pricing = {
+    subtotal: "100.00",
+    discount_total: "10.00",
+    service_fee_total: "5.00",
+    tax_total: "12.60",
+    total: "95.20",
+  };
+  const figures = guestQuoteFigures(pricing);
+  const orderTotal = quotedOrderTotal(pricing);
+  const html = renderToStaticMarkup(
+    createElement("p", null, formatMoney(figures.discount, "EGP", "en")),
+  );
+
+  assert.equal(figures.discount, pricing.discount_total);
+  assert.equal(figures.serviceFee, pricing.service_fee_total);
+  assert.equal(figures.tax, pricing.tax_total);
+  assert.equal(figures.subtotal, pricing.subtotal);
+  assert.equal(orderTotal, "95.20");
+  assert.equal(figures.total, orderTotal);
+  assert.match(html, /EGP\s*10\.00/);
+});

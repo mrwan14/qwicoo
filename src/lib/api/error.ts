@@ -204,6 +204,31 @@ const CATALOG: Record<string, Catalog> = {
     ar: "لا يمكن سداد طلب تم إلغاؤه",
     aliases: ["Cannot process payment for a cancelled order"],
   },
+  ORDER_CANCELLED: {
+    en: "This order was cancelled.",
+    ar: "تم إلغاء هذا الطلب.",
+    aliases: [
+      "This order was cancelled, so there isn't a pickup code.",
+      "تم إلغاء هذا الطلب، لذلك لا يوجد رمز استلام.",
+    ],
+  },
+  ORDER_NOT_READY_FOR_HANDOVER: {
+    en: "This order isn't ready for pickup yet.",
+    ar: "هذا الطلب ليس جاهزاً للاستلام بعد.",
+    aliases: ["This order isn't ready for pickup yet."],
+  },
+  PAYMENT_REQUIRED_BEFORE_HANDOVER: {
+    en: "Take payment first, then scan again.",
+    ar: "حصّل المبلغ أولاً، ثم امسح الرمز مجدداً.",
+  },
+  RATE_LIMITED: {
+    en: "Too many attempts. Please wait a minute and try again.",
+    ar: "محاولات كثيرة. يرجى الانتظار دقيقة ثم المحاولة مجدداً.",
+    aliases: [
+      "Too many requests. Please wait a moment and try again.",
+      "طلبات كثيرة جدًا. يُرجى الانتظار قليلًا ثم المحاولة مرة أخرى.",
+    ],
+  },
   PRESENCE_VERIFICATION_REQUIRED: {
     en: "A staff member needs to confirm your table first. They'll be with you shortly.",
     ar: "يحتاج أحد الموظفين إلى تأكيد طاولتك أولاً. سيكون معك خلال لحظات.",
@@ -243,7 +268,9 @@ for (const [code, entry] of Object.entries(CATALOG)) {
 const ARABIC = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
 
 function rawDetail(error: unknown): string | null {
-  if (!error || typeof error !== "object" || !("detail" in error)) return null;
+  if (!error || typeof error !== "object") return null;
+  if ("code" in error && typeof error.code === "string" && error.code in CATALOG) return error.code;
+  if (!("detail" in error)) return null;
   const detail = error.detail;
   if (typeof detail === "string" && detail.trim()) return detail.trim();
   if (detail && typeof detail === "object" && "code" in detail && typeof detail.code === "string" && detail.code in CATALOG) {

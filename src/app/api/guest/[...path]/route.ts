@@ -25,6 +25,12 @@ async function proxy(
   const branchId = request.headers.get("x-branch-id");
   if (brandId) headers.set("x-brand-id", brandId);
   if (branchId) headers.set("x-branch-id", branchId);
+  const orderAccessToken = request.headers.get("x-order-access-token");
+  if (orderAccessToken) headers.set("x-order-access-token", orderAccessToken);
+  // The API rate-limits public pickup orders per client IP and only trusts
+  // X-Forwarded-For when the socket peer is a trusted proxy (this server).
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) headers.set("x-forwarded-for", forwardedFor);
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
   try {
@@ -37,6 +43,8 @@ async function proxy(
     const responseHeaders = new Headers();
     const upstreamType = upstream.headers.get("content-type");
     if (upstreamType) responseHeaders.set("content-type", upstreamType);
+    const cacheControl = upstream.headers.get("cache-control");
+    if (cacheControl) responseHeaders.set("cache-control", cacheControl);
     return new NextResponse(upstream.body, {
       status: upstream.status,
       headers: responseHeaders,

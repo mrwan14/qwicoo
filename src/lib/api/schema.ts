@@ -805,7 +805,7 @@ export interface paths {
         };
         /**
          * Generate signed URL metadata for a single table
-         * @description Retrieve cryptographic signed URL, signature, and timestamp for a table.
+         * @description Retrieve the guest join URL and QR token for a table.
          */
         get: operations["get_single_table_qr_url_api_v1_qr_export_tables__table_id__url_get"];
         put?: never;
@@ -1502,8 +1502,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Create Pre-paid Drive-Thru or Curbside Mobile Order
-         * @description Atomic pre-paid checkout for drive-thru and curbside orders with immediate KDS expo routing.
+         * Place a drive-thru/curbside pickup order (public web pickup page or staff)
+         * @description Public and rate-limited. The order is recorded unpaid, and the customer pays at the window (the cashier settles it on the Payments screen). Any client payment reference is never trusted and stays in the audit log only. order_access_token is returned once and is needed for GET /orders/{id}/handover-token. The Mousa mobile app will use /api/v1/mobile/orders (a later phase).
          */
         post: operations["create_drive_thru_order_api_v1_orders_drive_thru_post"];
         delete?: never;
@@ -1523,7 +1523,7 @@ export interface paths {
         put?: never;
         /**
          * Verify Customer Handover Token (Staff)
-         * @description Scan and verify customer handover token, enforce single-use replay protection, and complete order.
+         * @description Scan and verify a customer handover token, enforce single-use replay protection, and complete the order. An unpaid drive-thru or curbside order returns 409 PAYMENT_REQUIRED_BEFORE_HANDOVER and does not consume the token. Settle the cash payment on the Payments screen, then scan again.
          */
         post: operations["verify_handover_api_v1_orders_handover_verify_post"];
         delete?: never;
@@ -1543,7 +1543,7 @@ export interface paths {
         put?: never;
         /**
          * Checkout Customer Order with ACID Pessimistic Concurrency
-         * @description Atomic order ingestion pipeline. Acquires a pessimistic row-level lock (SELECT ... FOR UPDATE) on the Table record, authoritatively re-validates all submitted items and modifier options, appends to existing active orders for live shared table bills (or initializes new Order), computes exact 15% VAT totals using Decimal ROUND_HALF_UP, sets presence-driven initial status, and logs an audit entry.
+         * @description Atomic order ingestion pipeline. Acquires a pessimistic row-level lock (SELECT ... FOR UPDATE) on the Table record, authoritatively re-validates all submitted items and modifier options, creates the Order (409 ACTIVE_ORDER_EXISTS with order_id if one is already active), computes exact 15% VAT totals using Decimal ROUND_HALF_UP, sets presence-driven initial status, and logs an audit entry.
          */
         post: operations["checkout_order_api_v1_orders_checkout_post"];
         delete?: never;
@@ -1564,6 +1564,26 @@ export interface paths {
          * @description Retrieves the active, open order and item fulfillment progress for the table bound to the verified guest session.
          */
         get: operations["get_active_order_api_v1_orders_active_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff Order Detail
+         * @description Branch staff view of a single order: line items, notes, payment ledger, status, is_paid, and display_number. Scoped to the caller's brand and branch.
+         */
+        get: operations["get_staff_order_api_v1_orders__order_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1603,7 +1623,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel Order (Customer or Staff)
-         * @description Permits customers to cancel orders in DRAFT or PENDING_STAFF_CONFIRMATION state. Rejects customer cancellation once an order is SUBMITTED or in preparation.
+         * @description Guests may cancel their own DRAFT or PENDING_STAFF_CONFIRMATION order. Front-of-house staff (cashier, waiter, branch/brand/super admin) may reject a PENDING_STAFF_CONFIRMATION order in their branch with a reason (X-Branch-ID required).
          */
         post: operations["cancel_order_api_v1_orders__order_id__cancel_post"];
         delete?: never;
@@ -1620,8 +1640,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Retrieve Handover Token and QR Payload
-         * @description Retrieve cryptographic handover token and QR payload once the order is ready.
+         * Get the pickup code for an order
+         * @description Returns the pickup code once the order is READY or later. Two access paths are accepted: staff of the order's branch (SUPER_ADMIN, BRAND_ADMIN, BRANCH_ADMIN, CASHIER, WAITER, RUNNER, or KITCHEN_STAFF; X-Branch-ID is not required), or the X-Order-Access-Token secret returned once by POST /orders/drive-thru. Anything else — including a missing order, no credentials, a guest table-session token, a wrong, expired, or other-order secret, and staff of another branch — is 404 ORDER_NOT_FOUND with an identical body. DRAFT, PENDING_STAFF_CONFIRMATION, SUBMITTED, and PREPARING return 400 ORDER_NOT_READY_FOR_HANDOVER. A cancelled order returns 409 ORDER_CANCELLED and is never given a new pickup code. Responses are not cached.
          */
         get: operations["get_handover_token_api_v1_orders__order_id__handover_token_get"];
         put?: never;
@@ -4263,7 +4283,7 @@ export interface components {
         DrawerStatus: "OPEN" | "CLOSED";
         /**
          * DriveThruOrderCreateSchema
-         * @description Payload for submitting a pre-paid drive-thru or curbside mobile order.
+         * @description Payload for a public or staff drive-thru / curbside pickup order.
          */
         DriveThruOrderCreateSchema: {
             /**
@@ -4287,12 +4307,12 @@ export interface components {
             vehicle_info?: components["schemas"]["VehicleInfoSchema"] | null;
             /**
              * Payment Method
-             * @description Digital payment tender (ONLINE_CARD, APPLE_PAY, ONLINE_PREPAID, STRIPE)
+             * @description Ignored for settlement. Orders are pay-at-pickup until a payment gateway is integrated.
              */
             payment_method: string;
             /**
              * Payment Intent Id
-             * @description Authoritative pre-validated payment gateway transaction ID
+             * @description Deprecated, ignored. Unverified client reference kept in the audit log only. Never marks the order paid.
              */
             payment_intent_id?: string | null;
             /**
@@ -4302,8 +4322,133 @@ export interface components {
             customer_notes?: string | null;
         };
         /**
+         * DriveThruOrderCreatedResponse
+         * @description Order plus the one-time pickup secret. The secret is not stored in clear text.
+         * @example {
+         *       "amount_due": "23.00",
+         *       "fulfillment_type": "DRIVE_THRU",
+         *       "id": "4f3c2b1a-9d8e-4c7b-a6f5-1234567890ab",
+         *       "is_paid": false,
+         *       "order_access_token": "shown-once-keep-this",
+         *       "order_access_token_expires_at": "2026-10-01T12:00:00Z",
+         *       "payment_due_at_pickup": true,
+         *       "pickup_number": 104,
+         *       "status": "SUBMITTED",
+         *       "total_amount": "23.00"
+         *     }
+         */
+        DriveThruOrderCreatedResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Branch Id
+             * Format: uuid
+             */
+            branch_id: string;
+            /** Table Id */
+            table_id?: string | null;
+            status: components["schemas"]["OrderStatus"];
+            order_type: components["schemas"]["OrderType"];
+            /** @default QR_CUSTOMER */
+            order_source: components["schemas"]["OrderSource"];
+            /** Pickup Number */
+            pickup_number?: number | null;
+            /**
+             * Display Number
+             * @description Guest-facing reference: pickup_number if assigned, else the table number
+             */
+            display_number?: string | null;
+            /** Subtotal */
+            subtotal: string;
+            /**
+             * Service Fee Rate
+             * @default 0.0000
+             */
+            service_fee_rate: string;
+            /**
+             * Service Fee Total
+             * @default 0.00
+             */
+            service_fee_total: string;
+            /**
+             * Applied Tax Rate
+             * @default 0.0000
+             */
+            applied_tax_rate: string;
+            /** Tax Total */
+            tax_total: string;
+            /** Total Amount */
+            total_amount: string;
+            /**
+             * Is Paid
+             * @default false
+             */
+            is_paid: boolean;
+            /** Customer Notes */
+            customer_notes?: string | null;
+            /** Cancellation Reason */
+            cancellation_reason?: string | null;
+            /** Fulfillment Type */
+            fulfillment_type?: string | null;
+            /** Vehicle Info */
+            vehicle_info?: {
+                [key: string]: unknown;
+            } | null;
+            /** Expo Notes */
+            expo_notes?: string | null;
+            /** Ready At */
+            ready_at?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Items
+             * @description Ordered line items with modifier snapshots and station routing
+             */
+            items?: components["schemas"]["OrderItemResponse"][];
+            /**
+             * Payments
+             * @description Settlement ledger rows (staff order detail)
+             */
+            payments?: components["schemas"]["PaymentResponse"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Order Access Token
+             * @description Shown once. Required later as X-Order-Access-Token to read the pickup code.
+             */
+            order_access_token: string;
+            /**
+             * Order Access Token Expires At
+             * Format: date-time
+             */
+            order_access_token_expires_at: string;
+            /**
+             * Payment Due At Pickup
+             * @default true
+             */
+            payment_due_at_pickup: boolean;
+            /** Amount Due */
+            amount_due: string;
+        };
+        /**
          * DriveThruOrderItemSchema
-         * @description Line item in a pre-paid drive-thru or curbside order.
+         * @description Line item in a drive-thru or curbside order.
          */
         DriveThruOrderItemSchema: {
             /**
@@ -4339,6 +4484,20 @@ export interface components {
             theme_config?: {
                 [key: string]: unknown;
             };
+        };
+        /**
+         * ErrorResponse
+         * @description Machine code plus a localized message.
+         * @example {
+         *       "code": "ORDER_NOT_FOUND",
+         *       "detail": "The requested order was not found"
+         *     }
+         */
+        ErrorResponse: {
+            /** Code */
+            code: string;
+            /** Detail */
+            detail: string;
         };
         /**
          * ExecutiveKPISummary
@@ -4402,6 +4561,22 @@ export interface components {
             average_items_per_order: string;
         };
         /**
+         * ExpoLineItem
+         * @description Guest or staff line on the expo ticket.
+         */
+        ExpoLineItem: {
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity: number;
+            /** Modifiers */
+            modifiers?: {
+                [key: string]: unknown;
+            }[];
+            /** Notes */
+            notes?: string | null;
+        };
+        /**
          * FloorSummaryResponse
          * @description Aggregated floor map summary across all dining tables in a branch.
          */
@@ -4416,6 +4591,12 @@ export interface components {
             tables_awaiting_food: number;
             /** Tables With Pending Requests */
             tables_with_pending_requests: number;
+            /**
+             * Pending Confirmation Count
+             * @description Orders in this branch waiting for staff confirmation (PENDING_STAFF_CONFIRMATION)
+             * @default 0
+             */
+            pending_confirmation_count: number;
             /** Tables */
             tables: components["schemas"]["FloorTableLiveResponse"][];
         };
@@ -4531,6 +4712,12 @@ export interface components {
             branch_id: string;
             /** Brand Id */
             brand_id?: string | null;
+            /** Brand Name */
+            brand_name?: string | null;
+            /** Brand Logo Url */
+            brand_logo_url?: string | null;
+            /** Accent Color */
+            accent_color?: string | null;
             /**
              * Currency
              * @default EGP
@@ -4609,10 +4796,7 @@ export interface components {
             order_id: string;
             /** Amount */
             amount: string;
-            /**
-             * Currency
-             * @default SAR
-             */
+            /** Currency */
             currency: string;
             status: components["schemas"]["PaymentStatus"];
             /** Transaction Reference */
@@ -4896,6 +5080,8 @@ export interface components {
             branch_id: string;
             /** Pickup Number */
             pickup_number?: number | null;
+            /** Display Number */
+            display_number?: string | null;
             /** Status */
             status: string;
             /** Fulfillment Type */
@@ -4906,6 +5092,8 @@ export interface components {
             } | null;
             /** Expo Notes */
             expo_notes?: string | null;
+            /** Customer Notes */
+            customer_notes?: string | null;
             /** Ready At */
             ready_at?: string | null;
             /**
@@ -4913,6 +5101,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Items */
+            items?: components["schemas"]["ExpoLineItem"][];
             /** Ticket Items */
             ticket_items?: components["schemas"]["KitchenTicketItemResponse"][];
             /**
@@ -5364,6 +5554,21 @@ export interface components {
              */
             branch_id: string;
             /**
+             * Brand Name
+             * @description English brand label
+             */
+            brand_name?: string | null;
+            /**
+             * Brand Logo Url
+             * @description Brand logo URL
+             */
+            brand_logo_url?: string | null;
+            /**
+             * Accent Color
+             * @description Brand accent as #RRGGBB, or null
+             */
+            accent_color?: string | null;
+            /**
              * Categories
              * @description Active menu categories in display order
              */
@@ -5584,6 +5789,11 @@ export interface components {
             order_source: components["schemas"]["OrderSource"];
             /** Pickup Number */
             pickup_number?: number | null;
+            /**
+             * Display Number
+             * @description Guest-facing reference: pickup_number if assigned, else the table number
+             */
+            display_number?: string | null;
             /** Subtotal */
             subtotal: string;
             /**
@@ -5631,6 +5841,11 @@ export interface components {
              * @description Ordered line items with modifier snapshots and station routing
              */
             items?: components["schemas"]["OrderItemResponse"][];
+            /**
+             * Payments
+             * @description Settlement ledger rows (staff order detail)
+             */
+            payments?: components["schemas"]["PaymentResponse"][];
             /**
              * Created At
              * Format: date-time
@@ -5831,6 +6046,44 @@ export interface components {
          */
         PaymentMethod: "CASH" | "CARD_TERMINAL" | "POS_TERMINAL" | "STRIPE" | "ONLINE_CARD" | "APPLE_PAY" | "LOCAL_WALLET" | "ONLINE_PREPAID";
         /**
+         * PaymentRequiredDetail
+         * @description Nested body of a 409 that blocks handover until the cashier is paid.
+         */
+        PaymentRequiredDetail: {
+            /** Code */
+            code: string;
+            /** Detail */
+            detail: string;
+            /** Amount Due */
+            amount_due: string;
+            /** Currency */
+            currency: string;
+            /** Payment Id */
+            payment_id: string | null;
+            /** Pickup Number */
+            pickup_number: number | null;
+        };
+        /**
+         * PaymentRequiredErrorResponse
+         * @description 409 from POST /orders/handover/verify when the pickup order is still unpaid.
+         * @example {
+         *       "code": "PAYMENT_REQUIRED_BEFORE_HANDOVER",
+         *       "detail": {
+         *         "amount_due": "23.00",
+         *         "code": "PAYMENT_REQUIRED_BEFORE_HANDOVER",
+         *         "currency": "SAR",
+         *         "detail": "Please take payment of 23.00 before handing this order over.",
+         *         "payment_id": "33333333-3333-3333-3333-333333333333",
+         *         "pickup_number": 104
+         *       }
+         *     }
+         */
+        PaymentRequiredErrorResponse: {
+            /** Code */
+            code: string;
+            detail: components["schemas"]["PaymentRequiredDetail"];
+        };
+        /**
          * PaymentResponse
          * @description Immutable ledger representation of a payment transaction.
          */
@@ -5864,6 +6117,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Pickup Number */
+            pickup_number?: number | null;
+            /** Fulfillment Type */
+            fulfillment_type?: string | null;
         };
         /**
          * PaymentSettlementResponse
@@ -6432,11 +6689,25 @@ export interface components {
              * Format: uuid
              */
             branch_id: string;
-            /** Signed Url */
+            /**
+             * Signed Url
+             * @description Guest join URL: FRONTEND_URL/t/<qr_token>
+             */
             signed_url: string;
-            /** Signature */
+            /**
+             * Qr Token
+             * @description Table QR token accepted by /qr/verify and /sessions/verify-presence
+             */
+            qr_token: string;
+            /**
+             * Signature
+             * @description Signature for the /qr-export/verify probe
+             */
             signature: string;
-            /** Timestamp */
+            /**
+             * Timestamp
+             * @description Timestamp for the /qr-export/verify probe
+             */
             timestamp: number;
         };
         /**
@@ -7155,6 +7426,21 @@ export interface components {
              */
             branch_name: string;
             /**
+             * Brand Name
+             * @description English brand label
+             */
+            brand_name?: string | null;
+            /**
+             * Brand Logo Url
+             * @description Brand logo URL
+             */
+            brand_logo_url?: string | null;
+            /**
+             * Accent Color
+             * @description Brand accent as #RRGGBB, or null
+             */
+            accent_color?: string | null;
+            /**
              * Table Id
              * Format: uuid
              * @description Table UUID
@@ -7475,6 +7761,37 @@ export interface components {
             ctx?: Record<string, never>;
         };
         /**
+         * ValidationErrorResponse
+         * @description Validation failure envelope returned for request-body and query errors.
+         * @example {
+         *       "code": "INPUT_VALIDATION_FAILED",
+         *       "detail": "Input validation failed",
+         *       "errors": [
+         *         {
+         *           "loc": [
+         *             "body",
+         *             "branch_id"
+         *           ],
+         *           "msg": "Field required",
+         *           "type": "missing"
+         *         }
+         *       ]
+         *     }
+         */
+        ValidationErrorResponse: {
+            /**
+             * Code
+             * @default INPUT_VALIDATION_FAILED
+             */
+            code: string;
+            /** Detail */
+            detail: string;
+            /** Errors */
+            errors?: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
          * VehicleInfoSchema
          * @description Customer vehicle information for drive-thru and curbside identification.
          */
@@ -7542,6 +7859,10 @@ export interface components {
              * @default Order handover successfully verified and completed.
              */
             message: string;
+            /** Is Paid */
+            is_paid?: boolean | null;
+            /** Pickup Number */
+            pickup_number?: number | null;
         };
         /**
          * VerifyOfflinePaymentRequest
@@ -10988,22 +11309,131 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description Unpaid pickup order. order_access_token is shown once. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrderResponse"];
+                    /**
+                     * @example {
+                     *       "id": "4f3c2b1a-9d8e-4c7b-a6f5-1234567890ab",
+                     *       "tenant_id": "11111111-1111-1111-1111-111111111111",
+                     *       "branch_id": "22222222-2222-2222-2222-222222222222",
+                     *       "status": "SUBMITTED",
+                     *       "order_type": "TAKEAWAY",
+                     *       "order_source": "QR_CUSTOMER",
+                     *       "pickup_number": 104,
+                     *       "display_number": "104",
+                     *       "subtotal": "20.00",
+                     *       "service_fee_rate": "0.0000",
+                     *       "service_fee_total": "0.00",
+                     *       "applied_tax_rate": "0.1500",
+                     *       "tax_total": "3.00",
+                     *       "total_amount": "23.00",
+                     *       "is_paid": false,
+                     *       "fulfillment_type": "DRIVE_THRU",
+                     *       "vehicle_info": {
+                     *         "color": "White",
+                     *         "model": "Camry",
+                     *         "plate_number": "ABC 123"
+                     *       },
+                     *       "items": [],
+                     *       "payments": [],
+                     *       "created_at": "2026-09-30T12:00:00Z",
+                     *       "updated_at": "2026-09-30T12:00:00Z",
+                     *       "order_access_token": "shown-once-keep-this",
+                     *       "order_access_token_expires_at": "2026-10-01T12:00:00Z",
+                     *       "payment_due_at_pickup": true,
+                     *       "amount_due": "23.00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["DriveThruOrderCreatedResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Forbidden: DRIVE_THRU_MODULE_LOCKED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "DRIVE_THRU_MODULE_LOCKED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -11030,13 +11460,81 @@ export interface operations {
                     "application/json": components["schemas"]["VerifyHandoverResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: PAYMENT_REQUIRED_BEFORE_HANDOVER, HANDOVER_TOKEN_ALREADY_USED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PAYMENT_REQUIRED_BEFORE_HANDOVER",
+                     *       "detail": {
+                     *         "code": "PAYMENT_REQUIRED_BEFORE_HANDOVER",
+                     *         "detail": "Please take payment of 23.00 before handing this order over.",
+                     *         "amount_due": "23.00",
+                     *         "currency": "SAR",
+                     *         "payment_id": "33333333-3333-3333-3333-333333333333",
+                     *         "pickup_number": 104
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PaymentRequiredErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
                 };
             };
         };
@@ -11090,6 +11588,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderResponse"];
+                };
+            };
+        };
+    };
+    get_staff_order_api_v1_orders__order_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -11167,7 +11696,10 @@ export interface operations {
     get_handover_token_api_v1_orders__order_id__handover_token_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Order access secret returned once by POST /orders/drive-thru. Guests must send it to read the pickup code. Staff of the order's branch may omit it. A wrong, expired, or missing secret is a 404 with the same body as an unknown order. */
+                "X-Order-Access-Token"?: string | null;
+            };
             path: {
                 order_id: string;
             };
@@ -11184,6 +11716,51 @@ export interface operations {
                     "application/json": components["schemas"]["HandoverTokenResponse"];
                 };
             };
+            /** @description Bad request: ORDER_NOT_READY_FOR_HANDOVER */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ORDER_NOT_READY_FOR_HANDOVER",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: ORDER_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ORDER_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: ORDER_CANCELLED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ORDER_CANCELLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -11191,6 +11768,21 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

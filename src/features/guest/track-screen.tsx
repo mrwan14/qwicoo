@@ -14,6 +14,7 @@ import { GuestQueryError, LineDetails, PresenceNote, useGuestCopy } from "@/feat
 import { usePollingInterval } from "@/hooks/use-page-visible";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
+import { getPickupOrder } from "@/lib/guest/pickup-orders";
 import type { components } from "@/lib/api/schema";
 import { useGuest } from "@/stores/guest";
 
@@ -37,6 +38,7 @@ function shouldFetchHandover(order: GuestOrder): boolean {
     order.order_type === "TAKEAWAY" ||
     fulfillment === "DRIVE_THRU" ||
     fulfillment === "CURBSIDE" ||
+    fulfillment === "CURBSIDE_PICKUP" ||
     fulfillment === "PICKUP"
   );
 }
@@ -187,12 +189,19 @@ export function TrackScreen() {
     }
   }, [order.data, cashRequestedOrderId, setCashRequestedOrderId]);
 
+  const storedPickup = order.data && shouldFetchHandover(order.data) ? getPickupOrder(order.data.id) : null;
   const handover = useQuery({
     queryKey: ["handover", order.data?.id, order.data?.status],
-    enabled: Boolean(order.data && shouldFetchHandover(order.data)),
+    enabled: Boolean(order.data && shouldFetchHandover(order.data) && storedPickup),
     queryFn: async () => {
+      const current = order.data;
+      const pickup = current ? getPickupOrder(current.id) : null;
+      if (!current || !pickup) return null;
       const result = await guestApi.GET("/api/v1/orders/{order_id}/handover-token", {
-        params: { path: { order_id: order.data?.id ?? "" } },
+        params: {
+          path: { order_id: current.id },
+          header: { "X-Order-Access-Token": pickup.accessToken },
+        },
       });
       if (!result.response.ok || !result.data) return null;
       return result.data;

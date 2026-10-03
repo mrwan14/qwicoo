@@ -14,12 +14,26 @@ const COMBO_STATIONS = ["GRILL", "HOT_SIDE", "BEVERAGE", "ASSEMBLY"] as const;
 
 export function ComboScreen() {
   const brandId = useScope((state) => state.brandId);
+  const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
   const [nameEn, setNameEn] = useState("Combo");
   const [nameAr, setNameAr] = useState("كومبو");
   const [parentId, setParentId] = useState("");
+  const [comboEn, setComboEn] = useState("");
+  const [comboAr, setComboAr] = useState("");
+  const [comboPrice, setComboPrice] = useState("0.00");
+  const [comboCategoryId, setComboCategoryId] = useState("");
   const [componentId, setComponentId] = useState("");
   const [station, setStation] = useState<(typeof COMBO_STATIONS)[number]>("GRILL");
+  const tree = useQuery({
+    queryKey: ["menu-tree", branchId],
+    enabled: Boolean(branchId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/menu/tree", { params: { query: { branch_id: branchId } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Menu failed");
+      return result.data;
+    },
+  });
   const menus = useQuery({
     queryKey: ["menus", brandId],
     enabled: Boolean(brandId),
@@ -39,6 +53,26 @@ export function ComboScreen() {
       if (!result.response.ok || !result.data) return [];
       return result.data;
     },
+  });
+  const createCombo = useMutation({
+    mutationFn: async () => {
+      const body: components["schemas"]["StaffItemCreate"] = {
+        category_id: comboCategoryId,
+        name: { en: comboEn, ar: comboAr },
+        base_price: comboPrice,
+        is_available: true,
+        item_type: "COMBO",
+      };
+      const result = await browserApi.POST("/api/v1/staff/menu/items", { body });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Could not create combo");
+      return result.data;
+    },
+    onSuccess: (item) => {
+      setParentId(item.id);
+      toast.success("Combo created");
+      void queryClient.invalidateQueries({ queryKey: ["menu-tree"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
   const createMenu = useMutation({
     mutationFn: async () => {
@@ -81,6 +115,20 @@ export function ComboScreen() {
     <div className="grid gap-4">
       <h1 className="text-[length:var(--text-28)] font-semibold">Combos</h1>
       {!brandId ? <p className="text-sm">Choose a brand first. Combo menus are stored on the brand.</p> : null}
+      <form className="grid gap-2" onSubmit={(event) => { event.preventDefault(); createCombo.mutate(); }}>
+        <h2 className="font-medium">New combo</h2>
+        {!branchId ? <p className="text-sm text-muted-foreground">Choose a branch before creating a combo.</p> : null}
+        <select className={control} value={comboCategoryId} onChange={(event) => setComboCategoryId(event.target.value)} required>
+          <option value="">Category</option>
+          {(tree.data?.categories ?? []).map((category) => (
+            <option key={category.id} value={category.id}>{category.name}</option>
+          ))}
+        </select>
+        <input className={control} placeholder="English name" value={comboEn} onChange={(event) => setComboEn(event.target.value)} required />
+        <input className={control} placeholder="Arabic name" value={comboAr} onChange={(event) => setComboAr(event.target.value)} required />
+        <input className={control} placeholder="Price" value={comboPrice} onChange={(event) => setComboPrice(event.target.value)} inputMode="decimal" required />
+        <button className="min-h-11 w-fit rounded-lg bg-primary px-4 text-sm text-primary-foreground" type="submit" disabled={!branchId}>Create combo</button>
+      </form>
       {menus.isError ? <p className="text-sm text-destructive">{menus.error.message}</p> : null}
       <form className="grid gap-2 sm:grid-cols-3" onSubmit={(event) => { event.preventDefault(); createMenu.mutate(); }}>
         <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} />

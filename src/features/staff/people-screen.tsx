@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -12,6 +12,7 @@ import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
 import { pickLocale } from "@/lib/i18n/locale-text";
+import { areaNames, boundsForGovernorate, loadEgyptGovernorates, searchEgyptAreas, type EgyptAreaSuggestion } from "@/lib/maps/egypt";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
@@ -384,9 +385,14 @@ export function DeliveryScreen() {
   const brandId = useScope((state) => state.brandId);
   const focusPlatform = useScope((state) => state.focusPlatform);
   const queryClient = useQueryClient();
-  const [nameEn, setNameEn] = useState("");
-  const [nameAr, setNameAr] = useState("");
+  const [draftGovId, setDraftGovId] = useState("");
   const [govId, setGovId] = useState("");
+  const [areaQuery, setAreaQuery] = useState("");
+  const [areaOptions, setAreaOptions] = useState<EgyptAreaSuggestion[]>([]);
+  const [areaPick, setAreaPick] = useState<{ nameEn: string; nameAr: string } | null>(null);
+  const [areaError, setAreaError] = useState("");
+  const [areaSearching, setAreaSearching] = useState(false);
+  const [areaMiss, setAreaMiss] = useState(false);
   const [fee, setFee] = useState("25.00");
   const brands = useQuery({
     queryKey: ["brands"],
@@ -425,21 +431,30 @@ export function DeliveryScreen() {
     },
   });
   const createGov = useMutation({
-    mutationFn: async () => {
-      const body: components["schemas"]["DeliveryGovernorateCreate"] = { name_en: nameEn, name_ar: nameAr, brand_id: brandId, is_active: true };
+    mutationFn: async (place: { nameEn: string; nameAr: string }) => {
+      const body: components["schemas"]["DeliveryGovernorateCreate"] = { name_en: place.nameEn, name_ar: place.nameAr, brand_id: brandId, is_active: true };
       const result = await browserApi.POST("/api/v1/delivery/governorates", { body });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Could not create governorate");
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["delivery-govs"] }),
+    onSuccess: () => {
+      setDraftGovId("");
+      void queryClient.invalidateQueries({ queryKey: ["delivery-govs"] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
   const createZone = useMutation({
-    mutationFn: async () => {
-      const body: components["schemas"]["DeliveryZoneCreate"] = { name_en: nameEn, name_ar: nameAr, governorate_id: govId, is_active: true };
+    mutationFn: async (place: { nameEn: string; nameAr: string }) => {
+      const body: components["schemas"]["DeliveryZoneCreate"] = { name_en: place.nameEn, name_ar: place.nameAr, governorate_id: govId, is_active: true };
       const result = await browserApi.POST("/api/v1/delivery/governorates/{governorate_id}/zones", { params: { path: { governorate_id: govId } }, body });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Could not create zone");
     },
-    onSuccess: () => void zones.refetch(),
+    onSuccess: () => {
+      setAreaQuery("");
+      setAreaPick(null);
+      setAreaOptions([]);
+      setAreaMiss(false);
+      void zones.refetch();
+    },
     onError: (error: Error) => toast.error(error.message),
   });
   const setBranchFee = useMutation({
@@ -460,6 +475,53 @@ export function DeliveryScreen() {
     onSuccess: () => toast.success("Fee saved"),
     onError: (error: Error) => toast.error(error.message),
   });
+  const egypt = useQuery({
+    queryKey: ["egypt-governorates"],
+    staleTime: Infinity,
+    retry: false,
+    queryFn: () => loadEgyptGovernorates(),
+  });
+  const savedGovName = (govs.data ?? []).find((item) => item.id === govId)?.name_en ?? "";
+  const areaBounds = useQuery({
+    queryKey: ["egypt-gov-bounds", savedGovName],
+    enabled: Boolean(savedGovName),
+    staleTime: Infinity,
+    retry: false,
+    queryFn: () => boundsForGovernorate(savedGovName),
+  });
+  useEffect(() => {
+    const query = areaQuery.trim();
+    if (!govId || query.length < 2 || areaPick) {
+      setAreaOptions([]);
+      setAreaSearching(false);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setAreaSearching(true);
+      setAreaError("");
+      void searchEgyptAreas(query, areaBounds.data ?? null)
+        .then((options) => {
+          if (!cancelled) {
+            setAreaOptions(options);
+            setAreaMiss(options.length === 0);
+          }
+        })
+        .catch((error: Error) => {
+          if (!cancelled) {
+            setAreaOptions([]);
+            setAreaError(error.message);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setAreaSearching(false);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [areaBounds.data, areaPick, areaQuery, govId]);
   const brandName = (brands.data ?? []).find((item) => item.id === brandId)?.name;
   const branchOptions = brandBranches.data ?? [];
   const selectedBranch = branchOptions.find((item) => item.id === branchId);
@@ -467,6 +529,20 @@ export function DeliveryScreen() {
   const governorates = govs.data ?? [];
   const selectedGov = governorates.find((item) => item.id === govId);
   const zoneItems = zones.data ?? [];
+  const egyptGovernorates = egypt.data ?? [];
+  const draftGov = egyptGovernorates.find((item) => item.placeId === draftGovId) ?? null;
+  const governorateAlreadyAdded = Boolean(
+    draftGov && governorates.some((item) => item.name_en.localeCompare(draftGov.nameEn, "en", { sensitivity: "accent" }) === 0),
+  );
+
+  function chooseSavedGovernorate(next: string) {
+    setGovId(next);
+    setAreaQuery("");
+    setAreaOptions([]);
+    setAreaPick(null);
+    setAreaError("");
+    setAreaMiss(false);
+  }
 
   return (
     <div className="grid gap-6">
@@ -489,7 +565,7 @@ export function DeliveryScreen() {
             value={brandId ?? ""}
             onChange={(event) => {
               const next = event.target.value || null;
-              if (next !== brandId) setGovId("");
+              if (next !== brandId) chooseSavedGovernorate("");
               focusPlatform({ brandId: next, branchId: next === brandId ? branchId : null });
             }}
           >
@@ -505,24 +581,45 @@ export function DeliveryScreen() {
       <section className={sectionCard}>
         <div>
           <h2 className="text-lg font-semibold">Governorates</h2>
-          <p className={hint}>A governorate is a region guests can choose, such as Cairo. Save the English name and the Arabic name.</p>
+          <p className={hint}>A governorate is a region guests can choose, such as Cairo. The list is Egypt’s governorates from Google Maps, in English and Arabic.</p>
         </div>
-        <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); createGov.mutate(); }}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm">
-              English
-              <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
-            </label>
-            <label className="grid gap-1 text-sm">
-              Arabic
-              <input className={control} dir="rtl" value={nameAr} onChange={(event) => setNameAr(event.target.value)} required />
-            </label>
-          </div>
-          <button className={primaryButton} type="submit" disabled={!brandId || createGov.isPending} aria-describedby="add-governorate-hint">
+        <form
+          className="grid gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (draftGov) createGov.mutate(draftGov);
+          }}
+        >
+          <label className="grid gap-1 text-sm">
+            Governorate
+            <span className={hint}>Choose one. The Arabic name is saved with it.</span>
+            <select
+              className={control}
+              value={draftGovId}
+              disabled={!brandId || egypt.isLoading}
+              onChange={(event) => setDraftGovId(event.target.value)}
+            >
+              <option value="">
+                {egypt.isLoading ? "Loading governorates from Google Maps…" : egypt.isError ? "Governorates unavailable" : "Choose a governorate"}
+              </option>
+              {egyptGovernorates.map((item) => (
+                <option key={item.placeId} value={item.placeId}>{item.nameEn} · {item.nameAr}</option>
+              ))}
+            </select>
+          </label>
+          {egypt.isError ? <p className="text-sm text-destructive">{egypt.error.message}</p> : null}
+          {draftGov ? <p className={hint} dir="auto">{draftGov.nameEn} · {draftGov.nameAr}</p> : null}
+          <button className={primaryButton} type="submit" disabled={!brandId || !draftGov || governorateAlreadyAdded || createGov.isPending} aria-describedby="add-governorate-hint">
             <Plus aria-hidden className="size-4" />
             {createGov.isPending ? "Adding…" : "Add governorate"}
           </button>
-          <p id="add-governorate-hint" className={hint}>Adds the region to {brandName ?? "the chosen brand"}.</p>
+          <p id="add-governorate-hint" className={hint}>
+            {governorateAlreadyAdded
+              ? `${draftGov?.nameEn ?? "This governorate"} is already on ${brandName ?? "this brand"}.`
+              : draftGov
+                ? `Adds ${draftGov.nameEn} to ${brandName ?? "the chosen brand"}.`
+                : `Adds the chosen governorate to ${brandName ?? "the chosen brand"}.`}
+          </p>
         </form>
         {govs.isLoading ? <LoadingState label="Loading governorates" /> : null}
         {govs.isError ? <ErrorState body={govs.error.message} onRetry={() => void govs.refetch()} /> : null}
@@ -544,29 +641,80 @@ export function DeliveryScreen() {
       <section className={sectionCard}>
         <div>
           <h2 className="text-lg font-semibold">Zones</h2>
-          <p className={hint}>A zone is a smaller area inside the governorate, such as a district. It uses the English and Arabic names above.</p>
+          <p className={hint}>A zone is an area inside the governorate, such as a district or city. Pick it from Google Maps. The English and Arabic names are saved together.</p>
         </div>
         <label className="grid gap-1 text-sm">
           Governorate
-          <span className={hint}>Zones are added to this governorate.</span>
-          <select className={control} value={govId} onChange={(event) => setGovId(event.target.value)} disabled={!brandId}>
+          <span className={hint}>Areas are limited to this governorate.</span>
+          <select className={control} value={govId} onChange={(event) => chooseSavedGovernorate(event.target.value)} disabled={!brandId}>
             <option value="">{governorates.length === 0 ? "Add a governorate first" : "Choose a governorate"}</option>
             {governorates.map((gov) => <option key={gov.id} value={gov.id}>{gov.name_en}</option>)}
           </select>
         </label>
+        <div className="grid gap-1 text-sm">
+          <label className="grid gap-1" htmlFor="delivery-area">
+            Area
+            <span className={hint}>{selectedGov ? `Districts and cities in ${selectedGov.name_en}.` : "Choose a governorate first."}</span>
+            <input
+              id="delivery-area"
+              className={control}
+              role="combobox"
+              aria-expanded={areaOptions.length > 0}
+              aria-controls="delivery-area-list"
+              aria-autocomplete="list"
+              placeholder={selectedGov ? "Type an area, then choose it" : "Choose a governorate first"}
+              value={areaQuery}
+              disabled={!govId || areaBounds.isLoading}
+              onChange={(event) => {
+                setAreaQuery(event.target.value);
+                setAreaPick(null);
+                setAreaError("");
+                setAreaMiss(false);
+              }}
+            />
+          </label>
+          {areaSearching ? <p className={hint}>Searching Google Maps…</p> : null}
+          {areaMiss && !areaSearching && areaQuery.trim().length >= 2 ? <p className={hint}>No areas match that. Try a district or city name.</p> : null}
+          {areaError ? <p className="text-sm text-destructive">{areaError}</p> : null}
+          {areaOptions.length > 0 ? (
+            <ul id="delivery-area-list" role="listbox" className="grid max-h-64 overflow-auto rounded-xl bg-background py-1 ring-1 ring-foreground/10">
+              {areaOptions.map((option) => (
+                <li key={option.placeId} role="option">
+                  <button
+                    type="button"
+                    className="grid w-full gap-0.5 px-3 py-2 text-start hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      setAreaQuery(option.label);
+                      setAreaOptions([]);
+                      setAreaError("");
+                      void areaNames(option.placeId)
+                        .then((names) => setAreaPick(names))
+                        .catch((error: Error) => setAreaError(error.message));
+                    }}
+                  >
+                    <span className="font-medium">{option.label}</span>
+                    {option.detail ? <span className="text-sm text-muted-foreground">{option.detail}</span> : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {areaPick ? <p className={hint} dir="auto">{areaPick.nameEn} · {areaPick.nameAr}</p> : null}
+        </div>
         <button
           type="button"
           className={secondaryButton}
-          disabled={!govId || !nameEn.trim() || !nameAr.trim() || createZone.isPending}
+          disabled={!govId || !areaPick || createZone.isPending}
           aria-describedby="add-zone-hint"
-          onClick={() => createZone.mutate()}
+          onClick={() => areaPick && createZone.mutate(areaPick)}
         >
           {createZone.isPending ? "Adding…" : "Add zone"}
         </button>
         <p id="add-zone-hint" className={hint}>
-          {selectedGov && nameEn.trim() && nameAr.trim()
-            ? `Adds a zone named “${nameEn.trim()}” inside ${selectedGov.name_en}.`
-            : "Choose a governorate, and fill in both names above, before adding a zone."}
+          {selectedGov && areaPick
+            ? `Adds ${areaPick.nameEn} inside ${selectedGov.name_en}.`
+            : "Choose a governorate, type an area, and pick it from the list."}
         </p>
         {govId && zones.isSuccess && zoneItems.length === 0 ? (
           <EmptyState title="No zones in this governorate" body="Guests can still choose the governorate. A zone lets them pick a smaller area." />

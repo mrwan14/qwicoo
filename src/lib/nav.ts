@@ -172,7 +172,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
 
 const BOTTOM_PRIORITY: Record<UserRole, readonly string[]> = {
   SUPER_ADMIN: ["/app/brands", "/app/menu", "/app/floor", "/app/analytics"],
-  BRAND_ADMIN: ["brand-dashboard", "/app/menu", "/app/staff", "/app/analytics"],
+  BRAND_ADMIN: ["brand-dashboard", "/app/menu", "/app/staff", "brand-settings"],
   REGIONAL_MANAGER: ["/app/floor", "/app/menu", "/app/staff", "/app/analytics"],
   BRANCH_ADMIN: ["/app/floor", "/app/pos", "/app/kds", "/app/payments"],
   CASHIER: ["/app/pos", "/app/payments", "/app/floor", "/app/attendance"],
@@ -195,6 +195,15 @@ export function navForUser(me: UserProfile, activeBranchId: string | null): NavI
       key: "brand-dashboard",
       href: `/app/brands/${me.brand_id}`,
       label: "Dashboard",
+      group: "Portfolio",
+      shell: "admin",
+      phase: 5,
+      roles: ["BRAND_ADMIN"],
+    });
+    extra.push({
+      key: "brand-settings",
+      href: `/app/brands/${me.brand_id}/settings`,
+      label: "Settings",
       group: "Portfolio",
       shell: "admin",
       phase: 5,
@@ -232,6 +241,7 @@ export function splitBottomNav(role: UserRole, items: readonly NavItem[]) {
 export function isNavActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
   if (!pathname.startsWith(`${href}/`)) return false;
+  if (/^\/app\/brands\/[^/]+$/.test(href)) return false;
   return !NAV_ITEMS.some(
     (item) =>
       item.href !== href &&

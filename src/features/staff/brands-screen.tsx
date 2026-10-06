@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/ops/page-header";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AnalyticsScreen } from "@/features/staff/backoffice-screen";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
@@ -145,6 +146,44 @@ export function BrandsScreen() {
 }
 
 export function BrandDetailScreen({ brandId }: { brandId: string }) {
+  const isPlatform = useScope((state) => state.homeScope === "platform");
+  if (!isPlatform) return <BrandOwnerDashboard brandId={brandId} />;
+  return <BrandSetup brandId={brandId} backHref="/app/brands" backLabel="Back" />;
+}
+
+export function BrandSettingsScreen({ brandId }: { brandId: string }) {
+  return <BrandSetup brandId={brandId} backHref={`/app/brands/${brandId}`} backLabel="Dashboard" />;
+}
+
+function BrandOwnerDashboard({ brandId }: { brandId: string }) {
+  const brand = useQuery({
+    queryKey: ["brand", brandId],
+    retry: false,
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/brands/{brand_id}", { params: { path: { brand_id: brandId } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Brand failed");
+      return result.data;
+    },
+  });
+  const missing = useDenyWhenMissing(brand.error);
+  if (brand.isLoading || missing) return <LoadingState label="Loading brand" />;
+  if (brand.isError || !brand.data) return <ErrorState body={brand.error?.message ?? "Brand missing"} onRetry={() => void brand.refetch()} />;
+  return (
+    <div className="grid gap-4">
+      <PageHeader
+        title={brand.data.name}
+        action={
+          <Link href={`/app/brands/${brandId}/settings`} className="inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium hover:bg-muted">
+            Settings
+          </Link>
+        }
+      />
+      <AnalyticsScreen view="dashboard" embedded />
+    </div>
+  );
+}
+
+function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHref: string; backLabel: string }) {
   const queryClient = useQueryClient();
   const [branchOpen, setBranchOpen] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -205,11 +244,11 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
   return (
     <div className="grid gap-4">
       <Link
-        href="/app/brands"
+        href={backHref}
         className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <ArrowLeft aria-hidden className="size-4" />
-        Back
+        {backLabel}
       </Link>
       <PageHeader
         title={brand.data.name}

@@ -379,7 +379,7 @@ function chartAmount(amount: string): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-export function AnalyticsScreen({ view }: { view: "dashboard" | "menu" | "branches" }) {
+export function AnalyticsScreen({ view, embedded = false }: { view: "dashboard" | "menu" | "branches"; embedded?: boolean }) {
   const [period, setPeriod] = useState<components["schemas"]["TimePeriod"]>("last_7_days");
   const data = useQuery({
     queryKey: ["analytics", view, period],
@@ -407,15 +407,19 @@ export function AnalyticsScreen({ view }: { view: "dashboard" | "menu" | "branch
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">Analytics</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Sales for the period you choose.</p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((tab) => (
-          <Link key={tab.id} className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm ${tab.id === view ? "bg-primary font-medium text-primary-foreground" : "border bg-card"}`} href={tab.href}>{tab.label}</Link>
-        ))}
-      </div>
+      {embedded ? null : (
+        <>
+          <div className="grid gap-1">
+            <h1 className="text-[length:var(--text-28)] font-semibold">Analytics</h1>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Sales for the period you choose.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {tabs.map((tab) => (
+              <Link key={tab.id} className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm ${tab.id === view ? "bg-primary font-medium text-primary-foreground" : "border bg-card"}`} href={tab.href}>{tab.label}</Link>
+            ))}
+          </div>
+        </>
+      )}
       <label className="grid max-w-xs gap-1 text-sm">
         Period
         <select className={control} value={period} onChange={(event) => setPeriod(event.target.value as typeof period)}>

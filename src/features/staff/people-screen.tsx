@@ -20,7 +20,29 @@ const hint = "text-sm leading-6 text-muted-foreground";
 const sectionCard = "grid max-w-3xl gap-4 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5";
 const primaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 const secondaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
-const ROLES: components["schemas"]["UserRole"][] = ["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER", "BRANCH_ADMIN"];
+const ROLES = ["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER", "BRANCH_ADMIN"] as const;
+const ROLE_LABELS: Record<(typeof ROLES)[number], string> = {
+  CASHIER: "Cashier",
+  WAITER: "Waiter",
+  KITCHEN_STAFF: "Kitchen",
+  RUNNER: "Runner",
+  BRANCH_ADMIN: "Branch admin",
+};
+const ROLE_HINTS: Record<(typeof ROLES)[number], string> = {
+  CASHIER: "Takes payment at the till.",
+  WAITER: "Serves tables and takes orders.",
+  KITCHEN_STAFF: "Sees tickets on the kitchen display.",
+  RUNNER: "Brings ready food to the table.",
+  BRANCH_ADMIN: "Manages this branch.",
+};
+
+function roleLabel(role: string): string {
+  return ROLE_LABELS[role as (typeof ROLES)[number]] ?? role;
+}
+
+function clock(value: string | null | undefined): string {
+  return value ? value.slice(0, 5) : "";
+}
 
 export function StaffScreen() {
   const branchId = useScope((state) => state.branchId);
@@ -29,8 +51,9 @@ export function StaffScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<components["schemas"]["UserRole"]>("CASHIER");
+  const [role, setRole] = useState<(typeof ROLES)[number]>("CASHIER");
   const [removeId, setRemoveId] = useState<string | null>(null);
+  const [staffQuery, setStaffQuery] = useState("");
   const staff = useQuery({
     queryKey: ["staff", branchId],
     enabled: Boolean(branchId),
@@ -60,6 +83,9 @@ export function StaffScreen() {
     },
     onSuccess: () => {
       toast.success("Staff added");
+      setFullName("");
+      setEmail("");
+      setPassword("");
       void queryClient.invalidateQueries({ queryKey: ["staff"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -81,7 +107,10 @@ export function StaffScreen() {
       const result = await browserApi.PATCH("/api/v1/staff/{staff_id}", { params: { path: { staff_id: input.id } }, body });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Update failed");
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["staff"] }),
+    onSuccess: () => {
+      toast.success("Name saved");
+      void queryClient.invalidateQueries({ queryKey: ["staff"] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 
@@ -89,32 +118,172 @@ export function StaffScreen() {
   if (staff.isLoading) return <LoadingState label="Loading staff" />;
   if (staff.isError || !staff.data) return <ErrorState body={staff.error?.message ?? "Staff missing"} onRetry={() => void staff.refetch()} />;
 
+  const people = staff.data;
+  const staffSearch = staffQuery.trim().toLowerCase();
+  const visiblePeople = staffSearch
+    ? people.filter((person) =>
+        [person.full_name, person.email, roleLabel(person.role)].join(" ").toLowerCase().includes(staffSearch),
+      )
+    : people;
+  const personToRemove = people.find((person) => person.id === removeId);
+
   return (
-    <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Staff</h1>
-      <form className="grid gap-2 md:grid-cols-2" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-        <input className={control} placeholder="Full name" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
-        <input className={control} type="email" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-        <input className={control} type="password" placeholder="Password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-        <select className={control} value={role} onChange={(event) => setRole(event.target.value as typeof role)}>
-          {ROLES.map((item) => <option key={item}>{item}</option>)}
-        </select>
-        <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">Add staff</button>
+    <div className="grid gap-6">
+      <header>
+        <h1 className="text-[length:var(--text-28)] font-semibold">Staff</h1>
+        <p className={`mt-1 max-w-2xl ${hint}`}>People who can sign in at this branch. Each person has one role.</p>
+      </header>
+
+      <form className={sectionCard} onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
+        <div>
+          <h2 className="text-lg font-semibold">Add a person</h2>
+          <p className={hint}>They sign in with the email and password. The shift is 10:00 to 18:00.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm">
+            Full name
+            <span className={hint}>The name other staff see.</span>
+            <input className={control} value={fullName} onChange={(event) => setFullName(event.target.value)} required />
+          </label>
+          <label className="grid gap-1 text-sm">
+            Email
+            <span className={hint}>They use this to sign in.</span>
+            <input className={control} type="email" autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          </label>
+          <label className="grid gap-1 text-sm">
+            Password
+            <span className={hint}>They use this the first time they sign in.</span>
+            <input className={control} type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          </label>
+          <label className="grid gap-1 text-sm">
+            Role
+            <span className={hint}>{ROLE_HINTS[role]}</span>
+            <select className={control} value={role} onChange={(event) => setRole(event.target.value as typeof role)}>
+              {ROLES.map((item) => <option key={item} value={item}>{ROLE_LABELS[item]}</option>)}
+            </select>
+          </label>
+        </div>
+        <button className={primaryButton} type="submit" disabled={create.isPending}>
+          <Plus aria-hidden className="size-4" />
+          {create.isPending ? "Adding…" : "Add staff"}
+        </button>
       </form>
-      <ul className="grid gap-2">
-        {staff.data.map((person) => (
-          <li key={person.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3">
-            <div>
-              <p className="font-medium">{person.full_name}</p>
-              <p className="text-sm text-muted-foreground">{person.role}</p>
-            </div>
-            <button type="button" className="min-h-11 text-sm underline" onClick={() => rename.mutate({ id: person.id, full_name: `${person.full_name}` })}>Save name</button>
-            <button type="button" className="min-h-11 text-sm text-destructive" onClick={() => setRemoveId(person.id)}>Deactivate</button>
-          </li>
-        ))}
-      </ul>
-      <ConfirmDialog open={Boolean(removeId)} onOpenChange={(open) => !open && setRemoveId(null)} title="Deactivate this person?" description="They will no longer be able to sign in." confirmLabel="Deactivate" destructive onConfirm={() => removeId && remove.mutate(removeId)} />
+
+      <section className="grid gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">People at this branch</h2>
+            <p className={hint}>{people.length === 1 ? "1 person" : `${people.length} people`}</p>
+          </div>
+          <label className="grid w-full max-w-xs gap-1 text-sm">
+            Search
+            <input className={control} value={staffQuery} onChange={(event) => setStaffQuery(event.target.value)} placeholder="Name, email, or role" />
+          </label>
+        </div>
+        {people.length === 0 ? <EmptyState title="No staff yet" body="Add a person above. They can then sign in at this branch." /> : null}
+        {people.length > 0 && visiblePeople.length === 0 ? <EmptyState title="No people match" body="Try another name, email, or role." /> : null}
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {visiblePeople.map((person) => (
+            <StaffCard
+              key={person.id}
+              person={person}
+              saving={rename.isPending && rename.variables?.id === person.id}
+              onRename={(full_name) => rename.mutate({ id: person.id, full_name })}
+              onDeactivate={() => setRemoveId(person.id)}
+            />
+          ))}
+        </ul>
+      </section>
+
+      <ConfirmDialog
+        open={Boolean(removeId)}
+        onOpenChange={(open) => !open && setRemoveId(null)}
+        title="Deactivate this person?"
+        description={personToRemove ? `${personToRemove.full_name} will no longer be able to sign in.` : "They will no longer be able to sign in."}
+        confirmLabel="Deactivate"
+        destructive
+        onConfirm={() => removeId && remove.mutate(removeId)}
+      />
     </div>
+  );
+}
+
+function StaffCard({
+  person,
+  saving,
+  onRename,
+  onDeactivate,
+}: {
+  person: components["schemas"]["StaffResponse"];
+  saving: boolean;
+  onRename: (fullName: string) => void;
+  onDeactivate: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(person.full_name);
+  const edited = name.trim().length > 0 && name.trim() !== person.full_name.trim();
+  useEffect(() => {
+    if (editing && person.full_name.trim() === name.trim()) setEditing(false);
+  }, [editing, name, person.full_name]);
+  const shift = clock(person.shift_start_time) && clock(person.shift_end_time)
+    ? `${clock(person.shift_start_time)}–${clock(person.shift_end_time)}`
+    : "";
+
+  return (
+    <li className="grid content-start gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="grid gap-1">
+          <p className="font-semibold">{person.full_name}</p>
+          <p className="text-sm text-muted-foreground">{person.email}</p>
+        </div>
+        <StatusChip tone={person.is_active ? "available" : "soldout"}>{person.is_active ? "Active" : "Inactive"}</StatusChip>
+      </div>
+      <p className="text-sm">{roleLabel(person.role)}{shift ? ` · ${shift}` : ""}</p>
+      {editing ? (
+        <form
+          className="grid gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (edited) onRename(name.trim());
+          }}
+        >
+          <label className="grid gap-1 text-sm">
+            Full name
+            <input className={control} value={name} onChange={(event) => setName(event.target.value)} required />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {edited ? (
+              <button className={primaryButton} type="submit" disabled={saving}>{saving ? "Saving…" : "Save name"}</button>
+            ) : null}
+            <button
+              type="button"
+              className={secondaryButton}
+              onClick={() => {
+                setName(person.full_name);
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={secondaryButton} onClick={() => { setName(person.full_name); setEditing(true); }}>
+            Change name
+          </button>
+          {person.is_active ? (
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center rounded-xl border border-destructive/30 px-4 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              onClick={onDeactivate}
+            >
+              Deactivate
+            </button>
+          ) : null}
+        </div>
+      )}
+    </li>
   );
 }
 

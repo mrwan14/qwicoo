@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MapPin } from "lucide-react";
+import { MapPin, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -342,7 +342,14 @@ function TablesTab({ branchId }: { branchId: string }) {
     <div className="grid gap-3">
       <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
         <input className={control} placeholder="Table number" value={number} onChange={(event) => setNumber(event.target.value)} required />
-        <button className="min-h-11 rounded-lg bg-primary px-4 text-sm text-primary-foreground" type="submit">Add table</button>
+        <button
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium whitespace-nowrap text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+          type="submit"
+          disabled={create.isPending}
+        >
+          <Plus aria-hidden className="size-4" />
+          {create.isPending ? "Adding…" : "Add table"}
+        </button>
       </form>
       {tables.isError ? (
         <ErrorState title="No table list" body={tables.error.message} onRetry={() => void tables.refetch()} />

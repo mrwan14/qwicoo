@@ -212,6 +212,8 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
               href={`/app/branches/${branch.id}`}
               title={pickLocale(branch.name)}
               meta={branch.slug}
+              imageUrl={mediaUrl(logoPreview ?? brand.data.logo_url)}
+              imageAlt={`${brand.data.name} logo`}
               badge={<StatusChip tone={branch.is_active ? "available" : "soldout"}>{branch.is_active ? "Active" : "Inactive"}</StatusChip>}
             />
           </li>

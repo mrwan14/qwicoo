@@ -14,6 +14,7 @@ import { useScope } from "@/stores/scope";
 import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { mediaUrl } from "@/lib/media";
 import { StatusChip } from "@/components/ops/status-chip";
 import { ErrorState, LoadingState } from "@/components/ops/states";
 import type { components } from "@/lib/api/schema";
@@ -44,6 +45,16 @@ export function BranchScreen({ branchId }: { branchId: string }) {
       return result.data;
     },
   });
+  const parentBrandId = branch.data?.brand_id ?? null;
+  const parentBrand = useQuery({
+    queryKey: ["brand", parentBrandId],
+    enabled: Boolean(parentBrandId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/brands/{brand_id}", { params: { path: { brand_id: parentBrandId ?? "" } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Brand failed");
+      return result.data;
+    },
+  });
   const missing = useDenyWhenMissing(branch.error);
   useEffect(() => {
     if (branch.data) {
@@ -53,6 +64,8 @@ export function BranchScreen({ branchId }: { branchId: string }) {
   if (branch.isLoading || missing) return <LoadingState label="Loading branch" />;
   if (branch.isError || !branch.data) return <ErrorState body={branch.error?.message ?? "Branch missing"} onRetry={() => void branch.refetch()} />;
   const branchRecord = branch.data;
+  const logoSrc = mediaUrl(branchRecord.logo_url) ?? mediaUrl(parentBrand.data?.logo_url);
+  const branchTitle = branchRecord.display_name || branchRecord.slug;
 
   const canSeePin = Boolean(me && PIN_ROLES.includes(me.role));
   const tabs = (Object.keys(TAB_LABELS) as BranchTab[]).filter((item) => item !== "pin" || canSeePin);
@@ -65,7 +78,14 @@ export function BranchScreen({ branchId }: { branchId: string }) {
         <ArrowLeft aria-hidden className="size-4" />
         Back
       </Link>
-      <h1 className="text-[length:var(--text-28)] font-semibold">{branchRecord.display_name || branchRecord.slug}</h1>
+      <div className="flex items-center gap-3">
+        {logoSrc ? (
+          // Stored logos are on the API host, which next/image is not set up to optimise.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoSrc} alt={`${branchTitle} logo`} className="size-14 rounded-xl object-cover ring-1 ring-foreground/5" />
+        ) : null}
+        <h1 className="text-[length:var(--text-28)] font-semibold">{branchTitle}</h1>
+      </div>
       <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Branch settings">
         {tabs.map((item) => (
           <button

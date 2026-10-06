@@ -13,6 +13,7 @@ import { useScope } from "@/stores/scope";
 import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { StatusChip } from "@/components/ops/status-chip";
 import { ErrorState, LoadingState } from "@/components/ops/states";
 import type { components } from "@/lib/api/schema";
 
@@ -266,6 +267,52 @@ function PinTab({ branchId }: { branchId: string }) {
   );
 }
 
+type TableDetail = components["schemas"]["TableDetailResponse"];
+type ChipTone = "available" | "browsing" | "ordered" | "ready" | "soldout" | "neutral";
+
+function tableTone(table: TableDetail): ChipTone {
+  if (!table.is_active) return "soldout";
+  switch (table.status) {
+    case "AVAILABLE":
+      return "available";
+    case "BROWSING":
+      return "browsing";
+    case "AWAITING_FOOD":
+    case "BILL_REQUESTED":
+      return "ordered";
+    case "EATING":
+      return "ready";
+    case "NEEDS_CLEANING":
+      return "soldout";
+    default:
+      return "neutral";
+  }
+}
+
+function tableLabel(table: TableDetail): string {
+  if (!table.is_active) return "Inactive";
+  switch (table.status) {
+    case "AVAILABLE":
+      return "Available";
+    case "BROWSING":
+      return "Browsing";
+    case "AWAITING_FOOD":
+      return "Awaiting food";
+    case "EATING":
+      return "Eating";
+    case "BILL_REQUESTED":
+      return "Bill requested";
+    case "NEEDS_CLEANING":
+      return "Needs cleaning";
+    default:
+      return table.status;
+  }
+}
+
+function seatLabel(capacity: number): string {
+  return capacity === 1 ? "1 seat" : `${capacity} seats`;
+}
+
 function TablesTab({ branchId }: { branchId: string }) {
   const [number, setNumber] = useState("");
   const queryClient = useQueryClient();
@@ -300,9 +347,15 @@ function TablesTab({ branchId }: { branchId: string }) {
       {tables.isError ? (
         <ErrorState title="No table list" body={tables.error.message} onRetry={() => void tables.refetch()} />
       ) : (
-        <ul className="grid gap-2">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {(tables.data ?? []).map((table) => (
-            <li key={table.id} className="rounded-lg border p-3 text-sm">{table.table_number}</li>
+            <li key={table.id} className="flex min-h-28 flex-col justify-between gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-lg font-semibold">Table {table.table_number}</p>
+                <StatusChip tone={tableTone(table)}>{tableLabel(table)}</StatusChip>
+              </div>
+              <p className="text-sm text-muted-foreground">{table.zone_name} · {seatLabel(table.capacity)}</p>
+            </li>
           ))}
         </ul>
       )}

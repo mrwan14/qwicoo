@@ -115,11 +115,26 @@ export function StaffScreen() {
   );
 }
 
+function normaliseFeatureKey(raw: string): string | null {
+  const key = raw.trim().toUpperCase().replace(/[\s-]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+  return /^[A-Z0-9_]{2,50}$/.test(key) ? key : null;
+}
+
 export function FeaturesScreen() {
   const brandId = useScope((state) => state.brandId);
+  const branchId = useScope((state) => state.branchId);
+  const focusPlatform = useScope((state) => state.focusPlatform);
   const queryClient = useQueryClient();
   const [key, setKey] = useState("");
   const [nameEn, setNameEn] = useState("");
+  const brands = useQuery({
+    queryKey: ["brands"],
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/brands", { params: { query: { limit: 100 } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Brands failed");
+      return result.data.items;
+    },
+  });
   const platform = useQuery({
     queryKey: ["features-platform"],
     queryFn: async () => {
@@ -139,10 +154,12 @@ export function FeaturesScreen() {
   });
   const create = useMutation({
     mutationFn: async () => {
+      const id = normaliseFeatureKey(key);
+      if (!id) throw new Error("Use at least two letters or numbers, such as DRIVE_THRU.");
       const body: components["schemas"]["PlatformFeatureCreate"] = {
-        id: key,
-        name_en: nameEn,
-        name_ar: nameEn,
+        id,
+        name_en: nameEn.trim(),
+        name_ar: nameEn.trim(),
         category: "OPS",
         is_core: false,
         is_premium: false,
@@ -174,6 +191,7 @@ export function FeaturesScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const brandName = (brands.data ?? []).find((item) => item.id === brandId)?.name;
   const features = platform.data ?? [];
   const entitlements = brand.data ?? [];
   const enabledKeys = new Set(entitlements.filter((item) => item.is_enabled_by_super_admin).map((item) => item.feature_key));
@@ -194,7 +212,7 @@ export function FeaturesScreen() {
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
             Feature key
-            <span className={hint}>A short code, such as DRIVE_THRU.</span>
+            <span className={hint}>Letters and numbers. Drive-thru is saved as DRIVE_THRU.</span>
             <input className={control} value={key} onChange={(event) => setKey(event.target.value)} required />
           </label>
           <label className="grid gap-1 text-sm">
@@ -210,10 +228,34 @@ export function FeaturesScreen() {
         <p id="add-feature-hint" className={hint}>Adds the feature to the platform list below.</p>
       </form>
 
+      <section className="grid max-w-3xl gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Brand</h2>
+          <p className={hint}>Choose the brand before enabling or disabling a feature.</p>
+        </div>
+        <label className="grid gap-1 text-sm">
+          Brand
+          <select
+            className={control}
+            value={brandId ?? ""}
+            onChange={(event) => {
+              const next = event.target.value || null;
+              focusPlatform({ brandId: next, branchId: next === brandId ? branchId : null });
+            }}
+          >
+            <option value="">{brands.isFetching ? "Loading brands…" : "Choose a brand"}</option>
+            {(brands.data ?? []).map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </select>
+        </label>
+        {brands.isError ? <p className="text-sm text-destructive">{brands.error.message}</p> : null}
+      </section>
+
       <section className="grid gap-3">
         <div>
           <h2 className="text-lg font-semibold">Platform features</h2>
-          <p className={hint}>{brandId ? "Enable or disable a feature for the brand you have open." : "Open a brand from Brands before changing a feature."}</p>
+          <p className={hint}>{brandName ? `Enable or disable a feature for ${brandName}.` : "Choose a brand above before changing a feature."}</p>
         </div>
         {platform.isLoading ? <LoadingState label="Loading features" /> : null}
         {platform.isError ? <ErrorState body={platform.error.message} onRetry={() => void platform.refetch()} /> : null}
@@ -240,7 +282,7 @@ export function FeaturesScreen() {
                       disabled={!brandId || toggle.isPending}
                       onClick={() => toggle.mutate({ featureKey: feature.id, enabled: !enabled })}
                     >
-                      {pending ? (enabled ? "Disabling…" : "Enabling…") : enabled ? "Disable for brand" : "Enable for brand"}
+                      {pending ? (enabled ? "Disabling…" : "Enabling…") : enabled ? `Disable for ${brandName ?? "brand"}` : `Enable for ${brandName ?? "brand"}`}
                     </button>
                   </div>
                 </li>
@@ -253,10 +295,10 @@ export function FeaturesScreen() {
       <section className="grid gap-3">
         <div>
           <h2 className="text-lg font-semibold">Brand entitlements</h2>
-          <p className={hint}>Features turned on or off for the brand you have open.</p>
+          <p className={hint}>{brandName ? `Features turned on or off for ${brandName}.` : "Choose a brand above to see its features."}</p>
         </div>
         {!brandId ? (
-          <EmptyState title="No brand open" body="Open a brand from Brands to see its features." />
+          <EmptyState title="No brand chosen" body="Choose a brand above to see which features are on." />
         ) : null}
         {brandId && brand.isSuccess && entitlements.length === 0 ? (
           <EmptyState title="No features for this brand yet" body="Enable a platform feature above and it will show up here." />
@@ -285,8 +327,8 @@ export function FeaturesScreen() {
                         ? "Disabling…"
                         : "Enabling…"
                       : item.is_enabled_by_super_admin
-                        ? "Disable for brand"
-                        : "Enable for brand"}
+                        ? `Disable for ${brandName ?? "brand"}`
+                        : `Enable for ${brandName ?? "brand"}`}
                   </button>
                 </li>
               );

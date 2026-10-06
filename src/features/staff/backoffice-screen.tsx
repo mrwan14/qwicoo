@@ -20,6 +20,10 @@ import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
 
+function cairoBusinessDate(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
 function attendanceStatusLabel(status: string | null | undefined): string {
   const value = status?.trim();
   if (!value || value.toLowerCase() === "unknown") return "Not checked in";
@@ -89,6 +93,7 @@ export function FinancialsScreen() {
 
   const shiftOpen = drawer.data?.status === "OPEN";
   const reportRows = reports.data ?? [];
+  const todayReport = reportRows.some((report) => report.business_date === cairoBusinessDate());
 
   return (
     <div className="grid gap-4">
@@ -137,10 +142,10 @@ export function FinancialsScreen() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-medium">End-of-day report</h2>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Freezes paid orders for today in Cairo time, so you can open and print them. Ending the shift records the cash count and does not fill this report.</p>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">One report for today in Cairo time. It counts paid orders, and a later press refreshes that same report when the figures change. Ending the shift records the cash count and does not fill this report.</p>
           </div>
           <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={generate.isPending} onClick={() => generate.mutate()}>
-            {generate.isPending ? "Creating…" : "Create end-of-day report"}
+            {generate.isPending ? (todayReport ? "Updating…" : "Creating…") : todayReport ? "Update today's report" : "Create end-of-day report"}
           </button>
         </div>
         {reportRows.length === 0 ? <p className="text-sm text-muted-foreground">No end-of-day reports yet.</p> : (

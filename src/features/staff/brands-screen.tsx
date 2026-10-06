@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { mediaUrl, presignedUploadUrl } from "@/lib/media";
 import { useDenyWhenMissing } from "@/lib/auth/session-client";
 import { useScope } from "@/stores/scope";
 
@@ -231,7 +232,7 @@ function BrandLogo({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const mark = name.trim().charAt(0).toUpperCase() || "B";
-  const shown = logoUrl?.trim() ? logoUrl : null;
+  const shown = mediaUrl(logoUrl?.trim() ? logoUrl : null);
   return (
     <section className="flex max-w-lg flex-col gap-4 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5 sm:flex-row sm:items-center">
       <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
@@ -413,9 +414,7 @@ async function uploadLogo(file: File, folder: "brands" | "items" | "general", af
   };
   const signed = await browserApi.POST("/api/v1/media/presigned-url", { body });
   if (!signed.response.ok || !signed.data) throw asApiError(signed.error, signed.response, "Upload URL failed");
-  const uploadUrl = signed.data.upload_url.startsWith("http")
-    ? signed.data.upload_url
-    : `${process.env.API_BASE_URL ?? ""}${signed.data.upload_url}`;
+  const uploadUrl = presignedUploadUrl(signed.data.upload_url);
   const uploaded = await fetch(uploadUrl, { method: "PUT", body: file, headers: { "content-type": file.type || "image/png" } });
   if (!uploaded.ok) throw new Error("Upload failed");
   await after(signed.data.public_url);

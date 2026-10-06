@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Plus } from "lucide-react";
+import { MapPin, Plus, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -18,6 +18,7 @@ import { ErrorState, LoadingState } from "@/components/ops/states";
 import type { components } from "@/lib/api/schema";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
+const hint = "max-w-lg text-sm leading-6 text-muted-foreground";
 
 const TAB_LABELS = {
   profile: "Profile",
@@ -96,9 +97,13 @@ function ProfileTab({ branchId, currency }: { branchId: string; currency: string
   });
   return (
     <form className="grid max-w-lg gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
-      <p className="text-sm text-muted-foreground">Currency {currency}</p>
-      <input className={control} placeholder="Address" value={address} onChange={(event) => setAddress(event.target.value)} />
-      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">Save profile</button>
+      <p className={hint}>The address for this branch. Currency is {currency} and is not changed here.</p>
+      <label className="grid gap-1 text-sm">
+        Address
+        <input className={control} placeholder="Address" value={address} onChange={(event) => setAddress(event.target.value)} />
+      </label>
+      <p id="save-profile-hint" className={hint}>Saves the address above.</p>
+      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit" aria-describedby="save-profile-hint">Save profile</button>
     </form>
   );
 }
@@ -140,9 +145,12 @@ function LocationTab({ branch }: { branch: components["schemas"]["BranchResponse
   });
   return (
     <form className="grid max-w-lg gap-3" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
+      <p className={hint}>Where this branch is, and how far a guest can be from it and still order at a table.</p>
+      <p id="open-map-hint" className={hint}>Opens the map so you can drop a pin for this branch.</p>
       <button
         type="button"
         className="flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-start text-sm hover:border-primary/40"
+        aria-describedby="open-map-hint"
         onClick={() => setPickerOpen(true)}
       >
         <MapPin aria-hidden className="size-4 shrink-0 text-primary" />
@@ -158,9 +166,11 @@ function LocationTab({ branch }: { branch: components["schemas"]["BranchResponse
       </button>
       <label className="grid gap-1 text-sm">
         Geofence radius (m)
+        <span className={hint}>How many metres from the pin a guest can be and still join a table.</span>
         <input className={control} type="number" min={5} max={5000} value={radius} onChange={(event) => setRadius(Number(event.target.value))} />
       </label>
-      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground disabled:opacity-50" type="submit" disabled={!location || save.isPending}>Save location</button>
+      <p id="save-location-hint" className={hint}>Saves the pin and the geofence radius.</p>
+      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground disabled:opacity-50" type="submit" disabled={!location || save.isPending} aria-describedby="save-location-hint">Save location</button>
       <LocationPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} value={location} radiusMeters={radius} onConfirm={setLocation} />
     </form>
   );
@@ -198,10 +208,19 @@ function FinancialsTab({ branchId }: { branchId: string }) {
   if (settings.isLoading) return <LoadingState label="Loading settings" />;
   return (
     <form className="grid max-w-lg gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
-      <p className="text-sm">Current tax {settings.data?.tax_rate}</p>
-      <input className={control} value={tax} onChange={(event) => setTax(event.target.value)} />
-      <input className={control} value={fee} onChange={(event) => setFee(event.target.value)} />
-      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">Save financial settings</button>
+      <p className={hint}>Tax and service fee for this branch. Enter a decimal: 0.14 means 14%.</p>
+      <label className="grid gap-1 text-sm">
+        Tax rate
+        <span className={hint}>Current rate {settings.data?.tax_rate ?? "—"}.</span>
+        <input className={control} value={tax} onChange={(event) => setTax(event.target.value)} />
+      </label>
+      <label className="grid gap-1 text-sm">
+        Service fee rate
+        <span className={hint}>Current rate {settings.data?.service_fee_rate ?? "—"}.</span>
+        <input className={control} value={fee} onChange={(event) => setFee(event.target.value)} />
+      </label>
+      <p id="save-financials-hint" className={hint}>Saves these rates. Menu prices are not changed here.</p>
+      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit" aria-describedby="save-financials-hint">Save financial settings</button>
     </form>
   );
 }
@@ -229,9 +248,14 @@ function SlaTab({ branchId }: { branchId: string }) {
   });
   return (
     <form className="grid max-w-lg gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
-      <p className="text-sm">Current {sla.data?.sla_prep_time_minutes ?? "—"} minutes</p>
-      <input className={control} type="number" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} />
-      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">Save SLA</button>
+      <p className={hint}>How long the kitchen should take to prepare an order. An order that takes longer is over this target.</p>
+      <label className="grid gap-1 text-sm">
+        Preparation target (minutes)
+        <span className={hint}>Current target {sla.data?.sla_prep_time_minutes ?? "—"} minutes. It must be greater than zero.</span>
+        <input className={control} type="number" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} />
+      </label>
+      <p id="save-sla-hint" className={hint}>Saves the preparation target for this branch.</p>
+      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit" aria-describedby="save-sla-hint">Save SLA</button>
     </form>
   );
 }
@@ -259,9 +283,20 @@ function PinTab({ branchId }: { branchId: string }) {
     onError: (error: Error) => toast.error(error.message),
   });
   return (
-    <div className="grid gap-2">
+    <div className="grid max-w-lg gap-2">
+      <p className={hint}>Guests who are outside the restaurant enter this PIN to join a table. It refreshes on its own after 24 hours.</p>
       <p className="text-2xl font-semibold tracking-widest">{pin.data?.access_pin ?? "—"}</p>
-      <button type="button" className="min-h-11 w-fit rounded-lg border px-4 text-sm" onClick={() => setConfirm(true)}>Rotate PIN</button>
+      <p id="rotate-pin-hint" className={hint}>Issues a new PIN now. Printed QR cards still work, but the previous PIN stops.</p>
+      <button
+        type="button"
+        className="inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+        aria-describedby="rotate-pin-hint"
+        disabled={rotate.isPending}
+        onClick={() => setConfirm(true)}
+      >
+        <RefreshCw aria-hidden className="size-4" />
+        {rotate.isPending ? "Rotating…" : "Rotate PIN"}
+      </button>
       <ConfirmDialog open={confirm} onOpenChange={setConfirm} title="Rotate the table PIN?" description="Printed QR cards keep working, but the old PIN stops." confirmLabel="Rotate" destructive onConfirm={() => rotate.mutate()} />
     </div>
   );
@@ -340,17 +375,23 @@ function TablesTab({ branchId }: { branchId: string }) {
   });
   return (
     <div className="grid gap-3">
-      <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-        <input className={control} placeholder="Table number" value={number} onChange={(event) => setNumber(event.target.value)} required />
+      <p className={hint}>Tables for this branch. A new table starts in the Indoor zone with 4 seats.</p>
+      <form className="flex items-end gap-2" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
+        <label className="grid min-w-0 flex-1 gap-1 text-sm">
+          Table number
+          <input className={control} placeholder="Table number" value={number} onChange={(event) => setNumber(event.target.value)} required />
+        </label>
         <button
           className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium whitespace-nowrap text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
           type="submit"
+          aria-describedby="add-table-hint"
           disabled={create.isPending}
         >
           <Plus aria-hidden className="size-4" />
           {create.isPending ? "Adding…" : "Add table"}
         </button>
       </form>
+      <p id="add-table-hint" className={hint}>Creates a table with the number you enter.</p>
       {tables.isError ? (
         <ErrorState title="No table list" body={tables.error.message} onRetry={() => void tables.refetch()} />
       ) : (

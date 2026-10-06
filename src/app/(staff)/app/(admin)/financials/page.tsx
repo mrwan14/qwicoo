@@ -5,7 +5,7 @@ import { FinancialsScreen } from "@/features/staff/backoffice-screen";
 export default function Page() {
   return (
     <RoleGate href="/app/financials">
-      <BranchGate screen="Financials">
+      <BranchGate screen="Till">
         <FinancialsScreen />
       </BranchGate>
     </RoleGate>

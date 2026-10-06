@@ -146,7 +146,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   {
     href: "/app/financials",
-    label: "Financials",
+    label: "Till",
     group: "Insight",
     shell: "admin",
     phase: 6,

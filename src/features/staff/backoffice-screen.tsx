@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { BranchesBarChart, CategoryDonut, ItemsBarChart } from "@/features/staff/analytics-charts";
 import { Money } from "@/components/ops/money";
+import { StatusChip } from "@/components/ops/status-chip";
 import { ErrorState, LoadingState, QueryErrorState, RoleUnavailableState } from "@/components/ops/states";
 import { asApiError, isRoleDenied } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -84,30 +85,90 @@ export function FinancialsScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (isRoleDenied(drawer.error) && isRoleDenied(reports.error)) return <RoleUnavailableState screen="Financials" />;
+  if (isRoleDenied(drawer.error) && isRoleDenied(reports.error)) return <RoleUnavailableState screen="Till" />;
+
+  const shiftOpen = drawer.data?.status === "OPEN";
+  const reportRows = reports.data ?? [];
 
   return (
     <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Financials</h1>
-      {drawer.isLoading ? <LoadingState label="Loading drawer" /> : null}
-      {drawer.isError ? <QueryErrorState error={drawer.error} screen="The cash drawer" onRetry={() => void drawer.refetch()} /> : null}
-      {reports.isError ? <QueryErrorState error={reports.error} screen="Z reports" onRetry={() => void reports.refetch()} /> : null}
-      <p className="text-sm">Drawer {drawer.data?.status ?? "none"}</p>
-      <div className="flex flex-wrap gap-2">
-        <input className={control} value={opening} onChange={(event) => setOpening(event.target.value)} />
-        <button type="button" className="min-h-11 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => open.mutate()}>Open drawer</button>
-        <input className={control} value={counted} onChange={(event) => setCounted(event.target.value)} />
-        <button type="button" className="min-h-11 rounded-lg border px-4 text-sm" onClick={() => setCloseOpen(true)}>Close drawer</button>
+      <div className="grid gap-1">
+        <h1 className="text-[length:var(--text-28)] font-semibold">Till</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">The cash drawer for this shift, and the report you print at the end of the day.</p>
       </div>
-      <button type="button" className="min-h-11 w-fit rounded-lg border px-4 text-sm" onClick={() => generate.mutate()}>Generate Z report</button>
-      <ul className="grid gap-2">
-        {(reports.data ?? []).map((report) => (
-          <li key={report.id}>
-            <Link className="inline-flex min-h-11 items-center underline" href={`/app/financials/z/${report.id}`}>{report.report_number}</Link>
-          </li>
-        ))}
-      </ul>
-      <ConfirmDialog open={closeOpen} onOpenChange={setCloseOpen} title="Close the drawer?" description="Counted cash is stored with the shift." confirmLabel="Close drawer" destructive onConfirm={() => close.mutate()} />
+      {drawer.isLoading ? <LoadingState label="Loading the till" /> : null}
+      {drawer.isError ? <QueryErrorState error={drawer.error} screen="The cash drawer" onRetry={() => void drawer.refetch()} /> : null}
+      {reports.isError ? <QueryErrorState error={reports.error} screen="End-of-day reports" onRetry={() => void reports.refetch()} /> : null}
+      <section className="grid gap-4 rounded-2xl border bg-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-medium">Cash drawer</h2>
+            <p className="text-sm leading-6 text-muted-foreground">The notes and coins in the till. Start a shift with the cash already in it. End the shift by counting what is left.</p>
+          </div>
+          <StatusChip tone={shiftOpen ? "ready" : "neutral"}>{shiftOpen ? "Shift open" : "No shift open"}</StatusChip>
+        </div>
+        {drawer.data ? (
+          <p className="text-sm">
+            Started with <Money amount={drawer.data.opening_balance} />
+            {drawer.data.opened_at ? ` · ${formatCairoDateTime(drawer.data.opened_at)}` : ""}
+          </p>
+        ) : null}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <label className="grid gap-1 text-sm">
+            Opening cash (EGP)
+            <span className="text-sm leading-6 text-muted-foreground">The cash in the drawer when this shift starts.</span>
+            <input className={control} inputMode="decimal" value={opening} onChange={(event) => setOpening(event.target.value)} />
+            <button type="button" className="mt-2 min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={shiftOpen || open.isPending} onClick={() => open.mutate()}>
+              {open.isPending ? "Starting…" : "Start the shift"}
+            </button>
+            {shiftOpen ? <span className="text-sm text-muted-foreground">A shift is already open. Count the cash and end it first.</span> : null}
+          </label>
+          <label className="grid gap-1 text-sm">
+            Counted cash (EGP)
+            <span className="text-sm leading-6 text-muted-foreground">The cash you count when the shift ends.</span>
+            <input className={control} inputMode="decimal" value={counted} onChange={(event) => setCounted(event.target.value)} />
+            <button type="button" className="mt-2 min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={!shiftOpen || close.isPending} onClick={() => setCloseOpen(true)}>
+              End the shift
+            </button>
+          </label>
+        </div>
+      </section>
+      <section className="grid gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="font-medium">End-of-day report</h2>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Freezes today’s sales so you can open and print them. This is not the cash drawer.</p>
+          </div>
+          <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={generate.isPending} onClick={() => generate.mutate()}>
+            {generate.isPending ? "Creating…" : "Create end-of-day report"}
+          </button>
+        </div>
+        {reportRows.length === 0 ? <p className="text-sm text-muted-foreground">No end-of-day reports yet.</p> : (
+          <div className="overflow-x-auto rounded-2xl border bg-card">
+            <table className="w-full min-w-[520px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Report</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Day</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Gross sales</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportRows.map((report) => (
+                  <tr key={report.id} className="border-b last:border-b-0">
+                    <th scope="row" className="px-4 py-3 text-start font-medium">
+                      <Link className="underline-offset-2 hover:underline" href={`/app/financials/z/${report.id}`}>{report.report_number}</Link>
+                    </th>
+                    <td className="px-4 py-3">{report.business_date}</td>
+                    <td className="px-4 py-3"><Money amount={report.gross_sales} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+      <ConfirmDialog open={closeOpen} onOpenChange={setCloseOpen} title="End this shift?" description="This saves the cash you counted and closes the till." confirmLabel="End the shift" onConfirm={() => close.mutate()} />
     </div>
   );
 }
@@ -126,12 +187,27 @@ export function ZReportScreen({ reportId }: { reportId: string }) {
   const data = report.data;
   if (!data) return <ErrorState body="Report missing" onRetry={() => void report.refetch()} />;
   return (
-    <article className="grid gap-2">
-      <h1 className="text-[length:var(--text-28)] font-semibold">{data.report_number}</h1>
-      <p>Gross <Money amount={data.gross_sales} /></p>
-      <p>Net <Money amount={data.net_sales} /></p>
-      <p>Tax <Money amount={data.total_tax} /></p>
-      <button type="button" className="min-h-11 w-fit rounded-lg border px-4 text-sm print:hidden" onClick={() => window.print()}>Print</button>
+    <article className="grid gap-4">
+      <div className="grid gap-1">
+        <Link href="/app/financials" className="text-sm text-muted-foreground underline-offset-2 hover:underline print:hidden">Back to the till</Link>
+        <h1 className="text-[length:var(--text-28)] font-semibold">End-of-day report</h1>
+        <p className="text-sm text-muted-foreground">{data.report_number} · {data.business_date}</p>
+      </div>
+      <dl className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border bg-card p-4">
+          <dt className="text-sm text-muted-foreground">Gross sales</dt>
+          <dd className="text-lg font-semibold"><Money amount={data.gross_sales} /></dd>
+        </div>
+        <div className="rounded-2xl border bg-card p-4">
+          <dt className="text-sm text-muted-foreground">Net sales</dt>
+          <dd className="text-lg font-semibold"><Money amount={data.net_sales} /></dd>
+        </div>
+        <div className="rounded-2xl border bg-card p-4">
+          <dt className="text-sm text-muted-foreground">Tax</dt>
+          <dd className="text-lg font-semibold"><Money amount={data.total_tax} /></dd>
+        </div>
+      </dl>
+      <button type="button" className="min-h-11 w-fit rounded-xl border px-4 text-sm print:hidden" onClick={() => window.print()}>Print</button>
     </article>
   );
 }

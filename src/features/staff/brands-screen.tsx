@@ -1,9 +1,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft, ImagePlus, MapPin } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -114,7 +114,9 @@ export function BrandsScreen() {
 }
 
 export function BrandDetailScreen({ brandId }: { brandId: string }) {
+  const queryClient = useQueryClient();
   const [branchOpen, setBranchOpen] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const isPlatform = useScope((state) => state.homeScope === "platform");
   const brand = useQuery({
     queryKey: ["brand", brandId],
@@ -145,8 +147,17 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Logo failed");
     }),
-    onSuccess: () => toast.success("Logo saved"),
-    onError: (error: Error) => toast.error(error.message),
+    onSuccess: () => {
+      toast.success("Logo saved");
+      void queryClient.invalidateQueries({ queryKey: ["brand", brandId] });
+    },
+    onError: (error: Error) => {
+      setLogoPreview((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return null;
+      });
+      toast.error(error.message);
+    },
   });
 
   if (brand.isLoading || missing) return <LoadingState label="Loading brand" />;
@@ -171,10 +182,19 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
           ) : undefined
         }
       />
-      <label className="text-sm">
-        Logo
-        <input className="mt-1 block" type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) logo.mutate(file); }} />
-      </label>
+      <BrandLogo
+        name={brand.data.name}
+        logoUrl={logoPreview ?? brand.data.logo_url}
+        pending={logo.isPending}
+        onFile={(file) => {
+          const url = URL.createObjectURL(file);
+          setLogoPreview((current) => {
+            if (current) URL.revokeObjectURL(current);
+            return url;
+          });
+          logo.mutate(file);
+        }}
+      />
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Branches</h2>
         <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setBranchOpen(true)}>
@@ -195,6 +215,63 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function BrandLogo({
+  name,
+  logoUrl,
+  pending,
+  onFile,
+}: {
+  name: string;
+  logoUrl?: string | null;
+  pending: boolean;
+  onFile: (file: File) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const mark = name.trim().charAt(0).toUpperCase() || "B";
+  const shown = logoUrl?.trim() ? logoUrl : null;
+  return (
+    <section className="flex max-w-lg flex-col gap-4 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5 sm:flex-row sm:items-center">
+      <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
+        {shown ? (
+          // Logo files are stored on the upload host, which next/image is not set up to optimise.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={shown} alt={`${name} logo`} className="size-full object-cover" />
+        ) : (
+          <span className="text-2xl font-semibold text-primary">{mark}</span>
+        )}
+      </div>
+      <div className="grid gap-2">
+        <div>
+          <h2 className="font-semibold">Logo</h2>
+          <p id="brand-logo-hint" className="text-sm leading-6 text-muted-foreground">Shown to guests and staff. A square image works best.</p>
+        </div>
+        <input
+          ref={inputRef}
+          className="sr-only"
+          type="file"
+          accept="image/*"
+          aria-describedby="brand-logo-hint"
+          disabled={pending}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onFile(file);
+          }}
+        />
+        <button
+          type="button"
+          className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+          disabled={pending}
+          onClick={() => inputRef.current?.click()}
+        >
+          <ImagePlus aria-hidden className="size-4" />
+          {pending ? "Uploading…" : shown ? "Replace logo" : "Choose logo"}
+        </button>
+      </div>
+    </section>
   );
 }
 

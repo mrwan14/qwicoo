@@ -176,12 +176,17 @@ export function PosScreen() {
 
   const categories = menu.data?.categories ?? [];
   const activeCategory = categories.find((category) => category.id === categoryId) ?? categories[0];
+  const itemSearch = query.trim().toLowerCase();
   const items = useMemo(() => {
-    const source = activeCategory?.items ?? [];
-    const needle = query.trim().toLowerCase();
-    if (!needle) return source;
-    return source.filter((item) => pickLocale(item.name, "en").toLowerCase().includes(needle));
-  }, [activeCategory, query]);
+    if (!itemSearch) {
+      return (activeCategory?.items ?? []).map((item) => ({ item, categoryName: "" }));
+    }
+    return categories.flatMap((category) =>
+      (category.items ?? [])
+        .filter((item) => pickLocale(item.name, "en").toLowerCase().includes(itemSearch))
+        .map((item) => ({ item, categoryName: pickLocale(category.name, "en") })),
+    );
+  }, [activeCategory, categories, itemSearch]);
 
   function appendLine(item: MenuItem, quantity: number, optionIds: string[]) {
     const selected: Record<string, string[]> = {};
@@ -209,7 +214,16 @@ export function PosScreen() {
       setConfiguring(item);
       return;
     }
-    appendLine(item, 1, []);
+    setLines((current) => {
+      const index = current.findIndex((line) => line.itemId === item.id && line.optionIds.length === 0);
+      if (index === -1) {
+        return [...current, { itemId: item.id, name: pickLocale(item.name, "en"), quantity: 1, optionIds: [], subtotal: previewSubtotal(item, 1, {}) }];
+      }
+      const next = [...current];
+      const quantity = next[index].quantity + 1;
+      next[index] = { ...next[index], quantity, subtotal: previewSubtotal(item, quantity, {}) };
+      return next;
+    });
   }
 
   const checkout = useMutation({
@@ -283,13 +297,21 @@ export function PosScreen() {
           onDismiss={() => setConfirmation(null)}
         />
       ) : null}
-      <h2 className="text-lg font-semibold">Ticket</h2>
+      <div>
+        <h2 className="text-lg font-semibold">Ticket</h2>
+        <p className="text-sm leading-6 text-muted-foreground">Tap an item to add it. Sending the ticket starts the order.</p>
+      </div>
       {lines.length === 0 ? <p className="text-sm text-muted-foreground">No items yet.</p> : null}
       <ul className="grid gap-2">
         {lines.map((line, index) => (
-          <li key={`${line.itemId}-${index}`} className="flex justify-between gap-2 text-sm">
-            <span>{line.name}</span>
-            <Money amount={line.subtotal} />
+          <li key={`${line.itemId}-${index}`} className="flex items-center justify-between gap-2 text-sm">
+            <span>{line.quantity > 1 ? `${line.quantity} × ` : ""}{line.name}</span>
+            <span className="flex items-center gap-2">
+              <Money amount={line.subtotal} />
+              <button type="button" className="min-h-11 rounded-lg px-2 text-sm text-muted-foreground hover:text-foreground" onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}>
+                Remove
+              </button>
+            </span>
           </li>
         ))}
       </ul>
@@ -301,7 +323,8 @@ export function PosScreen() {
       ) : null}
       <label className="grid gap-1 text-sm">
         Order type
-        <select className="h-12 rounded-lg border px-3" value={orderType} onChange={(event) => setOrderType(event.target.value as typeof orderType)}>
+        <span className="text-sm leading-6 text-muted-foreground">{orderType === "TAKEAWAY" ? "The guest collects it, and you take payment now." : "The order is for a table. Choose the table before sending."}</span>
+        <select className="h-12 rounded-xl border bg-background px-3" value={orderType} onChange={(event) => setOrderType(event.target.value as typeof orderType)}>
           <option value="TAKEAWAY">Takeaway</option>
           <option value="DINE_IN">Dine in</option>
         </select>
@@ -309,10 +332,11 @@ export function PosScreen() {
       {orderType === "DINE_IN" ? (
         <label className="grid gap-1 text-sm">
           Table
-          <select className="h-12 rounded-lg border px-3" value={tableId} onChange={(event) => setTableId(event.target.value)}>
-            <option value="">Select a table</option>
+          <span className="text-sm leading-6 text-muted-foreground">The order is added to this table.</span>
+          <select className="h-12 rounded-xl border bg-background px-3" value={tableId} onChange={(event) => setTableId(event.target.value)}>
+            <option value="">{tables.isFetching ? "Loading tables…" : "Choose a table"}</option>
             {(tables.data ?? []).map((table) => (
-              <option key={table.id} value={table.id}>{table.table_number}</option>
+              <option key={table.id} value={table.id}>Table {table.table_number}</option>
             ))}
           </select>
           {tables.isError ? <span className="text-sm text-destructive">{tables.error instanceof Error ? tables.error.message : "Tables failed"}</span> : null}
@@ -320,14 +344,16 @@ export function PosScreen() {
       ) : null}
       <label className="grid gap-1 text-sm">
         Tender
-        <select className="h-12 rounded-lg border px-3" value={tender} onChange={(event) => setTender(event.target.value as typeof tender)}>
+        <span className="text-sm leading-6 text-muted-foreground">How this order is paid.</span>
+        <select className="h-12 rounded-xl border bg-background px-3" value={tender} onChange={(event) => setTender(event.target.value as typeof tender)}>
           <option value="CASH">Cash</option>
           <option value="POS_TERMINAL">Card terminal</option>
         </select>
       </label>
-      <button type="button" className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground" disabled={sendDisabled} onClick={() => checkout.mutate()}>
-        Send order
+      <button type="button" className="min-h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={sendDisabled} onClick={() => checkout.mutate()}>
+        {checkout.isPending ? "Sending…" : "Send order"}
       </button>
+      {lines.length === 0 ? <p className="text-sm text-muted-foreground">Add an item before sending.</p> : null}
     </aside>
   );
 
@@ -335,35 +361,46 @@ export function PosScreen() {
     <div className="grid gap-4 lg:grid-cols-[minmax(140px,20%)_minmax(0,1fr)_minmax(260px,32%)]">
       <aside className="flex gap-2 overflow-x-auto lg:flex-col">
         {categories.map((category) => {
-          const active = category.id === activeCategory?.id;
+          const active = !itemSearch && category.id === activeCategory?.id;
+          const count = category.items?.length ?? 0;
           return (
             <button
               key={category.id}
               type="button"
-              className={`min-h-12 shrink-0 rounded-xl px-3 text-start text-sm ${active ? "bg-primary font-medium text-primary-foreground" : "bg-card shadow-elev-1"}`}
-              onClick={() => setCategoryId(category.id)}
+              className={`flex min-h-14 shrink-0 flex-col justify-center rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-card shadow-elev-1"}`}
+              onClick={() => {
+                setCategoryId(category.id);
+                setQuery("");
+              }}
             >
-              {pickLocale(category.name, "en")}
+              <span className="text-sm">{pickLocale(category.name, "en")}</span>
+              <span className={`text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{count === 1 ? "1 item" : `${count} items`}</span>
             </button>
           );
         })}
       </aside>
       <div className="grid content-start gap-3">
-        <input className="h-12 rounded-xl border bg-card px-3" placeholder="Search items" value={query} onChange={(event) => setQuery(event.target.value)} autoFocus />
+        <label className="grid gap-1 text-sm">
+          Search items
+          <span className="text-sm leading-6 text-muted-foreground">Finds an item in any category. Tap a result to add it.</span>
+          <input className="h-12 rounded-xl border bg-card px-3" value={query} onChange={(event) => setQuery(event.target.value)} autoFocus />
+        </label>
+        {items.length === 0 ? <p className="text-sm text-muted-foreground">{itemSearch ? "No items match that search." : "No items in this category."}</p> : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {items.map((item) => {
+          {items.map(({ item, categoryName }) => {
             const name = pickLocale(item.name, "en");
             const image = mediaUrl(item.image_url);
             return (
-              <button key={item.id} type="button" disabled={!item.is_available} className="min-h-24 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 disabled:opacity-60" onClick={() => addItem(item)}>
+              <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 ring-1 ring-foreground/5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
                 {image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={image} alt="" className="h-24 w-full object-cover" />
                 ) : (
-                  <span className="flex h-16 items-center justify-center bg-secondary text-xl font-semibold text-primary">{name.trim().charAt(0).toUpperCase()}</span>
+                  <span className="flex h-14 items-center justify-center bg-secondary text-lg font-semibold text-primary">{name.trim().charAt(0).toUpperCase()}</span>
                 )}
                 <span className="block px-3 pt-2 font-medium">{name}</span>
-                <span className="block px-3 pb-3 text-sm text-muted-foreground">{item.is_available ? item.base_price : "Sold out"}</span>
+                {categoryName ? <span className="block px-3 text-xs text-muted-foreground">{categoryName}</span> : null}
+                <span className="block px-3 pb-3 text-sm text-muted-foreground">{item.is_available ? <Money amount={String(item.base_price)} /> : "Sold out"}</span>
               </button>
             );
           })}

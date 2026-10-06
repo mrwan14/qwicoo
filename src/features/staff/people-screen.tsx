@@ -11,10 +11,12 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { pickLocale } from "@/lib/i18n/locale-text";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
 const hint = "text-sm leading-6 text-muted-foreground";
+const sectionCard = "grid max-w-3xl gap-4 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5";
 const primaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 const secondaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 const ROLES: components["schemas"]["UserRole"][] = ["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER", "BRANCH_ADMIN"];
@@ -394,6 +396,15 @@ export function DeliveryScreen() {
       return result.data.items;
     },
   });
+  const brandBranches = useQuery({
+    queryKey: ["brand-branches", brandId],
+    enabled: Boolean(brandId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/brands/{brand_id}/branches", { params: { path: { brand_id: brandId ?? "" } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Branches failed");
+      return result.data;
+    },
+  });
   const govs = useQuery({
     queryKey: ["delivery-govs", brandId],
     enabled: Boolean(brandId),
@@ -433,9 +444,11 @@ export function DeliveryScreen() {
   });
   const setBranchFee = useMutation({
     mutationFn: async () => {
-      if (!branchId) throw new Error("Choose a branch");
+      const chosenBranch = (brandBranches.data ?? []).some((item) => item.id === branchId) ? branchId : null;
+      if (!chosenBranch) throw new Error("Choose a branch");
+      if (!govId) throw new Error("Choose a governorate");
       const body: components["schemas"]["BranchDeliveryFeeCreate"] = {
-        branch_id: branchId,
+        branch_id: chosenBranch,
         governorate_id: govId,
         delivery_fee: fee,
         estimated_time_minutes: 45,
@@ -447,41 +460,171 @@ export function DeliveryScreen() {
     onSuccess: () => toast.success("Fee saved"),
     onError: (error: Error) => toast.error(error.message),
   });
+  const brandName = (brands.data ?? []).find((item) => item.id === brandId)?.name;
+  const branchOptions = brandBranches.data ?? [];
+  const selectedBranch = branchOptions.find((item) => item.id === branchId);
+  const branchLabel = selectedBranch ? pickLocale(selectedBranch.name) || selectedBranch.slug : null;
+  const governorates = govs.data ?? [];
+  const selectedGov = governorates.find((item) => item.id === govId);
+  const zoneItems = zones.data ?? [];
+
   return (
-    <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Delivery</h1>
-      <label className="grid max-w-lg gap-1 text-sm">
-        Brand
-        <select
-          className={control}
-          value={brandId ?? ""}
-          onChange={(event) => focusPlatform({ brandId: event.target.value || null, branchId })}
+    <div className="grid gap-6">
+      <header>
+        <h1 className="text-[length:var(--text-28)] font-semibold">Delivery</h1>
+        <p className={`mt-1 max-w-2xl ${hint}`}>
+          Where {brandName ?? "this brand"} delivers, and what a branch charges. Guests choose a governorate, then a zone, when they order.
+        </p>
+      </header>
+
+      <section className="grid max-w-3xl gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Brand</h2>
+          <p className={hint}>Governorates belong to the brand. Choose it before adding areas or a fee.</p>
+        </div>
+        <label className="grid gap-1 text-sm">
+          Brand
+          <select
+            className={control}
+            value={brandId ?? ""}
+            onChange={(event) => {
+              const next = event.target.value || null;
+              if (next !== brandId) setGovId("");
+              focusPlatform({ brandId: next, branchId: next === brandId ? branchId : null });
+            }}
+          >
+            <option value="">{brands.isFetching ? "Loading brands…" : "Choose a brand"}</option>
+            {(brands.data ?? []).map((brand) => (
+              <option key={brand.id} value={brand.id}>{brand.name}</option>
+            ))}
+          </select>
+        </label>
+        {brands.isError ? <p className="text-sm text-destructive">{brands.error.message}</p> : null}
+      </section>
+
+      <section className={sectionCard}>
+        <div>
+          <h2 className="text-lg font-semibold">Governorates</h2>
+          <p className={hint}>A governorate is a region guests can choose, such as Cairo. Save the English name and the Arabic name.</p>
+        </div>
+        <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); createGov.mutate(); }}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm">
+              English
+              <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
+            </label>
+            <label className="grid gap-1 text-sm">
+              Arabic
+              <input className={control} dir="rtl" value={nameAr} onChange={(event) => setNameAr(event.target.value)} required />
+            </label>
+          </div>
+          <button className={primaryButton} type="submit" disabled={!brandId || createGov.isPending} aria-describedby="add-governorate-hint">
+            <Plus aria-hidden className="size-4" />
+            {createGov.isPending ? "Adding…" : "Add governorate"}
+          </button>
+          <p id="add-governorate-hint" className={hint}>Adds the region to {brandName ?? "the chosen brand"}.</p>
+        </form>
+        {govs.isLoading ? <LoadingState label="Loading governorates" /> : null}
+        {govs.isError ? <ErrorState body={govs.error.message} onRetry={() => void govs.refetch()} /> : null}
+        {brandId && govs.isSuccess && governorates.length === 0 ? (
+          <EmptyState title="No governorates yet" body="Add one above. Guests cannot choose a delivery area until a governorate exists." />
+        ) : null}
+        {governorates.length > 0 ? (
+          <ul className="grid gap-2">
+            {governorates.map((gov) => (
+              <li key={gov.id} className="rounded-xl bg-background px-3 py-2 ring-1 ring-foreground/5">
+                <p className="font-medium">{gov.name_en}</p>
+                <p className="text-sm text-muted-foreground" dir="rtl">{gov.name_ar}</p>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      <section className={sectionCard}>
+        <div>
+          <h2 className="text-lg font-semibold">Zones</h2>
+          <p className={hint}>A zone is a smaller area inside the governorate, such as a district. It uses the English and Arabic names above.</p>
+        </div>
+        <label className="grid gap-1 text-sm">
+          Governorate
+          <span className={hint}>Zones are added to this governorate.</span>
+          <select className={control} value={govId} onChange={(event) => setGovId(event.target.value)} disabled={!brandId}>
+            <option value="">{governorates.length === 0 ? "Add a governorate first" : "Choose a governorate"}</option>
+            {governorates.map((gov) => <option key={gov.id} value={gov.id}>{gov.name_en}</option>)}
+          </select>
+        </label>
+        <button
+          type="button"
+          className={secondaryButton}
+          disabled={!govId || !nameEn.trim() || !nameAr.trim() || createZone.isPending}
+          aria-describedby="add-zone-hint"
+          onClick={() => createZone.mutate()}
         >
-          <option value="">Select a brand</option>
-          {(brands.data ?? []).map((brand) => (
-            <option key={brand.id} value={brand.id}>{brand.name}</option>
-          ))}
-        </select>
-      </label>
-      {brands.isError ? <p className="text-sm text-destructive">{brands.error.message}</p> : null}
-      {govs.isError ? <ErrorState body={govs.error.message} onRetry={() => void govs.refetch()} /> : null}
-      <form className="grid gap-2 sm:grid-cols-3" onSubmit={(event) => { event.preventDefault(); createGov.mutate(); }}>
-        <input className={control} placeholder="English" value={nameEn} onChange={(event) => setNameEn(event.target.value)} />
-        <input className={control} placeholder="Arabic" value={nameAr} onChange={(event) => setNameAr(event.target.value)} />
-        <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">Add governorate</button>
-      </form>
-      <select className={control} value={govId} onChange={(event) => setGovId(event.target.value)}>
-        <option value="">Governorate</option>
-        {(govs.data ?? []).map((gov) => <option key={gov.id} value={gov.id}>{gov.name_en}</option>)}
-      </select>
-      <button type="button" className="min-h-11 w-fit rounded-lg border px-4 text-sm" onClick={() => createZone.mutate()}>Add zone with the names above</button>
-      <ul className="grid gap-2">
-        {(zones.data ?? []).map((zone) => <li key={zone.id} className="rounded-lg border p-3 text-sm">{zone.name_en}</li>)}
-      </ul>
-      <div className="flex gap-2">
-        <input className={control} value={fee} onChange={(event) => setFee(event.target.value)} />
-        <button type="button" className="min-h-11 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => setBranchFee.mutate()}>Set fee</button>
-      </div>
+          {createZone.isPending ? "Adding…" : "Add zone"}
+        </button>
+        <p id="add-zone-hint" className={hint}>
+          {selectedGov && nameEn.trim() && nameAr.trim()
+            ? `Adds a zone named “${nameEn.trim()}” inside ${selectedGov.name_en}.`
+            : "Choose a governorate, and fill in both names above, before adding a zone."}
+        </p>
+        {govId && zones.isSuccess && zoneItems.length === 0 ? (
+          <EmptyState title="No zones in this governorate" body="Guests can still choose the governorate. A zone lets them pick a smaller area." />
+        ) : null}
+        {zoneItems.length > 0 ? (
+          <ul className="grid gap-2">
+            {zoneItems.map((zone) => (
+              <li key={zone.id} className="rounded-xl bg-background px-3 py-2 ring-1 ring-foreground/5">
+                <p className="font-medium">{zone.name_en}</p>
+                <p className="text-sm text-muted-foreground" dir="rtl">{zone.name_ar}</p>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      <section className={sectionCard}>
+        <div>
+          <h2 className="text-lg font-semibold">Delivery fee</h2>
+          <p className={hint}>
+            What guests pay, in EGP, to have an order delivered from one branch to the governorate you chose. Saving also sets a 45 minute estimate and no minimum order.
+          </p>
+        </div>
+        <label className="grid gap-1 text-sm">
+          Branch
+          <span className={hint}>The fee is saved for this branch only.</span>
+          <select
+            className={control}
+            value={branchLabel ? branchId ?? "" : ""}
+            disabled={!brandId || brandBranches.isLoading}
+            onChange={(event) => focusPlatform({ brandId, branchId: event.target.value || null })}
+          >
+            <option value="">{brandBranches.isFetching ? "Loading branches…" : "Choose a branch"}</option>
+            {branchOptions.map((branch) => (
+              <option key={branch.id} value={branch.id}>{pickLocale(branch.name) || branch.slug}</option>
+            ))}
+          </select>
+        </label>
+        {brandBranches.isError ? <p className="text-sm text-destructive">{brandBranches.error.message}</p> : null}
+        <label className="grid max-w-xs gap-1 text-sm">
+          Fee (EGP)
+          <input className={control} inputMode="decimal" value={fee} onChange={(event) => setFee(event.target.value)} />
+        </label>
+        <button
+          type="button"
+          className={primaryButton}
+          disabled={!branchLabel || !govId || setBranchFee.isPending}
+          aria-describedby="set-fee-hint"
+          onClick={() => setBranchFee.mutate()}
+        >
+          {setBranchFee.isPending ? "Saving…" : "Set fee"}
+        </button>
+        <p id="set-fee-hint" className={hint}>
+          {branchLabel && selectedGov
+            ? `Saves ${fee || "0.00"} EGP for ${branchLabel} delivering to ${selectedGov.name_en}.`
+            : "Choose a branch and a governorate before saving the fee."}
+        </p>
+      </section>
     </div>
   );
 }

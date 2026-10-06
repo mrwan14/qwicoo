@@ -13,6 +13,8 @@ import { ErrorState, LoadingState, QueryErrorState, RoleUnavailableState } from 
 import { asApiError, isRoleDenied } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatMoney } from "@/lib/format/money";
+import { auditActionLabel, auditStatusLabel } from "@/lib/audit-labels";
+import { isUserRole, roleLabel } from "@/lib/auth/roles";
 import { formatCairoDateTime } from "@/lib/format/time";
 import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -501,33 +503,50 @@ export function AnalyticsScreen({ view }: { view: "dashboard" | "menu" | "branch
   );
 }
 
+function auditRoleLabel(role: string | null | undefined): string {
+  if (!role || role === "ANONYMOUS") return "Not signed in";
+  return isUserRole(role) ? roleLabel(role) : role;
+}
+
 export function AuditScreen() {
   const [action, setAction] = useState("");
   const [resource, setResource] = useState("");
   const logs = useQuery({
-    queryKey: ["audit", action, resource],
+    queryKey: ["audit", resource],
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/audit/logs", {
-        params: { query: { action: action || undefined, resource_type: resource || undefined, limit: 50 } },
+        params: { query: { resource_type: resource || undefined, limit: 50 } },
       });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Audit failed");
       return result.data;
     },
   });
+  const needle = action.trim().toLowerCase();
+  const rows = (logs.data?.items ?? []).filter((item) => {
+    if (!needle) return true;
+    return auditActionLabel(item.action).toLowerCase().includes(needle);
+  });
   return (
     <div className="grid gap-3">
       <h1 className="text-[length:var(--text-28)] font-semibold">Audit</h1>
       <div className="grid gap-2 sm:grid-cols-2">
-        <input className={control} placeholder="Action" value={action} onChange={(event) => setAction(event.target.value)} />
-        <input className={control} placeholder="Resource type" value={resource} onChange={(event) => setResource(event.target.value)} />
+        <label className="grid gap-1 text-sm">
+          What happened
+          <input className={control} value={action} onChange={(event) => setAction(event.target.value)} />
+        </label>
+        <label className="grid gap-1 text-sm">
+          Resource type
+          <input className={control} placeholder="Resource type" value={resource} onChange={(event) => setResource(event.target.value)} />
+        </label>
       </div>
       {logs.isLoading ? <LoadingState label="Loading audit" /> : null}
       {logs.isError ? <ErrorState body={logs.error.message} onRetry={() => void logs.refetch()} /> : null}
+      {!logs.isLoading && !logs.isError && rows.length === 0 ? <p className="text-sm text-muted-foreground">Nothing matches.</p> : null}
       <ul className="grid gap-2 lg:hidden">
-        {(logs.data?.items ?? []).map((item) => (
+        {rows.map((item) => (
           <li key={item.id} className="rounded-lg border p-3 text-sm">
-            <p className="font-medium">{item.action}</p>
-            <p>{item.actor_role} · {formatCairoDateTime(item.created_at)}</p>
+            <p className="font-medium">{auditActionLabel(item.action)}</p>
+            <p>{auditRoleLabel(item.actor_role)} · {formatCairoDateTime(item.created_at)} · {auditStatusLabel(item.status)}</p>
           </li>
         ))}
       </ul>
@@ -535,18 +554,18 @@ export function AuditScreen() {
         <thead>
           <tr className="text-start">
             <th className="p-2">When</th>
-            <th className="p-2">Action</th>
+            <th className="p-2">What happened</th>
             <th className="p-2">Role</th>
-            <th className="p-2">Status</th>
+            <th className="p-2">Result</th>
           </tr>
         </thead>
         <tbody>
-          {(logs.data?.items ?? []).map((item) => (
+          {rows.map((item) => (
             <tr key={item.id} className="border-t">
               <td className="p-2">{formatCairoDateTime(item.created_at)}</td>
-              <td className="p-2">{item.action}</td>
-              <td className="p-2">{item.actor_role}</td>
-              <td className="p-2">{item.status}</td>
+              <td className="p-2">{auditActionLabel(item.action)}</td>
+              <td className="p-2">{auditRoleLabel(item.actor_role)}</td>
+              <td className="p-2">{auditStatusLabel(item.status)}</td>
             </tr>
           ))}
         </tbody>

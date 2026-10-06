@@ -14,6 +14,7 @@ import { asApiError, isRoleDenied } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatMoney } from "@/lib/format/money";
 import { formatCairoDateTime } from "@/lib/format/time";
+import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
@@ -306,19 +307,41 @@ export function AttendanceScreen() {
           </li>
         ))}
       </ul>
-      <section className="grid gap-2">
-        <h2 className="font-medium">Cashier transactions</h2>
-        <p className="text-sm text-muted-foreground">Transactions are immutable. Edit and delete are not available.</p>
-        {(txns.data ?? []).length === 0 ? <p className="text-sm">No transactions.</p> : null}
-        <ul className="grid gap-2">
-          {(txns.data ?? []).map((txn) => (
-            <li key={txn.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
-              <span>{txn.payment_method} · {txn.status}</span>
-              <Money amount={String(txn.amount)} currency={txn.currency} />
-              <span className="text-muted-foreground">{txn.created_at}</span>
-            </li>
-          ))}
-        </ul>
+      <section className="grid gap-3">
+        <div>
+          <h2 className="font-medium">Payments taken</h2>
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Every payment recorded at this branch, newest first. A payment that is still waiting to be confirmed stays on the Payments page.</p>
+        </div>
+        {txns.isLoading ? <p className="text-sm text-muted-foreground">Loading payments…</p> : null}
+        {txns.isError ? <QueryErrorState error={txns.error} screen="Payments taken" onRetry={() => void txns.refetch()} /> : null}
+        {!txns.isLoading && !txns.isError && (txns.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No payments recorded yet.</p> : null}
+        {(txns.data ?? []).length > 0 ? (
+          <div className="overflow-x-auto rounded-2xl border bg-card">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th scope="col" className="px-4 py-3 text-start font-medium">When</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Method</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Status</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(txns.data ?? []).map((txn) => (
+                  <tr key={txn.id} className="border-b align-middle last:border-b-0">
+                    <th scope="row" className="px-4 py-4 text-start font-medium">{formatCairoDateTime(txn.created_at)}</th>
+                    <td className="px-4 py-4">
+                      {paymentMethodLabel(txn.payment_method)}
+                      {txn.transaction_reference ? <span className="mt-1 block text-muted-foreground">{txn.transaction_reference}</span> : null}
+                    </td>
+                    <td className="px-4 py-4">{paymentStatusLabel(txn.status)}</td>
+                    <td className="px-4 py-4 font-medium"><Money amount={String(txn.amount)} currency={txn.currency} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </section>
       <ConfirmDialog open={Boolean(logId)} onOpenChange={(open) => !open && setLogId(null)} title="Override this attendance record?" description="Add a reason. This is stored on the log." confirmLabel="Override" onConfirm={() => override.mutate()} />
       <textarea className="min-h-20 rounded-lg border px-3 py-2" placeholder="Override reason" value={reason} onChange={(event) => setReason(event.target.value)} />

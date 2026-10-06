@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { EntityCard } from "@/components/ops/entity-card";
-import { LocaleText } from "@/components/ops/locale-text";
+import { pickLocale } from "@/lib/i18n/locale-text";
 import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
 import { PageHeader } from "@/components/ops/page-header";
 import { StatusChip } from "@/components/ops/status-chip";
@@ -175,13 +175,15 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
         </button>
       </div>
       <CreateBranchDialog brandId={brandId} open={branchOpen} onOpenChange={setBranchOpen} />
-      <ul className="grid gap-2">
+      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {(branches.data ?? []).map((branch) => (
           <li key={branch.id}>
-            <Link className="inline-flex min-h-11 items-center gap-2 underline" href={`/app/branches/${branch.id}`}>
-              <LocaleText value={branch.name} />
-              <span className="text-sm text-muted-foreground no-underline">{branch.slug}</span>
-            </Link>
+            <EntityCard
+              href={`/app/branches/${branch.id}`}
+              title={pickLocale(branch.name)}
+              meta={branch.slug}
+              badge={<StatusChip tone={branch.is_active ? "available" : "soldout"}>{branch.is_active ? "Active" : "Inactive"}</StatusChip>}
+            />
           </li>
         ))}
       </ul>

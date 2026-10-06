@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ImagePlus, MapPin } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -65,6 +65,20 @@ export function BrandsScreen() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+  const activate = useMutation({
+    mutationFn: async (brandId: string) => {
+      const result = await browserApi.PATCH("/api/v1/brands/{brand_id}", {
+        params: { path: { brand_id: brandId } },
+        body: { is_active: true },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not activate brand");
+    },
+    onSuccess: () => {
+      toast.success("Brand activated");
+      void queryClient.invalidateQueries({ queryKey: ["brands"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   if (brands.isLoading) return <LoadingState label="Loading brands" />;
   if (brands.isError) return <ErrorState body={brands.error.message} onRetry={() => void brands.refetch()} />;
@@ -92,8 +106,24 @@ export function BrandsScreen() {
                 title={brand.name}
                 meta={brand.slug}
                 badge={<StatusChip tone={brand.is_active ? "available" : "soldout"}>{brand.is_active ? "Active" : "Inactive"}</StatusChip>}
+                onClick={() => {
+                  if (useScope.getState().homeScope === "platform") {
+                    useScope.getState().focusPlatform({ brandId: brand.id, branchId: null });
+                  }
+                }}
               />
-              <button type="button" className="min-h-11 text-sm text-destructive" onClick={() => setRemoveId(brand.id)}>Deactivate</button>
+              {brand.is_active ? (
+                <button type="button" className="min-h-11 text-sm text-destructive" onClick={() => setRemoveId(brand.id)}>Deactivate</button>
+              ) : (
+                <button
+                  type="button"
+                  className="min-h-11 text-sm font-medium text-primary disabled:opacity-50"
+                  disabled={activate.isPending && activate.variables === brand.id}
+                  onClick={() => activate.mutate(brand.id)}
+                >
+                  {activate.isPending && activate.variables === brand.id ? "Activating…" : "Activate"}
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -119,6 +149,12 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
   const [branchOpen, setBranchOpen] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const isPlatform = useScope((state) => state.homeScope === "platform");
+  const focusedBrandId = useScope((state) => state.brandId);
+  useLayoutEffect(() => {
+    if (useScope.getState().homeScope === "platform") {
+      useScope.getState().focusPlatform({ brandId, branchId: null });
+    }
+  }, [brandId]);
   const brand = useQuery({
     queryKey: ["brand", brandId],
     retry: false,
@@ -134,7 +170,7 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
   }, [brand.data]);
   const branches = useQuery({
     queryKey: ["brand-branches", brandId],
-    enabled: brand.isSuccess,
+    enabled: brand.isSuccess && (!isPlatform || focusedBrandId === brandId),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/brands/{brand_id}/branches", { params: { path: { brand_id: brandId } } });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Branches failed");

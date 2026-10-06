@@ -8,6 +8,7 @@ export function EntityCard({
   badge,
   imageUrl,
   imageAlt,
+  onClick,
 }: {
   href: string;
   title: string;
@@ -15,6 +16,7 @@ export function EntityCard({
   badge?: ReactNode;
   imageUrl?: string | null;
   imageAlt?: string;
+  onClick?: () => void;
 }) {
   const mark = title.trim().charAt(0).toUpperCase() || "B";
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -22,6 +24,7 @@ export function EntityCard({
   return (
     <Link
       href={href}
+      onClick={onClick}
       className="flex min-h-28 flex-col gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5"
     >
       <div className="flex items-start justify-between gap-3">

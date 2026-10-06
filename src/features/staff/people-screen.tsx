@@ -127,6 +127,7 @@ export function FeaturesScreen() {
   const queryClient = useQueryClient();
   const [key, setKey] = useState("");
   const [nameEn, setNameEn] = useState("");
+  const [removeKey, setRemoveKey] = useState<string | null>(null);
   const brands = useQuery({
     queryKey: ["brands"],
     queryFn: async () => {
@@ -186,6 +187,21 @@ export function FeaturesScreen() {
     },
     onSuccess: (_data, input) => {
       toast.success(input.enabled ? "Feature enabled for this brand" : "Feature disabled for this brand");
+      void queryClient.invalidateQueries({ queryKey: ["features-brand"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const remove = useMutation({
+    mutationFn: async (featureKey: string) => {
+      const result = await browserApi.DELETE("/api/v1/features/platform/{feature_key}", {
+        params: { path: { feature_key: featureKey } },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not delete feature");
+    },
+    onSuccess: () => {
+      toast.success("Feature deleted");
+      setRemoveKey(null);
+      void queryClient.invalidateQueries({ queryKey: ["features-platform"] });
       void queryClient.invalidateQueries({ queryKey: ["features-brand"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -284,12 +300,33 @@ export function FeaturesScreen() {
                     >
                       {pending ? (enabled ? "Disabling…" : "Enabling…") : enabled ? `Disable for ${brandName ?? "brand"}` : `Enable for ${brandName ?? "brand"}`}
                     </button>
+                    {feature.is_core ? (
+                      <span className="text-sm text-muted-foreground">Core feature</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="inline-flex min-h-11 items-center rounded-xl border border-destructive/30 px-4 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                        disabled={remove.isPending}
+                        onClick={() => setRemoveKey(feature.id)}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </li>
               );
             })}
           </ul>
         ) : null}
+        <ConfirmDialog
+          open={Boolean(removeKey)}
+          onOpenChange={(open) => !open && setRemoveKey(null)}
+          title="Delete this feature?"
+          description="It is removed from the platform, and brands can no longer turn it on."
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => removeKey && remove.mutate(removeKey)}
+        />
       </section>
 
       <section className="grid gap-3">

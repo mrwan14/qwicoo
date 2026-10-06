@@ -16,6 +16,7 @@ import { useScope } from "@/stores/scope";
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
 const hint = "text-sm leading-6 text-muted-foreground";
 const primaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+const secondaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 const ROLES: components["schemas"]["UserRole"][] = ["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER", "BRANCH_ADMIN"];
 
 export function StaffScreen() {
@@ -159,15 +160,15 @@ export function FeaturesScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
   const toggle = useMutation({
-    mutationFn: async (featureKey: string) => {
+    mutationFn: async (input: { featureKey: string; enabled: boolean }) => {
       const result = await browserApi.PUT("/api/v1/features/brand/{brand_id}/{feature_key}", {
-        params: { path: { brand_id: brandId ?? "", feature_key: featureKey } },
-        body: { is_enabled_by_super_admin: true },
+        params: { path: { brand_id: brandId ?? "", feature_key: input.featureKey } },
+        body: { is_enabled_by_super_admin: input.enabled },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Entitlement failed");
+      if (!result.response.ok) throw asApiError(result.error, result.response, input.enabled ? "Could not enable feature" : "Could not disable feature");
     },
-    onSuccess: () => {
-      toast.success("Feature enabled for this brand");
+    onSuccess: (_data, input) => {
+      toast.success(input.enabled ? "Feature enabled for this brand" : "Feature disabled for this brand");
       void queryClient.invalidateQueries({ queryKey: ["features-brand"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -176,7 +177,7 @@ export function FeaturesScreen() {
   const features = platform.data ?? [];
   const entitlements = brand.data ?? [];
   const enabledKeys = new Set(entitlements.filter((item) => item.is_enabled_by_super_admin).map((item) => item.feature_key));
-  const enablingKey = toggle.isPending ? toggle.variables : null;
+  const pendingToggle = toggle.isPending ? toggle.variables : null;
 
   return (
     <div className="grid gap-6">
@@ -212,7 +213,7 @@ export function FeaturesScreen() {
       <section className="grid gap-3">
         <div>
           <h2 className="text-lg font-semibold">Platform features</h2>
-          <p className={hint}>{brandId ? "Enable a feature for the brand you have open." : "Open a brand from Brands before enabling a feature."}</p>
+          <p className={hint}>{brandId ? "Enable or disable a feature for the brand you have open." : "Open a brand from Brands before changing a feature."}</p>
         </div>
         {platform.isLoading ? <LoadingState label="Loading features" /> : null}
         {platform.isError ? <ErrorState body={platform.error.message} onRetry={() => void platform.refetch()} /> : null}
@@ -223,7 +224,7 @@ export function FeaturesScreen() {
           <ul className="grid gap-3">
             {features.map((feature) => {
               const enabled = enabledKeys.has(feature.id);
-              const enabling = enablingKey === feature.id;
+              const pending = pendingToggle?.featureKey === feature.id;
               return (
                 <li key={feature.id} className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="grid gap-1">
@@ -231,18 +232,17 @@ export function FeaturesScreen() {
                     <p className="text-sm text-muted-foreground">{feature.id}</p>
                     {feature.description ? <p className={hint}>{feature.description}</p> : null}
                   </div>
-                  {enabled ? (
-                    <StatusChip tone="available">Enabled</StatusChip>
-                  ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusChip tone={enabled ? "available" : "neutral"}>{enabled ? "Enabled" : "Off"}</StatusChip>
                     <button
                       type="button"
-                      className={primaryButton}
+                      className={enabled ? secondaryButton : primaryButton}
                       disabled={!brandId || toggle.isPending}
-                      onClick={() => toggle.mutate(feature.id)}
+                      onClick={() => toggle.mutate({ featureKey: feature.id, enabled: !enabled })}
                     >
-                      {enabling ? "Enabling…" : "Enable for brand"}
+                      {pending ? (enabled ? "Disabling…" : "Enabling…") : enabled ? "Disable for brand" : "Enable for brand"}
                     </button>
-                  )}
+                  </div>
                 </li>
               );
             })}
@@ -266,12 +266,28 @@ export function FeaturesScreen() {
             {entitlements.map((item) => {
               const name = features.find((feature) => feature.id === item.feature_key)?.name_en;
               return (
-                <li key={item.id} className="flex items-start justify-between gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
-                  <div className="grid gap-1">
-                    <p className="font-semibold">{name ?? item.feature_key}</p>
-                    {name ? <p className="text-sm text-muted-foreground">{item.feature_key}</p> : null}
+                <li key={item.id} className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="grid gap-1">
+                      <p className="font-semibold">{name ?? item.feature_key}</p>
+                      {name ? <p className="text-sm text-muted-foreground">{item.feature_key}</p> : null}
+                    </div>
+                    <StatusChip tone={item.is_enabled_by_super_admin ? "available" : "soldout"}>{item.is_enabled_by_super_admin ? "On" : "Off"}</StatusChip>
                   </div>
-                  <StatusChip tone={item.is_enabled_by_super_admin ? "available" : "soldout"}>{item.is_enabled_by_super_admin ? "On" : "Off"}</StatusChip>
+                  <button
+                    type="button"
+                    className={item.is_enabled_by_super_admin ? secondaryButton : primaryButton}
+                    disabled={toggle.isPending}
+                    onClick={() => toggle.mutate({ featureKey: item.feature_key, enabled: !item.is_enabled_by_super_admin })}
+                  >
+                    {pendingToggle?.featureKey === item.feature_key
+                      ? item.is_enabled_by_super_admin
+                        ? "Disabling…"
+                        : "Enabling…"
+                      : item.is_enabled_by_super_admin
+                        ? "Disable for brand"
+                        : "Enable for brand"}
+                  </button>
                 </li>
               );
             })}

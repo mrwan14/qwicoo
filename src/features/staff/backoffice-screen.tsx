@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
+import { BranchesBarChart, CategoryDonut, ItemsBarChart } from "@/features/staff/analytics-charts";
 import { Money } from "@/components/ops/money";
 import { ErrorState, LoadingState, QueryErrorState, RoleUnavailableState } from "@/components/ops/states";
 import { asApiError, isRoleDenied } from "@/lib/api/error";
@@ -267,44 +268,9 @@ const KPI_LABELS: Record<string, string> = {
 
 const MONEY_KPIS = new Set(["gmv", "net_revenue", "total_tax", "total_service_fees", "total_discounts", "total_refunds", "aov"]);
 
-function barShare(amount: string | number): number {
-  const value = typeof amount === "number" ? amount : Number(amount);
+function chartAmount(amount: string): number {
+  const value = Number(amount);
   return Number.isFinite(value) && value > 0 ? value : 0;
-}
-
-function BarChart({
-  title,
-  caption,
-  rows,
-}: {
-  title: string;
-  caption: string;
-  rows: Array<{ id: string; label: string; value: string; share: number }>;
-}) {
-  const longest = Math.max(...rows.map((row) => row.share), 0);
-  return (
-    <section className="grid gap-3 rounded-2xl border bg-card p-4">
-      <div>
-        <h2 className="font-medium">{title}</h2>
-        <p className="text-sm leading-6 text-muted-foreground">{caption}</p>
-      </div>
-      {rows.length === 0 ? <p className="text-sm text-muted-foreground">Nothing in this period.</p> : (
-        <ul className="grid gap-3">
-          {rows.map((row) => (
-            <li key={row.id} className="grid gap-1">
-              <div className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="font-medium">{row.label}</span>
-                <span className="tabular-nums text-muted-foreground">{row.value}</span>
-              </div>
-              <div className="h-3 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${longest > 0 ? Math.min(100, (row.share / longest) * 100) : 0}%` }} />
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
 }
 
 export function AnalyticsScreen({ view }: { view: "dashboard" | "menu" | "branches" }) {
@@ -337,7 +303,7 @@ export function AnalyticsScreen({ view }: { view: "dashboard" | "menu" | "branch
     <div className="grid gap-4">
       <div className="grid gap-1">
         <h1 className="text-[length:var(--text-28)] font-semibold">Analytics</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Sales for the period you choose. A longer bar means more of that figure.</p>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Sales for the period you choose.</p>
       </div>
       <div className="flex flex-wrap gap-2">
         {tabs.map((tab) => (
@@ -363,62 +329,67 @@ export function AnalyticsScreen({ view }: { view: "dashboard" | "menu" | "branch
         </div>
       ) : null}
       {data.data && "top_selling_items" in data.data ? (
-        <BarChart
+        <ItemsBarChart
           title="Top items"
-          caption="How many of each item sold, with the sales beside the name."
+          caption="How many of each item sold. The details show the sales as well."
           rows={data.data.top_selling_items.map((item) => ({
             id: item.item_id,
             label: pickLocale(item.item_name, "en"),
-            value: `${item.total_quantity_sold} sold · ${formatMoney(item.gross_revenue)}`,
-            share: item.total_quantity_sold,
+            quantity: item.total_quantity_sold,
+            revenue: item.gross_revenue,
           }))}
         />
       ) : null}
       {data.data && "bottom_selling_items" in data.data ? (
-        <BarChart
+        <ItemsBarChart
           title="Slowest items"
           caption="The items that sold the least in this period."
           rows={data.data.bottom_selling_items.map((item) => ({
             id: item.item_id,
             label: pickLocale(item.item_name, "en"),
-            value: `${item.total_quantity_sold} sold · ${formatMoney(item.gross_revenue)}`,
-            share: item.total_quantity_sold,
+            quantity: item.total_quantity_sold,
+            revenue: item.gross_revenue,
           }))}
         />
       ) : null}
       {data.data && "category_breakdown" in data.data ? (
-        <BarChart
-          title="Categories"
-          caption="Each category’s share of sales."
+        <CategoryDonut
           rows={data.data.category_breakdown.map((item) => ({
             id: item.category_id,
             label: pickLocale(item.category_name, "en"),
-            value: `${formatMoney(item.total_revenue)} · ${item.gmv_share_percentage}%`,
-            share: barShare(item.gmv_share_percentage),
+            revenue: item.total_revenue,
+            share: chartAmount(item.gmv_share_percentage),
+            shareLabel: `${item.gmv_share_percentage}%`,
           }))}
         />
       ) : null}
       {data.data && "branches" in data.data ? (
-        <BarChart
-          title="Branches"
-          caption="Gross sales at each branch."
+        <BranchesBarChart
           rows={data.data.branches.map((row) => ({
             id: row.branch_id,
             label: pickLocale(row.branch_name, "en"),
-            value: `${formatMoney(row.gmv)} · ${row.total_paid_orders} orders`,
-            share: barShare(row.gmv),
+            gmv: chartAmount(row.gmv),
+            cash: chartAmount(row.cash_revenue),
+            digital: chartAmount(row.digital_revenue),
+            gmvText: formatMoney(row.gmv),
+            cashText: formatMoney(row.cash_revenue),
+            digitalText: formatMoney(row.digital_revenue),
+            orders: row.total_paid_orders,
           }))}
         />
       ) : null}
       {data.data && "branch_rankings" in data.data && Array.isArray(data.data.branch_rankings) ? (
-        <BarChart
-          title="Branches"
-          caption="Gross sales at each branch."
+        <BranchesBarChart
           rows={(data.data.branch_rankings as components["schemas"]["BranchPerformanceRow"][]).map((row) => ({
             id: row.branch_id,
             label: pickLocale(row.branch_name, "en"),
-            value: `${formatMoney(row.gmv)} · ${row.total_paid_orders} orders`,
-            share: barShare(row.gmv),
+            gmv: chartAmount(row.gmv),
+            cash: chartAmount(row.cash_revenue),
+            digital: chartAmount(row.digital_revenue),
+            gmvText: formatMoney(row.gmv),
+            cashText: formatMoney(row.cash_revenue),
+            digitalText: formatMoney(row.digital_revenue),
+            orders: row.total_paid_orders,
           }))}
         />
       ) : null}

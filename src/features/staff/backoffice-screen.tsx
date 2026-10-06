@@ -137,7 +137,7 @@ export function FinancialsScreen() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-medium">End-of-day report</h2>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Freezes today’s sales so you can open and print them. This is not the cash drawer.</p>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Freezes paid orders for today in Cairo time, so you can open and print them. Ending the shift records the cash count and does not fill this report.</p>
           </div>
           <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={generate.isPending} onClick={() => generate.mutate()}>
             {generate.isPending ? "Creating…" : "Create end-of-day report"}

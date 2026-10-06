@@ -263,7 +263,7 @@ export function MenuAdmin() {
                       </button>
                       <DeleteItemButton item={item} onDone={refresh} />
                     </div>
-                    <p className={hint}>Save price updates what guests pay. Sold out hides the item. Options are extras such as size or milk.</p>
+                    <p className={hint}>Change the price, then save it. Sold out hides the item. Options are extras such as size or milk.</p>
                   </li>
                 ))}
                 {(active.items ?? []).length === 0 ? <EmptyState title="No items in this category" body="Add an item to show it on the guest menu." /> : null}
@@ -496,8 +496,19 @@ function ModifierEditor({ item, onClose, onDone }: { item: Item; onClose: () => 
 }
 
 
+function priceEdited(next: string, saved: string): boolean {
+  const typed = next.trim();
+  const current = String(saved).trim();
+  if (typed === current) return false;
+  const typedValue = Number(typed);
+  const currentValue = Number(current);
+  if (Number.isFinite(typedValue) && Number.isFinite(currentValue)) return typedValue !== currentValue;
+  return true;
+}
+
 function PriceField({ item, onDone }: { item: Item; onDone: () => void }) {
   const [price, setPrice] = useState(String(item.base_price));
+  const edited = priceEdited(price, String(item.base_price));
   const save = useMutation({
     mutationFn: async () => {
       const body: components["schemas"]["StaffItemUpdate"] = { base_price: price };
@@ -519,9 +530,11 @@ function PriceField({ item, onDone }: { item: Item; onDone: () => void }) {
         New price (EGP)
         <input className="h-11 w-28 rounded-lg border px-3 text-sm" value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" />
       </label>
-      <button className="min-h-11 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" type="submit" disabled={save.isPending}>
-        {save.isPending ? "Saving…" : "Save price"}
-      </button>
+      {edited ? (
+        <button className="min-h-11 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" type="submit" disabled={save.isPending}>
+          {save.isPending ? "Saving…" : "Save price"}
+        </button>
+      ) : null}
     </form>
   );
 }
@@ -566,6 +579,7 @@ function OptionPriceField({
   onDone: () => void;
 }) {
   const [delta, setDelta] = useState(option.price_delta);
+  const edited = priceEdited(delta, option.price_delta);
   const save = useMutation({
     mutationFn: async () => {
       const body: components["schemas"]["StaffModifierOptionUpdate"] = { price_delta: delta };
@@ -586,7 +600,11 @@ function OptionPriceField({
       <span className="min-w-24">{option.name}</span>
       <input className="h-11 w-28 rounded-lg border px-3 text-sm" aria-label={`Price change for ${option.name}`} value={delta} onChange={(event) => setDelta(event.target.value)} inputMode="decimal" />
       <span className="text-muted-foreground">{formatMoney(delta || "0")}</span>
-      <button className="min-h-11 rounded-lg border px-3 text-sm" type="submit">Save option</button>
+      {edited ? (
+        <button className="min-h-11 rounded-lg border px-3 text-sm" type="submit" disabled={save.isPending}>
+          {save.isPending ? "Saving…" : "Save option"}
+        </button>
+      ) : null}
     </form>
   );
 }

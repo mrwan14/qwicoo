@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -54,6 +55,7 @@ export function MenuAdmin() {
   const [tab, setTab] = useState<"items" | "stations">("items");
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [itemOpen, setItemOpen] = useState(false);
+  const [itemQuery, setItemQuery] = useState("");
 
   const menu = useQuery({
     queryKey: ["menu-tree", branchId],
@@ -161,6 +163,14 @@ export function MenuAdmin() {
 
   const categories = menu.data.categories ?? [];
   const active = categories.find((category) => category.id === categoryId) ?? categories[0];
+  const itemSearch = itemQuery.trim().toLowerCase();
+  const searchedItems = itemSearch
+    ? categories.flatMap((category) =>
+        (category.items ?? [])
+          .filter((item) => pickLocale(item.name, "en").toLowerCase().includes(itemSearch))
+          .map((item) => ({ item, categoryName: pickLocale(category.name, "en") })),
+      )
+    : [];
 
   return (
     <div className="grid gap-4">
@@ -201,19 +211,36 @@ export function MenuAdmin() {
           </ul>
         </section>
       ) : (
+        <div className="grid gap-4">
+          <label className="grid max-w-xl gap-1 text-sm">
+            Search items
+            <span className={hint}>Finds an item in any category.</span>
+            <span className="relative">
+              <Search aria-hidden className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                className={`${control} ps-9`}
+                value={itemQuery}
+                onChange={(event) => setItemQuery(event.target.value)}
+                placeholder="Latte, croissant"
+              />
+            </span>
+          </label>
         <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
           <aside className="grid gap-2">
             <p className="text-sm font-medium">Categories</p>
             <div className="flex gap-2 overflow-x-auto lg:flex-col">
               {categories.map((category) => {
-                const selected = category.id === active?.id;
+                const selected = !itemSearch && category.id === active?.id;
                 const count = category.items?.length ?? 0;
                 return (
                   <button
                     key={category.id}
                     type="button"
                     className={`flex min-h-14 shrink-0 flex-col justify-center rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${selected ? "bg-primary text-primary-foreground" : "bg-card shadow-elev-1 ring-1 ring-foreground/5"}`}
-                    onClick={() => setCategoryId(category.id)}
+                    onClick={() => {
+                      setCategoryId(category.id);
+                      setItemQuery("");
+                    }}
                   >
                     <span className="text-sm font-medium">{pickLocale(category.name, "en")}</span>
                     <span className={`text-xs ${selected ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
@@ -224,7 +251,23 @@ export function MenuAdmin() {
               })}
             </div>
           </aside>
-          {active ? (
+          {itemSearch ? (
+            <div className="grid gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Search results</h2>
+                <p className={hint}>{searchedItems.length === 1 ? "1 item matches." : `${searchedItems.length} items match.`}</p>
+              </div>
+              {searchedItems.length === 0 ? (
+                <EmptyState title="No items match" body="Try another name, or choose a category." />
+              ) : (
+                <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {searchedItems.map(({ item, categoryName }) => (
+                    <MenuItemBlock key={item.id} item={item} categoryName={categoryName} onOptions={() => setSelectedId(item.id)} onDone={refresh} />
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : active ? (
             <div className="grid gap-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -242,31 +285,20 @@ export function MenuAdmin() {
                   Delete category
                 </button>
               </div>
-              <ul className="grid gap-3">
-                {(active.items ?? []).map((item) => (
-                  <li key={item.id} className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="grid gap-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold"><LocaleText value={item.name} /></p>
-                        <StatusChip tone={item.is_available ? "available" : "soldout"}>{item.is_available ? "Available" : "Sold out"}</StatusChip>
-                      </div>
-                      <PriceField item={item} onDone={refresh} />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <AvailabilityToggle item={item} onDone={refresh} />
-                      <button type="button" className={quietButton} onClick={() => setSelectedId(item.id)}>
-                        Options
-                      </button>
-                      <DeleteItemButton item={item} onDone={refresh} />
-                    </div>
-                  </li>
-                ))}
-                {(active.items ?? []).length === 0 ? <EmptyState title="No items in this category" body="Add an item to show it on the guest menu." /> : null}
-              </ul>
+              {(active.items ?? []).length === 0 ? (
+                <EmptyState title="No items in this category" body="Add an item to show it on the guest menu." />
+              ) : (
+                <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {(active.items ?? []).map((item) => (
+                    <MenuItemBlock key={item.id} item={item} onOptions={() => setSelectedId(item.id)} onDone={refresh} />
+                  ))}
+                </ul>
+              )}
             </div>
           ) : (
             <EmptyState title="No categories yet" body="Add a category, then add items to it." />
           )}
+        </div>
         </div>
       )}
       <Sheet open={categoryOpen} onOpenChange={setCategoryOpen}>
@@ -490,6 +522,36 @@ function ModifierEditor({ item, onClose, onDone }: { item: Item; onClose: () => 
   );
 }
 
+
+function MenuItemBlock({
+  item,
+  categoryName,
+  onOptions,
+  onDone,
+}: {
+  item: Item;
+  categoryName?: string;
+  onOptions: () => void;
+  onDone: () => void;
+}) {
+  return (
+    <li className="grid content-start gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="grid gap-1">
+          <p className="font-semibold"><LocaleText value={item.name} /></p>
+          {categoryName ? <p className="text-sm text-muted-foreground">{categoryName}</p> : null}
+        </div>
+        <StatusChip tone={item.is_available ? "available" : "soldout"}>{item.is_available ? "Available" : "Sold out"}</StatusChip>
+      </div>
+      <PriceField item={item} onDone={onDone} />
+      <div className="flex flex-wrap gap-2">
+        <AvailabilityToggle item={item} onDone={onDone} />
+        <button type="button" className={quietButton} onClick={onOptions}>Options</button>
+        <DeleteItemButton item={item} onDone={onDone} />
+      </div>
+    </li>
+  );
+}
 
 function priceEdited(next: string, saved: string): boolean {
   const typed = next.trim();

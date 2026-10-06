@@ -10,6 +10,7 @@ import { Money } from "@/components/ops/money";
 import { ErrorState, LoadingState, QueryErrorState, RoleUnavailableState } from "@/components/ops/states";
 import { asApiError, isRoleDenied } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { formatMoney } from "@/lib/format/money";
 import { formatCairoDateTime } from "@/lib/format/time";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import type { components } from "@/lib/api/schema";
@@ -243,6 +244,69 @@ export function AttendanceScreen() {
   );
 }
 
+const PERIODS: { value: components["schemas"]["TimePeriod"]; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "last_7_days", label: "Last 7 days" },
+  { value: "last_30_days", label: "Last 30 days" },
+];
+
+const KPI_LABELS: Record<string, string> = {
+  gmv: "Gross sales",
+  net_revenue: "Net revenue",
+  total_tax: "Tax",
+  total_service_fees: "Service fees",
+  total_discounts: "Discounts",
+  total_refunds: "Refunds",
+  total_orders: "Orders",
+  paid_orders: "Paid orders",
+  cancelled_orders: "Cancelled orders",
+  aov: "Average order",
+  average_items_per_order: "Items per order",
+};
+
+const MONEY_KPIS = new Set(["gmv", "net_revenue", "total_tax", "total_service_fees", "total_discounts", "total_refunds", "aov"]);
+
+function barShare(amount: string | number): number {
+  const value = typeof amount === "number" ? amount : Number(amount);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function BarChart({
+  title,
+  caption,
+  rows,
+}: {
+  title: string;
+  caption: string;
+  rows: Array<{ id: string; label: string; value: string; share: number }>;
+}) {
+  const longest = Math.max(...rows.map((row) => row.share), 0);
+  return (
+    <section className="grid gap-3 rounded-2xl border bg-card p-4">
+      <div>
+        <h2 className="font-medium">{title}</h2>
+        <p className="text-sm leading-6 text-muted-foreground">{caption}</p>
+      </div>
+      {rows.length === 0 ? <p className="text-sm text-muted-foreground">Nothing in this period.</p> : (
+        <ul className="grid gap-3">
+          {rows.map((row) => (
+            <li key={row.id} className="grid gap-1">
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="font-medium">{row.label}</span>
+                <span className="tabular-nums text-muted-foreground">{row.value}</span>
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${longest > 0 ? Math.min(100, (row.share / longest) * 100) : 0}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function AnalyticsScreen({ view }: { view: "dashboard" | "menu" | "branches" }) {
   const [period, setPeriod] = useState<components["schemas"]["TimePeriod"]>("last_7_days");
   const data = useQuery({
@@ -263,80 +327,100 @@ export function AnalyticsScreen({ view }: { view: "dashboard" | "menu" | "branch
       return result.data;
     },
   });
+  const tabs = [
+    { id: "dashboard", href: "/app/analytics", label: "Dashboard" },
+    { id: "menu", href: "/app/analytics/menu", label: "Menu" },
+    { id: "branches", href: "/app/analytics/branches", label: "Branches" },
+  ] as const;
+
   return (
     <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Analytics</h1>
-      <div className="flex flex-wrap gap-2">
-        <Link className="min-h-11 rounded-lg border px-3 py-2 text-sm" href="/app/analytics">Dashboard</Link>
-        <Link className="min-h-11 rounded-lg border px-3 py-2 text-sm" href="/app/analytics/menu">Menu</Link>
-        <Link className="min-h-11 rounded-lg border px-3 py-2 text-sm" href="/app/analytics/branches">Branches</Link>
+      <div className="grid gap-1">
+        <h1 className="text-[length:var(--text-28)] font-semibold">Analytics</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Sales for the period you choose. A longer bar means more of that figure.</p>
       </div>
-      <select className={control} value={period} onChange={(event) => setPeriod(event.target.value as typeof period)}>
-        {["today", "yesterday", "last_7_days", "last_30_days"].map((item) => <option key={item}>{item}</option>)}
-      </select>
+      <div className="flex flex-wrap gap-2">
+        {tabs.map((tab) => (
+          <Link key={tab.id} className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm ${tab.id === view ? "bg-primary font-medium text-primary-foreground" : "border bg-card"}`} href={tab.href}>{tab.label}</Link>
+        ))}
+      </div>
+      <label className="grid max-w-xs gap-1 text-sm">
+        Period
+        <select className={control} value={period} onChange={(event) => setPeriod(event.target.value as typeof period)}>
+          {PERIODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+        </select>
+      </label>
       {data.isLoading ? <LoadingState label="Loading analytics" /> : null}
       {data.isError ? <ErrorState body={data.error.message} onRetry={() => void data.refetch()} /> : null}
       {data.data && "kpis" in data.data && data.data.kpis && typeof data.data.kpis === "object" ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {Object.entries(data.data.kpis as Record<string, unknown>).map(([key, value]) => (
-            <article key={key} className="rounded-xl border p-3">
-              <p className="text-xs text-muted-foreground">{key.replaceAll("_", " ")}</p>
-              <p className="text-lg font-semibold">{String(value)}</p>
+            <article key={key} className="rounded-2xl border bg-card p-4">
+              <p className="text-sm text-muted-foreground">{KPI_LABELS[key] ?? key.replaceAll("_", " ")}</p>
+              <p className="text-lg font-semibold tabular-nums">{typeof value === "string" && MONEY_KPIS.has(key) ? formatMoney(value) : String(value ?? "")}</p>
             </article>
           ))}
         </div>
       ) : null}
       {data.data && "top_selling_items" in data.data ? (
-        <section className="grid gap-2">
-          <h2 className="font-medium">Top items</h2>
-          <ul className="grid gap-2">
-            {data.data.top_selling_items.map((item) => (
-              <li key={item.item_id} className="flex justify-between gap-3 rounded-lg border p-3 text-sm">
-                <span>{pickLocale(item.item_name, "en")}</span>
-                <span>{item.total_quantity_sold} · {String(item.gross_revenue)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <BarChart
+          title="Top items"
+          caption="How many of each item sold, with the sales beside the name."
+          rows={data.data.top_selling_items.map((item) => ({
+            id: item.item_id,
+            label: pickLocale(item.item_name, "en"),
+            value: `${item.total_quantity_sold} sold · ${formatMoney(item.gross_revenue)}`,
+            share: item.total_quantity_sold,
+          }))}
+        />
+      ) : null}
+      {data.data && "bottom_selling_items" in data.data ? (
+        <BarChart
+          title="Slowest items"
+          caption="The items that sold the least in this period."
+          rows={data.data.bottom_selling_items.map((item) => ({
+            id: item.item_id,
+            label: pickLocale(item.item_name, "en"),
+            value: `${item.total_quantity_sold} sold · ${formatMoney(item.gross_revenue)}`,
+            share: item.total_quantity_sold,
+          }))}
+        />
       ) : null}
       {data.data && "category_breakdown" in data.data ? (
-        <section className="grid gap-2">
-          <h2 className="font-medium">Categories</h2>
-          <ul className="grid gap-2">
-            {data.data.category_breakdown.map((item) => (
-              <li key={item.category_id} className="flex justify-between gap-3 rounded-lg border p-3 text-sm">
-                <span>{pickLocale(item.category_name, "en")}</span>
-                <span>{String(item.total_revenue)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <BarChart
+          title="Categories"
+          caption="Each category’s share of sales."
+          rows={data.data.category_breakdown.map((item) => ({
+            id: item.category_id,
+            label: pickLocale(item.category_name, "en"),
+            value: `${formatMoney(item.total_revenue)} · ${item.gmv_share_percentage}%`,
+            share: barShare(item.gmv_share_percentage),
+          }))}
+        />
       ) : null}
       {data.data && "branches" in data.data ? (
-        <section className="grid gap-2">
-          <h2 className="font-medium">Branches</h2>
-          <ul className="grid gap-2">
-            {data.data.branches.map((row) => (
-              <li key={row.branch_id} className="flex justify-between gap-3 rounded-lg border p-3 text-sm">
-                <span>{pickLocale(row.branch_name, "en")}</span>
-                <span>{String(row.gmv)} · {row.total_paid_orders} orders</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <BarChart
+          title="Branches"
+          caption="Gross sales at each branch."
+          rows={data.data.branches.map((row) => ({
+            id: row.branch_id,
+            label: pickLocale(row.branch_name, "en"),
+            value: `${formatMoney(row.gmv)} · ${row.total_paid_orders} orders`,
+            share: barShare(row.gmv),
+          }))}
+        />
       ) : null}
       {data.data && "branch_rankings" in data.data && Array.isArray(data.data.branch_rankings) ? (
-        <section className="grid gap-2">
-          <h2 className="font-medium">Branch rankings</h2>
-          <ul className="grid gap-2">
-            {(data.data.branch_rankings as components["schemas"]["BranchPerformanceRow"][]).map((row) => (
-              <li key={row.branch_id} className="flex justify-between gap-3 rounded-lg border p-3 text-sm">
-                <span>{pickLocale(row.branch_name, "en")}</span>
-                <span>{String(row.gmv)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <BarChart
+          title="Branches"
+          caption="Gross sales at each branch."
+          rows={(data.data.branch_rankings as components["schemas"]["BranchPerformanceRow"][]).map((row) => ({
+            id: row.branch_id,
+            label: pickLocale(row.branch_name, "en"),
+            value: `${formatMoney(row.gmv)} · ${row.total_paid_orders} orders`,
+            share: barShare(row.gmv),
+          }))}
+        />
       ) : null}
     </div>
   );

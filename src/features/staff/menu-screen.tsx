@@ -25,6 +25,11 @@ function names(en: string, ar: string) {
   return { en, ar };
 }
 
+function stationCode(name: string): string | null {
+  const code = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 50);
+  return /^[A-Z0-9_]{2,50}$/.test(code) ? code : null;
+}
+
 export function MenuAdmin() {
   const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
@@ -165,6 +170,7 @@ export function MenuAdmin() {
       </div>
       {tab === "stations" ? (
         <section className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1">
+          <p className="text-sm leading-6 text-muted-foreground">A station is a preparation area, such as the hot kitchen or the bar. Items sent there show on that station’s kitchen display.</p>
           <StationForm onDone={() => void stations.refetch()} />
           <ul className="grid gap-2">
             {(stations.data ?? []).map((stationItem) => (
@@ -488,9 +494,10 @@ function OptionPriceField({
 
 function StationForm({ onDone }: { onDone: () => void }) {
   const [en, setEn] = useState("");
-  const [code, setCode] = useState("HOT_KITCHEN");
+  const code = stationCode(en);
   const create = useMutation({
     mutationFn: async () => {
+      if (!code) throw new Error("Use at least two letters in the station name.");
       const body: components["schemas"]["CreateKitchenStationRequest"] = {
         name: names(en, en),
         code,
@@ -501,23 +508,29 @@ function StationForm({ onDone }: { onDone: () => void }) {
     },
     onSuccess: () => {
       toast.success("Station saved");
+      setEn("");
       onDone();
     },
     onError: (error: Error) => toast.error(error.message),
   });
   return (
     <form
-      className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+      className="grid gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         create.mutate();
       }}
     >
-      <input className={control} placeholder="Station name" value={en} onChange={(event) => setEn(event.target.value)} required />
-      <input className={control} placeholder="Code" value={code} onChange={(event) => setCode(event.target.value)} required />
-      <button className="min-h-11 rounded-lg bg-primary px-4 text-sm text-primary-foreground" type="submit">
-        Add station
-      </button>
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+        <label className="grid gap-1 text-sm">
+          Station name
+          <input className={control} placeholder="Hot kitchen" value={en} onChange={(event) => setEn(event.target.value)} required />
+        </label>
+        <button className="min-h-11 self-end rounded-lg bg-primary px-4 text-sm text-primary-foreground disabled:opacity-50" type="submit" disabled={!code || create.isPending}>
+          {create.isPending ? "Adding…" : "Add station"}
+        </button>
+      </div>
+      <p className="text-sm text-muted-foreground">{code ? `The code is saved as ${code}.` : "The code is taken from the name. Use at least two letters."}</p>
     </form>
   );
 }

@@ -1,17 +1,21 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
-import { ErrorState, LoadingState } from "@/components/ops/states";
+import { StatusChip } from "@/components/ops/status-chip";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
+const hint = "text-sm leading-6 text-muted-foreground";
+const primaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 const ROLES: components["schemas"]["UserRole"][] = ["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER", "BRANCH_ADMIN"];
 
 export function StaffScreen() {
@@ -146,7 +150,12 @@ export function FeaturesScreen() {
       const result = await browserApi.POST("/api/v1/features/platform", { body });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Could not add feature");
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["features-platform"] }),
+    onSuccess: () => {
+      toast.success("Feature added");
+      setKey("");
+      setNameEn("");
+      void queryClient.invalidateQueries({ queryKey: ["features-platform"] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
   const toggle = useMutation({
@@ -157,34 +166,118 @@ export function FeaturesScreen() {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Entitlement failed");
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["features-brand"] }),
+    onSuccess: () => {
+      toast.success("Feature enabled for this brand");
+      void queryClient.invalidateQueries({ queryKey: ["features-brand"] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const features = platform.data ?? [];
+  const entitlements = brand.data ?? [];
+  const enabledKeys = new Set(entitlements.filter((item) => item.is_enabled_by_super_admin).map((item) => item.feature_key));
+  const enablingKey = toggle.isPending ? toggle.variables : null;
+
   return (
-    <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Features</h1>
-      <form className="grid gap-2 sm:grid-cols-3" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-        <input className={control} placeholder="Feature key" value={key} onChange={(event) => setKey(event.target.value)} required />
-        <input className={control} placeholder="English name" value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
-        <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">Add platform feature</button>
+    <div className="grid gap-6">
+      <header>
+        <h1 className="text-[length:var(--text-28)] font-semibold">Features</h1>
+        <p className={`mt-1 max-w-2xl ${hint}`}>Platform features Qwicoo can offer. A feature stays off until you enable it for the brand you have open.</p>
+      </header>
+
+      <form className="grid max-w-3xl gap-4 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
+        <div>
+          <h2 className="text-lg font-semibold">Add a platform feature</h2>
+          <p className={hint}>Creates a feature for the whole platform. It is not turned on for a brand yet.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm">
+            Feature key
+            <span className={hint}>A short code, such as DRIVE_THRU.</span>
+            <input className={control} value={key} onChange={(event) => setKey(event.target.value)} required />
+          </label>
+          <label className="grid gap-1 text-sm">
+            English name
+            <span className={hint}>The name staff see, such as Drive-thru.</span>
+            <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
+          </label>
+        </div>
+        <button className={primaryButton} type="submit" disabled={create.isPending} aria-describedby="add-feature-hint">
+          <Plus aria-hidden className="size-4" />
+          {create.isPending ? "Adding…" : "Add platform feature"}
+        </button>
+        <p id="add-feature-hint" className={hint}>Adds the feature to the platform list below.</p>
       </form>
-      {platform.isLoading ? <LoadingState label="Loading features" /> : null}
-      {platform.isError ? <ErrorState body={platform.error.message} onRetry={() => void platform.refetch()} /> : null}
-      <ul className="grid gap-2">
-        {(platform.data ?? []).map((feature) => (
-          <li key={feature.id} className="flex items-center justify-between gap-2 rounded-lg border p-3 text-sm">
-            <span>{feature.name_en}</span>
-            <button type="button" className="min-h-11 underline" onClick={() => toggle.mutate(feature.id)}>Enable for brand</button>
-          </li>
-        ))}
-      </ul>
-      <h2 className="font-medium">Brand entitlements</h2>
-      <ul className="grid gap-2">
-        {(brand.data ?? []).map((item) => (
-          <li key={item.id} className="rounded-lg border p-3 text-sm">{item.feature_key} · {item.is_enabled_by_super_admin ? "on" : "off"}</li>
-        ))}
-      </ul>
+
+      <section className="grid gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Platform features</h2>
+          <p className={hint}>{brandId ? "Enable a feature for the brand you have open." : "Open a brand from Brands before enabling a feature."}</p>
+        </div>
+        {platform.isLoading ? <LoadingState label="Loading features" /> : null}
+        {platform.isError ? <ErrorState body={platform.error.message} onRetry={() => void platform.refetch()} /> : null}
+        {platform.isSuccess && features.length === 0 ? (
+          <EmptyState title="No platform features yet" body="Add a feature above. It can then be enabled for a brand." />
+        ) : null}
+        {features.length > 0 ? (
+          <ul className="grid gap-3">
+            {features.map((feature) => {
+              const enabled = enabledKeys.has(feature.id);
+              const enabling = enablingKey === feature.id;
+              return (
+                <li key={feature.id} className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="grid gap-1">
+                    <p className="font-semibold">{feature.name_en}</p>
+                    <p className="text-sm text-muted-foreground">{feature.id}</p>
+                    {feature.description ? <p className={hint}>{feature.description}</p> : null}
+                  </div>
+                  {enabled ? (
+                    <StatusChip tone="available">Enabled</StatusChip>
+                  ) : (
+                    <button
+                      type="button"
+                      className={primaryButton}
+                      disabled={!brandId || toggle.isPending}
+                      onClick={() => toggle.mutate(feature.id)}
+                    >
+                      {enabling ? "Enabling…" : "Enable for brand"}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </section>
+
+      <section className="grid gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Brand entitlements</h2>
+          <p className={hint}>Features turned on or off for the brand you have open.</p>
+        </div>
+        {!brandId ? (
+          <EmptyState title="No brand open" body="Open a brand from Brands to see its features." />
+        ) : null}
+        {brandId && brand.isSuccess && entitlements.length === 0 ? (
+          <EmptyState title="No features for this brand yet" body="Enable a platform feature above and it will show up here." />
+        ) : null}
+        {entitlements.length > 0 ? (
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {entitlements.map((item) => {
+              const name = features.find((feature) => feature.id === item.feature_key)?.name_en;
+              return (
+                <li key={item.id} className="flex items-start justify-between gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+                  <div className="grid gap-1">
+                    <p className="font-semibold">{name ?? item.feature_key}</p>
+                    {name ? <p className="text-sm text-muted-foreground">{item.feature_key}</p> : null}
+                  </div>
+                  <StatusChip tone={item.is_enabled_by_super_admin ? "available" : "soldout"}>{item.is_enabled_by_super_admin ? "On" : "Off"}</StatusChip>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </section>
     </div>
   );
 }

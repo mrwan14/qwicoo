@@ -10,6 +10,7 @@ import { BranchesBarChart, CategoryDonut, ItemsBarChart } from "@/features/staff
 import { Money } from "@/components/ops/money";
 import { StatusChip } from "@/components/ops/status-chip";
 import { ErrorState, LoadingState, QueryErrorState, RoleUnavailableState } from "@/components/ops/states";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { asApiError, isRoleDenied } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatMoney } from "@/lib/format/money";
@@ -28,9 +29,12 @@ function cairoBusinessDate(now = new Date()): string {
 }
 
 function attendanceStatusLabel(status: string | null | undefined): string {
-  const value = status?.trim();
-  if (!value || value.toLowerCase() === "unknown") return "Not checked in";
-  return value;
+  const value = status?.trim().toUpperCase();
+  if (!value || value === "UNKNOWN") return "Not checked in";
+  if (value === "PRESENT") return "On time";
+  if (value === "LATE") return "Late";
+  if (value === "ABSENT") return "Absent";
+  return status?.trim() || "Not checked in";
 }
 
 function attendanceHeading(name: string | null | undefined, status: string | null | undefined): string {
@@ -220,10 +224,21 @@ export function ZReportScreen({ reportId }: { reportId: string }) {
   );
 }
 
+const ATTENDANCE_RANGES = [
+  { value: "daily", label: "Today" },
+  { value: "weekly", label: "This week" },
+  { value: "monthly", label: "This month" },
+] as const;
+
 export function AttendanceScreen() {
+  const me = useStaffSession();
   const branchId = useScope((state) => state.branchId);
+  const branches = useScope((state) => state.branches);
+  const watchedBranchIds = branches.length > 0 ? branches.map((branch) => branch.id) : branchId ? [branchId] : [];
+  const canOverride = me?.role === "SUPER_ADMIN" || me?.role === "BRAND_ADMIN";
   const [reason, setReason] = useState("");
   const [logId, setLogId] = useState<string | null>(null);
+  const [range, setRange] = useState<(typeof ATTENDANCE_RANGES)[number]["value"]>("daily");
   const status = useQuery({
     queryKey: ["attendance-me"],
     queryFn: async () => {
@@ -233,12 +248,17 @@ export function AttendanceScreen() {
     },
   });
   const logs = useQuery({
-    queryKey: ["attendance-logs", branchId],
-    enabled: Boolean(branchId),
+    queryKey: ["attendance-logs", watchedBranchIds.join(","), range],
+    enabled: watchedBranchIds.length > 0,
     queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/branches/{branch_id}/attendance-logs", { params: { path: { branch_id: branchId ?? "" } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Logs failed");
-      return result.data.records ?? [];
+      const pages = await Promise.all(watchedBranchIds.map(async (id) => {
+        const result = await browserApi.GET("/api/v1/branches/{branch_id}/attendance-logs", {
+          params: { path: { branch_id: id }, query: { filter_type: range } },
+        });
+        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Logs failed");
+        return result.data.records ?? [];
+      }));
+      return pages.flat().sort((left, right) => right.date.localeCompare(left.date) || left.employee_name.localeCompare(right.employee_name));
     },
   });
   const txns = useQuery({
@@ -254,18 +274,25 @@ export function AttendanceScreen() {
     const position = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 8000 });
     }).catch(() => null);
+    if (!position) {
+      toast.error("Allow location so we can confirm you are at the branch.");
+      return;
+    }
     const body: components["schemas"]["CheckInRequest"] = {
-      latitude: position?.coords.latitude ?? 0,
-      longitude: position?.coords.longitude ?? 0,
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
     };
     const result = kind === "in"
       ? await browserApi.POST("/api/v1/attendance/check-in", { body })
       : await browserApi.POST("/api/v1/attendance/check-out", { body });
-    if (!result.response.ok) toast.error(asApiError(result.error, result.response, "Attendance failed").message);
-    else {
-      toast.success(kind === "in" ? "Checked in" : "Checked out");
-      void status.refetch();
+    if (!result.response.ok) {
+      const error = asApiError(result.error, result.response, "Attendance failed");
+      toast.error(error.code === "OUT_OF_GEOFENCE" ? "You need to be at the branch to check in." : error.message);
+      return;
     }
+    toast.success(kind === "in" ? "Checked in" : "Checked out");
+    void status.refetch();
+    void logs.refetch();
   }
   const override = useMutation({
     mutationFn: async () => {
@@ -286,7 +313,10 @@ export function AttendanceScreen() {
 
   return (
     <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Attendance</h1>
+      <div className="grid gap-1">
+        <h1 className="text-[length:var(--text-28)] font-semibold">Attendance</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Check in when you arrive at the branch. The list shows the staff at the branches you look after.</p>
+      </div>
       {status.isError ? (
         <ErrorState body={status.error instanceof Error ? status.error.message : "Status failed"} onRetry={() => void status.refetch()} />
       ) : (
@@ -294,21 +324,63 @@ export function AttendanceScreen() {
           {status.isLoading
             ? "Loading your attendance…"
             : attendanceHeading(status.data?.employee_name, status.data?.attendance?.status)}
+          {status.data?.attendance?.check_in ? ` · In ${formatCairoDateTime(status.data.attendance.check_in)}` : ""}
+          {status.data?.attendance?.check_out ? ` · Out ${formatCairoDateTime(status.data.attendance.check_out)}` : ""}
         </p>
       )}
       <div className="flex gap-2">
         <button type="button" className="min-h-12 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => void punch("in")}>Check in</button>
         <button type="button" className="min-h-12 rounded-lg border px-4 text-sm" onClick={() => void punch("out")}>Check out</button>
       </div>
-      {logs.isError ? <ErrorState body={logs.error instanceof Error ? logs.error.message : "Logs failed"} onRetry={() => void logs.refetch()} /> : null}
-      <ul className="grid gap-2">
-        {(logs.data ?? []).map((log) => (
-          <li key={log.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-            <span>{log.employee_name} · {attendanceStatusLabel(log.status)}</span>
-            <button type="button" className="min-h-11 underline" onClick={() => setLogId(log.id)}>Override</button>
-          </li>
-        ))}
-      </ul>
+      <section className="grid gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="font-medium">Staff attendance</h2>
+          <label className="grid gap-1 text-sm">
+            Period
+            <select className={control} value={range} onChange={(event) => setRange(event.target.value as typeof range)}>
+              {ATTENDANCE_RANGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </label>
+        </div>
+        {logs.isLoading ? <p className="text-sm text-muted-foreground">Loading attendance…</p> : null}
+        {logs.isError ? <ErrorState body={logs.error instanceof Error ? logs.error.message : "Logs failed"} onRetry={() => void logs.refetch()} /> : null}
+        {!logs.isLoading && !logs.isError && watchedBranchIds.length === 0 ? <p className="text-sm text-muted-foreground">Choose a branch to see who has checked in.</p> : null}
+        {!logs.isLoading && !logs.isError && watchedBranchIds.length > 0 && (logs.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No one has checked in for this period.</p> : null}
+        {(logs.data ?? []).length > 0 ? (
+          <div className="overflow-x-auto rounded-2xl border bg-card">
+            <table className="w-full min-w-[720px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Person</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Branch</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Day</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Arrived</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Left</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">Status</th>
+                  {canOverride ? <th scope="col" className="px-4 py-3 text-start font-medium">Action</th> : null}
+                </tr>
+              </thead>
+              <tbody>
+                {(logs.data ?? []).map((log) => (
+                  <tr key={log.id} className="border-b align-middle last:border-b-0">
+                    <th scope="row" className="px-4 py-4 text-start font-medium">{log.employee_name}</th>
+                    <td className="px-4 py-4">{log.branch_name}</td>
+                    <td className="px-4 py-4">{log.date}</td>
+                    <td className="px-4 py-4">{log.check_in ? formatCairoDateTime(log.check_in) : "—"}</td>
+                    <td className="px-4 py-4">{log.check_out ? formatCairoDateTime(log.check_out) : "—"}</td>
+                    <td className="px-4 py-4">{attendanceStatusLabel(log.status)}</td>
+                    {canOverride ? (
+                      <td className="px-4 py-4">
+                        <button type="button" className="min-h-11 underline" onClick={() => setLogId(log.id)}>Correct</button>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
       <section className="grid gap-3">
         <div>
           <h2 className="font-medium">Payments taken</h2>
@@ -345,8 +417,12 @@ export function AttendanceScreen() {
           </div>
         ) : null}
       </section>
-      <ConfirmDialog open={Boolean(logId)} onOpenChange={(open) => !open && setLogId(null)} title="Override this attendance record?" description="Add a reason. This is stored on the log." confirmLabel="Override" onConfirm={() => override.mutate()} />
-      <textarea className="min-h-20 rounded-lg border px-3 py-2" placeholder="Override reason" value={reason} onChange={(event) => setReason(event.target.value)} />
+      {canOverride ? (
+        <>
+          <ConfirmDialog open={Boolean(logId)} onOpenChange={(open) => !open && setLogId(null)} title="Correct this attendance record?" description="Add a reason. This is stored on the record." confirmLabel="Correct" onConfirm={() => override.mutate()} />
+          {logId ? <textarea className="min-h-20 rounded-lg border px-3 py-2" placeholder="Reason" value={reason} onChange={(event) => setReason(event.target.value)} /> : null}
+        </>
+      ) : null}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { LocaleText } from "@/components/ops/locale-text";
 import { PageHeader } from "@/components/ops/page-header";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -17,7 +17,14 @@ import { formatMoney } from "@/lib/format/money";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
+const hint = "text-sm leading-6 text-muted-foreground";
 const STATIONS = ["HOT_KITCHEN", "COLD_KITCHEN", "BEVERAGE", "DESSERT"] as const;
+const STATION_LABELS: Record<(typeof STATIONS)[number], string> = {
+  HOT_KITCHEN: "Hot kitchen",
+  COLD_KITCHEN: "Cold kitchen",
+  BEVERAGE: "Drinks",
+  DESSERT: "Dessert",
+};
 
 type Item = components["schemas"]["MenuItemResponse"];
 
@@ -104,6 +111,8 @@ export function MenuAdmin() {
     },
     onSuccess: () => {
       toast.success("Item saved");
+      setItemEn("");
+      setItemAr("");
       setItemOpen(false);
       refresh();
     },
@@ -159,7 +168,16 @@ export function MenuAdmin() {
           tab === "items" ? (
             <div className="flex gap-2">
               <button type="button" className="min-h-11 rounded-xl border bg-card px-4 text-sm" onClick={() => setCategoryOpen(true)}>Add category</button>
-              <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setItemOpen(true)}>Add item</button>
+              <button
+                type="button"
+                className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
+                onClick={() => {
+                  if (!categoryId && active) setCategoryId(active.id);
+                  setItemOpen(true);
+                }}
+              >
+                Add item
+              </button>
             </div>
           ) : null
         }
@@ -231,22 +249,55 @@ export function MenuAdmin() {
         </SheetContent>
       </Sheet>
       <Sheet open={itemOpen} onOpenChange={setItemOpen}>
-        <SheetContent side="right">
+        <SheetContent side="right" className="overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Add item</SheetTitle>
+            <SheetDescription>Adds a dish or drink to the category guests see. The price is in EGP.</SheetDescription>
           </SheetHeader>
-          <form className="grid gap-3 px-4 pb-6" onSubmit={(event) => { event.preventDefault(); createItem.mutate(); }}>
-            <select className={control} value={categoryId} onChange={(event) => setCategoryId(event.target.value)} required>
-              <option value="">Category</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>{pickLocale(category.name, "en")}</option>
-              ))}
-            </select>
-            <input className={control} placeholder="Price" value={price} onChange={(event) => setPrice(event.target.value)} required />
-            <input className={control} placeholder="English name" value={itemEn} onChange={(event) => setItemEn(event.target.value)} required />
-            <input className={control} placeholder="Arabic name" value={itemAr} onChange={(event) => setItemAr(event.target.value)} required />
-            <button className="min-h-11 rounded-xl bg-primary text-sm text-primary-foreground" type="submit">Save item</button>
-            <button className="min-h-11 rounded-xl border text-sm" type="button" onClick={() => catalog.mutate()}>Try catalog create</button>
+          <form className="grid gap-4 px-4 pb-6" onSubmit={(event) => { event.preventDefault(); createItem.mutate(); }}>
+            <label className="grid gap-1 text-sm">
+              Category
+              <span className={hint}>The item is listed under this category.</span>
+              <select className={control} value={categoryId} onChange={(event) => setCategoryId(event.target.value)} required>
+                <option value="">{categories.length === 0 ? "Add a category first" : "Choose a category"}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>{pickLocale(category.name, "en")}</option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              Price (EGP)
+              <span className={hint}>What guests pay for this item, before options.</span>
+              <input className={control} inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} required />
+              <span className={hint}>{formatMoney(price || "0")}</span>
+            </label>
+            <label className="grid gap-1 text-sm">
+              English name
+              <span className={hint}>The name guests see in English.</span>
+              <input className={control} value={itemEn} onChange={(event) => setItemEn(event.target.value)} required />
+            </label>
+            <label className="grid gap-1 text-sm">
+              Arabic name
+              <span className={hint}>The name guests see in Arabic.</span>
+              <input className={control} dir="rtl" value={itemAr} onChange={(event) => setItemAr(event.target.value)} required />
+            </label>
+            <label className="grid gap-1 text-sm">
+              Station
+              <span className={hint}>Where the kitchen prepares this item.</span>
+              <select className={control} value={station} onChange={(event) => setStation(event.target.value as typeof station)}>
+                {STATIONS.map((value) => (
+                  <option key={value} value={value}>{STATION_LABELS[value]}</option>
+                ))}
+              </select>
+            </label>
+            <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={!categoryId || createItem.isPending}>
+              {createItem.isPending ? "Saving…" : "Save item"}
+            </button>
+            <p className={hint}>Saves the item for this branch.</p>
+            <button className="min-h-11 rounded-xl border text-sm disabled:opacity-50" type="button" onClick={() => catalog.mutate()} disabled={!categoryId || !itemEn.trim() || !itemAr.trim() || catalog.isPending}>
+              {catalog.isPending ? "Creating…" : "Add for every branch"}
+            </button>
+            <p className={hint}>Uses the same name and price, and adds the item on every branch.</p>
           </form>
         </SheetContent>
       </Sheet>

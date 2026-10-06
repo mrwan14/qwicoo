@@ -122,7 +122,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   {
     href: "/app/kds/expo",
-    label: "Expo",
+    label: "Handover",
     group: "Brand ops",
     shell: "ops",
     phase: 3,

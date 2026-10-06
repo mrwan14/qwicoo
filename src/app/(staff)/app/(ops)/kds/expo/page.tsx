@@ -5,7 +5,7 @@ import { ExpoScreen } from "@/features/staff/expo-screen";
 export default function Page() {
   return (
     <RoleGate href="/app/kds/expo">
-      <BranchGate screen="Expo">
+      <BranchGate screen="Handover">
         <ExpoScreen />
       </BranchGate>
     </RoleGate>

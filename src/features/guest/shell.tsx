@@ -221,7 +221,7 @@ export function GuestShell({
 
   return (
     <div dir={dir} lang={locale} style={style} className="min-h-dvh overflow-x-hidden bg-background text-foreground">
-      <header className="flex items-center justify-between gap-3 px-4 py-4">
+      <header className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-4 py-4">
         {neutral ? <Logo markClassName="size-7 text-primary" wordClassName="text-2xl" /> : <BrandHeader />}
         <button
           type="button"
@@ -231,7 +231,7 @@ export function GuestShell({
           {t.language}
         </button>
       </header>
-      <div className="mx-auto w-full max-w-3xl px-4 py-4 pb-28">{resume ? <GuestResume>{children}</GuestResume> : children}</div>
+      <div className="mx-auto w-full max-w-md px-4 py-4 pb-32">{resume ? <GuestResume>{children}</GuestResume> : children}</div>
     </div>
   );
 }

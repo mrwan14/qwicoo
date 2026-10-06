@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { resumeIfSessionGone } from "@/features/guest/session";
 import { GuestQueryError, PresenceNote, guestField, guestPrimaryButton, guestSecondaryButton, useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
 import { Money } from "@/components/ops/money";
@@ -36,7 +35,6 @@ export function MenuScreen() {
   const setGuestName = useGuest((state) => state.setGuestName);
   const queryClient = useQueryClient();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [wide, setWide] = useState(false);
 
   const menu = useQuery({
     queryKey: ["guest-menu", session?.branchId],
@@ -142,21 +140,32 @@ export function MenuScreen() {
         <span className="font-normal text-muted-foreground">{t.nameHint}</span>
       </label>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {(menu.data?.categories ?? []).map((category) => (
+        {(menu.data?.categories ?? []).map((category) => {
+          const image = mediaUrl(category.image_url);
+          return (
           <a
             key={category.id}
             href={`#cat-${category.id}`}
-            className="inline-flex min-h-11 shrink-0 items-center rounded-full border bg-card px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border bg-card px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={image} alt="" className="size-8 shrink-0 rounded-lg bg-secondary object-contain" />
+            ) : null}
             {optionName(category.name, locale)}
           </a>
-        ))}
+          );
+        })}
       </div>
       {(menu.data?.categories ?? []).map((category) => (
         <section key={category.id} id={`cat-${category.id}`} className="grid scroll-mt-4 gap-3">
           <h2 className="font-display text-[length:var(--text-20)]">
             {optionName(category.name, locale)}
           </h2>
+          {mediaUrl(category.image_url) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={mediaUrl(category.image_url) ?? ""} alt="" className="h-40 w-full rounded-2xl bg-secondary object-contain" />
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-2">
             {(category.items ?? []).map((item) => {
               const image = mediaUrl(item.image_url);
@@ -165,15 +174,12 @@ export function MenuScreen() {
                   key={item.id}
                   type="button"
                   disabled={!item.is_available}
-                  onClick={() => {
-                    setWide(window.matchMedia("(min-width: 1024px)").matches);
-                    setActiveId(item.id);
-                  }}
+                  onClick={() => setActiveId(item.id)}
                   className="flex min-h-24 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-70"
                 >
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={image} alt="" className="h-24 w-24 shrink-0 object-cover" />
+                    <img src={image} alt="" className="h-24 w-24 shrink-0 bg-secondary object-contain" />
                   ) : (
                     <div className="flex h-24 w-24 shrink-0 items-center justify-center bg-secondary text-2xl font-semibold text-primary">
                       {optionName(item.name, locale).trim().charAt(0).toUpperCase()}
@@ -200,12 +206,19 @@ export function MenuScreen() {
           </div>
         </section>
       ))}
-      {active && wide ? (
-        <Dialog open onOpenChange={(open) => !open && setActiveId(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{optionName(active.name, locale)}</DialogTitle>
-            </DialogHeader>
+      {active ? (
+        <Sheet open onOpenChange={(open) => !open && setActiveId(null)}>
+          <SheetContent
+            side="bottom"
+            showCloseButton={false}
+            className="mx-auto flex max-h-[92dvh] w-full max-w-md flex-col gap-0 overflow-hidden rounded-t-3xl p-0"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-4 pb-2">
+              <SheetTitle className="text-lg">{optionName(active.name, locale)}</SheetTitle>
+              <SheetClose className="inline-flex min-h-11 shrink-0 items-center rounded-xl border bg-card px-3 text-sm font-medium">
+                {t.close}
+              </SheetClose>
+            </div>
             <ItemConfigurator
               item={active}
               currency={currency}
@@ -216,32 +229,11 @@ export function MenuScreen() {
                 void queryClient.invalidateQueries({ queryKey: ["guest-quote"] });
               }}
             />
-          </DialogContent>
-        </Dialog>
-      ) : null}
-      {active && !wide ? (
-        <Sheet open onOpenChange={(open) => !open && setActiveId(null)}>
-          <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>{optionName(active.name, locale)}</SheetTitle>
-            </SheetHeader>
-            <div className="px-4 pb-6">
-              <ItemConfigurator
-                item={active}
-                currency={currency}
-                branchPrice={branchPrices.get(active.id) ?? null}
-                onDone={() => {
-                  setActiveId(null);
-                  void queryClient.invalidateQueries({ queryKey: ["guest-cart"] });
-                  void queryClient.invalidateQueries({ queryKey: ["guest-quote"] });
-                }}
-              />
-            </div>
           </SheetContent>
         </Sheet>
       ) : null}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto grid max-w-3xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+        <div className="mx-auto grid max-w-md grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
           <Link href="/order/checkout" className={`${(cart.data?.total_items ?? 0) > 0 ? guestPrimaryButton : guestSecondaryButton} gap-2`}>
             <span>
               {t.checkout}
@@ -383,10 +375,18 @@ function ItemConfigurator({
     },
   });
 
+  const title = optionName(item.name, locale);
+  const description = item.description ? optionName(item.description, locale) : "";
+
   return (
-    <div className="grid gap-4">
-      {item.description ? (
-        <p className="text-sm text-muted-foreground">{optionName(item.description, locale)}</p>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-4 pb-4">
+      {mediaUrl(item.image_url) ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={mediaUrl(item.image_url) ?? ""} alt="" className="max-h-40 w-full rounded-xl bg-secondary object-contain" />
+      ) : null}
+      {description && description !== title ? (
+        <p className="text-sm text-muted-foreground">{description}</p>
       ) : null}
       {groups.map((group) => (
         <fieldset key={group.id} className="grid gap-2">
@@ -465,9 +465,11 @@ function ItemConfigurator({
       ) : (
         <p className="text-sm">{t.pricePending}</p>
       )}
+    </div>
+    <div className="shrink-0 border-t bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <button
         type="button"
-        className={`${guestPrimaryButton} sticky bottom-0 gap-2`}
+        className={`${guestPrimaryButton} gap-2`}
         disabled={add.isPending || !guestName.trim()}
         onClick={() => {
           const needed = missingGroup();
@@ -482,6 +484,7 @@ function ItemConfigurator({
         {add.isPending ? t.paying : t.add}
         {quote.data ? <Money amount={quotedOrderTotal(quote.data)} currency={currency} locale={locale} /> : null}
       </button>
+    </div>
     </div>
   );
 }

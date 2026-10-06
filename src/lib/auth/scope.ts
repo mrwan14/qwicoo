@@ -44,6 +44,7 @@ export function scopeHome(me: UserProfile): string {
   const scope = homeScopeOf(me);
   if (scope === "platform") return "/app/brands";
   if (scope === "brand") return `/app/brands/${me.brand_id}`;
+  if (me.role === "BRANCH_ADMIN") return "/app/dashboard";
   return roleHome(me.role);
 }
 

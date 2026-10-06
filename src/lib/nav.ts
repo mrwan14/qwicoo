@@ -137,6 +137,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...BRANCH_OPS, "CASHIER"],
   },
   {
+    href: "/app/dashboard",
+    label: "Dashboard",
+    group: "Insight",
+    shell: "admin",
+    phase: 6,
+    roles: ["BRANCH_ADMIN"],
+  },
+  {
     href: "/app/analytics",
     label: "Analytics",
     group: "Insight",
@@ -174,7 +182,7 @@ const BOTTOM_PRIORITY: Record<UserRole, readonly string[]> = {
   SUPER_ADMIN: ["/app/brands", "/app/menu", "/app/floor", "/app/analytics"],
   BRAND_ADMIN: ["brand-dashboard", "/app/menu", "/app/staff", "brand-settings"],
   REGIONAL_MANAGER: ["/app/floor", "/app/menu", "/app/staff", "/app/analytics"],
-  BRANCH_ADMIN: ["/app/floor", "/app/pos", "/app/kds", "/app/payments"],
+  BRANCH_ADMIN: ["/app/dashboard", "/app/floor", "/app/pos", "/app/payments"],
   CASHIER: ["/app/pos", "/app/payments", "/app/floor", "/app/attendance"],
   WAITER: ["/app/floor", "/app/floor/requests"],
   KITCHEN_STAFF: ["/app/kds", "/app/kds/expo"],

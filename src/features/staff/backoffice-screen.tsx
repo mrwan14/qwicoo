@@ -379,13 +379,14 @@ function chartAmount(amount: string): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-export function AnalyticsScreen({ view, embedded = false }: { view: "dashboard" | "menu" | "branches"; embedded?: boolean }) {
+export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "dashboard" | "menu" | "branches"; embedded?: boolean; branchId?: string | null }) {
   const [period, setPeriod] = useState<components["schemas"]["TimePeriod"]>("last_7_days");
   const data = useQuery({
-    queryKey: ["analytics", view, period],
+    queryKey: ["analytics", view, period, branchId ?? "all"],
     queryFn: async () => {
+      const scoped = branchId ? { period, branch_id: branchId } : { period };
       if (view === "menu") {
-        const result = await browserApi.GET("/api/v1/analytics/menu-performance", { params: { query: { period } } });
+        const result = await browserApi.GET("/api/v1/analytics/menu-performance", { params: { query: scoped } });
         if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Analytics failed");
         return result.data;
       }
@@ -394,7 +395,7 @@ export function AnalyticsScreen({ view, embedded = false }: { view: "dashboard" 
         if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Analytics failed");
         return result.data;
       }
-      const result = await browserApi.GET("/api/v1/analytics/dashboard", { params: { query: { period } } });
+      const result = await browserApi.GET("/api/v1/analytics/dashboard", { params: { query: scoped } });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Analytics failed");
       return result.data;
     },
@@ -488,7 +489,7 @@ export function AnalyticsScreen({ view, embedded = false }: { view: "dashboard" 
           }))}
         />
       ) : null}
-      {data.data && "branch_rankings" in data.data && Array.isArray(data.data.branch_rankings) ? (
+      {!branchId && data.data && "branch_rankings" in data.data && Array.isArray(data.data.branch_rankings) ? (
         <BranchesBarChart
           rows={(data.data.branch_rankings as components["schemas"]["BranchPerformanceRow"][]).map((row) => ({
             id: row.branch_id,

@@ -62,6 +62,7 @@ const ICONS: Record<string, LucideIcon> = {
   "/app/financials": Wallet,
   "/app/attendance": ClipboardList,
   "/app/analytics": BarChart3,
+  "/app/dashboard": BarChart3,
   "/app/audit": Shield,
   "brand-dashboard": Store,
   "brand-settings": Settings2,

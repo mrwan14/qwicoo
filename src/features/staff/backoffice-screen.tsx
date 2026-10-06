@@ -510,21 +510,24 @@ function auditRoleLabel(role: string | null | undefined): string {
 
 export function AuditScreen() {
   const [action, setAction] = useState("");
-  const [resource, setResource] = useState("");
+  const [role, setRole] = useState("");
   const logs = useQuery({
-    queryKey: ["audit", resource],
+    queryKey: ["audit"],
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/audit/logs", {
-        params: { query: { resource_type: resource || undefined, limit: 50 } },
+        params: { query: { limit: 50 } },
       });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Audit failed");
       return result.data;
     },
   });
-  const needle = action.trim().toLowerCase();
+  const actionNeedle = action.trim().toLowerCase();
+  const roleNeedle = role.trim().toLowerCase();
   const rows = (logs.data?.items ?? []).filter((item) => {
-    if (!needle) return true;
-    return auditActionLabel(item.action).toLowerCase().includes(needle);
+    const actionMatches = !actionNeedle || auditActionLabel(item.action).toLowerCase().includes(actionNeedle);
+    const roleText = `${auditRoleLabel(item.actor_role)} ${item.actor_role ?? ""}`.toLowerCase();
+    const roleMatches = !roleNeedle || roleText.includes(roleNeedle);
+    return actionMatches && roleMatches;
   });
   return (
     <div className="grid gap-3">
@@ -535,8 +538,8 @@ export function AuditScreen() {
           <input className={control} value={action} onChange={(event) => setAction(event.target.value)} />
         </label>
         <label className="grid gap-1 text-sm">
-          Resource type
-          <input className={control} placeholder="Resource type" value={resource} onChange={(event) => setResource(event.target.value)} />
+          Role
+          <input className={control} placeholder="Cashier, Super admin" value={role} onChange={(event) => setRole(event.target.value)} />
         </label>
       </div>
       {logs.isLoading ? <LoadingState label="Loading audit" /> : null}

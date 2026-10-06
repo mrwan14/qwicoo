@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { resumeIfSessionGone } from "@/features/guest/session";
-import { GuestQueryError, PresenceNote, useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
+import { GuestQueryError, PresenceNote, guestField, guestPrimaryButton, guestSecondaryButton, useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
 import { Money } from "@/components/ops/money";
 import { LoadingState } from "@/components/ops/states";
 import { GuestQuoteSummary } from "@/features/guest/guest-quote-summary";
@@ -134,24 +134,26 @@ export function MenuScreen() {
       <label className="grid gap-1 text-sm font-medium">
         {t.yourName}
         <input
-          className="h-12 rounded-lg border px-3"
+          className={guestField}
+          autoComplete="name"
           value={guestName}
           onChange={(event) => setGuestName(event.target.value)}
         />
+        <span className="font-normal text-muted-foreground">{t.nameHint}</span>
       </label>
       <div className="flex gap-2 overflow-x-auto pb-1">
         {(menu.data?.categories ?? []).map((category) => (
           <a
             key={category.id}
             href={`#cat-${category.id}`}
-            className="inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 text-sm"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-full border bg-card px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {optionName(category.name, locale)}
           </a>
         ))}
       </div>
       {(menu.data?.categories ?? []).map((category) => (
-        <section key={category.id} id={`cat-${category.id}`} className="grid gap-3">
+        <section key={category.id} id={`cat-${category.id}`} className="grid scroll-mt-4 gap-3">
           <h2 className="font-display text-[length:var(--text-20)]">
             {optionName(category.name, locale)}
           </h2>
@@ -167,17 +169,17 @@ export function MenuScreen() {
                     setWide(window.matchMedia("(min-width: 1024px)").matches);
                     setActiveId(item.id);
                   }}
-                  className="min-h-14 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 disabled:opacity-70"
+                  className="flex min-h-24 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-70"
                 >
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={image} alt="" className="h-36 w-full object-cover" />
+                    <img src={image} alt="" className="h-24 w-24 shrink-0 object-cover" />
                   ) : (
-                    <div className="flex h-24 items-center justify-center bg-secondary text-2xl font-semibold text-primary">
+                    <div className="flex h-24 w-24 shrink-0 items-center justify-center bg-secondary text-2xl font-semibold text-primary">
                       {optionName(item.name, locale).trim().charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <div className="grid gap-1 p-3">
+                  <span className="flex min-w-0 flex-1 flex-col justify-center gap-1 p-3">
                     <span className="font-medium">{optionName(item.name, locale)}</span>
                     <span className="text-sm text-muted-foreground">
                       {item.is_available ? (
@@ -190,7 +192,8 @@ export function MenuScreen() {
                         <span className="inline-flex rounded-full bg-[var(--status-soldout-bg)] px-2 py-0.5 text-xs font-medium text-[var(--status-soldout)]">{t.unavailable}</span>
                       )}
                     </span>
-                  </div>
+                    {item.is_available ? <span className="text-sm font-medium text-primary">{t.add}</span> : null}
+                  </span>
                 </button>
               );
             })}
@@ -237,25 +240,22 @@ export function MenuScreen() {
           </SheetContent>
         </Sheet>
       ) : null}
-      <div className="fixed inset-x-0 bottom-0 z-30 bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-elev-2">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <div>
-            <p className="text-xs text-muted-foreground">{t.cart}</p>
-            <p className="text-base font-semibold">
-              {(cart.data?.total_items ?? 0) === 0 ? (
-                <Money amount="0.00" currency={currency} locale={locale} />
-              ) : cartQuote.data ? (
-                <Money amount={quotedOrderTotal(cartQuote.data)} currency={currency} locale={locale} />
-              ) : (
-                <span>{cartQuote.isError ? t.retry : t.validate}</span>
-              )}
-            </p>
-          </div>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto grid max-w-3xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <Link href="/order/checkout" className={`${(cart.data?.total_items ?? 0) > 0 ? guestPrimaryButton : guestSecondaryButton} gap-2`}>
+            <span>
+              {t.checkout}
+              {(cart.data?.total_items ?? 0) > 0 ? ` (${cart.data?.total_items})` : ""}
+            </span>
+            {(cart.data?.total_items ?? 0) > 0 && cartQuote.data ? (
+              <Money amount={quotedOrderTotal(cartQuote.data)} currency={currency} locale={locale} />
+            ) : null}
+          </Link>
           <Link
-            href="/order/checkout"
-            className="inline-flex min-h-14 items-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground"
+            href="/order/service"
+            className="inline-flex min-h-14 items-center justify-center rounded-xl border bg-card px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {t.checkout} ({cart.data?.total_items ?? 0})
+            {t.service}
           </Link>
         </div>
       </div>
@@ -277,6 +277,7 @@ function ItemConfigurator({
   const { t, locale } = useGuestCopy();
   const session = useGuest((state) => state.session);
   const guestName = useGuest((state) => state.guestName);
+  const setGuestName = useGuest((state) => state.setGuestName);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const [selected, setSelected] = useState<Record<string, string[]>>({});
@@ -396,12 +397,14 @@ function ItemConfigurator({
           {(group.options ?? []).map((option) => {
             const soldOut = option.is_available === false;
             const delta = Number(option.price_delta);
+            const chosen = (selected[group.id] ?? []).includes(option.id);
             return (
-              <label key={option.id} className={`flex min-h-12 items-center gap-3 text-sm ${soldOut ? "text-muted-foreground" : ""}`}>
+              <label key={option.id} className={`flex min-h-14 items-center gap-3 rounded-xl border px-3 text-sm ${chosen ? "border-primary bg-secondary" : "bg-card"} ${soldOut ? "text-muted-foreground" : ""}`}>
                 <input
                   type={group.max_choices === 1 ? "radio" : "checkbox"}
                   name={group.id}
-                  checked={(selected[group.id] ?? []).includes(option.id)}
+                  className="size-5"
+                  checked={chosen}
                   disabled={soldOut}
                   onChange={() => {
                     if (soldOut) return;
@@ -421,20 +424,22 @@ function ItemConfigurator({
           })}
         </fieldset>
       ))}
-      <label className="grid gap-1 text-sm font-medium">
+      <div className="grid gap-1 text-sm font-medium">
         {t.quantity}
-        <input
-          type="number"
-          min={1}
-          className="h-12 rounded-lg border px-3"
-          value={quantity}
-          onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
-        />
+        <div className="flex items-center gap-3">
+          <button type="button" className="inline-flex size-12 items-center justify-center rounded-xl border bg-card text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" aria-label={t.fewer} onClick={() => setQuantity((current) => Math.max(1, current - 1))}>−</button>
+          <span className="min-w-8 text-center text-base">{quantity}</span>
+          <button type="button" className="inline-flex size-12 items-center justify-center rounded-xl border bg-card text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" aria-label={t.more} onClick={() => setQuantity((current) => current + 1)}>+</button>
+        </div>
+      </div>
+      <label className="grid gap-1 text-sm font-medium">
+        {t.yourName}
+        <input className={guestField} autoComplete="name" value={guestName} onChange={(event) => setGuestName(event.target.value)} />
       </label>
       <label className="grid gap-1 text-sm font-medium">
         {t.notes}
         <textarea
-          className="min-h-20 rounded-lg border px-3 py-2"
+          className="min-h-20 rounded-xl border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
         />
@@ -462,7 +467,7 @@ function ItemConfigurator({
       )}
       <button
         type="button"
-        className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
+        className={`${guestPrimaryButton} sticky bottom-0 gap-2`}
         disabled={add.isPending || !guestName.trim()}
         onClick={() => {
           const needed = missingGroup();
@@ -474,7 +479,8 @@ function ItemConfigurator({
           add.mutate(priced.data);
         }}
       >
-        {t.add}
+        {add.isPending ? t.paying : t.add}
+        {quote.data ? <Money amount={quotedOrderTotal(quote.data)} currency={currency} locale={locale} /> : null}
       </button>
     </div>
   );

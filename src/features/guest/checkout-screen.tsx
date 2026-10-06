@@ -11,7 +11,7 @@ import { LoadingState } from "@/components/ops/states";
 import { GuestQuoteSummary } from "@/features/guest/guest-quote-summary";
 import { quotedLineSubtotal } from "@/features/guest/guest-prices";
 import { resumeIfSessionGone } from "@/features/guest/session";
-import { GuestQueryError, LineDetails, useGuestCopy } from "@/features/guest/shell";
+import { GuestQueryError, LineDetails, guestField, guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
 import { useGuestOrderQuote, type QuoteItemInput } from "@/features/guest/use-guest-quote";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
@@ -125,7 +125,10 @@ export function CheckoutScreen() {
     <div className="grid gap-4">
       <h1 className="text-[length:var(--text-28)] font-semibold">{t.checkout}</h1>
       {lines.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t.emptyCart}</p>
+        <div className="grid gap-3">
+          <p className="text-sm text-muted-foreground">{t.emptyCart}</p>
+          <Link href="/order" className={guestPrimaryButton}>{t.backMenu}</Link>
+        </div>
       ) : (
         <ul className="grid gap-3">
           {lines.map((line, index) => {
@@ -139,7 +142,7 @@ export function CheckoutScreen() {
                 </p>
                 <LineDetails modifiers={(line.modifiers ?? []).map((modifier) => modifier.name)} note={line.notes} />
               </div>
-              <div className="text-end">
+              <div className="grid justify-items-end gap-2">
                 {quoted ? (
                   <Money
                     amount={quotedLineSubtotal({
@@ -152,7 +155,7 @@ export function CheckoutScreen() {
                 ) : (
                   <span className="text-sm text-muted-foreground">{quote.isError ? t.retry : t.validate}</span>
                 )}
-                <button type="button" className="mt-2 block min-h-11 text-sm underline" onClick={() => remove.mutate(line.id)}>
+                <button type="button" className="mt-2 min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" onClick={() => remove.mutate(line.id)}>
                   {t.remove}
                 </button>
               </div>
@@ -166,7 +169,7 @@ export function CheckoutScreen() {
           {t.promo}
           <span className="flex gap-2">
             <input
-              className="min-h-11 w-full rounded-lg border bg-background px-3"
+              className={guestField}
               value={promoDraft}
               maxLength={32}
               autoComplete="off"
@@ -181,7 +184,7 @@ export function CheckoutScreen() {
             />
             <button
               type="button"
-              className="min-h-11 shrink-0 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
+              className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               onClick={() => setPromoCode(promoDraft.trim() || null)}
             >
               {t.applyPromo}
@@ -202,24 +205,28 @@ export function CheckoutScreen() {
       ) : lines.length > 0 ? (
         <p className="text-sm">{t.validate}</p>
       ) : null}
-      <label className="grid gap-1 text-sm font-medium">
-        {t.notes}
-        <textarea className="min-h-20 rounded-lg border px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} />
-      </label>
-      <button
-        type="button"
-        className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
-        disabled={lines.length === 0 || place.isPending || !quoteReady}
-        onClick={() => place.mutate()}
-      >
-        {t.placeOrder}
-      </button>
-      <button type="button" className="min-h-11 text-sm underline" onClick={() => clear.mutate()}>
-        {t.clearCart}
-      </button>
-      <Link href="/order" className="text-sm underline">
-        {t.backMenu}
-      </Link>
+      {lines.length > 0 ? (
+        <>
+          <label className="grid gap-1 text-sm font-medium">
+            {t.notes}
+            <textarea className="min-h-20 rounded-xl border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" value={notes} onChange={(event) => setNotes(event.target.value)} />
+          </label>
+          <button
+            type="button"
+            className={guestPrimaryButton}
+            disabled={place.isPending || !quoteReady}
+            onClick={() => place.mutate()}
+          >
+            {place.isPending ? t.paying : t.placeOrder}
+          </button>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Link href="/order" className={guestSecondaryButton}>{t.backMenu}</Link>
+            <button type="button" className={guestSecondaryButton} disabled={clear.isPending} onClick={() => clear.mutate()}>
+              {t.clearCart}
+            </button>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

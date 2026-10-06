@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import type { guestCopy } from "@/features/guest/copy";
 import { toGuestSession } from "@/features/guest/session";
-import { useGuestCopy } from "@/features/guest/shell";
+import { guestField, guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
 import type { components } from "@/lib/api/schema";
 import { mergeGuestBranding } from "@/lib/guest/branding";
 import { useGuest } from "@/stores/guest";
@@ -26,6 +26,7 @@ export function PresenceForm({ token }: { token: string }) {
   const guestName = useGuest((state) => state.guestName);
   const setGuestName = useGuest((state) => state.setGuestName);
   const [pin, setPin] = useState("");
+  const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [lastAction, setLastAction] = useState<"verify" | "join">("join");
@@ -75,6 +76,8 @@ export function PresenceForm({ token }: { token: string }) {
   }
 
   function locate(action: "verify" | "join") {
+    setLastAction(action);
+    setPending(true);
     if (!navigator.geolocation) {
       void submit(action);
       return;
@@ -102,29 +105,39 @@ export function PresenceForm({ token }: { token: string }) {
       <label className="grid gap-1 text-sm font-medium">
         {t.yourName}
         <input
-          className="h-12 rounded-lg border px-3"
+          className={guestField}
+          autoComplete="name"
           value={guestName}
           onChange={(event) => setGuestName(event.target.value)}
         />
         <span className="font-normal text-muted-foreground">{t.nameHint}</span>
       </label>
-      <label className="grid gap-1 text-sm font-medium">
-        {t.pin}
-        <input
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          className="h-12 rounded-lg border px-3 tracking-widest"
-          value={pin}
-          onChange={(event) => setPin(event.target.value)}
-        />
-        <span className="font-normal text-muted-foreground">{t.pinHint}</span>
-      </label>
+      <button
+        type="button"
+        className="min-h-11 justify-self-start text-sm font-medium underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        onClick={() => setShowPin((current) => !current)}
+      >
+        {showPin ? t.hidePin : t.havePin}
+      </button>
+      {showPin ? (
+        <label className="grid gap-1 text-sm font-medium">
+          {t.pin}
+          <input
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            className={`${guestField} tracking-widest`}
+            value={pin}
+            onChange={(event) => setPin(event.target.value)}
+          />
+          <span className="font-normal text-muted-foreground">{t.pinHint}</span>
+        </label>
+      ) : null}
       {error ? (
         <div role="alert" className="grid gap-2 rounded-xl border border-destructive/40 p-3">
           <p className="text-sm text-destructive">{error}</p>
           <button
             type="button"
-            className="min-h-11 justify-self-start rounded-lg border px-4 text-sm font-medium disabled:opacity-50"
+            className={guestSecondaryButton}
             disabled={pending}
             onClick={() => (lastAction === "verify" ? locate("verify") : void submit("join"))}
           >
@@ -132,22 +145,28 @@ export function PresenceForm({ token }: { token: string }) {
           </button>
         </div>
       ) : null}
-      <button
-        type="button"
-        className="min-h-12 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
-        disabled={pending}
-        onClick={() => void submit("join")}
-      >
-        {pending ? t.verifying : t.join}
-      </button>
-      <button
-        type="button"
-        className="min-h-12 rounded-xl border px-4 text-sm font-medium disabled:opacity-50"
-        disabled={pending}
-        onClick={() => locate("verify")}
-      >
-        {t.useLocation}
-      </button>
+      <div className="grid gap-1">
+        <button
+          type="button"
+          className={guestPrimaryButton}
+          disabled={pending}
+          onClick={() => locate("verify")}
+        >
+          {pending && lastAction === "verify" ? t.verifying : t.useLocation}
+        </button>
+        <p className="text-sm text-muted-foreground">{t.locationHint}</p>
+      </div>
+      <div className="grid gap-1">
+        <button
+          type="button"
+          className={guestSecondaryButton}
+          disabled={pending}
+          onClick={() => void submit("join")}
+        >
+          {pending && lastAction === "join" ? t.verifying : t.join}
+        </button>
+        <p className="text-sm text-muted-foreground">{t.joinHint}</p>
+      </div>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { Money } from "@/components/ops/money";
 import { LoadingState } from "@/components/ops/states";
 import { guestStatus, PAYABLE_STATUSES } from "@/features/guest/copy";
 import { isGuestSessionGone, resumeIfSessionGone } from "@/features/guest/session";
-import { GuestQueryError, LineDetails, PresenceNote, useGuestCopy } from "@/features/guest/shell";
+import { GuestQueryError, LineDetails, PresenceNote, guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
 import { usePollingInterval } from "@/hooks/use-page-visible";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
@@ -218,7 +218,7 @@ export function TrackScreen() {
       <div className="grid gap-3">
         <h1 className="text-[length:var(--text-28)] font-semibold">{t.track}</h1>
         <p className="text-sm text-muted-foreground">{t.noOrder}</p>
-        <Link href="/order" className="text-sm underline">{t.backMenu}</Link>
+        <Link href="/order" className={guestPrimaryButton}>{t.menu}</Link>
       </div>
     );
   }
@@ -254,10 +254,7 @@ export function TrackScreen() {
           {activeOrder.cancellation_reason ? (
             <p className="text-sm text-muted-foreground">{activeOrder.cancellation_reason}</p>
           ) : null}
-          <Link
-            href="/order"
-            className="inline-flex min-h-14 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground"
-          >
+          <Link href="/order" className={guestPrimaryButton}>
             {t.startNewOrder}
           </Link>
         </div>
@@ -269,11 +266,15 @@ export function TrackScreen() {
       {pending ? <PresenceNote /> : null}
       {showKitchen ? (
         <ol className="grid gap-2">
-          {STEPS.map((step, index) => (
-            <li key={step} className={`text-sm ${index <= current ? "font-semibold" : "text-muted-foreground"}`}>
-              {guestStatus[locale][step]}
-            </li>
-          ))}
+          {STEPS.map((step, index) => {
+            const reached = index <= current;
+            return (
+              <li key={step} className="flex items-center gap-3">
+                <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-medium ${reached ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{index + 1}</span>
+                <span className={reached ? "font-medium" : "text-muted-foreground"}>{guestStatus[locale][step]}</span>
+              </li>
+            );
+          })}
         </ol>
       ) : null}
       {(activeOrder.items ?? []).length > 0 ? (
@@ -314,31 +315,17 @@ export function TrackScreen() {
         </p>
       ) : null}
       {finished ? (
-        <Link
-          href="/order"
-          className="inline-flex min-h-14 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground"
-        >
+        <Link href="/order" className={guestPrimaryButton}>
           {t.orderElse}
         </Link>
       ) : null}
       {rejected || finished ? null : (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Link href="/order/service" className="inline-flex min-h-14 items-center justify-center rounded-lg border text-sm font-medium">
-            {t.call}
-          </Link>
-          <button
-            type="button"
-            className="min-h-14 rounded-lg border text-sm font-medium disabled:opacity-50"
-            disabled={here.isPending}
-            onClick={() => here.mutate()}
-          >
-            {t.here}
-          </button>
+        <div className="grid gap-2">
           {canPay ? (
             <>
               <button
                 type="button"
-                className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
+                className={guestPrimaryButton}
                 disabled={pay.isPending}
                 onClick={() => pay.mutate({ method: "CASH", activeOrder })}
               >
@@ -346,7 +333,7 @@ export function TrackScreen() {
               </button>
               <button
                 type="button"
-                className="min-h-14 rounded-lg border text-sm font-medium disabled:opacity-50"
+                className={guestSecondaryButton}
                 disabled={pay.isPending}
                 onClick={() => pay.mutate({ method: "ONLINE_CARD", activeOrder })}
               >
@@ -354,12 +341,23 @@ export function TrackScreen() {
               </button>
             </>
           ) : null}
+          <Link href="/order/service" className={guestSecondaryButton}>
+            {t.call}
+          </Link>
+          <button
+            type="button"
+            className={guestSecondaryButton}
+            disabled={here.isPending}
+            onClick={() => here.mutate()}
+          >
+            {here.isPending ? t.paying : t.here}
+          </button>
         </div>
       )}
       {pending ? <p className="text-sm text-muted-foreground">{t.payAfterConfirm}</p> : null}
       {GUEST_CANCELLABLE.has(status) ? (
         <div className="mt-4 border-t pt-4">
-          <button type="button" className="min-h-11 text-sm text-muted-foreground underline" onClick={() => setConfirmCancel(true)}>
+          <button type="button" className="min-h-12 rounded-xl px-3 text-sm text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" onClick={() => setConfirmCancel(true)}>
             {t.cancelOrder}
           </button>
         </div>

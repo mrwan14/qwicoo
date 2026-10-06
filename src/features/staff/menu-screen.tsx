@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { LocaleText } from "@/components/ops/locale-text";
 import { PageHeader } from "@/components/ops/page-header";
+import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { asApiError } from "@/lib/api/error";
@@ -199,28 +200,70 @@ export function MenuAdmin() {
           </ul>
         </section>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <aside className="flex gap-2 overflow-x-auto lg:flex-col">
-            {categories.map((category) => (
-              <button key={category.id} type="button" className={`min-h-12 shrink-0 rounded-xl px-3 text-start text-sm ${category.id === active?.id ? "bg-primary text-primary-foreground" : "bg-card shadow-elev-1"}`} onClick={() => setCategoryId(category.id)}>
-                {pickLocale(category.name, "en")}
-              </button>
-            ))}
+        <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className="grid gap-2">
+            <p className={hint}>Categories guests browse, such as Coffee.</p>
+            <div className="flex gap-2 overflow-x-auto lg:flex-col">
+              {categories.map((category) => {
+                const selected = category.id === active?.id;
+                const count = category.items?.length ?? 0;
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    className={`flex min-h-14 shrink-0 flex-col justify-center rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${selected ? "bg-primary text-primary-foreground" : "bg-card shadow-elev-1 ring-1 ring-foreground/5"}`}
+                    onClick={() => setCategoryId(category.id)}
+                  >
+                    <span className="text-sm font-medium">{pickLocale(category.name, "en")}</span>
+                    <span className={`text-xs ${selected ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                      {count === 1 ? "1 item" : `${count} items`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </aside>
           {active ? (
-            <div className="grid gap-2">
-              <div className="flex justify-end">
-                <button type="button" className="min-h-11 rounded-lg border px-3 text-sm text-destructive" onClick={() => setCategoryToDelete(active.id)}>Delete category</button>
+            <div className="grid gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">{pickLocale(active.name, "en")}</h2>
+                  <p className={hint}>
+                    {(active.items?.length ?? 0) === 1 ? "1 item" : `${active.items?.length ?? 0} items`}
+                    {STATION_LABELS[active.station] ? ` · sent to ${STATION_LABELS[active.station]}` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="min-h-11 rounded-xl border border-destructive/30 px-4 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  onClick={() => setCategoryToDelete(active.id)}
+                >
+                  Delete category
+                </button>
               </div>
-              <ul className="grid gap-2">
+              <ul className="grid gap-3">
                 {(active.items ?? []).map((item) => (
-                  <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-card p-3 shadow-elev-1">
-                    <button type="button" className="min-h-11 text-start font-medium" onClick={() => setSelectedId(item.id)}>
-                      <LocaleText value={item.name} /> · {formatMoney(String(item.base_price))}
-                    </button>
-                    <PriceField item={item} onDone={refresh} />
-                    <AvailabilityToggle item={item} onDone={refresh} />
-                    <DeleteItemButton item={item} onDone={refresh} />
+                  <li key={item.id} className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="grid gap-1">
+                        <p className="font-semibold"><LocaleText value={item.name} /></p>
+                        <p className="text-sm text-muted-foreground">{formatMoney(String(item.base_price))}</p>
+                      </div>
+                      <StatusChip tone={item.is_available ? "available" : "soldout"}>{item.is_available ? "Available" : "Sold out"}</StatusChip>
+                    </div>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <PriceField item={item} onDone={refresh} />
+                      <AvailabilityToggle item={item} onDone={refresh} />
+                      <button
+                        type="button"
+                        className="min-h-11 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        onClick={() => setSelectedId(item.id)}
+                      >
+                        Options
+                      </button>
+                      <DeleteItemButton item={item} onDone={refresh} />
+                    </div>
+                    <p className={hint}>Save price updates what guests pay. Sold out hides the item. Options are extras such as size or milk.</p>
                   </li>
                 ))}
                 {(active.items ?? []).length === 0 ? <EmptyState title="No items in this category" body="Add an item to show it on the guest menu." /> : null}
@@ -337,8 +380,8 @@ function AvailabilityToggle({ item, onDone }: { item: Item; onDone: () => void }
   });
   return (
     <>
-      <button type="button" className="min-h-11 rounded-lg border px-3 text-sm" onClick={() => setOpen(true)}>
-        {item.is_available ? "86 item" : "Make available"}
+      <button type="button" className="min-h-11 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" onClick={() => setOpen(true)}>
+        {item.is_available ? "Mark sold out" : "Make available"}
       </button>
       <ConfirmDialog
         open={open}
@@ -471,9 +514,14 @@ function PriceField({ item, onDone }: { item: Item; onDone: () => void }) {
     onError: (error: Error) => toast.error(error.message),
   });
   return (
-    <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
-      <input className="h-11 w-28 rounded-lg border px-3 text-sm" aria-label="Base price" value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" />
-      <button className="min-h-11 rounded-lg border px-3 text-sm" type="submit">Save price</button>
+    <form className="flex items-end gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
+      <label className="grid gap-1 text-sm">
+        New price (EGP)
+        <input className="h-11 w-28 rounded-lg border px-3 text-sm" value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" />
+      </label>
+      <button className="min-h-11 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" type="submit" disabled={save.isPending}>
+        {save.isPending ? "Saving…" : "Save price"}
+      </button>
     </form>
   );
 }
@@ -496,7 +544,7 @@ function DeleteItemButton({ item, onDone }: { item: Item; onDone: () => void }) 
   });
   return (
     <>
-      <button type="button" className="min-h-11 rounded-lg border px-3 text-sm text-destructive" onClick={() => setOpen(true)}>Delete</button>
+      <button type="button" className="min-h-11 rounded-xl border border-destructive/30 px-4 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" onClick={() => setOpen(true)}>Delete</button>
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}

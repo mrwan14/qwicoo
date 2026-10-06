@@ -43,6 +43,27 @@ function attendanceHeading(name: string | null | undefined, status: string | nul
   return who ? `${who} · ${label}` : label;
 }
 
+const CAIRO_WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+
+function TodayHoursNote({ hours, branchId }: { hours: components["schemas"]["OpeningHours"] | null | undefined; branchId: string | null }) {
+  if (!branchId) return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Choose a branch. Your check-in uses that branch&apos;s opening time.</p>;
+  const settings = (
+    <Link href={`/app/branches/${branchId}`} className="font-medium text-foreground underline-offset-2 hover:underline">
+      Branch settings
+    </Link>
+  );
+  if (!hours) {
+    return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">No operating hours are set yet. Open {settings} and choose Operating hours. Until then, arriving by 10:00 counts as on time.</p>;
+  }
+  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "Africa/Cairo", weekday: "short" }).format(new Date()).slice(0, 3).toLowerCase();
+  const key = CAIRO_WEEKDAYS.find((day) => day.startsWith(weekday)) ?? "mon";
+  const range = hours[key]?.[0];
+  if (!range) {
+    return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">This branch is closed today, so arriving by 10:00 counts as on time. Change the day in {settings}.</p>;
+  }
+  return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Today this branch opens at {range.open.slice(0, 5)} and closes at {range.close.slice(0, 5)}. Arriving by {range.open.slice(0, 5)}, plus a short grace, counts as on time. Change the hours in {settings}.</p>;
+}
+
 export function FinancialsScreen() {
   const queryClient = useQueryClient();
   const branchId = useScope((state) => state.branchId);
@@ -235,10 +256,20 @@ export function AttendanceScreen() {
   const branchId = useScope((state) => state.branchId);
   const branches = useScope((state) => state.branches);
   const watchedBranchIds = branches.length > 0 ? branches.map((branch) => branch.id) : branchId ? [branchId] : [];
+  const isAdmin = me?.role === "BRAND_ADMIN" || me?.role === "BRANCH_ADMIN";
   const canOverride = me?.role === "SUPER_ADMIN" || me?.role === "BRAND_ADMIN";
   const [reason, setReason] = useState("");
   const [logId, setLogId] = useState<string | null>(null);
   const [range, setRange] = useState<(typeof ATTENDANCE_RANGES)[number]["value"]>("daily");
+  const hoursBranch = useQuery({
+    queryKey: ["branch", branchId],
+    enabled: Boolean(branchId) && isAdmin,
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/branches/{branch_id}", { params: { path: { branch_id: branchId ?? "" } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Branch failed");
+      return result.data;
+    },
+  });
   const status = useQuery({
     queryKey: ["attendance-me"],
     queryFn: async () => {
@@ -316,6 +347,7 @@ export function AttendanceScreen() {
       <div className="grid gap-1">
         <h1 className="text-[length:var(--text-28)] font-semibold">Attendance</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Check in when you arrive at the branch. The list shows the staff at the branches you look after.</p>
+        {isAdmin && !hoursBranch.isLoading ? <TodayHoursNote hours={hoursBranch.data?.opening_hours} branchId={branchId} /> : null}
       </div>
       {status.isError ? (
         <ErrorState body={status.error instanceof Error ? status.error.message : "Status failed"} onRetry={() => void status.refetch()} />

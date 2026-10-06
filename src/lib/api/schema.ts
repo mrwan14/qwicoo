@@ -3315,6 +3315,8 @@ export interface components {
              * @default true
              */
             service_fee_dine_in_only: boolean;
+            /** Weekly hours. A day with an empty list is closed. */
+            opening_hours?: components["schemas"]["OpeningHours"] | null;
             /** Created At */
             created_at?: string | null;
             /** Updated At */
@@ -3430,6 +3432,31 @@ export interface components {
             timezone?: string | null;
             /** Is Active */
             is_active?: boolean | null;
+            /** Weekly hours. Null clears the schedule. */
+            opening_hours?: components["schemas"]["OpeningHours"] | null;
+        };
+        /**
+         * OpeningHours
+         * @description Weekly schedule. A missing day or an empty list means closed.
+         */
+        OpeningHours: {
+            mon?: components["schemas"]["OpeningRange"][];
+            tue?: components["schemas"]["OpeningRange"][];
+            wed?: components["schemas"]["OpeningRange"][];
+            thu?: components["schemas"]["OpeningRange"][];
+            fri?: components["schemas"]["OpeningRange"][];
+            sat?: components["schemas"]["OpeningRange"][];
+            sun?: components["schemas"]["OpeningRange"][];
+        };
+        /**
+         * OpeningRange
+         * @description One open interval. A close earlier than open ends after midnight.
+         */
+        OpeningRange: {
+            /** Opening time, 24-hour HH:MM. */
+            open: string;
+            /** Closing time, 24-hour HH:MM. */
+            close: string;
         };
         /**
          * BranchesMatrixResponse

@@ -24,6 +24,7 @@ const hint = "max-w-lg text-sm leading-6 text-muted-foreground";
 
 const TAB_LABELS = {
   profile: "Profile",
+  hours: "Operating hours",
   location: "Location",
   financials: "Financials",
   sla: "SLA",
@@ -101,6 +102,7 @@ export function BranchScreen({ branchId }: { branchId: string }) {
         ))}
       </div>
       {tab === "profile" ? <ProfileTab branchId={branchId} currency={branchRecord.currency} address={branchRecord.address ?? ""} /> : null}
+      {tab === "hours" ? <HoursTab branchId={branchId} hours={branchRecord.opening_hours} /> : null}
       {tab === "location" ? <LocationTab branch={branchRecord} /> : null}
       {tab === "financials" ? <FinancialsTab branchId={branchId} /> : null}
       {tab === "sla" ? <SlaTab branchId={branchId} /> : null}
@@ -108,6 +110,97 @@ export function BranchScreen({ branchId }: { branchId: string }) {
       {tab === "tables" ? <TablesTab branchId={branchId} /> : null}
     </div>
   );
+}
+
+const WEEKDAYS = [
+  ["mon", "Monday"],
+  ["tue", "Tuesday"],
+  ["wed", "Wednesday"],
+  ["thu", "Thursday"],
+  ["fri", "Friday"],
+  ["sat", "Saturday"],
+  ["sun", "Sunday"],
+] as const;
+
+type Weekday = (typeof WEEKDAYS)[number][0];
+
+function HoursTab({ branchId, hours }: { branchId: string; hours: components["schemas"]["OpeningHours"] | null | undefined }) {
+  const queryClient = useQueryClient();
+  const [days, setDays] = useState(() => daysFromHours(hours));
+  useEffect(() => {
+    setDays(daysFromHours(hours));
+  }, [hours]);
+  const save = useMutation({
+    mutationFn: async () => {
+      const opening_hours: components["schemas"]["OpeningHours"] = {};
+      for (const [key] of WEEKDAYS) {
+        const day = days[key];
+        if (day.closed) {
+          opening_hours[key] = [];
+          continue;
+        }
+        if (day.open === day.close) throw new Error(`${dayLabel(key)} needs a closing time that is different from the opening time.`);
+        opening_hours[key] = [{ open: day.open, close: day.close }];
+      }
+      const result = await browserApi.PATCH("/api/v1/branches/{branch_id}", {
+        params: { path: { branch_id: branchId } },
+        body: { opening_hours },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not save operating hours");
+    },
+    onSuccess: () => {
+      toast.success("Operating hours saved");
+      void queryClient.invalidateQueries({ queryKey: ["branch", branchId] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  return (
+    <form className="grid max-w-xl gap-3" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
+      <p className={hint}>When this branch is open. Brand and branch admins who check in are on time if they arrive by the opening time, plus a short grace period. A closing time earlier than the opening time means the branch stays open past midnight.</p>
+      {WEEKDAYS.map(([key, label]) => {
+        const day = days[key];
+        return (
+          <div key={key} className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-[8rem_1fr_1fr_auto] sm:items-end">
+            <span className="text-sm font-medium">{label}</span>
+            <label className="grid gap-1 text-sm">
+              Opens
+              <input className={control} type="time" value={day.open} disabled={day.closed} onChange={(event) => setDays((current) => ({ ...current, [key]: { ...current[key], open: event.target.value } }))} />
+            </label>
+            <label className="grid gap-1 text-sm">
+              Closes
+              <input className={control} type="time" value={day.close} disabled={day.closed} onChange={(event) => setDays((current) => ({ ...current, [key]: { ...current[key], close: event.target.value } }))} />
+            </label>
+            <label className="flex min-h-11 items-center gap-2 text-sm">
+              <input type="checkbox" checked={day.closed} onChange={(event) => setDays((current) => ({ ...current, [key]: { ...current[key], closed: event.target.checked } }))} />
+              Closed
+            </label>
+          </div>
+        );
+      })}
+      <button className="min-h-11 w-fit rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={save.isPending}>
+        {save.isPending ? "Saving…" : "Save operating hours"}
+      </button>
+    </form>
+  );
+}
+
+function dayLabel(key: Weekday): string {
+  return WEEKDAYS.find(([day]) => day === key)?.[1] ?? key;
+}
+
+function daysFromHours(hours: components["schemas"]["OpeningHours"] | null | undefined): Record<Weekday, { open: string; close: string; closed: boolean }> {
+  const next = {} as Record<Weekday, { open: string; close: string; closed: boolean }>;
+  for (const [key] of WEEKDAYS) {
+    if (!hours) {
+      next[key] = { open: "09:00", close: "23:00", closed: false };
+      continue;
+    }
+    const range = hours[key]?.[0];
+    next[key] = range
+      ? { open: range.open.slice(0, 5), close: range.close.slice(0, 5), closed: false }
+      : { open: "09:00", close: "23:00", closed: true };
+  }
+  return next;
 }
 
 function ProfileTab({ branchId, currency, address: savedAddress }: { branchId: string; currency: string; address: string }) {

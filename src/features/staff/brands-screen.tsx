@@ -142,10 +142,12 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
     },
   });
   const logo = useMutation({
-    mutationFn: async (file: File) => uploadLogo(file, "brands", async () => {
+    mutationFn: async (file: File) => uploadLogo(file, "brands", async (publicUrl) => {
       const result = await browserApi.POST("/api/v1/brands/{brand_id}/logo", {
         params: { path: { brand_id: brandId } },
-      });
+        body: { logo_url: publicUrl },
+        headers: { "Content-Type": "application/json" },
+      } as never);
       if (!result.response.ok) throw asApiError(result.error, result.response, "Logo failed");
     }),
     onSuccess: () => {

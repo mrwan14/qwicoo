@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MapPin } from "lucide-react";
+import { ArrowLeft, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -154,6 +154,13 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
 
   return (
     <div className="grid gap-4">
+      <Link
+        href="/app/brands"
+        className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        <ArrowLeft aria-hidden className="size-4" />
+        Back
+      </Link>
       <PageHeader
         title={brand.data.name}
         action={

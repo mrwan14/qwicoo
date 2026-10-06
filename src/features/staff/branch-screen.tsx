@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Plus, RefreshCw } from "lucide-react";
+import { ArrowLeft, MapPin, Plus, RefreshCw } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -57,6 +58,13 @@ export function BranchScreen({ branchId }: { branchId: string }) {
   const tabs = (Object.keys(TAB_LABELS) as BranchTab[]).filter((item) => item !== "pin" || canSeePin);
   return (
     <div className="grid gap-4">
+      <Link
+        href={branchRecord.brand_id ? `/app/brands/${branchRecord.brand_id}` : "/app/brands"}
+        className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        <ArrowLeft aria-hidden className="size-4" />
+        Back
+      </Link>
       <h1 className="text-[length:var(--text-28)] font-semibold">{branchRecord.display_name || branchRecord.slug}</h1>
       <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Branch settings">
         {tabs.map((item) => (

@@ -19,6 +19,7 @@ import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
 const hint = "text-sm leading-6 text-muted-foreground";
+const quietButton = "inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 const STATIONS = ["HOT_KITCHEN", "COLD_KITCHEN", "BEVERAGE", "DESSERT"] as const;
 const STATION_LABELS: Record<(typeof STATIONS)[number], string> = {
   HOT_KITCHEN: "Hot kitchen",
@@ -202,7 +203,7 @@ export function MenuAdmin() {
       ) : (
         <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
           <aside className="grid gap-2">
-            <p className={hint}>Categories guests browse, such as Coffee.</p>
+            <p className="text-sm font-medium">Categories</p>
             <div className="flex gap-2 overflow-x-auto lg:flex-col">
               {categories.map((category) => {
                 const selected = category.id === active?.id;
@@ -230,7 +231,7 @@ export function MenuAdmin() {
                   <h2 className="text-lg font-semibold">{pickLocale(active.name, "en")}</h2>
                   <p className={hint}>
                     {(active.items?.length ?? 0) === 1 ? "1 item" : `${active.items?.length ?? 0} items`}
-                    {STATION_LABELS[active.station] ? ` · sent to ${STATION_LABELS[active.station]}` : ""}
+                    {STATION_LABELS[active.station] ? ` · sent to ${STATION_LABELS[active.station]}` : ""}. Change a price to save it. Sold out hides an item. Options are extras such as size or milk.
                   </p>
                 </div>
                 <button
@@ -243,27 +244,21 @@ export function MenuAdmin() {
               </div>
               <ul className="grid gap-3">
                 {(active.items ?? []).map((item) => (
-                  <li key={item.id} className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="grid gap-1">
+                  <li key={item.id} className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="grid gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <p className="font-semibold"><LocaleText value={item.name} /></p>
-                        <p className="text-sm text-muted-foreground">{formatMoney(String(item.base_price))}</p>
+                        <StatusChip tone={item.is_available ? "available" : "soldout"}>{item.is_available ? "Available" : "Sold out"}</StatusChip>
                       </div>
-                      <StatusChip tone={item.is_available ? "available" : "soldout"}>{item.is_available ? "Available" : "Sold out"}</StatusChip>
-                    </div>
-                    <div className="flex flex-wrap items-end gap-2">
                       <PriceField item={item} onDone={refresh} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
                       <AvailabilityToggle item={item} onDone={refresh} />
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                        onClick={() => setSelectedId(item.id)}
-                      >
+                      <button type="button" className={quietButton} onClick={() => setSelectedId(item.id)}>
                         Options
                       </button>
                       <DeleteItemButton item={item} onDone={refresh} />
                     </div>
-                    <p className={hint}>Change the price, then save it. Sold out hides the item. Options are extras such as size or milk.</p>
                   </li>
                 ))}
                 {(active.items ?? []).length === 0 ? <EmptyState title="No items in this category" body="Add an item to show it on the guest menu." /> : null}
@@ -380,7 +375,7 @@ function AvailabilityToggle({ item, onDone }: { item: Item; onDone: () => void }
   });
   return (
     <>
-      <button type="button" className="min-h-11 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" onClick={() => setOpen(true)}>
+      <button type="button" className={quietButton} onClick={() => setOpen(true)}>
         {item.is_available ? "Mark sold out" : "Make available"}
       </button>
       <ConfirmDialog
@@ -507,8 +502,10 @@ function priceEdited(next: string, saved: string): boolean {
 }
 
 function PriceField({ item, onDone }: { item: Item; onDone: () => void }) {
-  const [price, setPrice] = useState(String(item.base_price));
-  const edited = priceEdited(price, String(item.base_price));
+  const saved = String(item.base_price);
+  const [editing, setEditing] = useState(false);
+  const [price, setPrice] = useState(saved);
+  const edited = priceEdited(price, saved);
   const save = useMutation({
     mutationFn: async () => {
       const body: components["schemas"]["StaffItemUpdate"] = { base_price: price };
@@ -520,21 +517,42 @@ function PriceField({ item, onDone }: { item: Item; onDone: () => void }) {
     },
     onSuccess: () => {
       toast.success("Price saved");
+      setEditing(false);
       onDone();
     },
     onError: (error: Error) => toast.error(error.message),
   });
+  if (!editing) {
+    return (
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm font-medium">{formatMoney(saved)}</p>
+        <button type="button" className={quietButton} onClick={() => { setPrice(saved); setEditing(true); }}>
+          Change price
+        </button>
+      </div>
+    );
+  }
   return (
-    <form className="flex items-end gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
+    <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); if (edited) save.mutate(); }}>
       <label className="grid gap-1 text-sm">
-        New price (EGP)
-        <input className="h-11 w-28 rounded-lg border px-3 text-sm" value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" />
+        Price (EGP)
+        <input className="h-11 w-28 rounded-lg border bg-background px-3 text-sm" value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" autoFocus />
       </label>
       {edited ? (
-        <button className="min-h-11 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" type="submit" disabled={save.isPending}>
+        <button className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" type="submit" disabled={save.isPending}>
           {save.isPending ? "Saving…" : "Save price"}
         </button>
       ) : null}
+      <button
+        type="button"
+        className={quietButton}
+        onClick={() => {
+          setPrice(saved);
+          setEditing(false);
+        }}
+      >
+        Cancel
+      </button>
     </form>
   );
 }

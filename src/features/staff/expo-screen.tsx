@@ -191,15 +191,27 @@ export function ExpoScreen() {
       >
         <label className="grid gap-1 text-sm sm:col-span-2">
           Guest code
-          <span className="text-sm leading-6 text-muted-foreground">The guest shows this code. Check it before you give them the food.</span>
+          <span className="text-sm leading-6 text-muted-foreground">Only a drive-thru or curbside guest has this code on their phone. A table or a normal takeaway does not. Type it to confirm the order is theirs.</span>
         </label>
         <input className="h-12 rounded-xl border bg-background px-3" value={token} onChange={(event) => setToken(event.target.value)} />
         <button className="min-h-12 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" type="submit" disabled={!token.trim() || verify.isPending}>
           {verify.isPending ? "Checking…" : "Check code"}
         </button>
       </form>
-      {cards.length === 0 ? <EmptyState title="Nothing to hand over" body="Orders appear here while the kitchen is making them." /> : null}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {cards.length === 0 ? <EmptyState title="Nothing to hand over" body="Orders appear here while the kitchen is making them." /> : (
+      <div className="overflow-x-auto rounded-2xl border bg-card">
+        <table className="w-full min-w-[760px] border-collapse text-sm">
+          <caption className="px-4 py-3 text-start text-sm text-muted-foreground">Press Guest has the food after you give the order to the guest.</caption>
+          <thead>
+            <tr className="border-b text-muted-foreground">
+              <th scope="col" className="px-4 py-3 text-start font-medium">Order</th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">Dishes</th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">Status</th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">Note</th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">Action</th>
+            </tr>
+          </thead>
+          <tbody>
         {cards.map(({ order, number, lines }) => {
           const ready = order.status === "READY";
           const handingOver = handOver.isPending && handOver.variables === order.order_id;
@@ -211,19 +223,11 @@ export function ExpoScreen() {
           const noteChanged = draftNote !== savedNote;
           const dishesLeft = order.total_ticket_items > 0 && order.ready_ticket_items < order.total_ticket_items;
           return (
-            <article
-              key={order.order_id}
-              className={`grid content-start gap-3 rounded-2xl border bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5 ${ready ? "border-[var(--status-ready)]" : ""}`}
-            >
-              <header className="flex items-start justify-between gap-2">
-                <p className="text-[length:var(--text-28)] leading-none font-semibold tabular-nums">{number ?? "No number"}</p>
-                <StatusChip tone={ready ? "ready" : "ordered"}>{ready ? "Ready to hand over" : "Still in the kitchen"}</StatusChip>
-              </header>
-              {dishesLeft ? (
-                <p className="text-sm text-muted-foreground">{order.ready_ticket_items} of {order.total_ticket_items} dishes ready</p>
-              ) : null}
+            <tr key={order.order_id} className="border-b align-top last:border-b-0">
+              <th scope="row" className="px-4 py-4 text-start text-base font-semibold tabular-nums">{number ?? "No number"}</th>
+              <td className="px-4 py-4">
               {order.customer_notes?.trim() ? (
-                <p className={`rounded-md px-2 py-1 text-sm font-medium ${toneSurface("ordered")}`}>
+                <p className={`mb-2 rounded-md px-2 py-1 text-sm font-medium ${toneSurface("ordered")}`}>
                   Order note: {order.customer_notes}
                 </p>
               ) : null}
@@ -267,6 +271,14 @@ export function ExpoScreen() {
                   })}
                 </ul>
               )}
+              </td>
+              <td className="px-4 py-4">
+                <StatusChip tone={ready ? "ready" : "ordered"}>{ready ? "Ready to hand over" : "Still in the kitchen"}</StatusChip>
+                {dishesLeft ? (
+                  <p className="mt-2 text-sm text-muted-foreground">{order.ready_ticket_items} of {order.total_ticket_items} dishes ready</p>
+                ) : null}
+              </td>
+              <td className="px-4 py-4">
               {editingNote ? (
                 <label className="grid gap-1 text-sm">
                   Note for the handover
@@ -301,39 +313,39 @@ export function ExpoScreen() {
                   </button>
                 </div>
               )}
+              </td>
+              <td className="px-4 py-4">
               {ready ? (
                 isRunner ? (
                   <p className="text-sm text-muted-foreground">A colleague marks this once the guest has the food.</p>
                 ) : (
-                <div className="grid gap-1">
                   <button
                     type="button"
-                    className="min-h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                    className="min-h-11 rounded-xl bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
                     disabled={handingOver}
                     onClick={() => handOver.mutate(order.order_id)}
                   >
                     {handingOver ? "Handing over…" : "Guest has the food"}
                   </button>
-                  <p className="text-sm text-muted-foreground">Press this after you have given the order to the guest.</p>
-                </div>
                 )
               ) : (
-                <div className="grid gap-1">
-                  <button
-                    type="button"
-                    className="min-h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
-                    disabled={bumping}
-                    onClick={() => bump.mutate(order.order_id)}
-                  >
-                    {bumping ? "Marking…" : "Mark ready to hand over"}
-                  </button>
-                  <p className="text-sm text-muted-foreground">The kitchen has not finished this order yet.</p>
-                </div>
+                <button
+                  type="button"
+                  className="min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                  disabled={bumping}
+                  onClick={() => bump.mutate(order.order_id)}
+                >
+                  {bumping ? "Marking…" : "Mark ready to hand over"}
+                </button>
               )}
-            </article>
+              </td>
+            </tr>
           );
         })}
+          </tbody>
+        </table>
       </div>
+      )}
     </div>
   );
 }

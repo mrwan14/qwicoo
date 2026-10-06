@@ -80,7 +80,7 @@ export function BranchScreen({ branchId }: { branchId: string }) {
           </button>
         ))}
       </div>
-      {tab === "profile" ? <ProfileTab branchId={branchId} currency={branchRecord.currency} /> : null}
+      {tab === "profile" ? <ProfileTab branchId={branchId} currency={branchRecord.currency} address={branchRecord.address ?? ""} /> : null}
       {tab === "location" ? <LocationTab branch={branchRecord} /> : null}
       {tab === "financials" ? <FinancialsTab branchId={branchId} /> : null}
       {tab === "sla" ? <SlaTab branchId={branchId} /> : null}
@@ -90,8 +90,9 @@ export function BranchScreen({ branchId }: { branchId: string }) {
   );
 }
 
-function ProfileTab({ branchId, currency }: { branchId: string; currency: string }) {
-  const [address, setAddress] = useState("");
+function ProfileTab({ branchId, currency, address: savedAddress }: { branchId: string; currency: string; address: string }) {
+  const queryClient = useQueryClient();
+  const [address, setAddress] = useState(savedAddress);
   const save = useMutation({
     mutationFn: async () => {
       const result = await browserApi.PATCH("/api/v1/branches/{branch_id}", {
@@ -100,7 +101,10 @@ function ProfileTab({ branchId, currency }: { branchId: string; currency: string
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Update failed");
     },
-    onSuccess: () => toast.success("Profile saved"),
+    onSuccess: () => {
+      toast.success("Profile saved");
+      void queryClient.invalidateQueries({ queryKey: ["branch", branchId] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
   return (
@@ -193,16 +197,23 @@ function FinancialsTab({ branchId }: { branchId: string }) {
       return result.data;
     },
   });
-  const [tax, setTax] = useState("0.14");
-  const [fee, setFee] = useState("0.00");
+  if (settings.isLoading) return <LoadingState label="Loading settings" />;
+  if (settings.isError || !settings.data) return <ErrorState body={settings.error?.message ?? "Settings missing"} onRetry={() => void settings.refetch()} />;
+  return <FinancialsForm branchId={branchId} settings={settings.data} />;
+}
+
+function FinancialsForm({ branchId, settings }: { branchId: string; settings: components["schemas"]["BranchFinancialSettingsResponse"] }) {
+  const queryClient = useQueryClient();
+  const [tax, setTax] = useState(settings.tax_rate);
+  const [fee, setFee] = useState(settings.service_fee_rate);
   const save = useMutation({
     mutationFn: async () => {
       const body: components["schemas"]["UpdateBranchFinancialSettingsRequest"] = {
         tax_rate: tax,
         service_fee_rate: fee,
-        is_service_taxable: false,
-        is_tax_inclusive: false,
-        service_fee_dine_in_only: true,
+        is_service_taxable: settings.is_service_taxable,
+        is_tax_inclusive: settings.is_tax_inclusive,
+        service_fee_dine_in_only: settings.service_fee_dine_in_only,
       };
       const result = await browserApi.PUT("/api/v1/branches/{branch_id}/financial-settings", {
         params: { path: { branch_id: branchId } },
@@ -210,21 +221,24 @@ function FinancialsTab({ branchId }: { branchId: string }) {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Save failed");
     },
-    onSuccess: () => toast.success("Financial settings saved"),
+    onSuccess: () => {
+      toast.success("Financial settings saved");
+      void queryClient.invalidateQueries({ queryKey: ["fin", branchId] });
+      void queryClient.invalidateQueries({ queryKey: ["branch", branchId] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
-  if (settings.isLoading) return <LoadingState label="Loading settings" />;
   return (
     <form className="grid max-w-lg gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
       <p className={hint}>Tax and service fee for this branch. Enter a decimal: 0.14 means 14%.</p>
       <label className="grid gap-1 text-sm">
         Tax rate
-        <span className={hint}>Current rate {settings.data?.tax_rate ?? "—"}.</span>
+        <span className={hint}>Current rate {settings.tax_rate}.</span>
         <input className={control} value={tax} onChange={(event) => setTax(event.target.value)} />
       </label>
       <label className="grid gap-1 text-sm">
         Service fee rate
-        <span className={hint}>Current rate {settings.data?.service_fee_rate ?? "—"}.</span>
+        <span className={hint}>Current rate {settings.service_fee_rate}.</span>
         <input className={control} value={fee} onChange={(event) => setFee(event.target.value)} />
       </label>
       <p id="save-financials-hint" className={hint}>Saves these rates. Menu prices are not changed here.</p>
@@ -234,7 +248,6 @@ function FinancialsTab({ branchId }: { branchId: string }) {
 }
 
 function SlaTab({ branchId }: { branchId: string }) {
-  const [minutes, setMinutes] = useState(20);
   const sla = useQuery({
     queryKey: ["sla", branchId],
     queryFn: async () => {
@@ -243,6 +256,14 @@ function SlaTab({ branchId }: { branchId: string }) {
       return result.data;
     },
   });
+  if (sla.isLoading) return <LoadingState label="Loading preparation target" />;
+  if (sla.isError || !sla.data) return <ErrorState body={sla.error?.message ?? "Preparation target missing"} onRetry={() => void sla.refetch()} />;
+  return <SlaForm branchId={branchId} minutes={sla.data.sla_prep_time_minutes} />;
+}
+
+function SlaForm({ branchId, minutes: savedMinutes }: { branchId: string; minutes: number }) {
+  const queryClient = useQueryClient();
+  const [minutes, setMinutes] = useState(savedMinutes);
   const save = useMutation({
     mutationFn: async () => {
       const result = await browserApi.PATCH("/api/v1/branches/{branch_id}/sla-config", {
@@ -251,7 +272,11 @@ function SlaTab({ branchId }: { branchId: string }) {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "SLA save failed");
     },
-    onSuccess: () => toast.success("SLA saved"),
+    onSuccess: () => {
+      toast.success("SLA saved");
+      void queryClient.invalidateQueries({ queryKey: ["sla", branchId] });
+      void queryClient.invalidateQueries({ queryKey: ["branch", branchId] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
   return (
@@ -259,7 +284,7 @@ function SlaTab({ branchId }: { branchId: string }) {
       <p className={hint}>How long the kitchen should take to prepare an order. An order that takes longer is over this target.</p>
       <label className="grid gap-1 text-sm">
         Preparation target (minutes)
-        <span className={hint}>Current target {sla.data?.sla_prep_time_minutes ?? "—"} minutes. It must be greater than zero.</span>
+        <span className={hint}>Current target {savedMinutes} minutes. It must be greater than zero.</span>
         <input className={control} type="number" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} />
       </label>
       <p id="save-sla-hint" className={hint}>Saves the preparation target for this branch.</p>

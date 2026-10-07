@@ -32,6 +32,7 @@ export const metadata: Metadata = {
     template: "%s · Qwicoo",
   },
   description: "Qwicoo staff tools and guest ordering.",
+  appleWebApp: { capable: true, title: "Qwicoo", statusBarStyle: "default" },
 };
 
 export default function RootLayout({

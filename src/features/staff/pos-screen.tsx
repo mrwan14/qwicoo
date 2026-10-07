@@ -363,18 +363,25 @@ export function PosScreen() {
         {categories.map((category) => {
           const active = !itemSearch && category.id === activeCategory?.id;
           const count = category.items?.length ?? 0;
+          const image = mediaUrl(category.image_url);
           return (
             <button
               key={category.id}
               type="button"
-              className={`flex min-h-14 shrink-0 flex-col justify-center rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-card shadow-elev-1"}`}
+              className={`flex min-h-14 shrink-0 items-center gap-2 rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-card shadow-elev-1"}`}
               onClick={() => {
                 setCategoryId(category.id);
                 setQuery("");
               }}
             >
+              {image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={image} alt="" className="size-10 shrink-0 rounded-lg bg-secondary object-contain" />
+              ) : null}
+              <span className="grid">
               <span className="text-sm">{pickLocale(category.name, "en")}</span>
               <span className={`text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{count === 1 ? "1 item" : `${count} items`}</span>
+              </span>
             </button>
           );
         })}
@@ -394,7 +401,7 @@ export function PosScreen() {
               <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 ring-1 ring-foreground/5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
                 {image ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={image} alt="" className="h-24 w-full object-cover" />
+                  <img src={image} alt="" className="h-24 w-full bg-secondary object-contain" />
                 ) : (
                   <span className="flex h-14 items-center justify-center bg-secondary text-lg font-semibold text-primary">{name.trim().charAt(0).toUpperCase()}</span>
                 )}

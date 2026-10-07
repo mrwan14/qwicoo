@@ -256,7 +256,9 @@ export function AttendanceScreen() {
   const branchId = useScope((state) => state.branchId);
   const branches = useScope((state) => state.branches);
   const watchedBranchIds = branches.length > 0 ? branches.map((branch) => branch.id) : branchId ? [branchId] : [];
-  const isAdmin = me?.role === "BRAND_ADMIN" || me?.role === "BRANCH_ADMIN";
+  const isAdmin = me?.role === "BRANCH_ADMIN";
+  const canReviewStaff =
+    me?.role === "REGIONAL_MANAGER" || me?.role === "BRANCH_ADMIN" || me?.role === "CASHIER";
   const canOverride = me?.role === "SUPER_ADMIN" || me?.role === "BRAND_ADMIN";
   const [reason, setReason] = useState("");
   const [logId, setLogId] = useState<string | null>(null);
@@ -280,7 +282,7 @@ export function AttendanceScreen() {
   });
   const logs = useQuery({
     queryKey: ["attendance-logs", watchedBranchIds.join(","), range],
-    enabled: watchedBranchIds.length > 0,
+    enabled: canReviewStaff && watchedBranchIds.length > 0,
     queryFn: async () => {
       const pages = await Promise.all(watchedBranchIds.map(async (id) => {
         const result = await browserApi.GET("/api/v1/branches/{branch_id}/attendance-logs", {
@@ -294,7 +296,7 @@ export function AttendanceScreen() {
   });
   const txns = useQuery({
     queryKey: ["cashier-txns", branchId],
-    enabled: Boolean(branchId),
+    enabled: canReviewStaff && Boolean(branchId),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/branches/{branch_id}/cashier-transactions", { params: { path: { branch_id: branchId ?? "" } } });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Transactions failed");
@@ -346,7 +348,10 @@ export function AttendanceScreen() {
     <div className="grid gap-4">
       <div className="grid gap-1">
         <h1 className="text-[length:var(--text-28)] font-semibold">Attendance</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Check in when you arrive at the branch. The list shows the staff at the branches you look after.</p>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          Check in when you arrive at the branch.
+          {canReviewStaff ? " The list shows the staff at the branches you look after." : ""}
+        </p>
         {isAdmin && !hoursBranch.isLoading ? <TodayHoursNote hours={hoursBranch.data?.opening_hours} branchId={branchId} /> : null}
       </div>
       {status.isError ? (
@@ -364,6 +369,8 @@ export function AttendanceScreen() {
         <button type="button" className="min-h-12 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => void punch("in")}>Check in</button>
         <button type="button" className="min-h-12 rounded-lg border px-4 text-sm" onClick={() => void punch("out")}>Check out</button>
       </div>
+      {canReviewStaff ? (
+      <>
       <section className="grid gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 className="font-medium">Staff attendance</h2>
@@ -449,6 +456,8 @@ export function AttendanceScreen() {
           </div>
         ) : null}
       </section>
+      </>
+      ) : null}
       {canOverride ? (
         <>
           <ConfirmDialog open={Boolean(logId)} onOpenChange={(open) => !open && setLogId(null)} title="Correct this attendance record?" description="Add a reason. This is stored on the record." confirmLabel="Correct" onConfirm={() => override.mutate()} />

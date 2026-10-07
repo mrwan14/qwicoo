@@ -166,7 +166,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Insight",
     shell: "admin",
     phase: 6,
-    roles: [...BRAND_SCOPE, "BRANCH_ADMIN", "CASHIER"],
+    roles: ["REGIONAL_MANAGER", "BRANCH_ADMIN", "CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER"],
   },
   {
     href: "/app/audit",
@@ -184,9 +184,9 @@ const BOTTOM_PRIORITY: Record<UserRole, readonly string[]> = {
   REGIONAL_MANAGER: ["/app/floor", "/app/menu", "/app/staff", "/app/analytics"],
   BRANCH_ADMIN: ["/app/dashboard", "/app/floor", "/app/pos", "/app/payments"],
   CASHIER: ["/app/pos", "/app/payments", "/app/floor", "/app/attendance"],
-  WAITER: ["/app/floor", "/app/floor/requests"],
-  KITCHEN_STAFF: ["/app/kds", "/app/kds/expo"],
-  RUNNER: ["/app/kds/expo", "/app/floor/requests", "/app/floor"],
+  WAITER: ["/app/floor", "/app/floor/requests", "/app/attendance"],
+  KITCHEN_STAFF: ["/app/kds", "/app/kds/expo", "/app/attendance"],
+  RUNNER: ["/app/kds/expo", "/app/floor/requests", "/app/floor", "/app/attendance"],
 };
 
 /**

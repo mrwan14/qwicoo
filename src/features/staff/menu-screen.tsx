@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -16,11 +16,13 @@ import { browserApi } from "@/lib/api/browser";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import type { components } from "@/lib/api/schema";
 import { formatMoney } from "@/lib/format/money";
+import { mediaUrl, presignedUploadUrl } from "@/lib/media";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
 const hint = "text-sm leading-6 text-muted-foreground";
 const quietButton = "inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
 const STATIONS = ["HOT_KITCHEN", "COLD_KITCHEN", "BEVERAGE", "DESSERT"] as const;
 const STATION_LABELS: Record<(typeof STATIONS)[number], string> = {
   HOT_KITCHEN: "Hot kitchen",
@@ -33,6 +35,25 @@ type Item = components["schemas"]["MenuItemResponse"];
 
 function names(en: string, ar: string) {
   return { en, ar };
+}
+
+async function uploadMenuImage(file: File, folder: "items" | "general"): Promise<string> {
+  if (!IMAGE_TYPES.includes(file.type)) throw new Error("Use a JPEG, PNG, WebP, or SVG image.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Image must be 5 MB or smaller.");
+  const body: components["schemas"]["PresignedUrlRequest"] = {
+    filename: file.name || "image.png",
+    content_type: file.type,
+    folder,
+  };
+  const signed = await browserApi.POST("/api/v1/media/presigned-url", { body });
+  if (!signed.response.ok || !signed.data) throw asApiError(signed.error, signed.response, "Could not upload image");
+  const uploaded = await fetch(presignedUploadUrl(signed.data.upload_url), {
+    method: "PUT",
+    body: file,
+    headers: { "content-type": file.type },
+  });
+  if (!uploaded.ok) throw new Error("Could not upload image");
+  return signed.data.public_url;
 }
 
 function stationCode(name: string): string | null {
@@ -56,6 +77,8 @@ export function MenuAdmin() {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [itemOpen, setItemOpen] = useState(false);
   const [itemQuery, setItemQuery] = useState("");
+  const [categoryImage, setCategoryImage] = useState<File | null>(null);
+  const [itemImage, setItemImage] = useState<File | null>(null);
 
   const menu = useQuery({
     queryKey: ["menu-tree", branchId],
@@ -83,11 +106,13 @@ export function MenuAdmin() {
 
   const createCategory = useMutation({
     mutationFn: async () => {
+      const imageUrl = categoryImage ? await uploadMenuImage(categoryImage, "general") : null;
       const body: components["schemas"]["StaffCategoryCreate"] = {
         name: names(en, ar),
         station,
         display_order: 1,
         is_active: true,
+        ...(imageUrl ? { image_url: imageUrl } : {}),
       };
       const result = await browserApi.POST("/api/v1/staff/menu/categories", { body });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Could not create category");
@@ -95,6 +120,9 @@ export function MenuAdmin() {
     onSuccess: () => {
       toast.success("Category saved");
       setCategoryOpen(false);
+      setEn("");
+      setAr("");
+      setCategoryImage(null);
       refresh();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -102,6 +130,7 @@ export function MenuAdmin() {
 
   const createItem = useMutation({
     mutationFn: async () => {
+      const imageUrl = itemImage ? await uploadMenuImage(itemImage, "items") : null;
       const body: components["schemas"]["StaffItemCreate"] = {
         category_id: categoryId,
         name: names(itemEn, itemAr),
@@ -109,6 +138,7 @@ export function MenuAdmin() {
         station,
         is_available: true,
         item_type: "PREPARED",
+        ...(imageUrl ? { image_url: imageUrl } : {}),
       };
       const result = await browserApi.POST("/api/v1/staff/menu/items", { body });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Could not create item");
@@ -117,6 +147,7 @@ export function MenuAdmin() {
       toast.success("Item saved");
       setItemEn("");
       setItemAr("");
+      setItemImage(null);
       setItemOpen(false);
       refresh();
     },
@@ -141,11 +172,13 @@ export function MenuAdmin() {
 
   const catalog = useMutation({
     mutationFn: async () => {
+      const imageUrl = itemImage ? await uploadMenuImage(itemImage, "items") : null;
       const body: components["schemas"]["ScopedItemCreateRequest"] = {
         name: names(itemEn || "Item", itemAr || "صنف"),
         base_price: price,
         category_id: categoryId,
         scope: "ALL_BRANCHES",
+        ...(imageUrl ? { image_url: imageUrl } : {}),
       };
       const result = await browserApi.POST("/api/v1/menu/catalog-items", { body });
       if (result.response.status === 500) {
@@ -153,7 +186,11 @@ export function MenuAdmin() {
       }
       if (!result.response.ok) throw asApiError(result.error, result.response, "Catalog create failed");
     },
-    onSuccess: () => toast.success("Catalog item created"),
+    onSuccess: () => {
+      toast.success("Catalog item created");
+      setItemImage(null);
+      refresh();
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 
@@ -232,19 +269,27 @@ export function MenuAdmin() {
               {categories.map((category) => {
                 const selected = !itemSearch && category.id === active?.id;
                 const count = category.items?.length ?? 0;
+                const image = mediaUrl(category.image_url);
                 return (
                   <button
                     key={category.id}
                     type="button"
-                    className={`flex min-h-14 shrink-0 flex-col justify-center rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${selected ? "bg-primary text-primary-foreground" : "bg-card shadow-elev-1 ring-1 ring-foreground/5"}`}
+                    className={`flex min-h-14 shrink-0 items-center gap-2 rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${selected ? "bg-primary text-primary-foreground" : "bg-card shadow-elev-1 ring-1 ring-foreground/5"}`}
                     onClick={() => {
                       setCategoryId(category.id);
                       setItemQuery("");
                     }}
                   >
+                    {image ? (
+                      // Stored photos are on the upload host, which next/image is not set up to optimise.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={image} alt="" className="size-10 shrink-0 rounded-lg bg-secondary object-contain" />
+                    ) : null}
+                    <span className="grid">
                     <span className="text-sm font-medium">{pickLocale(category.name, "en")}</span>
                     <span className={`text-xs ${selected ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                       {count === 1 ? "1 item" : `${count} items`}
+                    </span>
                     </span>
                   </button>
                 );
@@ -272,6 +317,10 @@ export function MenuAdmin() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold">{pickLocale(active.name, "en")}</h2>
+                  {mediaUrl(active.image_url) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={mediaUrl(active.image_url) ?? ""} alt="" className="mt-2 h-36 w-full max-w-sm rounded-xl bg-secondary object-contain" />
+                  ) : null}
                   <p className={hint}>
                     {(active.items?.length ?? 0) === 1 ? "1 item" : `${active.items?.length ?? 0} items`}
                     {STATION_LABELS[active.station] ? ` · sent to ${STATION_LABELS[active.station]}` : ""}. Change a price to save it. Sold out hides an item. Options are extras such as size or milk.
@@ -314,6 +363,7 @@ export function MenuAdmin() {
                 <option key={value}>{value}</option>
               ))}
             </select>
+            <OptionalImageField file={categoryImage} onChange={setCategoryImage} />
             <button className="min-h-11 rounded-xl bg-primary text-sm text-primary-foreground" type="submit">Save category</button>
           </form>
         </SheetContent>
@@ -360,6 +410,7 @@ export function MenuAdmin() {
                 ))}
               </select>
             </label>
+            <OptionalImageField file={itemImage} onChange={setItemImage} />
             <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={!categoryId || createItem.isPending}>
               {createItem.isPending ? "Saving…" : "Save item"}
             </button>
@@ -534,8 +585,14 @@ function MenuItemBlock({
   onOptions: () => void;
   onDone: () => void;
 }) {
+  const image = mediaUrl(item.image_url);
   return (
     <li className="grid content-start gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+      {image ? (
+        // Stored photos are on the upload host, which next/image is not set up to optimise.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt="" className="h-36 w-full rounded-xl bg-secondary object-contain" />
+      ) : null}
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="grid gap-1">
           <p className="font-semibold"><LocaleText value={item.name} /></p>
@@ -686,6 +743,35 @@ function OptionPriceField({
         </button>
       ) : null}
     </form>
+  );
+}
+
+function OptionalImageField({ file, onChange }: { file: File | null; onChange: (file: File | null) => void }) {
+  const [preview, setPreview] = useState<string | null>(null);
+  useEffect(() => {
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  return (
+    <label className="grid gap-1 text-sm">
+      Image
+      <span className={hint}>Optional. The photo is shown in full, without cropping.</span>
+      <input
+        className="block w-full text-sm file:me-3 file:min-h-11 file:rounded-lg file:border file:bg-card file:px-3 file:text-sm"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/svg+xml"
+        onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+      />
+      {preview ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={preview} alt="" className="h-32 w-full rounded-xl bg-secondary object-contain" />
+      ) : null}
+    </label>
   );
 }
 

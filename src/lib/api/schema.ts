@@ -5474,6 +5474,11 @@ export interface components {
              */
             station: components["schemas"]["KitchenStation"];
             /**
+             * Image Url
+             * @description Optional category image, shown in full
+             */
+            image_url?: string | null;
+            /**
              * Items
              * @description Items belonging to this category
              */
@@ -6835,6 +6840,11 @@ export interface components {
              * @default true
              */
             is_active: boolean;
+            /**
+             * Image Url
+             * @description Optional category image URL
+             */
+            image_url?: string | null;
         };
         /**
          * StaffCategoryResponse
@@ -6862,6 +6872,8 @@ export interface components {
             station_id?: string | null;
             /** Is Active */
             is_active: boolean;
+            /** Image Url */
+            image_url?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -6902,6 +6914,11 @@ export interface components {
              * @description Updated active status
              */
             is_active?: boolean | null;
+            /**
+             * Image Url
+             * @description Updated category image URL
+             */
+            image_url?: string | null;
         };
         /**
          * StaffCreateRequest

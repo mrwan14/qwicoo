@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
 
 import { StatusChip, toneSurface } from "@/components/ops/status-chip";
-import { useStaffSession } from "@/components/ops/staff-session";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -79,8 +78,6 @@ function cardLines(order: ExpoOrder): CardLine[] {
 }
 
 export function ExpoScreen() {
-  const me = useStaffSession();
-  const isRunner = me?.role === "RUNNER";
   const interval = usePollingInterval(7000);
   const branchId = useScope((state) => state.branchId);
   const [token, setToken] = useState("");
@@ -322,10 +319,7 @@ export function ExpoScreen() {
               </td>
               <td className="px-4 py-4">
               {ready ? (
-                isRunner ? (
-                  <p className="text-sm text-muted-foreground">A colleague marks this once the guest has the food.</p>
-                ) : (
-                  <button
+                <button
                     type="button"
                     className="min-h-11 rounded-xl bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
                     disabled={handingOver}
@@ -333,7 +327,6 @@ export function ExpoScreen() {
                   >
                     {handingOver ? "Handing over…" : "Guest has the food"}
                   </button>
-                )
               ) : (
                 <button
                   type="button"

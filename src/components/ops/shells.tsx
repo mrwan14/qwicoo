@@ -22,10 +22,10 @@ import {
   UtensilsCrossed,
   Wallet,
   type LucideIcon,
+  CloudOff,
 } from "lucide-react";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
-import { ConnectionBanner } from "@/components/ops/connection-banner";
 import { BranchSwitcher, ScopeBadge } from "@/components/ops/scope-header";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { AlertControls } from "@/features/staff/alerts/alert-controls";
@@ -33,6 +33,7 @@ import { usePendingConfirmationCount } from "@/hooks/use-floor-live";
 import { roleLabel, type UserRole } from "@/lib/auth/roles";
 import { endStaffSession } from "@/lib/auth/session-client";
 import { isNavActive, navForUser, navKey, splitBottomNav, type NavItem } from "@/lib/nav";
+import { StaffConnectionBanner } from "@/features/staff/offline/staff-connection-banner";
 import { useScope } from "@/stores/scope";
 import {
   Sheet,
@@ -52,6 +53,7 @@ const ICONS: Record<string, LucideIcon> = {
   "/app/kds": Monitor,
   "/app/kds/expo": ClipboardList,
   "/app/payments": Wallet,
+  "/app/offline-orders": CloudOff,
   "/app/menu": UtensilsCrossed,
   "/app/qr": QrCode,
   "/app/brands": Store,
@@ -302,7 +304,7 @@ function ShellFrame({
         Skip to content
       </a>
       <div className="print:hidden">
-        <ConnectionBanner />
+        <StaffConnectionBanner canSellOffline={items.some((item) => item.href === "/app/pos")} />
       </div>
       <div className="flex min-h-dvh">
         {variant === "admin" ? <AdminSidebar items={items} pathname={pathname} badges={badges} /> : null}

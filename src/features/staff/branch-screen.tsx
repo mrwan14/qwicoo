@@ -28,6 +28,7 @@ const TAB_LABELS = {
   location: "Location",
   financials: "Financials",
   sla: "SLA",
+  offline: "Offline till",
   pin: "Access PIN",
   tables: "Tables",
 } as const;
@@ -69,7 +70,8 @@ export function BranchScreen({ branchId }: { branchId: string }) {
   const branchTitle = branchRecord.display_name || branchRecord.slug;
 
   const canSeePin = Boolean(me && PIN_ROLES.includes(me.role));
-  const tabs = (Object.keys(TAB_LABELS) as BranchTab[]).filter((item) => item !== "pin" || canSeePin);
+  const canSetOffline = Boolean(me && OFFLINE_ADMIN_ROLES.includes(me.role));
+  const tabs = (Object.keys(TAB_LABELS) as BranchTab[]).filter((item) => (item !== "pin" || canSeePin) && (item !== "offline" || canSetOffline));
   return (
     <div className="grid gap-4">
       <Link
@@ -107,6 +109,7 @@ export function BranchScreen({ branchId }: { branchId: string }) {
       {tab === "financials" ? <FinancialsTab branchId={branchId} /> : null}
       {tab === "sla" ? <SlaTab branchId={branchId} /> : null}
       {tab === "pin" && canSeePin ? <PinTab branchId={branchId} /> : null}
+      {tab === "offline" && canSetOffline ? <OfflineTab branchId={branchId} /> : null}
       {tab === "tables" ? <TablesTab branchId={branchId} /> : null}
     </div>
   );
@@ -356,6 +359,63 @@ function FinancialsForm({ branchId, settings }: { branchId: string; settings: co
       </label>
       <p id="save-financials-hint" className={hint}>Saves these rates. Menu prices are not changed here.</p>
       <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit" aria-describedby="save-financials-hint">Save financial settings</button>
+    </form>
+  );
+}
+
+const OFFLINE_ADMIN_ROLES: readonly string[] = ["BRANCH_ADMIN", "REGIONAL_MANAGER", "BRAND_ADMIN", "SUPER_ADMIN"];
+
+function OfflineTab({ branchId }: { branchId: string }) {
+  const config = useQuery({
+    queryKey: ["offline-config", branchId],
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/branches/{branch_id}/offline-config", { params: { path: { branch_id: branchId } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Offline settings failed");
+      return result.data;
+    },
+  });
+  if (config.isLoading) return <LoadingState label="Loading offline till settings" />;
+  if (config.isError || !config.data) return <ErrorState body={config.error?.message ?? "Offline settings missing"} onRetry={() => void config.refetch()} />;
+  return <OfflineForm branchId={branchId} enabled={config.data.offline_pos_enabled} hours={config.data.offline_max_hours} />;
+}
+
+function OfflineForm({ branchId, enabled: savedEnabled, hours: savedHours }: { branchId: string; enabled: boolean; hours: number }) {
+  const queryClient = useQueryClient();
+  const [enabled, setEnabled] = useState(savedEnabled);
+  const [hours, setHours] = useState(savedHours);
+  const valid = Number.isInteger(hours) && hours >= 1 && hours <= 72;
+  const save = useMutation({
+    mutationFn: async () => {
+      const result = await browserApi.PATCH("/api/v1/branches/{branch_id}/offline-config", {
+        params: { path: { branch_id: branchId } },
+        body: { offline_pos_enabled: enabled, offline_max_hours: hours },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, "Offline settings save failed");
+    },
+    onSuccess: () => {
+      toast.success("Offline till settings saved");
+      void queryClient.invalidateQueries({ queryKey: ["offline-config", branchId] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  return (
+    <form className="grid max-w-lg gap-3" onSubmit={(event) => { event.preventDefault(); if (valid) save.mutate(); }}>
+      <p className={hint}>
+        When the connection drops, tills can keep taking cash orders and sync them when it&apos;s back. Card payments always need a connection. While a till is cut off, guests are asked to order at the counter.
+      </p>
+      <label className="flex min-h-11 items-center gap-3 text-sm">
+        <input type="checkbox" className="size-5" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
+        Let tills keep selling offline (cash only)
+      </label>
+      <label className="grid gap-1 text-sm">
+        Longest time offline (hours)
+        <span className={hint}>Orders that sync later than this are still kept, but flagged for you to review. 1 to 72 hours.</span>
+        <input className={control} type="number" min={1} max={72} value={hours} onChange={(event) => setHours(Number(event.target.value))} />
+      </label>
+      {!valid ? <p className="text-sm text-destructive">Choose between 1 and 72 hours.</p> : null}
+      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground disabled:opacity-50" type="submit" disabled={!valid || save.isPending}>
+        Save offline settings
+      </button>
     </form>
   );
 }

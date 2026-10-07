@@ -2,6 +2,7 @@ import createClient from "openapi-fetch";
 
 import type { paths } from "@/lib/api/schema";
 import { SCOPE_DENIALS, denyAccess, endStaffSession } from "@/lib/auth/session-client";
+import { useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
 
 export const browserApi = createClient<paths>({
@@ -17,6 +18,9 @@ browserApi.use({
     return request;
   },
   async onResponse({ response }) {
+    // 502–504 come from our proxy or the edge when the API itself can't be reached.
+    if (response.status === 502 || response.status === 503 || response.status === 504) useNetwork.getState().markOffline();
+    else useNetwork.getState().markOnline();
     if (response.status === 401) {
       void endStaffSession();
       return response;
@@ -26,5 +30,9 @@ browserApi.use({
       if (typeof payload?.detail === "string" && SCOPE_DENIALS.has(payload.detail)) denyAccess();
     }
     return response;
+  },
+  onError() {
+    // fetch itself failed: no network, or the app's own server is unreachable.
+    useNetwork.getState().markOffline();
   },
 });

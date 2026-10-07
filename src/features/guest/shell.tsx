@@ -5,6 +5,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Logo } from "@/components/ops/logo";
 import { ErrorState, LoadingState } from "@/components/ops/states";
 import { guestCopy } from "@/features/guest/copy";
+import { OrderingPausedNotice, isGuestUnreachable, useOrderingPaused } from "@/features/guest/ordering-status";
 import { guestTableToken, isGuestSessionGone, recoverGuestSession } from "@/features/guest/session";
 import { initials } from "@/lib/auth/scope";
 import { accentForeground, mergeGuestBranding, sameBranding } from "@/lib/guest/branding";
@@ -168,6 +169,7 @@ export function GuestQueryError({
 }) {
   const { t } = useGuestCopy();
   const gone = isGuestSessionGone(error);
+  const paused = useOrderingPaused();
   const token = useGuest((state) => state.tableToken);
   const [retried, setRetried] = useState(false);
 
@@ -182,6 +184,18 @@ export function GuestQueryError({
   if (gone) {
     if (token && !retried) return <LoadingState label={t.rejoining} />;
     return <RejoinTable />;
+  }
+
+  if (isGuestUnreachable(error)) {
+    // The shell already shows the paused notice when it has noticed; just offer a retry then.
+    if (paused) {
+      return (
+        <button type="button" className={guestSecondaryButton} onClick={onRetry}>
+          {t.retry}
+        </button>
+      );
+    }
+    return <OrderingPausedNotice onRetry={onRetry} retryLabel={t.retry} />;
   }
 
   return (
@@ -206,6 +220,7 @@ export function GuestShell({
 }) {
   const { t, locale, dir, setLocale } = useGuestCopy();
   const accent = useGuest((state) => (neutral ? null : (state.branding?.accent ?? null)));
+  const paused = useOrderingPaused();
 
   useEffect(() => {
     void useGuest.persist.rehydrate();
@@ -231,7 +246,10 @@ export function GuestShell({
           {t.language}
         </button>
       </header>
-      <div className="mx-auto w-full max-w-md px-4 py-4 pb-32">{resume ? <GuestResume>{children}</GuestResume> : children}</div>
+      <div className="mx-auto grid w-full max-w-md gap-4 px-4 py-4 pb-32">
+        {paused ? <OrderingPausedNotice /> : null}
+        <div>{resume ? <GuestResume>{children}</GuestResume> : children}</div>
+      </div>
     </div>
   );
 }

@@ -14,7 +14,10 @@ import { acknowledgeOrder, ignoreOwnChange } from "@/features/staff/alerts/ignor
 import { playTone, unlockAudio } from "@/lib/sound/tones";
 import { stationLabel } from "@/lib/status-labels";
 import type { components } from "@/lib/api/schema";
+import { useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
+
+import { OfflineStage, OfflineTickets } from "./offline/offline-tickets";
 
 function asStation(value: string): components["schemas"]["KitchenStation"] | null {
   if (value === "HOT_KITCHEN" || value === "COLD_KITCHEN" || value === "BEVERAGE" || value === "DESSERT") return value;
@@ -50,6 +53,7 @@ export function KdsScreen() {
   const [sound, setSound] = useSoundSetting();
   const [stationFilter, setStationFilter] = useState<string>("ALL");
   const queryClient = useQueryClient();
+  const online = useNetwork((state) => state.online);
 
   const tickets = useQuery({
     queryKey: ["kds-tickets", branchId],
@@ -101,6 +105,7 @@ export function KdsScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  if (!online) return <OfflineStage stage="kitchen" />;
   if (tickets.isLoading) return <LoadingState label="Loading kitchen tickets" />;
   if (tickets.isError) return <QueryErrorState error={tickets.error} screen="The kitchen display" onRetry={() => void tickets.refetch()} />;
 
@@ -132,6 +137,7 @@ export function KdsScreen() {
         </button>
       </div>
       <p className="text-sm text-muted-foreground">Turn sound on to hear a tone when a new ticket arrives.</p>
+      <OfflineTickets stage="kitchen" />
       <div className="flex gap-2 overflow-x-auto">
         {[...stations].map((station) => {
           const active = station === stationFilter;

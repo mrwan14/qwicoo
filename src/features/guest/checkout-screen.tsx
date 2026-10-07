@@ -17,9 +17,11 @@ import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import type { components } from "@/lib/api/schema";
 import { useGuest } from "@/stores/guest";
+import { useOrderingPaused } from "@/features/guest/ordering-status";
 
 export function CheckoutScreen() {
   const { t, locale } = useGuestCopy();
+  const paused = useOrderingPaused();
   const session = useGuest((state) => state.session);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -214,7 +216,7 @@ export function CheckoutScreen() {
           <button
             type="button"
             className={guestPrimaryButton}
-            disabled={place.isPending || !quoteReady}
+            disabled={place.isPending || !quoteReady || paused}
             onClick={() => place.mutate()}
           >
             {place.isPending ? t.paying : t.placeOrder}

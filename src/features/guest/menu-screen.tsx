@@ -19,6 +19,7 @@ import { pickLocale } from "@/lib/i18n/locale-text";
 import { mediaUrl } from "@/lib/media";
 import type { components } from "@/lib/api/schema";
 import { useGuest } from "@/stores/guest";
+import { useOrderingPaused } from "@/features/guest/ordering-status";
 
 type MenuItem = components["schemas"]["MenuItemResponse"];
 type ModifierGroup = components["schemas"]["ModifierGroupResponse"];
@@ -271,6 +272,7 @@ function ItemConfigurator({
   const guestName = useGuest((state) => state.guestName);
   const setGuestName = useGuest((state) => state.setGuestName);
   const [quantity, setQuantity] = useState(1);
+  const paused = useOrderingPaused();
   const [notes, setNotes] = useState("");
   const [selected, setSelected] = useState<Record<string, string[]>>({});
   const [choiceError, setChoiceError] = useState("");
@@ -470,7 +472,7 @@ function ItemConfigurator({
       <button
         type="button"
         className={`${guestPrimaryButton} gap-2`}
-        disabled={add.isPending || !guestName.trim()}
+        disabled={add.isPending || !guestName.trim() || paused}
         onClick={() => {
           const needed = missingGroup();
           if (needed) {

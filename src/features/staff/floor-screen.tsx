@@ -4,12 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
+
 import { Money } from "@/components/ops/money";
 import { PageHeader } from "@/components/ops/page-header";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { occupancyTone, StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState, QueryErrorState } from "@/components/ops/states";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import {
   CONFIRM_ROLES,
@@ -28,6 +30,13 @@ import { useScope } from "@/stores/scope";
 type OrderStatus = components["schemas"]["OrderStatus"];
 
 const NEXT: OrderStatus[] = ["PREPARING", "READY", "SERVED", "DELIVERED", "CLOSED"];
+const hint = "text-sm leading-6 text-muted-foreground";
+const control = "h-12 w-full rounded-xl border bg-background px-3 text-sm";
+
+function seatedFor(minutes: number): string {
+  if (minutes <= 0) return "";
+  return minutes === 1 ? "Seated for 1 minute" : `Seated for ${minutes} minutes`;
+}
 
 function modifierNames(modifiers: { [key: string]: unknown }[] | null | undefined): string[] {
   return (modifiers ?? [])
@@ -79,7 +88,8 @@ export function FloorScreen() {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Could not update the order");
     },
-    onSuccess: (_data, { target }) => {
+    onSuccess: (_data, { orderId, target }) => {
+      ignoreOwnChange(orderId, target);
       toast.success(target === "SUBMITTED" ? "Order confirmed" : target === "CANCELLED" ? "Order rejected" : "Order updated");
       if (target === "SUBMITTED" || target === "CANCELLED") closeDrawer();
       void queryClient.invalidateQueries({ queryKey: ["floor-live"] });
@@ -101,6 +111,7 @@ export function FloorScreen() {
   return (
     <div className="grid gap-4">
       <PageHeader title="Floor" />
+      <p className={`max-w-2xl ${hint}`}>Each block is a table. The colour shows where it is in service. Open a table to move its order on.</p>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         {pendingCount > 0 ? (
           <span className="rounded-full bg-foreground px-3 py-1 font-semibold text-background">
@@ -112,40 +123,68 @@ export function FloorScreen() {
         <span className="rounded-full bg-card px-3 py-1 shadow-elev-1">{data.tables_with_pending_requests} requests</span>
         <StatusChip tone="available">Available</StatusChip>
         <StatusChip tone="browsing">Seated</StatusChip>
-        <StatusChip tone="ordered">Ordered</StatusChip>
-        <StatusChip tone="ready">Served</StatusChip>
+        <StatusChip tone="ordered">Waiting for food</StatusChip>
+        <StatusChip tone="ready">Food served</StatusChip>
       </div>
       {tables.length === 0 ? (
         <EmptyState title="No tables on the floor" body="Add tables and QR codes for this branch, then refresh." />
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {tables.map((table) => {
             const tone = occupancyTone(table.current_state);
             const pending = needsConfirmation(table);
+            const open = table.table_id === selectedId;
+            const seated = seatedFor(table.occupancy_duration_minutes);
             return (
               <button
                 key={table.table_id}
                 type="button"
-                className={`min-h-32 rounded-2xl p-4 text-start shadow-elev-1 ${toneSurface(tone)} ${pending ? "ring-2 ring-foreground" : ""}`}
-                onClick={() => setSelectedId(table.table_id)}
+                aria-pressed={open}
+                className={`grid min-h-36 content-between rounded-2xl p-4 text-start shadow-elev-1 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${toneSurface(tone)} ${pending || open ? "ring-2 ring-foreground" : ""}`}
+                onClick={() => {
+                  setSelectedId(table.table_id);
+                  setRejecting(false);
+                  setReason("");
+                  const current = table.order_status;
+                  setStatus(current && NEXT.includes(current) ? current : "PREPARING");
+                }}
               >
-                <span className="block text-2xl font-semibold">{table.table_number}</span>
-                <span className="mt-2 block text-sm">{pending ? "Needs confirmation" : occupancyLabel(table.current_state)}</span>
+                <span className="block text-2xl font-semibold">Table {table.table_number}</span>
+                <span className="mt-3 grid gap-1">
+                  <span className="block text-sm font-medium">{pending ? "Needs confirmation" : occupancyLabel(table.current_state)}</span>
+                  {table.order_status && !pending ? <span className="block text-sm">Order {orderStatusLabel(table.order_status)}</span> : null}
+                  <span className="block text-xs">
+                    {table.capacity} {table.capacity === 1 ? "seat" : "seats"}
+                    {seated ? ` · ${seated}` : ""}
+                    {table.pending_service_requests_count > 0 ? ` · ${table.pending_service_requests_count} requests` : ""}
+                  </span>
+                </span>
               </button>
             );
           })}
         </div>
       )}
       <Sheet open={Boolean(selected)} onOpenChange={(open) => !open && closeDrawer()}>
-        <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
+        <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-3xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <SheetHeader>
             <SheetTitle>Table {selected?.display_number ?? selected?.table_number}</SheetTitle>
+            <SheetDescription>
+              {selected && needsConfirmation(selected)
+                ? "A guest order is waiting. Check the table, then confirm it for the kitchen."
+                : "The colour matches the floor. Move the open order on when the table is ready for the next step."}
+            </SheetDescription>
           </SheetHeader>
           {selected ? (
-            <div className="grid gap-3 px-4 pb-6">
-              <p className="text-sm">
-                {needsConfirmation(selected) ? "Needs confirmation" : occupancyLabel(selected.current_state)}
-              </p>
+            <div className="grid gap-4 px-4 pb-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusChip tone={occupancyTone(selected.current_state)}>
+                  {needsConfirmation(selected) ? "Needs confirmation" : occupancyLabel(selected.current_state)}
+                </StatusChip>
+                <span className="text-sm text-muted-foreground">
+                  {selected.capacity} {selected.capacity === 1 ? "seat" : "seats"}
+                  {seatedFor(selected.occupancy_duration_minutes) ? ` · ${seatedFor(selected.occupancy_duration_minutes)}` : ""}
+                </span>
+              </div>
               {needsConfirmation(selected) && selected.active_order_id ? (
                 <PendingOrder
                   table={selected}
@@ -162,29 +201,37 @@ export function FloorScreen() {
                   onConfirm={(orderId) => transition.mutate({ orderId, target: "SUBMITTED" })}
                   onReject={(orderId) => transition.mutate({ orderId, target: "CANCELLED", note: reason.trim() })}
                 />
-              ) : (
-                <>
-                  <p className="text-sm">Order: {orderStatusLabel(selected.order_status)}</p>
-                  {selected.active_order_id ? (
-                    <>
-                      <select className="h-12 rounded-lg border px-3" value={status} onChange={(event) => setStatus(event.target.value as OrderStatus)}>
-                        {NEXT.map((value) => (
-                          <option key={value} value={value}>
-                            {orderStatusLabel(value)}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        className="min-h-12 rounded-lg bg-primary text-sm text-primary-foreground disabled:opacity-50"
-                        disabled={transition.isPending}
-                        onClick={() => selected.active_order_id && transition.mutate({ orderId: selected.active_order_id, target: status })}
-                      >
-                        Update order
-                      </button>
-                    </>
+              ) : selected.active_order_id ? (
+                <form
+                  className="grid gap-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (selected.active_order_id) transition.mutate({ orderId: selected.active_order_id, target: status });
+                  }}
+                >
+                  <p className="text-sm">The order is <span className="font-medium">{orderStatusLabel(selected.order_status)}</span>.</p>
+                  {selected.order_total ? (
+                    <p className="text-sm">Total <Money amount={String(selected.order_total)} /></p>
                   ) : null}
-                </>
+                  <label className="grid gap-1 text-sm">
+                    Move the order to
+                    <span className={hint}>Choose the next step, then update. The kitchen and the floor both follow this.</span>
+                    <select className={control} value={status} onChange={(event) => setStatus(event.target.value as OrderStatus)}>
+                      {NEXT.map((value) => (
+                        <option key={value} value={value}>{orderStatusLabel(value)}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    className="min-h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                    disabled={transition.isPending || status === selected.order_status}
+                  >
+                    {transition.isPending ? "Updating…" : "Update order"}
+                  </button>
+                </form>
+              ) : (
+                <p className={hint}>No open order on this table. Guests can still sit here and order from the table QR.</p>
               )}
             </div>
           ) : null}

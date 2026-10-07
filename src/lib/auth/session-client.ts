@@ -44,6 +44,17 @@ let ending = false;
 export async function endStaffSession(redirectTo = "/login") {
   if (ending) return;
   ending = true;
+  // Stop pushes to this browser before the session goes. Bounded so sign-out never hangs.
+  await Promise.race([
+    import("@/lib/push/web-push").then((push) => push.removePushSubscription()),
+    new Promise((resolve) => setTimeout(resolve, 1500)),
+  ]).catch(() => undefined);
+  try {
+    const { useWorkspace } = await import("@/stores/workspace");
+    useWorkspace.getState().setPushEnabled(false);
+  } catch {
+    // Preferences are best effort.
+  }
   const client = getQueryClient();
   await client.cancelQueries();
   client.clear();

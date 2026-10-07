@@ -7,7 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/features/guest/guest-prices.test.ts",
+    "test": "node --experimental-strip-types --test src/features/guest/guest-prices.test.ts src/features/staff/alerts/diff.test.ts",
     "gen:api": "openapi-typescript ${API_BASE_URL:-http://127.0.0.1:8000}/api/v1/openapi.json -o src/lib/api/schema.ts",
     "smoke": "node scripts/smoke.mjs"
   },
@@ -23,6 +23,7 @@
     "openapi-fetch": "^0.17.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "recharts": "^3.10.1",
     "shadcn": "^4.21.0",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",

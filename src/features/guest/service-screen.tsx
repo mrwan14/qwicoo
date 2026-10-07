@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { guestServiceStatus, guestServiceType } from "@/features/guest/copy";
-import { useGuestCopy } from "@/features/guest/shell";
+import { guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
 import { usePollingInterval } from "@/hooks/use-page-visible";
 import { asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
@@ -62,36 +63,37 @@ export function ServiceScreen() {
   return (
     <div className="grid gap-4">
       <h1 className="text-[length:var(--text-28)] font-semibold">{t.service}</h1>
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label={t.service}>
+        {TYPES.map((item) => (
+          <button
+            key={item}
+            type="button"
+            aria-pressed={type === item}
+            className={type === item ? guestPrimaryButton : guestSecondaryButton}
+            onClick={() => setType(item)}
+          >
+            {guestServiceType[locale][item]}
+          </button>
+        ))}
+      </div>
       <label className="grid gap-1 text-sm font-medium">
-        {t.service}
-        <select
-          className="h-12 rounded-lg border px-3"
-          value={type}
-          onChange={(event) => setType(event.target.value as typeof type)}
-        >
-          {TYPES.map((item) => (
-            <option key={item} value={item}>
-              {guestServiceType[locale][item]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm font-medium">
-        {t.notes}
-        <textarea className="min-h-20 rounded-lg border px-3 py-2" value={note} onChange={(event) => setNote(event.target.value)} />
+        {t.serviceNote}
+        <textarea className="min-h-20 rounded-xl border bg-background px-3 py-2 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" value={note} onChange={(event) => setNote(event.target.value)} />
       </label>
       <button
         type="button"
-        className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+        className={guestPrimaryButton}
         disabled={pending}
         onClick={() => void submit()}
       >
-        {t.call}
+        {pending ? t.paying : t.sendRequest}
       </button>
+      <Link href="/order" className={guestSecondaryButton}>{t.backMenu}</Link>
       <ul className="grid gap-2">
         {(active.data ?? []).map((request) => (
-          <li key={request.id} className="rounded-lg border p-3 text-sm">
-            {guestServiceType[locale][request.request_type]} · {guestServiceStatus[locale][request.status]}
+          <li key={request.id} className="flex items-center justify-between gap-3 rounded-xl border bg-card p-3 text-sm">
+            <span className="font-medium">{guestServiceType[locale][request.request_type]}</span>
+            <span className="rounded-full bg-secondary px-3 py-1">{guestServiceStatus[locale][request.status]}</span>
           </li>
         ))}
       </ul>

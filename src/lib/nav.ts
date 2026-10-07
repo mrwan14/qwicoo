@@ -122,7 +122,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   {
     href: "/app/kds/expo",
-    label: "Expo",
+    label: "Handover",
     group: "Brand ops",
     shell: "ops",
     phase: 3,
@@ -137,6 +137,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...BRANCH_OPS, "CASHIER"],
   },
   {
+    href: "/app/dashboard",
+    label: "Dashboard",
+    group: "Insight",
+    shell: "admin",
+    phase: 6,
+    roles: ["BRANCH_ADMIN"],
+  },
+  {
     href: "/app/analytics",
     label: "Analytics",
     group: "Insight",
@@ -146,7 +154,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   {
     href: "/app/financials",
-    label: "Financials",
+    label: "Till",
     group: "Insight",
     shell: "admin",
     phase: 6,
@@ -158,7 +166,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Insight",
     shell: "admin",
     phase: 6,
-    roles: [...BRAND_SCOPE, "BRANCH_ADMIN", "CASHIER"],
+    roles: ["REGIONAL_MANAGER", "BRANCH_ADMIN", "CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER"],
   },
   {
     href: "/app/audit",
@@ -172,13 +180,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
 
 const BOTTOM_PRIORITY: Record<UserRole, readonly string[]> = {
   SUPER_ADMIN: ["/app/brands", "/app/menu", "/app/floor", "/app/analytics"],
-  BRAND_ADMIN: ["brand-dashboard", "/app/menu", "/app/staff", "/app/analytics"],
+  BRAND_ADMIN: ["brand-dashboard", "/app/menu", "/app/staff", "brand-settings"],
   REGIONAL_MANAGER: ["/app/floor", "/app/menu", "/app/staff", "/app/analytics"],
-  BRANCH_ADMIN: ["/app/floor", "/app/pos", "/app/kds", "/app/payments"],
+  BRANCH_ADMIN: ["/app/dashboard", "/app/floor", "/app/pos", "/app/payments"],
   CASHIER: ["/app/pos", "/app/payments", "/app/floor", "/app/attendance"],
-  WAITER: ["/app/floor", "/app/floor/requests"],
-  KITCHEN_STAFF: ["/app/kds", "/app/kds/expo"],
-  RUNNER: ["/app/kds/expo", "/app/floor/requests", "/app/floor"],
+  WAITER: ["/app/floor", "/app/floor/requests", "/app/attendance"],
+  KITCHEN_STAFF: ["/app/kds", "/app/kds/expo", "/app/attendance"],
+  RUNNER: ["/app/kds/expo", "/app/floor/requests", "/app/floor", "/app/attendance"],
 };
 
 /**
@@ -195,6 +203,15 @@ export function navForUser(me: UserProfile, activeBranchId: string | null): NavI
       key: "brand-dashboard",
       href: `/app/brands/${me.brand_id}`,
       label: "Dashboard",
+      group: "Portfolio",
+      shell: "admin",
+      phase: 5,
+      roles: ["BRAND_ADMIN"],
+    });
+    extra.push({
+      key: "brand-settings",
+      href: `/app/brands/${me.brand_id}/settings`,
+      label: "Settings",
       group: "Portfolio",
       shell: "admin",
       phase: 5,
@@ -232,6 +249,7 @@ export function splitBottomNav(role: UserRole, items: readonly NavItem[]) {
 export function isNavActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
   if (!pathname.startsWith(`${href}/`)) return false;
+  if (/^\/app\/brands\/[^/]+$/.test(href)) return false;
   return !NAV_ITEMS.some(
     (item) =>
       item.href !== href &&

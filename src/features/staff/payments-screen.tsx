@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
+
 import { Money } from "@/components/ops/money";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
@@ -33,7 +35,10 @@ export function PaymentsScreen() {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Verify failed");
     },
-    onSuccess: () => {
+    onSuccess: (_data, paymentId) => {
+      const row = (pending.data ?? []).find((payment) => payment.id === paymentId);
+      ignoreOwnChange(paymentId, "COMPLETED");
+      if (row) ignoreOwnChange(row.order_id, "PAID");
       toast.success("Payment verified");
       void queryClient.invalidateQueries({ queryKey: ["payments-pending"] });
     },
@@ -43,30 +48,55 @@ export function PaymentsScreen() {
   if (pending.isLoading) return <LoadingState label="Loading payments" />;
   if (pending.isError) return <QueryErrorState error={pending.error} screen="Payments" onRetry={() => void pending.refetch()} />;
 
+  const rows = pending.data ?? [];
+
   return (
     <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Payments</h1>
-      <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-        Card webhooks are received by the server. This app never calls the payment webhook URL.
-      </p>
-      {(pending.data ?? []).length === 0 ? <p className="text-sm">No payments are waiting.</p> : null}
-      <ul className="grid gap-3">
-        {(pending.data ?? []).map((payment) => (
-          <li key={payment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
-            <div>
-              <p className="font-medium">
-                {paymentMethodLabel(payment.payment_method)}
-                {payment.pickup_number != null ? <span className="tabular-nums"> #{payment.pickup_number}</span> : null}
-              </p>
-              <p className="text-sm text-muted-foreground">{paymentStatusLabel(payment.status)}</p>
-            </div>
-            <Money amount={payment.amount} currency={payment.currency} />
-            <button type="button" className="min-h-11 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => verify.mutate(payment.id)}>
-              Verify
-            </button>
-          </li>
-        ))}
-      </ul>
+      <div className="grid gap-1">
+        <h1 className="text-[length:var(--text-28)] font-semibold">Payments</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Cash and card-terminal payments waiting for you to confirm the money was taken.</p>
+      </div>
+      {rows.length === 0 ? <p className="text-sm text-muted-foreground">No payments are waiting.</p> : (
+        <div className="overflow-x-auto rounded-2xl border bg-card">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
+            <caption className="px-4 py-3 text-start text-sm text-muted-foreground">Confirm a row after you have taken the money.</caption>
+            <thead>
+              <tr className="border-b text-muted-foreground">
+                <th scope="col" className="px-4 py-3 text-start font-medium">Order</th>
+                <th scope="col" className="px-4 py-3 text-start font-medium">Method</th>
+                <th scope="col" className="px-4 py-3 text-start font-medium">Status</th>
+                <th scope="col" className="px-4 py-3 text-start font-medium">Amount</th>
+                <th scope="col" className="px-4 py-3 text-start font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((payment) => {
+                const confirming = verify.isPending && verify.variables === payment.id;
+                return (
+                  <tr key={payment.id} className="border-b align-middle last:border-b-0">
+                    <th scope="row" className="px-4 py-4 text-start font-semibold tabular-nums">
+                      {payment.pickup_number != null ? `Pickup ${payment.pickup_number}` : "Table"}
+                    </th>
+                    <td className="px-4 py-4">{paymentMethodLabel(payment.payment_method)}</td>
+                    <td className="px-4 py-4">{paymentStatusLabel(payment.status)}</td>
+                    <td className="px-4 py-4 font-medium"><Money amount={payment.amount} currency={payment.currency} /></td>
+                    <td className="px-4 py-4">
+                      <button
+                        type="button"
+                        className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                        disabled={confirming}
+                        onClick={() => verify.mutate(payment.id)}
+                      >
+                        {confirming ? "Confirming…" : "Confirm payment"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

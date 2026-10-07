@@ -16,7 +16,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { Logo } from "@/components/ops/logo";
+import { AnimatedLogo } from "@/components/brand/animated-logo";
+import { LOGO_ASPECT, LOGO_VIDEO } from "@/components/brand/logo-assets";
 import { FEATURE_KEYS, SURFACE_KEYS, landingCopy, type FeatureKey, type SurfaceKey } from "@/features/marketing/copy";
 import { formatMoney } from "@/lib/format/money";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
@@ -58,10 +59,11 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
 
   return (
     <div dir={dir} lang={locale} className={`bg-background text-foreground ${isArabic ? "font-arabic" : ""}`}>
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 supports-backdrop-filter:bg-background/70 supports-backdrop-filter:backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <Link href={pathFor(locale)} aria-label="Qwicoo" className={`rounded-lg ${FOCUS}`}>
-            <Logo markClassName="size-7 text-primary" wordClassName="text-xl" />
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-[#f2efe9]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-1 sm:px-6">
+          {/* Solid LOGO_SURFACE header so the logo canvas blends away (see logo-assets). */}
+          <Link href={pathFor(locale)} aria-label="Qwicoo" className={`-ms-2 block w-40 shrink-0 rounded-lg sm:w-52 ${FOCUS}`}>
+            <AnimatedLogo />
           </Link>
 
           <nav aria-label="Site" className="flex items-center gap-1 text-sm sm:gap-2">
@@ -242,10 +244,11 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
         </div>
       </section>
 
-      <footer className="border-t bg-card">
+      <footer className="border-t bg-[#f2efe9]">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 sm:px-6 md:grid-cols-[1fr_auto] md:items-center">
           <div className="grid gap-2">
-            <Logo markClassName="size-6 text-primary" wordClassName="text-lg" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={LOGO_VIDEO.poster} alt="Qwicoo" className="-ms-2 block w-40 mix-blend-darken" style={{ aspectRatio: LOGO_ASPECT }} />
 
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Qwicoo · {t.footer.rights}

@@ -1,22 +1,24 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MapPin } from "lucide-react";
+import { ArrowLeft, ImagePlus, MapPin } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { EntityCard } from "@/components/ops/entity-card";
-import { LocaleText } from "@/components/ops/locale-text";
+import { pickLocale } from "@/lib/i18n/locale-text";
 import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
 import { PageHeader } from "@/components/ops/page-header";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AnalyticsScreen } from "@/features/staff/backoffice-screen";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { mediaUrl, presignedUploadUrl } from "@/lib/media";
 import { useDenyWhenMissing } from "@/lib/auth/session-client";
 import { useScope } from "@/stores/scope";
 
@@ -64,6 +66,20 @@ export function BrandsScreen() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+  const activate = useMutation({
+    mutationFn: async (brandId: string) => {
+      const result = await browserApi.PATCH("/api/v1/brands/{brand_id}", {
+        params: { path: { brand_id: brandId } },
+        body: { is_active: true },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not activate brand");
+    },
+    onSuccess: () => {
+      toast.success("Brand activated");
+      void queryClient.invalidateQueries({ queryKey: ["brands"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   if (brands.isLoading) return <LoadingState label="Loading brands" />;
   if (brands.isError) return <ErrorState body={brands.error.message} onRetry={() => void brands.refetch()} />;
@@ -91,8 +107,24 @@ export function BrandsScreen() {
                 title={brand.name}
                 meta={brand.slug}
                 badge={<StatusChip tone={brand.is_active ? "available" : "soldout"}>{brand.is_active ? "Active" : "Inactive"}</StatusChip>}
+                onClick={() => {
+                  if (useScope.getState().homeScope === "platform") {
+                    useScope.getState().focusPlatform({ brandId: brand.id, branchId: null });
+                  }
+                }}
               />
-              <button type="button" className="min-h-11 text-sm text-destructive" onClick={() => setRemoveId(brand.id)}>Deactivate</button>
+              {brand.is_active ? (
+                <button type="button" className="min-h-11 text-sm text-destructive" onClick={() => setRemoveId(brand.id)}>Deactivate</button>
+              ) : (
+                <button
+                  type="button"
+                  className="min-h-11 text-sm font-medium text-primary disabled:opacity-50"
+                  disabled={activate.isPending && activate.variables === brand.id}
+                  onClick={() => activate.mutate(brand.id)}
+                >
+                  {activate.isPending && activate.variables === brand.id ? "Activating…" : "Activate"}
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -114,8 +146,54 @@ export function BrandsScreen() {
 }
 
 export function BrandDetailScreen({ brandId }: { brandId: string }) {
-  const [branchOpen, setBranchOpen] = useState(false);
   const isPlatform = useScope((state) => state.homeScope === "platform");
+  if (!isPlatform) return <BrandOwnerDashboard brandId={brandId} />;
+  return <BrandSetup brandId={brandId} backHref="/app/brands" backLabel="Back" />;
+}
+
+export function BrandSettingsScreen({ brandId }: { brandId: string }) {
+  return <BrandSetup brandId={brandId} backHref={`/app/brands/${brandId}`} backLabel="Dashboard" />;
+}
+
+function BrandOwnerDashboard({ brandId }: { brandId: string }) {
+  const brand = useQuery({
+    queryKey: ["brand", brandId],
+    retry: false,
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/brands/{brand_id}", { params: { path: { brand_id: brandId } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Brand failed");
+      return result.data;
+    },
+  });
+  const missing = useDenyWhenMissing(brand.error);
+  if (brand.isLoading || missing) return <LoadingState label="Loading brand" />;
+  if (brand.isError || !brand.data) return <ErrorState body={brand.error?.message ?? "Brand missing"} onRetry={() => void brand.refetch()} />;
+  return (
+    <div className="grid gap-4">
+      <PageHeader
+        title={brand.data.name}
+        action={
+          <Link href={`/app/brands/${brandId}/settings`} className="inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium hover:bg-muted">
+            Settings
+          </Link>
+        }
+      />
+      <AnalyticsScreen view="dashboard" embedded />
+    </div>
+  );
+}
+
+function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHref: string; backLabel: string }) {
+  const queryClient = useQueryClient();
+  const [branchOpen, setBranchOpen] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const isPlatform = useScope((state) => state.homeScope === "platform");
+  const focusedBrandId = useScope((state) => state.brandId);
+  useLayoutEffect(() => {
+    if (useScope.getState().homeScope === "platform") {
+      useScope.getState().focusPlatform({ brandId, branchId: null });
+    }
+  }, [brandId]);
   const brand = useQuery({
     queryKey: ["brand", brandId],
     retry: false,
@@ -131,7 +209,7 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
   }, [brand.data]);
   const branches = useQuery({
     queryKey: ["brand-branches", brandId],
-    enabled: brand.isSuccess,
+    enabled: brand.isSuccess && (!isPlatform || focusedBrandId === brandId),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/brands/{brand_id}/branches", { params: { path: { brand_id: brandId } } });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Branches failed");
@@ -139,14 +217,25 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
     },
   });
   const logo = useMutation({
-    mutationFn: async (file: File) => uploadLogo(file, "brands", async () => {
+    mutationFn: async (file: File) => uploadLogo(file, "brands", async (publicUrl) => {
       const result = await browserApi.POST("/api/v1/brands/{brand_id}/logo", {
         params: { path: { brand_id: brandId } },
-      });
+        body: { logo_url: publicUrl },
+        headers: { "Content-Type": "application/json" },
+      } as never);
       if (!result.response.ok) throw asApiError(result.error, result.response, "Logo failed");
     }),
-    onSuccess: () => toast.success("Logo saved"),
-    onError: (error: Error) => toast.error(error.message),
+    onSuccess: () => {
+      toast.success("Logo saved");
+      void queryClient.invalidateQueries({ queryKey: ["brand", brandId] });
+    },
+    onError: (error: Error) => {
+      setLogoPreview((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return null;
+      });
+      toast.error(error.message);
+    },
   });
 
   if (brand.isLoading || missing) return <LoadingState label="Loading brand" />;
@@ -154,6 +243,13 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
 
   return (
     <div className="grid gap-4">
+      <Link
+        href={backHref}
+        className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        <ArrowLeft aria-hidden className="size-4" />
+        {backLabel}
+      </Link>
       <PageHeader
         title={brand.data.name}
         action={
@@ -164,10 +260,19 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
           ) : undefined
         }
       />
-      <label className="text-sm">
-        Logo
-        <input className="mt-1 block" type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) logo.mutate(file); }} />
-      </label>
+      <BrandLogo
+        name={brand.data.name}
+        logoUrl={logoPreview ?? brand.data.logo_url}
+        pending={logo.isPending}
+        onFile={(file) => {
+          const url = URL.createObjectURL(file);
+          setLogoPreview((current) => {
+            if (current) URL.revokeObjectURL(current);
+            return url;
+          });
+          logo.mutate(file);
+        }}
+      />
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Branches</h2>
         <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setBranchOpen(true)}>
@@ -175,17 +280,78 @@ export function BrandDetailScreen({ brandId }: { brandId: string }) {
         </button>
       </div>
       <CreateBranchDialog brandId={brandId} open={branchOpen} onOpenChange={setBranchOpen} />
-      <ul className="grid gap-2">
+      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {(branches.data ?? []).map((branch) => (
           <li key={branch.id}>
-            <Link className="inline-flex min-h-11 items-center gap-2 underline" href={`/app/branches/${branch.id}`}>
-              <LocaleText value={branch.name} />
-              <span className="text-sm text-muted-foreground no-underline">{branch.slug}</span>
-            </Link>
+            <EntityCard
+              href={`/app/branches/${branch.id}`}
+              title={pickLocale(branch.name)}
+              meta={branch.slug}
+              imageUrl={mediaUrl(logoPreview ?? brand.data.logo_url)}
+              imageAlt={`${brand.data.name} logo`}
+              badge={<StatusChip tone={branch.is_active ? "available" : "soldout"}>{branch.is_active ? "Active" : "Inactive"}</StatusChip>}
+            />
           </li>
         ))}
       </ul>
     </div>
+  );
+}
+
+function BrandLogo({
+  name,
+  logoUrl,
+  pending,
+  onFile,
+}: {
+  name: string;
+  logoUrl?: string | null;
+  pending: boolean;
+  onFile: (file: File) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const mark = name.trim().charAt(0).toUpperCase() || "B";
+  const shown = mediaUrl(logoUrl?.trim() ? logoUrl : null);
+  return (
+    <section className="flex max-w-lg flex-col gap-4 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5 sm:flex-row sm:items-center">
+      <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
+        {shown ? (
+          // Logo files are stored on the upload host, which next/image is not set up to optimise.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={shown} alt={`${name} logo`} className="size-full object-cover" />
+        ) : (
+          <span className="text-2xl font-semibold text-primary">{mark}</span>
+        )}
+      </div>
+      <div className="grid gap-2">
+        <div>
+          <h2 className="font-semibold">Logo</h2>
+          <p id="brand-logo-hint" className="text-sm leading-6 text-muted-foreground">Shown to guests and staff. A square image works best.</p>
+        </div>
+        <input
+          ref={inputRef}
+          className="sr-only"
+          type="file"
+          accept="image/*"
+          aria-describedby="brand-logo-hint"
+          disabled={pending}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onFile(file);
+          }}
+        />
+        <button
+          type="button"
+          className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+          disabled={pending}
+          onClick={() => inputRef.current?.click()}
+        >
+          <ImagePlus aria-hidden className="size-4" />
+          {pending ? "Uploading…" : shown ? "Replace logo" : "Choose logo"}
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -327,9 +493,7 @@ async function uploadLogo(file: File, folder: "brands" | "items" | "general", af
   };
   const signed = await browserApi.POST("/api/v1/media/presigned-url", { body });
   if (!signed.response.ok || !signed.data) throw asApiError(signed.error, signed.response, "Upload URL failed");
-  const uploadUrl = signed.data.upload_url.startsWith("http")
-    ? signed.data.upload_url
-    : `${process.env.API_BASE_URL ?? ""}${signed.data.upload_url}`;
+  const uploadUrl = presignedUploadUrl(signed.data.upload_url);
   const uploaded = await fetch(uploadUrl, { method: "PUT", body: file, headers: { "content-type": file.type || "image/png" } });
   if (!uploaded.ok) throw new Error("Upload failed");
   await after(signed.data.public_url);

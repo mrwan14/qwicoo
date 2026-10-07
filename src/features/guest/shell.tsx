@@ -11,6 +11,13 @@ import { accentForeground, mergeGuestBranding, sameBranding } from "@/lib/guest/
 import { mediaUrl } from "@/lib/media";
 import { useGuest } from "@/stores/guest";
 
+export const guestField =
+  "h-12 w-full rounded-xl border bg-background px-3 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+export const guestPrimaryButton =
+  "inline-flex min-h-14 w-full items-center justify-center rounded-xl bg-primary px-5 text-base font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
+export const guestSecondaryButton =
+  "inline-flex min-h-14 w-full items-center justify-center rounded-xl border bg-card px-5 text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
+
 export function useGuestCopy() {
   const locale = useGuest((state) => state.locale);
   const setLocale = useGuest((state) => state.setLocale);
@@ -101,7 +108,7 @@ export function RejoinTable({ message }: { message?: string }) {
       {token ? (
         <button
           type="button"
-          className="min-h-14 justify-self-start rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          className={guestPrimaryButton}
           disabled={pending}
           onClick={() => void rejoin()}
         >
@@ -214,17 +221,17 @@ export function GuestShell({
 
   return (
     <div dir={dir} lang={locale} style={style} className="min-h-dvh overflow-x-hidden bg-background text-foreground">
-      <header className="flex items-center justify-between gap-3 px-4 py-4">
+      <header className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-4 py-4">
         {neutral ? <Logo markClassName="size-7 text-primary" wordClassName="text-2xl" /> : <BrandHeader />}
         <button
           type="button"
-          className="min-h-11 shrink-0 rounded-lg border px-3 text-sm"
+          className="min-h-11 shrink-0 rounded-xl border bg-card px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
         >
           {t.language}
         </button>
       </header>
-      <div className="mx-auto w-full max-w-3xl px-4 py-4 pb-28">{resume ? <GuestResume>{children}</GuestResume> : children}</div>
+      <div className="mx-auto w-full max-w-md px-4 py-4 pb-32">{resume ? <GuestResume>{children}</GuestResume> : children}</div>
     </div>
   );
 }

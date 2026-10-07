@@ -2,7 +2,8 @@ import Link from "next/link";
 import { ArrowLeft, BarChart3, Monitor, QrCode, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Logo, LogoMark } from "@/components/ops/logo";
+import { AnimatedLogo } from "@/components/brand/animated-logo";
+import { LogoMark } from "@/components/ops/logo";
 
 const PANEL_POINTS: { icon: LucideIcon; text: string }[] = [
   { icon: QrCode, text: "QR table ordering, POS, and one menu per brand" },
@@ -25,12 +26,16 @@ export function AuthShell({
   surface?: "card" | "plain";
 }) {
   return (
-    <main className="grid min-h-dvh lg:grid-cols-[1fr_1.1fr]">
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-foreground p-10 text-background lg:flex">
-        <LogoMark className="pointer-events-none absolute -bottom-20 -end-20 size-96 text-background/5" />
+    <main className="grid min-h-dvh bg-[#f2efe9] lg:bg-background lg:grid-cols-[1fr_1.1fr]">
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#f2efe9] p-10 text-neutral-900 lg:flex">
+        <LogoMark className="pointer-events-none absolute -bottom-20 -end-20 size-96 text-neutral-900/[0.04]" />
 
-        <Link href="/" className="relative w-fit rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4">
-          <Logo markClassName="size-8 text-background" wordClassName="text-xl" />
+        <Link
+          href="/"
+          aria-label="Qwicoo home"
+          className="relative -ms-2 -mt-2 block w-full max-w-[34rem] rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4"
+        >
+          <AnimatedLogo />
         </Link>
 
         <div className="relative grid gap-8">
@@ -40,7 +45,7 @@ export function AuthShell({
           <ul className="grid gap-4">
             {PANEL_POINTS.map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-start gap-3 text-sm">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background/10">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-neutral-900/[0.07]">
                   <Icon aria-hidden className="size-4" />
                 </span>
                 <span className="pt-1.5 opacity-90">{text}</span>
@@ -52,10 +57,10 @@ export function AuthShell({
         <p className="relative text-xs opacity-60">© {new Date().getFullYear()} Qwicoo</p>
       </aside>
 
-      <div className="flex flex-col px-4 py-6 sm:px-8">
-        <div className="flex items-center justify-between gap-3">
-          <Link href="/" className="rounded-lg lg:hidden">
-            <Logo markClassName="size-7 text-primary" wordClassName="text-lg" />
+      <div className="flex flex-col px-4 py-6 sm:px-8 lg:bg-background">
+        <div className="flex items-start justify-between gap-3">
+          <Link href="/" aria-label="Qwicoo home" className="-ms-1 -mt-2 block w-64 rounded-lg sm:w-80 lg:hidden">
+            <AnimatedLogo />
           </Link>
           <Link
             href="/"

@@ -4,15 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { toneSurface } from "@/components/ops/status-chip";
-import { useStaffSession } from "@/components/ops/staff-session";
+import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
+
+import { StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatMoney } from "@/lib/format/money";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import { pickLocale } from "@/lib/i18n/locale-text";
-import { orderStatusLabel } from "@/lib/status-labels";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
 
@@ -78,12 +78,11 @@ function cardLines(order: ExpoOrder): CardLine[] {
 }
 
 export function ExpoScreen() {
-  const me = useStaffSession();
-  const isRunner = me?.role === "RUNNER";
   const interval = usePollingInterval(7000);
   const branchId = useScope((state) => state.branchId);
   const [token, setToken] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [noteEditor, setNoteEditor] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const queryKey = ["expo", branchId];
   const orders = useQuery({
@@ -103,7 +102,10 @@ export function ExpoScreen() {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Expo bump failed");
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["expo"] }),
+    onSuccess: (_data, orderId) => {
+      ignoreOwnChange(orderId, "READY");
+      void queryClient.invalidateQueries({ queryKey: ["expo"] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 
@@ -117,6 +119,7 @@ export function ExpoScreen() {
       return orderId;
     },
     onSuccess: (orderId) => {
+      ignoreOwnChange(orderId, "DELIVERED");
       queryClient.setQueryData<ExpoOrder[]>(queryKey, (current) => current?.filter((order) => order.order_id !== orderId));
       toast.success("Handed over");
       void queryClient.invalidateQueries({ queryKey: ["expo"] });
@@ -132,7 +135,10 @@ export function ExpoScreen() {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Notes failed");
     },
-    onSuccess: () => toast.success("Notes saved"),
+    onSuccess: (_data, orderId) => {
+      toast.success("Note saved");
+      setNoteEditor((current) => (current === orderId ? null : current));
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 
@@ -166,8 +172,8 @@ export function ExpoScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (orders.isLoading) return <LoadingState label="Loading expo" />;
-  if (orders.isError) return <QueryErrorState error={orders.error} screen="Expo" onRetry={() => void orders.refetch()} />;
+  if (orders.isLoading) return <LoadingState label="Loading handover" />;
+  if (orders.isError) return <QueryErrorState error={orders.error} screen="Handover" onRetry={() => void orders.refetch()} />;
 
   const cards = (orders.data ?? [])
     .map((order) => ({ order, number: displayNumber(order), lines: cardLines(order) }))
@@ -175,43 +181,56 @@ export function ExpoScreen() {
 
   return (
     <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Expo</h1>
+      <div className="grid gap-1">
+        <h1 className="text-[length:var(--text-28)] font-semibold">Handover</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Give the finished order to the guest. The kitchen cooks it first.</p>
+      </div>
       <form
-        className="flex flex-wrap gap-2"
+        className="grid gap-2 rounded-2xl border bg-card p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
         onSubmit={(event) => {
           event.preventDefault();
-          verify.mutate();
+          if (token.trim()) verify.mutate();
         }}
       >
-        <input className="h-12 min-w-48 flex-1 rounded-lg border px-3" placeholder="Handover token" value={token} onChange={(event) => setToken(event.target.value)} />
-        <button className="min-h-14 rounded-lg bg-primary px-4 text-sm text-primary-foreground" type="submit">
-          Verify handover
+        <label className="grid gap-1 text-sm sm:col-span-2">
+          Guest code
+          <span className="text-sm leading-6 text-muted-foreground">Only a drive-thru or curbside guest has this code on their phone. A table or a normal takeaway does not. Type it to confirm the order is theirs.</span>
+        </label>
+        <input className="h-12 rounded-xl border bg-background px-3" value={token} onChange={(event) => setToken(event.target.value)} />
+        <button className="min-h-12 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" type="submit" disabled={!token.trim() || verify.isPending}>
+          {verify.isPending ? "Checking…" : "Check code"}
         </button>
       </form>
-      {cards.length === 0 ? <EmptyState title="No orders waiting" body="Orders show up here as the kitchen starts on them." /> : null}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {cards.length === 0 ? <EmptyState title="Nothing to hand over" body="Orders appear here while the kitchen is making them." /> : (
+      <div className="overflow-x-auto rounded-2xl border bg-card">
+        <table className="w-full min-w-[760px] border-collapse text-sm">
+          <caption className="px-4 py-3 text-start text-sm text-muted-foreground">Press Guest has the food after you give the order to the guest.</caption>
+          <thead>
+            <tr className="border-b text-muted-foreground">
+              <th scope="col" className="px-4 py-3 text-start font-medium">Order</th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">Dishes</th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">Status</th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">Note</th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">Action</th>
+            </tr>
+          </thead>
+          <tbody>
         {cards.map(({ order, number, lines }) => {
           const ready = order.status === "READY";
           const handingOver = handOver.isPending && handOver.variables === order.order_id;
           const bumping = bump.isPending && bump.variables === order.order_id;
+          const savingNote = saveNotes.isPending && saveNotes.variables === order.order_id;
+          const editingNote = noteEditor === order.order_id;
+          const savedNote = order.expo_notes?.trim() ?? "";
+          const draftNote = (notes[order.order_id] ?? order.expo_notes ?? "").trim();
+          const noteChanged = draftNote !== savedNote;
+          const dishesLeft = order.total_ticket_items > 0 && order.ready_ticket_items < order.total_ticket_items;
           return (
-            <article
-              key={order.order_id}
-              className={`grid content-start gap-3 rounded-xl border bg-card p-3 shadow-elev-1 ${ready ? "border-[var(--status-ready)]" : ""}`}
-            >
-              <header className="flex items-start justify-between gap-2">
-                <p className="text-[length:var(--text-28)] leading-none font-semibold tabular-nums">{number ?? "No number"}</p>
-                <div className="grid justify-items-end gap-1 text-xs text-muted-foreground">
-                  <span className={ready ? "font-medium text-[var(--status-ready)]" : undefined}>{orderStatusLabel(order.status)}</span>
-                  {order.total_ticket_items > 0 ? (
-                    <span className="tabular-nums">
-                      {order.ready_ticket_items}/{order.total_ticket_items} ready
-                    </span>
-                  ) : null}
-                </div>
-              </header>
+            <tr key={order.order_id} className="border-b align-top last:border-b-0">
+              <th scope="row" className="px-4 py-4 text-start text-base font-semibold tabular-nums">{number ?? "No number"}</th>
+              <td className="px-4 py-4">
               {order.customer_notes?.trim() ? (
-                <p className={`rounded-md px-2 py-1 text-sm font-medium ${toneSurface("ordered")}`}>
+                <p className={`mb-2 rounded-md px-2 py-1 text-sm font-medium ${toneSurface("ordered")}`}>
                   Order note: {order.customer_notes}
                 </p>
               ) : null}
@@ -238,10 +257,14 @@ export function ExpoScreen() {
                         {line.ticketItemId ? (
                           <button
                             type="button"
-                            className="grid min-h-14 w-full gap-0.5 rounded-lg border px-3 py-2 text-start"
+                            className="grid min-h-14 w-full gap-0.5 rounded-xl border px-3 py-2 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                            disabled={ticketBump.isPending && ticketBump.variables === line.ticketItemId}
                             onClick={() => line.ticketItemId && ticketBump.mutate(line.ticketItemId)}
                           >
                             {body}
+                            <span className="text-sm text-muted-foreground">
+                              {ticketBump.isPending && ticketBump.variables === line.ticketItemId ? "Marking…" : "Tap when this dish is ready"}
+                            </span>
                           </button>
                         ) : (
                           <div className="grid gap-0.5 rounded-lg border px-3 py-2">{body}</div>
@@ -251,42 +274,77 @@ export function ExpoScreen() {
                   })}
                 </ul>
               )}
-              <label className="grid gap-1 text-sm">
-                Expo notes
-                <textarea
-                  className="min-h-20 rounded-lg border px-3 py-2"
-                  value={notes[order.order_id] ?? order.expo_notes ?? ""}
-                  onChange={(event) => setNotes((current) => ({ ...current, [order.order_id]: event.target.value }))}
-                />
-              </label>
-              <button type="button" className="min-h-11 rounded-lg border text-sm" onClick={() => saveNotes.mutate(order.order_id)}>
-                Save notes
-              </button>
+              </td>
+              <td className="px-4 py-4">
+                <StatusChip tone={ready ? "ready" : "ordered"}>{ready ? "Ready to hand over" : "Still in the kitchen"}</StatusChip>
+                {dishesLeft ? (
+                  <p className="mt-2 text-sm text-muted-foreground">{order.ready_ticket_items} of {order.total_ticket_items} dishes ready</p>
+                ) : null}
+              </td>
+              <td className="px-4 py-4">
+              {editingNote ? (
+                <label className="grid gap-1 text-sm">
+                  Note for the handover
+                  <textarea
+                    className="min-h-20 rounded-xl border bg-background px-3 py-2"
+                    value={notes[order.order_id] ?? order.expo_notes ?? ""}
+                    onChange={(event) => setNotes((current) => ({ ...current, [order.order_id]: event.target.value }))}
+                  />
+                  <span className="flex gap-2">
+                    {noteChanged ? (
+                      <button type="button" className="min-h-11 rounded-xl bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={savingNote} onClick={() => saveNotes.mutate(order.order_id)}>
+                        {savingNote ? "Saving…" : "Save note"}
+                      </button>
+                    ) : null}
+                    <button type="button" className="min-h-11 rounded-xl px-3 text-sm text-muted-foreground" onClick={() => setNoteEditor(null)}>
+                      Cancel
+                    </button>
+                  </span>
+                </label>
+              ) : (
+                <div className="grid gap-1">
+                  {savedNote ? <p className="text-sm">{savedNote}</p> : null}
+                  <button
+                    type="button"
+                    className="min-h-11 justify-self-start text-sm text-muted-foreground underline-offset-2 hover:underline"
+                    onClick={() => {
+                      setNotes((current) => ({ ...current, [order.order_id]: current[order.order_id] ?? order.expo_notes ?? "" }));
+                      setNoteEditor(order.order_id);
+                    }}
+                  >
+                    {savedNote ? "Change note" : "Add a note"}
+                  </button>
+                </div>
+              )}
+              </td>
+              <td className="px-4 py-4">
               {ready ? (
-                isRunner ? null : (
                 <button
-                  type="button"
-                  className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-60"
-                  disabled={handingOver}
-                  onClick={() => handOver.mutate(order.order_id)}
-                >
-                  {handingOver ? "Handing over…" : "Handed over"}
-                </button>
-                )
+                    type="button"
+                    className="min-h-11 rounded-xl bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                    disabled={handingOver}
+                    onClick={() => handOver.mutate(order.order_id)}
+                  >
+                    {handingOver ? "Handing over…" : "Guest has the food"}
+                  </button>
               ) : (
                 <button
                   type="button"
-                  className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-60"
+                  className="min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
                   disabled={bumping}
                   onClick={() => bump.mutate(order.order_id)}
                 >
-                  Mark ready
+                  {bumping ? "Marking…" : "Mark ready to hand over"}
                 </button>
               )}
-            </article>
+              </td>
+            </tr>
           );
         })}
+          </tbody>
+        </table>
       </div>
+      )}
     </div>
   );
 }

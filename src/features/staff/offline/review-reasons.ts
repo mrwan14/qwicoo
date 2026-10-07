@@ -16,6 +16,8 @@ export function reasonLabel(reason: Reason): string {
       return `Synced more than ${money(reason.max_hours) || "the allowed"} hours after the sale`;
     case "NO_OPEN_DRAWER":
       return "No cash drawer was open at the time";
+    case "DRAWER_CLOSED_BEFORE_SYNC":
+      return "Its drawer closed before it synced, so the cash counts in the current drawer";
     case "TABLE_MISSING":
       return "The table wasn't found, so it's kept without a table";
     case "ITEM_MISSING":

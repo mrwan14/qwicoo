@@ -50,6 +50,7 @@ export function useOfflineConfig(branchId: string | null) {
     queryKey: offlineQueryKeys.config(branchId),
     enabled: Boolean(branchId),
     staleTime: 5 * 60_000,
+    networkMode: "always",
     queryFn: () => fetchOfflineConfig(branchId ?? ""),
   });
 }

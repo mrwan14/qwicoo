@@ -14,7 +14,10 @@ import { formatMoney } from "@/lib/format/money";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import type { components } from "@/lib/api/schema";
+import { useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
+
+import { OfflineStage, OfflineTickets } from "./offline/offline-tickets";
 
 type ExpoOrder = components["schemas"]["KDSExpoOrderResponse"];
 
@@ -84,6 +87,7 @@ export function ExpoScreen() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [noteEditor, setNoteEditor] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const online = useNetwork((state) => state.online);
   const queryKey = ["expo", branchId];
   const orders = useQuery({
     queryKey,
@@ -172,6 +176,7 @@ export function ExpoScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  if (!online) return <OfflineStage stage="handover" />;
   if (orders.isLoading) return <LoadingState label="Loading handover" />;
   if (orders.isError) return <QueryErrorState error={orders.error} screen="Handover" onRetry={() => void orders.refetch()} />;
 
@@ -185,6 +190,7 @@ export function ExpoScreen() {
         <h1 className="text-[length:var(--text-28)] font-semibold">Handover</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Give the finished order to the guest. The kitchen cooks it first.</p>
       </div>
+      <OfflineTickets stage="handover" />
       <form
         className="grid gap-2 rounded-2xl border bg-card p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
         onSubmit={(event) => {

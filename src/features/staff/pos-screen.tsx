@@ -17,7 +17,10 @@ import type { components } from "@/lib/api/schema";
 import { useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
 
-import { fetchMenu, fetchTables, offlineQueryKeys } from "./offline/offline-data";
+import { fetchMenu, fetchTables, offlineQueryKeys, useOfflineConfig } from "./offline/offline-data";
+import { displayNumber, isWaiting, type OfflineLine } from "./offline/queue-core";
+import { useOfflineQueue } from "./offline/queue";
+import { TillOfflineOrders } from "./offline/offline-tickets";
 
 type MenuItem = components["schemas"]["MenuItemResponse"];
 type ModifierGroup = components["schemas"]["ModifierGroupResponse"];
@@ -32,6 +35,9 @@ type Line = {
 
 type Confirmation = {
   id: string;
+  /** Set when the order was saved on this till while offline (queue id). */
+  offlineId?: string;
+  offlineNumber?: string;
   pickup: number | null;
   total: string;
   paid: boolean;
@@ -59,18 +65,29 @@ function OrderConfirmation({
   onCancel: () => void;
   onDismiss: () => void;
 }) {
+  const queued = useOfflineQueue((state) => (confirmation.offlineId ? state.orders.find((order) => order.id === confirmation.offlineId) : undefined));
+  const offline = Boolean(confirmation.offlineId);
+  const waiting = queued ? isWaiting(queued) : false;
+  const number = queued ? displayNumber(queued) : confirmation.pickup != null ? `#${confirmation.pickup}` : null;
+  const realNumber = queued ? queued.pickupNumber != null || Boolean(queued.serverId && queued.tableNumber) : true;
   return (
     <section role="status" aria-live="polite" className="grid gap-3 rounded-xl border bg-background p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">Order sent</p>
+        <p className="text-sm font-medium">{offline ? (waiting ? "Saved on this till" : "Order synced") : "Order sent"}</p>
         <StatusChip tone={confirmation.paid ? "available" : "ordered"}>{paymentLabel(confirmation)}</StatusChip>
       </div>
-      {confirmation.pickup != null ? (
+      {number ? (
         <p className="grid gap-0.5">
-          <span className="text-xs text-muted-foreground">Pickup number</span>
-          <span className="text-[length:var(--text-28)] leading-none font-semibold tabular-nums">#{confirmation.pickup}</span>
+          <span className="text-xs text-muted-foreground">{realNumber ? (confirmation.orderType === "DINE_IN" ? "Order for" : "Pickup number") : "Offline number"}</span>
+          <span className="text-[length:var(--text-28)] leading-none font-semibold tabular-nums">{number}</span>
         </p>
       ) : null}
+      {offline && waiting ? (
+        <p className="text-sm leading-6 text-muted-foreground">
+          Give the guest this number. It syncs when the connection is back, and the real number replaces it.
+        </p>
+      ) : null}
+      {queued?.status === "CANCELLED" ? <p className="text-sm text-muted-foreground">Cancelled on this till.</p> : null}
       <p className="flex justify-between text-sm">
         <span>{confirmation.paid ? "Collected" : "Total"}</span>
         <span className="font-semibold">
@@ -81,9 +98,11 @@ function OrderConfirmation({
         <button type="button" className="min-h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onClick={onDismiss}>
           New order
         </button>
-        <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm" onClick={onCancel}>
-          Cancel order
-        </button>
+        {queued?.status === "CANCELLED" ? null : (
+          <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm" onClick={onCancel}>
+            Cancel order
+          </button>
+        )}
       </div>
     </section>
   );
@@ -143,6 +162,8 @@ export function PosScreen() {
   const tables = useQuery({
     queryKey: offlineQueryKeys.tables(branchId),
     enabled: Boolean(branchId) && orderType === "DINE_IN",
+    // Run even when the browser reports offline: the fetcher answers from the till's saved copy.
+    networkMode: "always",
     queryFn: () => fetchTables(branchId ?? ""),
   });
   const linesRef = useRef(lines);
@@ -165,8 +186,11 @@ export function PosScreen() {
   const menu = useQuery({
     queryKey: offlineQueryKeys.menu(branchId),
     enabled: Boolean(branchId),
+    networkMode: "always",
     queryFn: () => fetchMenu(branchId ?? ""),
   });
+
+  const offlineConfig = useOfflineConfig(branchId);
 
   // Card and online payments need the network; offline the till takes cash only.
   const effectiveTender: components["schemas"]["PaymentMethod"] = online ? tender : "CASH";
@@ -223,11 +247,57 @@ export function PosScreen() {
     });
   }
 
+  function offlineLines(): OfflineLine[] {
+    const catalogue = new Map((menu.data?.categories ?? []).flatMap((category) => (category.items ?? []).map((item) => [item.id, item] as const)));
+    return lines.map((line) => {
+      const item = catalogue.get(line.itemId);
+      if (!item) throw new Error(`${line.name} isn't on this till's saved menu. Remove it and try again.`);
+      const modifiers = (item.modifier_groups ?? []).flatMap((group) =>
+        (group.options ?? [])
+          .filter((option) => line.optionIds.includes(option.id))
+          .map((option) => ({ option_id: option.id, group_id: group.id, name: pickLocale(option.name, "en"), price_delta: String(option.price_delta) })),
+      );
+      const unit = moneyToCents(String(item.base_price)) + modifiers.reduce((sum, mod) => sum + moneyToCents(mod.price_delta), 0);
+      return { item_id: item.id, name: line.name, quantity: line.quantity, unit_price: centsToMoney(unit), modifiers };
+    });
+  }
+
+  /** Keep the sale on this device; it syncs (create + cash payment) when the API is back. */
+  async function saveOffline(): Promise<Confirmation> {
+    const config = offlineConfig.data;
+    if (!branchId) throw new Error("Choose a branch first.");
+    if (!config) throw new Error("This till hasn't saved the branch's offline settings yet. Connect once, then try again.");
+    if (!config.offline_pos_enabled) throw new Error("Offline selling is switched off for this branch. Take the order when the connection is back.");
+    const table = (tables.data ?? []).find((row) => row.id === tableId);
+    const order = await useOfflineQueue.getState().addSale({
+      branchId,
+      orderType,
+      tableId: orderType === "DINE_IN" ? tableId : null,
+      tableLabel: table ? `Table ${table.table_number}` : null,
+      lines: offlineLines(),
+      rules: config,
+      payCash: true,
+    });
+    return {
+      id: order.id,
+      offlineId: order.id,
+      offlineNumber: order.offlineNumber,
+      pickup: null,
+      total: order.totals.total_amount,
+      paid: order.paid,
+      tender: "CASH",
+      orderType,
+    };
+  }
+
   const checkout = useMutation({
-    mutationFn: async () => {
+    // Never pause while offline: offline sales go to the till's queue instead.
+    networkMode: "always",
+    mutationFn: async (): Promise<Confirmation> => {
       if (!branchId || useScope.getState().branchId !== branchId) {
         throw new Error("The branch changed. Check the ticket before sending.");
       }
+      if (!useNetwork.getState().online) return saveOffline();
       const body: components["schemas"]["POSCheckoutRequest"] = {
         order_type: orderType,
         table_id: orderType === "DINE_IN" ? tableId : null,
@@ -239,28 +309,44 @@ export function PosScreen() {
           selected_option_ids: line.optionIds,
         })),
       };
-      const result = await browserApi.POST("/api/v1/pos/orders/checkout", { body });
+      let result;
+      try {
+        result = await browserApi.POST("/api/v1/pos/orders/checkout", { body });
+      } catch (error) {
+        // Our own server couldn't be reached, so the order never left this device.
+        if (error instanceof TypeError && effectiveTender === "CASH") return saveOffline();
+        throw error;
+      }
+      // 502 is our proxy saying the API refused the connection: nothing was created.
+      if (result.response.status === 502 && effectiveTender === "CASH") return saveOffline();
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Checkout failed");
-      return result.data;
-    },
-    onSuccess: (order) => {
-      setConfirmation({
+      const order = result.data;
+      return {
         id: order.id,
         pickup: order.pickup_number ?? null,
         total: order.total_amount,
         paid: order.is_paid,
         tender: effectiveTender,
         orderType: order.order_type,
-      });
+      };
+    },
+    onSuccess: (order) => {
+      setConfirmation(order);
       setLines([]);
-      toast.success(order.pickup_number != null ? `Order sent · Pickup #${order.pickup_number}` : "Order sent");
+      if (order.offlineId) toast.success(`Saved on this till · ${order.offlineNumber}`);
+      else toast.success(order.pickup != null ? `Order sent · Pickup #${order.pickup}` : "Order sent");
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
   const cancel = useMutation({
+    networkMode: "always",
     mutationFn: async () => {
       if (!cancelId) return;
+      if (confirmation?.offlineId === cancelId) {
+        await useOfflineQueue.getState().cancel(cancelId, "Cashier cancel");
+        return;
+      }
       const body: components["schemas"]["POSCancelOrderRequest"] = {
         reason: "Cashier cancel",
         refund_payment: true,
@@ -274,7 +360,7 @@ export function PosScreen() {
     onSuccess: () => {
       toast.success("Order cancelled");
       setCancelId(null);
-      setConfirmation(null);
+      if (!confirmation?.offlineId) setConfirmation(null);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -353,6 +439,7 @@ export function PosScreen() {
         {checkout.isPending ? "Sending…" : "Send order"}
       </button>
       {lines.length === 0 ? <p className="text-sm text-muted-foreground">Add an item before sending.</p> : null}
+      <TillOfflineOrders />
     </aside>
   );
 
@@ -438,7 +525,11 @@ export function PosScreen() {
         open={Boolean(cancelId)}
         onOpenChange={(open) => !open && setCancelId(null)}
         title="Cancel this order?"
-        description="Staff cancel uses the POS cancel path and can refund the payment."
+        description={
+          confirmation?.offlineId === cancelId
+            ? "The cancel syncs with this order, and the cash is marked as refunded. Hand the cash back to the guest."
+            : "Staff cancel uses the POS cancel path and can refund the payment."
+        }
         confirmLabel="Cancel order"
         destructive
         onConfirm={() => cancel.mutate()}

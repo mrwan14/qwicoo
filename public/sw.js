@@ -55,7 +55,8 @@ async function warmAssets(urls) {
 
 function assetUrlsIn(html) {
   const found = new Set();
-  for (const match of html.matchAll(/["'(](\/(?:_next\/static|brand)\/[^"')\s\\]+)/g)) found.add(match[1]);
+  // Chunk names can contain parentheses (route groups such as "(staff)"), so only quotes end a URL.
+  for (const match of html.matchAll(/["'](\/(?:_next\/static|brand)\/[^"'\s\\]+)/g)) found.add(match[1]);
   return [...found];
 }
 
@@ -129,6 +130,9 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "qwicoo:claim") {
+    event.waitUntil(self.clients.claim());
+  }
   if (event.data && event.data.type === "qwicoo:clear-shell") {
     event.waitUntil(caches.delete(SHELL_CACHE));
   }

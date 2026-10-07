@@ -34,6 +34,7 @@ export function StaffRuntime({ children }: { children: ReactNode }) {
     queryKey: ["auth", "me"],
     enabled: hydrated,
     retry: false,
+    networkMode: "always",
     staleTime: Infinity,
     // Offline, the last profile on this device keeps the till open (the session cookie still guards the API).
     queryFn: () =>

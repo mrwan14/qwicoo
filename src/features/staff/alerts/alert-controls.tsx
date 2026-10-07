@@ -6,6 +6,7 @@ import { playTone, unlockAudio } from "@/lib/sound/tones";
 import { useWorkspace } from "@/stores/workspace";
 
 import { useAlertPreferences, useSoundSetting } from "./preferences";
+import { NotificationsControl } from "./staff-push";
 
 const chip =
   "inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -48,6 +49,7 @@ export function AlertControls() {
           <span className="hidden md:inline">{sound ? "Sound on" : "Muted"}</span>
         </button>
       ) : null}
+      <NotificationsControl />
     </>
   );
 }

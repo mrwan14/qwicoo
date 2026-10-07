@@ -2568,6 +2568,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staff/push/public-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** VAPID public key for staff web push */
+        get: operations["get_public_key_api_v1_staff_push_public_key_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/push/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register this browser for staff order pushes */
+        post: operations["subscribe_api_v1_staff_push_subscriptions_post"];
+        /** Stop staff pushes on this browser */
+        delete: operations["unsubscribe_api_v1_staff_push_subscriptions_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -8075,6 +8110,55 @@ export interface components {
              */
             created_at: string;
         };
+        StaffPushKeys: {
+            /** P256Dh */
+            p256dh: string;
+            /** Auth */
+            auth: string;
+        };
+        StaffPushPublicKeyResponse: {
+            /**
+             * Enabled
+             * @description False when the server has no VAPID keys. The app hides the control.
+             */
+            enabled: boolean;
+            /**
+             * Public Key
+             * @description VAPID application server key (base64url).
+             */
+            public_key?: string | null;
+        };
+        StaffPushSubscribeRequest: {
+            /** Endpoint */
+            endpoint: string;
+            keys: components["schemas"]["StaffPushKeys"];
+            /**
+             * Branch Id
+             * @description Branch to hear. Defaults to X-Branch-ID.
+             */
+            branch_id?: string | null;
+            /**
+             * Order Alerts Opt In
+             * @description Admins only: hear order alerts.
+             * @default false
+             */
+            order_alerts_opt_in: boolean;
+        };
+        StaffPushSubscriptionResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Branch Id */
+            branch_id: string | null;
+            /** Order Alerts Opt In */
+            order_alerts_opt_in: boolean;
+        };
+        StaffPushUnsubscribeRequest: {
+            /** Endpoint */
+            endpoint: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -13510,6 +13594,92 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    get_public_key_api_v1_staff_push_public_key_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffPushPublicKeyResponse"];
+                };
+            };
+        };
+    };
+    subscribe_api_v1_staff_push_subscriptions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Branch-ID"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffPushSubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffPushSubscriptionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsubscribe_api_v1_staff_push_subscriptions_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffPushUnsubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

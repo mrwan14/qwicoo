@@ -7,6 +7,7 @@ import { Fragment, Suspense, useEffect, useLayoutEffect, useState, type ReactNod
 import { RoleChrome } from "@/components/ops/shells";
 import { StaffSessionProvider } from "@/components/ops/staff-session";
 import { OrderAlerts } from "@/features/staff/alerts/order-alerts";
+import { StaffPushRuntime } from "@/features/staff/alerts/staff-push";
 import { AccessDeniedToast, NoWorkspace, WorkspaceLoading } from "@/components/ops/workspace-states";
 import { browserApi } from "@/lib/api/browser";
 import { endStaffSession } from "@/lib/auth/session-client";
@@ -77,6 +78,7 @@ export function StaffRuntime({ children }: { children: ReactNode }) {
         <AccessDeniedToast />
       </Suspense>
       <OrderAlerts />
+      <StaffPushRuntime />
       <RoleChrome>
         {/* Remount screens on branch change so no local state (tickets, filters) crosses branches. */}
         <Fragment key={branchKey}>{children}</Fragment>

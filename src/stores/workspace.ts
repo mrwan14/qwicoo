@@ -12,6 +12,9 @@ type WorkspaceState = {
   soundChosen: boolean;
   /** Super, brand and branch admins: opt in to staff order alerts. Off by default. */
   adminOrderAlerts: boolean;
+  /** This device asked for web push notifications. */
+  pushEnabled: boolean;
+  setPushEnabled: (on: boolean) => void;
   setLocale: (locale: LocaleCode) => void;
   setSoundEnabled: (soundEnabled: boolean) => void;
   setAdminOrderAlerts: (on: boolean) => void;
@@ -24,6 +27,8 @@ export const useWorkspace = create<WorkspaceState>()(
       soundEnabled: true,
       soundChosen: false,
       adminOrderAlerts: false,
+      pushEnabled: false,
+      setPushEnabled: (pushEnabled) => set({ pushEnabled }),
       setLocale: (locale) => set({ locale }),
       setSoundEnabled: (soundEnabled) => set({ soundEnabled, soundChosen: true }),
       setAdminOrderAlerts: (adminOrderAlerts) => set({ adminOrderAlerts }),
@@ -41,6 +46,7 @@ export const useWorkspace = create<WorkspaceState>()(
           soundEnabled: old.soundEnabled ?? (fromV1 ? false : true),
           soundChosen: fromV1 ? true : (old.soundChosen ?? false),
           adminOrderAlerts: old.adminOrderAlerts ?? false,
+          pushEnabled: old.pushEnabled ?? false,
         } as WorkspaceState;
       },
       partialize: (state) => ({
@@ -48,6 +54,7 @@ export const useWorkspace = create<WorkspaceState>()(
         soundEnabled: state.soundEnabled,
         soundChosen: state.soundChosen,
         adminOrderAlerts: state.adminOrderAlerts,
+        pushEnabled: state.pushEnabled,
       }),
     },
   ),

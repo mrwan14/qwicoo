@@ -8,9 +8,11 @@ import { RoleChrome } from "@/components/ops/shells";
 import { StaffSessionProvider } from "@/components/ops/staff-session";
 import { OrderAlerts } from "@/features/staff/alerts/order-alerts";
 import { StaffPushRuntime } from "@/features/staff/alerts/staff-push";
+import { OfflineRuntime } from "@/features/staff/offline/offline-runtime";
 import { AccessDeniedToast, NoWorkspace, WorkspaceLoading } from "@/components/ops/workspace-states";
 import { browserApi } from "@/lib/api/browser";
 import { endStaffSession } from "@/lib/auth/session-client";
+import { offlineKeys, withOfflineCopy } from "@/lib/offline/cache";
 import { useScope } from "@/stores/scope";
 import { useWorkspace } from "@/stores/workspace";
 
@@ -33,15 +35,17 @@ export function StaffRuntime({ children }: { children: ReactNode }) {
     enabled: hydrated,
     retry: false,
     staleTime: Infinity,
-    queryFn: async () => {
-      const { data, response } = await browserApi.GET("/api/v1/auth/me");
-      if (response.status === 401) {
-        void endStaffSession();
-        throw new Error("Unauthorized");
-      }
-      if (!response.ok || !data) throw new Error("Could not load your profile");
-      return data;
-    },
+    // Offline, the last profile on this device keeps the till open (the session cookie still guards the API).
+    queryFn: () =>
+      withOfflineCopy(offlineKeys.me(), async () => {
+        const { data, response } = await browserApi.GET("/api/v1/auth/me");
+        if (response.status === 401) {
+          void endStaffSession();
+          throw new Error("Unauthorized");
+        }
+        if (!response.ok || !data) throw Object.assign(new Error("Could not load your profile"), { status: response.status });
+        return data;
+      }),
   });
 
   // Layout effect: the scope must be in place before the first shell paint.
@@ -79,6 +83,7 @@ export function StaffRuntime({ children }: { children: ReactNode }) {
       </Suspense>
       <OrderAlerts />
       <StaffPushRuntime />
+      <OfflineRuntime />
       <RoleChrome>
         {/* Remount screens on branch change so no local state (tickets, filters) crosses branches. */}
         <Fragment key={branchKey}>{children}</Fragment>

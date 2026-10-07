@@ -55,6 +55,14 @@ export async function endStaffSession(redirectTo = "/login") {
   } catch {
     // Preferences are best effort.
   }
+  try {
+    // Cached menu, tables and profile belong to this person. The unsynced till queue is kept.
+    const { clearOfflineData } = await import("@/lib/offline/idb");
+    await clearOfflineData();
+    navigator.serviceWorker?.controller?.postMessage({ type: "qwicoo:clear-shell" });
+  } catch {
+    // Best effort.
+  }
   const client = getQueryClient();
   await client.cancelQueries();
   client.clear();

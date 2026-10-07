@@ -302,7 +302,7 @@ function ShellFrame({
         Skip to content
       </a>
       <div className="print:hidden">
-        <ConnectionBanner />
+        <ConnectionBanner canSellOffline={items.some((item) => item.href === "/app/pos")} />
       </div>
       <div className="flex min-h-dvh">
         {variant === "admin" ? <AdminSidebar items={items} pathname={pathname} badges={badges} /> : null}

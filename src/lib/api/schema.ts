@@ -2603,6 +2603,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pos/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync offline till actions
+         * @description Apply what a POS device did offline, in order: create_order, pay_cash (cash only), transition (PREPARING, READY, DELIVERED; skipped steps are walked in order) and cancel. Every action has its own idempotency_key, so re-sending a batch is safe: applied actions come back as replayed. Sales are never rejected: sold-out or missing items, changed prices, totals that don't add up, offline orders older than the branch's offline_max_hours, offline selling switched off, or no open cash drawer at occurred_at are saved at the offline price and flagged needs_review with reasons. Each result maps client_order_id / offline_number to the real order_id and pickup or table number. final=false (code ORDER_NOT_SYNCED) means keep that action queued and retry it later, in order.
+         */
+        post: operations["sync_offline_actions_api_v1_pos_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pos/offline/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Offline orders for review
+         * @description Offline orders at this branch. state=pending (default) lists those flagged needs_review.
+         */
+        get: operations["list_offline_review_api_v1_pos_offline_review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pos/offline/review/{order_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve an offline order as sold */
+        post: operations["approve_offline_order_api_v1_pos_offline_review__order_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pos/offline/review/{order_id}/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adjust an offline order's prices and mark it reviewed
+         * @description Line prices are replaced and totals recalculated with the branch rates. A note is required.
+         */
+        post: operations["adjust_offline_order_api_v1_pos_offline_review__order_id__adjust_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branches/{branch_id}/offline-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get branch offline till settings
+         * @description Whether POS devices at this branch may keep selling (cash only) while offline, and for how many hours.
+         */
+        get: operations["get_branch_offline_config_api_v1_branches__branch_id__offline_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update branch offline till settings
+         * @description Branch admins and above. offline_max_hours is 1 to 72.
+         */
+        patch: operations["update_branch_offline_config_api_v1_branches__branch_id__offline_config_patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -8159,6 +8260,367 @@ export interface components {
             /** Endpoint */
             endpoint: string;
         };
+        AdjustLine: {
+            /**
+             * Order Item Id
+             * Format: uuid
+             */
+            order_item_id: string;
+            /** Unit Price */
+            unit_price: number | string;
+        };
+        AdjustOfflineOrderRequest: {
+            /** Note */
+            note: string;
+            /** Lines */
+            lines?: components["schemas"]["AdjustLine"][];
+        };
+        ApproveOfflineOrderRequest: {
+            /** Note */
+            note?: string | null;
+        };
+        BranchOfflineConfig: {
+            /**
+             * Branch Id
+             * Format: uuid
+             */
+            branch_id: string;
+            /** Offline Pos Enabled */
+            offline_pos_enabled: boolean;
+            /** Offline Max Hours */
+            offline_max_hours: number;
+            /** Currency */
+            currency?: string | null;
+            /**
+             * Tax Rate
+             * @default 0
+             */
+            tax_rate: string;
+            /**
+             * Service Fee Rate
+             * @default 0
+             */
+            service_fee_rate: string;
+            /**
+             * Is Service Taxable
+             * @default false
+             */
+            is_service_taxable: boolean;
+            /**
+             * Service Fee Dine In Only
+             * @default true
+             */
+            service_fee_dine_in_only: boolean;
+        };
+        BranchOfflineConfigUpdate: {
+            /** Offline Pos Enabled */
+            offline_pos_enabled?: boolean | null;
+            /** Offline Max Hours */
+            offline_max_hours?: number | null;
+        };
+        CancelAction: {
+            /**
+             * Idempotency Key
+             * @description Device-generated UUID, unique per action.
+             */
+            idempotency_key: string;
+            /**
+             * Client Order Id
+             * @description Device-generated id of the order this action is about.
+             */
+            client_order_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             * @description When it happened on the device (ISO 8601 with offset).
+             */
+            occurred_at: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "cancel";
+            /** Reason */
+            reason: string;
+        };
+        CreateOrderAction: {
+            /**
+             * Idempotency Key
+             * @description Device-generated UUID, unique per action.
+             */
+            idempotency_key: string;
+            /**
+             * Client Order Id
+             * @description Device-generated id of the order this action is about.
+             */
+            client_order_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             * @description When it happened on the device (ISO 8601 with offset).
+             */
+            occurred_at: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "create_order";
+            /**
+             * Offline Number
+             * @description Device number shown on the receipt, e.g. OFF-12.
+             */
+            offline_number: string;
+            /**
+             * Order Type
+             * @default TAKEAWAY
+             * @enum {string}
+             */
+            order_type: "TAKEAWAY" | "DINE_IN";
+            /** Table Id */
+            table_id?: string | null;
+            /** Items */
+            items: components["schemas"]["OfflineLine"][];
+            totals: components["schemas"]["OfflineTotals"];
+            /** Customer Notes */
+            customer_notes?: string | null;
+        };
+        OfflineLine: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /** Quantity */
+            quantity: number;
+            /** Unit Price */
+            unit_price: number | string;
+            /** Modifiers */
+            modifiers?: components["schemas"]["OfflineModifier"][];
+            /** Special Instructions */
+            special_instructions?: string | null;
+        };
+        OfflineModifier: {
+            /** Option Id */
+            option_id?: string | null;
+            /** Group Id */
+            group_id?: string | null;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /**
+             * Price Delta
+             * @default 0.00
+             */
+            price_delta: number | string;
+        };
+        OfflineReviewLine: {
+            /**
+             * Order Item Id
+             * Format: uuid
+             */
+            order_item_id: string;
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity: number;
+            /** Unit Price */
+            unit_price: string;
+            /** Subtotal */
+            subtotal: string;
+        };
+        OfflineReviewList: {
+            /** Pending */
+            pending: number;
+            /** Orders */
+            orders: components["schemas"]["OfflineReviewOrder"][];
+        };
+        OfflineReviewOrder: {
+            /**
+             * Order Id
+             * Format: uuid
+             */
+            order_id: string;
+            /** Offline Number */
+            offline_number: string | null;
+            /** Offline Device Id */
+            offline_device_id: string | null;
+            /** Pickup Number */
+            pickup_number: number | null;
+            /** Table Number */
+            table_number: string | null;
+            /** Order Type */
+            order_type: string;
+            /** Status */
+            status: string;
+            /** Is Paid */
+            is_paid: boolean;
+            /** Total Amount */
+            total_amount: string;
+            /** Paid Amount */
+            paid_amount: string;
+            /** Offline Created At */
+            offline_created_at: string | null;
+            /** Offline Synced At */
+            offline_synced_at: string | null;
+            /** Needs Review */
+            needs_review: boolean;
+            /** Review Reasons */
+            review_reasons: {
+                [key: string]: unknown;
+            }[];
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Reviewed By User Id */
+            reviewed_by_user_id: string | null;
+            /** Review Note */
+            review_note: string | null;
+            /** Items */
+            items: components["schemas"]["OfflineReviewLine"][];
+        };
+        OfflineTotals: {
+            /** Subtotal */
+            subtotal: number | string;
+            /**
+             * Service Fee Total
+             * @default 0.00
+             */
+            service_fee_total: number | string;
+            /**
+             * Tax Total
+             * @default 0.00
+             */
+            tax_total: number | string;
+            /** Total Amount */
+            total_amount: number | string;
+        };
+        PayCashAction: {
+            /**
+             * Idempotency Key
+             * @description Device-generated UUID, unique per action.
+             */
+            idempotency_key: string;
+            /**
+             * Client Order Id
+             * @description Device-generated id of the order this action is about.
+             */
+            client_order_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             * @description When it happened on the device (ISO 8601 with offset).
+             */
+            occurred_at: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "pay_cash";
+            /** Amount */
+            amount: number | string;
+            /**
+             * Payment Method
+             * @description Only CASH is accepted offline.
+             * @default CASH
+             */
+            payment_method: string;
+        };
+        SyncActionResult: {
+            /** Index */
+            index: number;
+            /** Type */
+            type: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Client Order Id */
+            client_order_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "applied" | "replayed" | "skipped" | "error";
+            /** Code */
+            code?: string | null;
+            /**
+             * Final
+             * @default true
+             */
+            final: boolean;
+            /** Order Id */
+            order_id?: string | null;
+            /** Offline Number */
+            offline_number?: string | null;
+            /** Pickup Number */
+            pickup_number?: number | null;
+            /** Table Number */
+            table_number?: string | null;
+            /** Order Status */
+            order_status?: string | null;
+            /** Is Paid */
+            is_paid?: boolean | null;
+            /** Total Amount */
+            total_amount?: string | null;
+            /** Needs Review */
+            needs_review?: boolean | null;
+            /** Review Reasons */
+            review_reasons?: {
+                [key: string]: unknown;
+            }[] | null;
+        };
+        SyncRequest: {
+            /** Device Id */
+            device_id: string;
+            /** Actions */
+            actions: (components["schemas"]["CreateOrderAction"] | components["schemas"]["PayCashAction"] | components["schemas"]["TransitionAction"] | components["schemas"]["CancelAction"])[];
+        };
+        SyncResponse: {
+            /**
+             * Synced At
+             * Format: date-time
+             */
+            synced_at: string;
+            /** Results */
+            results: components["schemas"]["SyncActionResult"][];
+        };
+        TransitionAction: {
+            /**
+             * Idempotency Key
+             * @description Device-generated UUID, unique per action.
+             */
+            idempotency_key: string;
+            /**
+             * Client Order Id
+             * @description Device-generated id of the order this action is about.
+             */
+            client_order_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             * @description When it happened on the device (ISO 8601 with offset).
+             */
+            occurred_at: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "transition";
+            /**
+             * Target Status
+             * @enum {string}
+             */
+            target_status: "PREPARING" | "READY" | "DELIVERED";
+        };
     };
     responses: never;
     parameters: never;
@@ -13672,6 +14134,207 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    adjust_offline_order_api_v1_pos_offline_review__order_id__adjust_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustOfflineOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfflineReviewOrder"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_offline_order_api_v1_pos_offline_review__order_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveOfflineOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfflineReviewOrder"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_branch_offline_config_api_v1_branches__branch_id__offline_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchOfflineConfig"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_offline_review_api_v1_pos_offline_review_get: {
+        parameters: {
+            query?: {
+                state?: "pending" | "reviewed" | "all";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfflineReviewList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_offline_actions_api_v1_pos_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_branch_offline_config_api_v1_branches__branch_id__offline_config_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BranchOfflineConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchOfflineConfig"];
+                };
             };
             /** @description Validation Error */
             422: {

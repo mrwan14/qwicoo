@@ -14,7 +14,10 @@ import { browserApi } from "@/lib/api/browser";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { mediaUrl } from "@/lib/media";
 import type { components } from "@/lib/api/schema";
+import { useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
+
+import { fetchMenu, fetchTables, offlineQueryKeys } from "./offline/offline-data";
 
 type MenuItem = components["schemas"]["MenuItemResponse"];
 type ModifierGroup = components["schemas"]["ModifierGroupResponse"];
@@ -136,16 +139,11 @@ export function PosScreen() {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [configuring, setConfiguring] = useState<MenuItem | null>(null);
+  const online = useNetwork((state) => state.online);
   const tables = useQuery({
-    queryKey: ["branch-tables", branchId],
+    queryKey: offlineQueryKeys.tables(branchId),
     enabled: Boolean(branchId) && orderType === "DINE_IN",
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/branches/{branch_id}/tables", {
-        params: { path: { branch_id: branchId ?? "" } },
-      });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Tables failed");
-      return [...result.data].sort((a, b) => a.table_number.localeCompare(b.table_number, undefined, { numeric: true }));
-    },
+    queryFn: () => fetchTables(branchId ?? ""),
   });
   const linesRef = useRef(lines);
   useEffect(() => {
@@ -165,14 +163,13 @@ export function PosScreen() {
   }, []);
 
   const menu = useQuery({
-    queryKey: ["pos-menu", branchId],
+    queryKey: offlineQueryKeys.menu(branchId),
     enabled: Boolean(branchId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/menu/tree", { params: { query: { branch_id: branchId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Menu failed");
-      return result.data;
-    },
+    queryFn: () => fetchMenu(branchId ?? ""),
   });
+
+  // Card and online payments need the network; offline the till takes cash only.
+  const effectiveTender: components["schemas"]["PaymentMethod"] = online ? tender : "CASH";
 
   const categories = menu.data?.categories ?? [];
   const activeCategory = categories.find((category) => category.id === categoryId) ?? categories[0];
@@ -234,7 +231,7 @@ export function PosScreen() {
       const body: components["schemas"]["POSCheckoutRequest"] = {
         order_type: orderType,
         table_id: orderType === "DINE_IN" ? tableId : null,
-        immediate_payment: orderType === "TAKEAWAY" ? tender : tender,
+        immediate_payment: effectiveTender,
         customer_notes: null,
         items: lines.map((line) => ({
           item_id: line.itemId,
@@ -252,7 +249,7 @@ export function PosScreen() {
         pickup: order.pickup_number ?? null,
         total: order.total_amount,
         paid: order.is_paid,
-        tender,
+        tender: effectiveTender,
         orderType: order.order_type,
       });
       setLines([]);
@@ -344,10 +341,12 @@ export function PosScreen() {
       ) : null}
       <label className="grid gap-1 text-sm">
         Tender
-        <span className="text-sm leading-6 text-muted-foreground">How this order is paid.</span>
-        <select className="h-12 rounded-xl border bg-background px-3" value={tender} onChange={(event) => setTender(event.target.value as typeof tender)}>
+        <span className="text-sm leading-6 text-muted-foreground">{online ? "How this order is paid." : "Cash only while you're offline. Card payments come back with the connection."}</span>
+        <select className="h-12 rounded-xl border bg-background px-3" value={effectiveTender} onChange={(event) => setTender(event.target.value as typeof tender)}>
           <option value="CASH">Cash</option>
-          <option value="POS_TERMINAL">Card terminal</option>
+          <option value="POS_TERMINAL" disabled={!online}>
+            {online ? "Card terminal" : "Card terminal (offline)"}
+          </option>
         </select>
       </label>
       <button type="button" className="min-h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={sendDisabled} onClick={() => checkout.mutate()}>

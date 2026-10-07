@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
+
 import { StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
@@ -103,7 +105,10 @@ export function ExpoScreen() {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Expo bump failed");
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["expo"] }),
+    onSuccess: (_data, orderId) => {
+      ignoreOwnChange(orderId, "READY");
+      void queryClient.invalidateQueries({ queryKey: ["expo"] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 
@@ -117,6 +122,7 @@ export function ExpoScreen() {
       return orderId;
     },
     onSuccess: (orderId) => {
+      ignoreOwnChange(orderId, "DELIVERED");
       queryClient.setQueryData<ExpoOrder[]>(queryKey, (current) => current?.filter((order) => order.order_id !== orderId));
       toast.success("Handed over");
       void queryClient.invalidateQueries({ queryKey: ["expo"] });

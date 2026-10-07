@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
+
 import { Money } from "@/components/ops/money";
 import { PageHeader } from "@/components/ops/page-header";
 import { useStaffSession } from "@/components/ops/staff-session";
@@ -86,7 +88,8 @@ export function FloorScreen() {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Could not update the order");
     },
-    onSuccess: (_data, { target }) => {
+    onSuccess: (_data, { orderId, target }) => {
+      ignoreOwnChange(orderId, target);
       toast.success(target === "SUBMITTED" ? "Order confirmed" : target === "CANCELLED" ? "Order rejected" : "Order updated");
       if (target === "SUBMITTED" || target === "CANCELLED") closeDrawer();
       void queryClient.invalidateQueries({ queryKey: ["floor-live"] });

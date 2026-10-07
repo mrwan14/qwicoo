@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
@@ -9,6 +9,8 @@ import { StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
+import { acknowledgeOrder, ignoreOwnChange } from "@/features/staff/alerts/ignore";
+import { playTone, unlockAudio } from "@/lib/sound/tones";
 import { stationLabel } from "@/lib/status-labels";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
@@ -47,7 +49,6 @@ export function KdsScreen() {
   const branchId = useScope((state) => state.branchId);
   const sound = useWorkspace((state) => state.soundEnabled);
   const setSound = useWorkspace((state) => state.setSoundEnabled);
-  const seen = useRef<Set<string>>(new Set());
   const [stationFilter, setStationFilter] = useState<string>("ALL");
   const queryClient = useQueryClient();
 
@@ -61,15 +62,7 @@ export function KdsScreen() {
     },
   });
 
-  useEffect(() => {
-    const ids = new Set((tickets.data ?? []).map((ticket) => ticket.sub_ticket_id));
-    if (seen.current.size > 0 && sound) {
-      for (const id of ids) {
-        if (!seen.current.has(id)) beep();
-      }
-    }
-    seen.current = ids;
-  }, [tickets.data, sound]);
+  // New-ticket tones come from the shared staff alert watcher, so Kitchen never beeps twice.
 
   const stations = useMemo(() => {
     const names = new Set((tickets.data ?? []).map((ticket) => ticket.station));
@@ -89,6 +82,11 @@ export function KdsScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const acknowledgeItem = (orderItemId: string) => {
+    const ticket = (tickets.data ?? []).find((row) => (row.items ?? []).some((item) => item.order_item_id === orderItemId));
+    if (ticket) acknowledgeOrder(ticket.order_id);
+  };
+
   const bumpStation = useMutation({
     mutationFn: async (input: { orderId: string; station: components["schemas"]["KitchenStation"] }) => {
       const result = await browserApi.POST("/api/v1/kds/orders/{order_id}/stations/{station}/bump", {
@@ -96,7 +94,11 @@ export function KdsScreen() {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Station bump failed");
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["kds-tickets"] }),
+    onSuccess: (_data, input) => {
+      acknowledgeOrder(input.orderId);
+      ignoreOwnChange(input.orderId, "READY");
+      void queryClient.invalidateQueries({ queryKey: ["kds-tickets"] });
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 
@@ -121,7 +123,11 @@ export function KdsScreen() {
           type="button"
           className="min-h-11 rounded-xl border bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           aria-pressed={sound}
-          onClick={() => setSound(!sound)}
+          onClick={() => {
+            const next = !sound;
+            setSound(next);
+            if (next) void unlockAudio().then(() => playTone("new"));
+          }}
         >
           Sound {sound ? "on" : "off"}
         </button>
@@ -154,7 +160,10 @@ export function KdsScreen() {
               tickets={column}
               markingItem={markingItem ?? null}
               marking={marking ?? null}
-              onItem={(id) => bumpItem.mutate(id)}
+              onItem={(id) => {
+                acknowledgeItem(id);
+                bumpItem.mutate(id);
+              }}
               onStation={(orderId, name) => {
                 const next = asStation(name);
                 if (next) bumpStation.mutate({ orderId, station: next });
@@ -213,7 +222,7 @@ function TicketColumn({
           const markingThis = marking?.orderId === ticket.order_id && marking.station === ticket.station;
           const canMark = Boolean(asStation(ticket.station));
           return (
-            <article key={ticket.sub_ticket_id} className="grid content-start gap-3 rounded-2xl border bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+            <article key={ticket.sub_ticket_id} onPointerDown={() => acknowledgeOrder(ticket.order_id)} className="grid content-start gap-3 rounded-2xl border bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-[length:var(--text-20)] font-semibold">{ticketTitle(ticket)}</p>
@@ -279,11 +288,3 @@ function groupBy<T>(items: T[], key: (item: T) => string) {
   return map;
 }
 
-function beep() {
-  const context = new AudioContext();
-  const oscillator = context.createOscillator();
-  oscillator.frequency.value = 880;
-  oscillator.connect(context.destination);
-  oscillator.start();
-  oscillator.stop(context.currentTime + 0.12);
-}

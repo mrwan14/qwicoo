@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
+
 import { Money } from "@/components/ops/money";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
@@ -33,7 +35,10 @@ export function PaymentsScreen() {
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, "Verify failed");
     },
-    onSuccess: () => {
+    onSuccess: (_data, paymentId) => {
+      const row = (pending.data ?? []).find((payment) => payment.id === paymentId);
+      ignoreOwnChange(paymentId, "COMPLETED");
+      if (row) ignoreOwnChange(row.order_id, "PAID");
       toast.success("Payment verified");
       void queryClient.invalidateQueries({ queryKey: ["payments-pending"] });
     },

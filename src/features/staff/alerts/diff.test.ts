@@ -94,3 +94,10 @@ test("regional manager hears only the selected branch", () => {
   assert.deepEqual(diffSnapshots({ kitchen: [] }, other, all("REGIONAL_MANAGER")), []);
   assert.equal(diffSnapshots({ kitchen: [] }, other, { role: "REGIONAL_MANAGER", branchId: B2 }).length, 1);
 });
+
+test("dine-in payment toast names the table from the floor", () => {
+  const floor = [{ table_id: "t1", table_number: "4", active_order_id: "o4", order_status: "DELIVERED" }];
+  const events = diffSnapshots({ floor, payments: [] }, { floor, payments: [{ id: "p9", order_id: "o4", payment_method: "CASH" }] }, all("CASHIER"));
+  assert.equal(events.length, 1);
+  assert.equal(events[0].place, "Table 4");
+});

@@ -197,16 +197,19 @@ function diffSource(source: Source, prev: Snapshot, next: Snapshot): AlertEvent[
         tone: "new" as const,
         detail: row.request_type,
       }));
-    case "payments":
+    case "payments": {
+      // Dine-in payments carry no table number; borrow it from the floor when that queue is watched.
+      const tableOf = new Map((next.floor ?? prev.floor ?? []).filter((row) => row.active_order_id).map((row) => [row.active_order_id!, row.table_number]));
       return newRows(prev.payments!, next.payments!, (row) => row.id).map((row) => ({
         kind: "payment" as const,
         entityId: row.id,
         status: row.status ?? "PENDING",
-        place: placeLabel(row),
+        place: placeLabel({ pickup_number: row.pickup_number, table_number: tableOf.get(row.order_id) ?? null }),
         branchId: row.branch_id ?? null,
         tone: "new" as const,
         detail: row.payment_method ?? null,
       }));
+    }
   }
 }
 

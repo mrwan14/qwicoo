@@ -44,11 +44,11 @@ export function QwicooSplash({ sessionKey }: { sessionKey: string }) {
       type="button"
       aria-label="Skip intro"
       onClick={() => setLeaving(true)}
-      className={`fixed inset-0 z-50 grid place-items-center bg-background px-8 transition-opacity duration-200 ${leaving ? "opacity-0" : "opacity-100"}`}
+      className={`fixed inset-0 z-50 grid place-items-center bg-[#f2efe9] px-8 transition-opacity duration-200 ${leaving ? "opacity-0" : "opacity-100"}`}
     >
       {/* Play the last 2.5 s: the hand-off to the settled logo. */}
-      <AnimatedLogo className="max-w-sm shadow-elev-1" startAt={3.7} onEnded={() => setLeaving(true)} />
-      <span className="absolute bottom-8 text-xs text-muted-foreground">Tap to skip</span>
+      <AnimatedLogo className="max-w-md" startAt={2.1} onEnded={() => setLeaving(true)} />
+      <span className="absolute bottom-8 text-xs text-neutral-500">Tap to skip</span>
     </button>
   );
 }

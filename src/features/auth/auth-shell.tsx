@@ -3,7 +3,6 @@ import { ArrowLeft, BarChart3, Monitor, QrCode, type LucideIcon } from "lucide-r
 import type { ReactNode } from "react";
 
 import { AnimatedLogo } from "@/components/brand/animated-logo";
-import { LOGO_VIDEO } from "@/components/brand/logo-assets";
 import { LogoMark } from "@/components/ops/logo";
 
 const PANEL_POINTS: { icon: LucideIcon; text: string }[] = [
@@ -27,13 +26,16 @@ export function AuthShell({
   surface?: "card" | "plain";
 }) {
   return (
-    <main className="grid min-h-dvh lg:grid-cols-[1fr_1.1fr]">
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-foreground p-10 text-background lg:flex">
-        <LogoMark className="pointer-events-none absolute -bottom-20 -end-20 size-96 text-background/5" />
+    <main className="grid min-h-dvh bg-[#f2efe9] lg:bg-background lg:grid-cols-[1fr_1.1fr]">
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#f2efe9] p-10 text-neutral-900 lg:flex">
+        <LogoMark className="pointer-events-none absolute -bottom-20 -end-20 size-96 text-neutral-900/[0.04]" />
 
-        <Link href="/" className="relative w-fit rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={LOGO_VIDEO.poster} alt="Qwicoo" className="h-12 w-auto rounded-lg" />
+        <Link
+          href="/"
+          aria-label="Qwicoo home"
+          className="relative -ms-2 -mt-2 block w-full max-w-[34rem] rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4"
+        >
+          <AnimatedLogo />
         </Link>
 
         <div className="relative grid gap-8">
@@ -43,7 +45,7 @@ export function AuthShell({
           <ul className="grid gap-4">
             {PANEL_POINTS.map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-start gap-3 text-sm">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background/10">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-neutral-900/[0.07]">
                   <Icon aria-hidden className="size-4" />
                 </span>
                 <span className="pt-1.5 opacity-90">{text}</span>
@@ -55,8 +57,11 @@ export function AuthShell({
         <p className="relative text-xs opacity-60">© {new Date().getFullYear()} Qwicoo</p>
       </aside>
 
-      <div className="flex flex-col px-4 py-6 sm:px-8">
-        <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col px-4 py-6 sm:px-8 lg:bg-background">
+        <div className="flex items-start justify-between gap-3">
+          <Link href="/" aria-label="Qwicoo home" className="-ms-1 -mt-2 block w-64 rounded-lg sm:w-80 lg:hidden">
+            <AnimatedLogo />
+          </Link>
           <Link
             href="/"
             className="ms-auto inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -68,7 +73,6 @@ export function AuthShell({
 
         <div className="flex flex-1 items-center justify-center py-8">
           <div className="grid w-full max-w-md gap-6">
-            <AnimatedLogo className="max-w-72 shadow-elev-1" />
             <div className="grid gap-2">
               <h1 className="text-[length:var(--text-28)] leading-tight font-semibold">{title}</h1>
               <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>

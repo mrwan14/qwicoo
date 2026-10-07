@@ -28,6 +28,7 @@ import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { ConnectionBanner } from "@/components/ops/connection-banner";
 import { BranchSwitcher, ScopeBadge } from "@/components/ops/scope-header";
 import { useStaffSession } from "@/components/ops/staff-session";
+import { AlertControls } from "@/features/staff/alerts/alert-controls";
 import { usePendingConfirmationCount } from "@/hooks/use-floor-live";
 import { roleLabel, type UserRole } from "@/lib/auth/roles";
 import { endStaffSession } from "@/lib/auth/session-client";
@@ -341,6 +342,7 @@ function ShellFrame({
               ) : null}
             </div>
             <div className="flex items-center gap-2">
+              <AlertControls />
               <p className="hidden text-end text-sm sm:block">
                 <span className="block font-medium">{me.full_name}</span>
                 <span className="block text-xs text-muted-foreground">{roleLabel(me.role)}</span>

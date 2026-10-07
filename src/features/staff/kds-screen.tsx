@@ -9,12 +9,12 @@ import { StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
+import { useSoundSetting } from "@/features/staff/alerts/preferences";
 import { acknowledgeOrder, ignoreOwnChange } from "@/features/staff/alerts/ignore";
 import { playTone, unlockAudio } from "@/lib/sound/tones";
 import { stationLabel } from "@/lib/status-labels";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
-import { useWorkspace } from "@/stores/workspace";
 
 function asStation(value: string): components["schemas"]["KitchenStation"] | null {
   if (value === "HOT_KITCHEN" || value === "COLD_KITCHEN" || value === "BEVERAGE" || value === "DESSERT") return value;
@@ -47,8 +47,7 @@ function orderTypeLabel(orderType: string | null | undefined): string {
 export function KdsScreen() {
   const interval = usePollingInterval(7000);
   const branchId = useScope((state) => state.branchId);
-  const sound = useWorkspace((state) => state.soundEnabled);
-  const setSound = useWorkspace((state) => state.setSoundEnabled);
+  const [sound, setSound] = useSoundSetting();
   const [stationFilter, setStationFilter] = useState<string>("ALL");
   const queryClient = useQueryClient();
 

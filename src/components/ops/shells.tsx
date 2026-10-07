@@ -22,6 +22,7 @@ import {
   UtensilsCrossed,
   Wallet,
   type LucideIcon,
+  CloudOff,
 } from "lucide-react";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -52,6 +53,7 @@ const ICONS: Record<string, LucideIcon> = {
   "/app/kds": Monitor,
   "/app/kds/expo": ClipboardList,
   "/app/payments": Wallet,
+  "/app/offline-orders": CloudOff,
   "/app/menu": UtensilsCrossed,
   "/app/qr": QrCode,
   "/app/brands": Store,

@@ -60,6 +60,10 @@ export function PresenceForm({ token }: { token: string }) {
         await submit(action);
         return;
       }
+      if ([502, 503, 504].includes(response.status)) {
+        setError(t.orderingPaused);
+        return;
+      }
       if (!response.ok) {
         setError(joinErrorMessage(payload.code, t));
         return;
@@ -69,7 +73,7 @@ export function PresenceForm({ token }: { token: string }) {
       useGuest.getState().setBranding(mergeGuestBranding(null, payload));
       router.push("/order");
     } catch {
-      setError(t.tableCodeFailed);
+      setError(t.orderingPaused);
     } finally {
       setPending(false);
     }

@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useStaffSession } from "@/components/ops/staff-session";
+import { browserApi } from "@/lib/api/browser";
 import { navForUser } from "@/lib/nav";
 import { listenForNetworkChanges, useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
@@ -74,6 +75,16 @@ export function OfflineRuntime() {
     void registerShellWorker().then(setControlled);
     void useOfflineQueue.getState().load();
   }, []);
+
+  // Check in about once a minute so guest QR ordering pauses if this branch's devices go quiet.
+  useEffect(() => {
+    if (!online || !branchId) return;
+    const beat = () =>
+      void browserApi.POST("/api/v1/branches/{branch_id}/heartbeat", { params: { path: { branch_id: branchId } } }).catch(() => undefined);
+    beat();
+    const timer = window.setInterval(beat, 60_000);
+    return () => window.clearInterval(timer);
+  }, [online, branchId]);
 
   // Back online: sync straight away rather than waiting out the offline backoff.
   useEffect(() => {

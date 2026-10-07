@@ -137,6 +137,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...BRANCH_OPS, "CASHIER"],
   },
   {
+    href: "/app/offline-orders",
+    label: "Offline orders",
+    group: "Brand ops",
+    shell: "admin",
+    phase: 4,
+    roles: [...BRANCH_OPS],
+  },
+  {
     href: "/app/dashboard",
     label: "Dashboard",
     group: "Insight",

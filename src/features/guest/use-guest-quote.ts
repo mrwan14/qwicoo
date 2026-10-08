@@ -31,7 +31,7 @@ export function useGuestOrderQuote(
     queryKey: ["guest-quote", key, promo === undefined ? "omit" : promo],
     enabled: Boolean(items && items.length > 0),
     queryFn: async () => {
-      const body: components["schemas"]["CheckoutRequest"] = {
+      const body: components["schemas"]["app__schemas__order__CheckoutRequest"] = {
         items: JSON.parse(key) as QuoteItemInput[],
       };
       if (promo !== undefined) body.promo_code = promo;

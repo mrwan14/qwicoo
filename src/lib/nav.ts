@@ -189,7 +189,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
 const BOTTOM_PRIORITY: Record<UserRole, readonly string[]> = {
   SUPER_ADMIN: ["/app/brands", "/app/menu", "/app/floor", "/app/analytics"],
   BRAND_ADMIN: ["brand-dashboard", "/app/menu", "/app/staff", "brand-settings"],
-  REGIONAL_MANAGER: ["/app/floor", "/app/menu", "/app/staff", "/app/analytics"],
+  REGIONAL_MANAGER: ["/app/menu", "/app/analytics", "/app/offline-orders", "/app/floor"],
   BRANCH_ADMIN: ["/app/dashboard", "/app/floor", "/app/pos", "/app/payments"],
   CASHIER: ["/app/pos", "/app/payments", "/app/floor", "/app/attendance"],
   WAITER: ["/app/floor", "/app/floor/requests", "/app/attendance"],

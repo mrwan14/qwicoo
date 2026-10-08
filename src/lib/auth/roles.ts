@@ -7,11 +7,11 @@ export type UserProfile = components["schemas"]["UserResponse"];
 const ROLE_HOME: Record<UserRole, string> = {
   SUPER_ADMIN: "/app/brands",
   BRAND_ADMIN: "/app/brands",
-  REGIONAL_MANAGER: "/app/floor",
+  REGIONAL_MANAGER: "/app/menu",
   BRANCH_ADMIN: "/app/floor",
   CASHIER: "/app/pos",
   WAITER: "/app/floor",
-  RUNNER: "/app/floor",
+  RUNNER: "/app/kds/expo",
   KITCHEN_STAFF: "/app/kds",
 };
 

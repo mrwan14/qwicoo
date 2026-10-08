@@ -13,6 +13,7 @@ import { useSoundSetting } from "@/features/staff/alerts/preferences";
 import { acknowledgeOrder, ignoreOwnChange } from "@/features/staff/alerts/ignore";
 import { playTone, unlockAudio } from "@/lib/sound/tones";
 import { stationLabel } from "@/lib/status-labels";
+import { kitchenTicketKind, vehicleDetails } from "@/features/staff/place-labels";
 import type { components } from "@/lib/api/schema";
 import { useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
@@ -39,12 +40,6 @@ function ticketTitle(ticket: { pickup_number?: number | null; table_number?: str
   if (ticket.pickup_number != null) return `Pickup ${ticket.pickup_number}`;
   if (ticket.table_number) return `Table ${ticket.table_number}`;
   return "Order";
-}
-
-function orderTypeLabel(orderType: string | null | undefined): string {
-  if (orderType === "TAKEAWAY") return "Takeaway";
-  if (orderType === "DINE_IN") return "Dine in";
-  return "";
 }
 
 export function KdsScreen() {
@@ -195,6 +190,9 @@ function TicketColumn({
     order_id: string;
     station: string;
     order_type?: string | null;
+    order_channel?: string | null;
+    fulfillment_type?: string | null;
+    vehicle?: { [key: string]: unknown } | null;
     table_number?: string | null;
     pickup_number?: number | null;
     customer_notes?: string | null;
@@ -223,7 +221,8 @@ function TicketColumn({
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {tickets.map((ticket) => {
           const waiting = waitingLabel(ticket.created_at);
-          const kind = orderTypeLabel(ticket.order_type);
+          const kind = kitchenTicketKind(ticket);
+          const car = vehicleDetails(ticket.vehicle);
           const markingThis = marking?.orderId === ticket.order_id && marking.station === ticket.station;
           const canMark = Boolean(asStation(ticket.station));
           return (
@@ -232,6 +231,7 @@ function TicketColumn({
                 <div>
                   <p className="text-[length:var(--text-20)] font-semibold">{ticketTitle(ticket)}</p>
                   {kind ? <p className="text-sm text-muted-foreground">{kind}</p> : null}
+                  {car ? <p className="text-sm text-muted-foreground">{car}</p> : null}
                 </div>
                 <StatusChip tone={waiting.tone}>{waiting.text}</StatusChip>
               </div>

@@ -10,7 +10,9 @@ import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
+import { getStaffOrder } from "@/lib/api/staff-order";
 import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
+import { paymentPlaceLabel } from "@/features/staff/place-labels";
 import { useScope } from "@/stores/scope";
 
 export function PaymentsScreen() {
@@ -45,10 +47,26 @@ export function PaymentsScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const rows = pending.data ?? [];
+  const tableOrders = rows.filter((payment) => payment.pickup_number == null && paymentPlaceLabel(payment) === "Table");
+  const tables = useQuery({
+    queryKey: ["payment-tables", branchId, tableOrders.map((payment) => payment.order_id).join(",")],
+    enabled: tableOrders.length > 0,
+    queryFn: async () => {
+      const entries = await Promise.all(tableOrders.map(async (payment) => {
+        try {
+          const order = await getStaffOrder(payment.order_id);
+          return [payment.order_id, order.display_number?.trim() || ""] as const;
+        } catch {
+          return [payment.order_id, ""] as const;
+        }
+      }));
+      return Object.fromEntries(entries);
+    },
+  });
+
   if (pending.isLoading) return <LoadingState label="Loading payments" />;
   if (pending.isError) return <QueryErrorState error={pending.error} screen="Payments" onRetry={() => void pending.refetch()} />;
-
-  const rows = pending.data ?? [];
 
   return (
     <div className="grid gap-4">
@@ -75,7 +93,7 @@ export function PaymentsScreen() {
                 return (
                   <tr key={payment.id} className="border-b align-middle last:border-b-0">
                     <th scope="row" className="px-4 py-4 text-start font-semibold tabular-nums">
-                      {payment.pickup_number != null ? `Pickup ${payment.pickup_number}` : "Table"}
+                      {paymentPlaceLabel({ ...payment, display_number: tables.data?.[payment.order_id] })}
                     </th>
                     <td className="px-4 py-4">{paymentMethodLabel(payment.payment_method)}</td>
                     <td className="px-4 py-4">{paymentStatusLabel(payment.status)}</td>

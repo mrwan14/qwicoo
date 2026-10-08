@@ -70,7 +70,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Brand ops",
     shell: "admin",
     phase: 2,
-    roles: [...BRANCH_OPS],
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"],
   },
   {
     href: "/app/staff",
@@ -78,7 +78,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Brand ops",
     shell: "admin",
     phase: 5,
-    roles: [...BRANCH_OPS],
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"],
   },
   {
     href: "/app/team",
@@ -94,7 +94,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Brand ops",
     shell: "ops",
     phase: 3,
-    roles: [...BRANCH_OPS, "CASHIER", "WAITER", "RUNNER"],
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER", "WAITER"],
   },
   {
     href: "/app/floor/requests",
@@ -102,7 +102,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Brand ops",
     shell: "ops",
     phase: 4,
-    roles: [...BRANCH_OPS, "WAITER", "RUNNER"],
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "WAITER", "RUNNER"],
   },
   {
     href: "/app/pos",
@@ -118,7 +118,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Brand ops",
     shell: "ops",
     phase: 3,
-    roles: [...BRANCH_OPS, "KITCHEN_STAFF"],
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "KITCHEN_STAFF"],
   },
   {
     href: "/app/kds/expo",
@@ -126,7 +126,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Brand ops",
     shell: "ops",
     phase: 3,
-    roles: [...BRANCH_OPS, "KITCHEN_STAFF", "RUNNER"],
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "KITCHEN_STAFF", "RUNNER"],
   },
   {
     href: "/app/payments",
@@ -134,7 +134,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Brand ops",
     shell: "admin",
     phase: 4,
-    roles: [...BRANCH_OPS, "CASHIER"],
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER"],
   },
   {
     href: "/app/offline-orders",
@@ -174,7 +174,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "Insight",
     shell: "admin",
     phase: 6,
-    roles: ["REGIONAL_MANAGER", "BRANCH_ADMIN", "CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER"],
+    roles: ["BRANCH_ADMIN", "CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER"],
   },
   {
     href: "/app/audit",
@@ -189,12 +189,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
 const BOTTOM_PRIORITY: Record<UserRole, readonly string[]> = {
   SUPER_ADMIN: ["/app/brands", "/app/menu", "/app/floor", "/app/analytics"],
   BRAND_ADMIN: ["brand-dashboard", "/app/menu", "/app/staff", "brand-settings"],
-  REGIONAL_MANAGER: ["/app/menu", "/app/analytics", "/app/offline-orders", "/app/floor"],
+  REGIONAL_MANAGER: ["/app/menu", "/app/analytics", "/app/offline-orders", "/app/pos"],
   BRANCH_ADMIN: ["/app/dashboard", "/app/floor", "/app/pos", "/app/payments"],
   CASHIER: ["/app/pos", "/app/payments", "/app/floor", "/app/attendance"],
   WAITER: ["/app/floor", "/app/floor/requests", "/app/attendance"],
   KITCHEN_STAFF: ["/app/kds", "/app/kds/expo", "/app/attendance"],
-  RUNNER: ["/app/kds/expo", "/app/floor/requests", "/app/floor", "/app/attendance"],
+  RUNNER: ["/app/kds/expo", "/app/floor/requests", "/app/attendance"],
 };
 
 /**

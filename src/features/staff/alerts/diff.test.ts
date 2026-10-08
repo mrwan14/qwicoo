@@ -30,12 +30,11 @@ test("first snapshot is a baseline", () => {
 });
 
 test("a source seen for the first time is baselined on its own", () => {
-  assert.deepEqual(diffSnapshots({ floor: [] }, busy, all("REGIONAL_MANAGER")).map((e) => e.kind), ["confirmation"]);
+  assert.deepEqual(diffSnapshots({ floor: [] }, busy, all("WAITER")).map((e) => e.kind), ["confirmation"]);
 });
 
-test("new items across every queue for a regional manager", () => {
-  const kinds = diffSnapshots(empty, busy, all("REGIONAL_MANAGER")).map((e) => e.kind).sort();
-  assert.deepEqual(kinds, ["confirmation", "handover-ready", "kitchen-ticket", "payment", "service-request"]);
+test("a regional manager hears no operational queues", () => {
+  assert.deepEqual(diffSnapshots(empty, busy, all("REGIONAL_MANAGER")), []);
 });
 
 test("floor status change and ready tone", () => {
@@ -89,10 +88,10 @@ test("role filtering", () => {
   assert.deepEqual(sourcesFor(all("BRANCH_ADMIN")), []);
 });
 
-test("regional manager hears only the selected branch", () => {
+test("kitchen hears a new ticket only for the selected branch", () => {
   const other: Snapshot = { kitchen: [{ sub_ticket_id: "k9", order_id: "o9", branch_id: B2 }] };
-  assert.deepEqual(diffSnapshots({ kitchen: [] }, other, all("REGIONAL_MANAGER")), []);
-  assert.equal(diffSnapshots({ kitchen: [] }, other, { role: "REGIONAL_MANAGER", branchId: B2 }).length, 1);
+  assert.deepEqual(diffSnapshots({ kitchen: [] }, other, all("KITCHEN_STAFF")), []);
+  assert.equal(diffSnapshots({ kitchen: [] }, other, { role: "KITCHEN_STAFF", branchId: B2 }).length, 1);
 });
 
 test("dine-in payment toast names the table from the floor", () => {

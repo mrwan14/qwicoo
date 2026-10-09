@@ -7,6 +7,8 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { BranchesBarChart, CategoryDonut, ItemsBarChart } from "@/features/staff/analytics-charts";
+import { AssistantUsage } from "@/features/staff/assistant/leads-screen";
+import { canSeeAssistantUsage } from "@/features/staff/assistant/access";
 import { LiveCount } from "@/components/ops/live-fact";
 import { Money } from "@/components/ops/money";
 import { StatusChip } from "@/components/ops/status-chip";
@@ -506,6 +508,7 @@ function chartAmount(amount: string): number {
 export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "dashboard" | "menu" | "branches"; embedded?: boolean; branchId?: string | null }) {
   const t = useStaffSection(analyticsCopy).analytics;
   const { locale } = useLocale();
+  const me = useStaffSession();
   const [period, setPeriod] = useState<components["schemas"]["TimePeriod"]>("last_7_days");
   const data = useQuery({
     queryKey: ["analytics", view, period, branchId ?? "all"],
@@ -546,6 +549,7 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
           <div className="grid gap-1">
             <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.intro}</p>
+            {me && canSeeAssistantUsage(me.role) ? <AssistantUsage /> : null}
           </div>
           <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (

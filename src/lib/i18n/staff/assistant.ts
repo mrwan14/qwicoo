@@ -23,6 +23,19 @@ const en = {
     hours: "Busiest hours this month",
     topBranch: "Which branch sold the most this month?",
   },
+  usage: "{questions} of {limit} questions this month",
+  leads: {
+    title: "Partner leads",
+    empty: "No partner enquiries yet.",
+    loading: "Loading leads",
+    failed: "Leads couldn't load.",
+    date: "Date",
+    restaurant: "Restaurant",
+    city: "City",
+    branches: "Branches",
+    contact: "Contact",
+    message: "Message",
+  },
 } as const;
 
 const ar = {
@@ -47,6 +60,19 @@ const ar = {
     cancelled: "الطلبات الملغاة اليوم",
     hours: "أكثر الساعات ازدحاماً هذا الشهر",
     topBranch: "أي فرع باع أكثر هذا الشهر؟",
+  },
+  usage: "{questions} من {limit} سؤالاً هذا الشهر",
+  leads: {
+    title: "طلبات الشراكة",
+    empty: "لا توجد طلبات شراكة بعد.",
+    loading: "جارٍ تحميل الطلبات",
+    failed: "تعذّر تحميل الطلبات.",
+    date: "التاريخ",
+    restaurant: "المطعم",
+    city: "المدينة",
+    branches: "الفروع",
+    contact: "التواصل",
+    message: "الرسالة",
   },
 } as const;
 

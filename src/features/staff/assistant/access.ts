@@ -1,5 +1,9 @@
 import type { UserRole } from "@/lib/auth/roles";
 
+export function canSeeAssistantUsage(role: UserRole): boolean {
+  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN";
+}
+
 export type AssistantBranch = { id: string; name: string };
 
 const BRAND_LEVEL: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER"];

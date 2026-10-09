@@ -58,6 +58,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...PLATFORM],
   },
   {
+    href: "/app/partner-leads",
+    labelKey: "leads",
+    group: "portfolio",
+    shell: "admin",
+    phase: 6,
+    roles: [...PLATFORM],
+  },
+  {
     href: "/app/menu",
     labelKey: "menu",
     group: "brandOps",

@@ -22,6 +22,7 @@ const en = {
   attendance: "Attendance",
   audit: "Audit",
   assistant: "Ask Qwicoo",
+  leads: "Partner leads",
   settings: "Settings",
   branchSettings: "Branch settings",
   groups: {
@@ -53,6 +54,7 @@ const ar = {
   attendance: "الحضور",
   audit: "السجل",
   assistant: "اسأل كويكو",
+  leads: "طلبات الشراكة",
   settings: "الإعدادات",
   branchSettings: "إعدادات الفرع",
   groups: {

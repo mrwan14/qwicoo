@@ -5,7 +5,7 @@ import { ASSISTANT_ROLES, canAskQwicoo } from "@/lib/auth/roles.ts";
 import { deniedUrl } from "@/lib/auth/scope.ts";
 import { getNavItem } from "@/lib/nav.ts";
 
-import { assistantSheetSide, selectAssistantBranch, starterKeys } from "./access.ts";
+import { assistantSheetSide, canSeeAssistantUsage, selectAssistantBranch, starterKeys } from "./access.ts";
 
 const cashier = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -47,4 +47,7 @@ test("the branch picker keeps only accessible branches", () => {
   assert.equal(assistantSheetSide(true, "rtl"), "bottom");
   assert.equal(assistantSheetSide(false, "rtl"), "left");
   assert.equal(assistantSheetSide(false, "ltr"), "right");
+  assert.equal(canSeeAssistantUsage("SUPER_ADMIN"), true);
+  assert.equal(canSeeAssistantUsage("BRAND_ADMIN"), true);
+  assert.equal(canSeeAssistantUsage("REGIONAL_MANAGER"), false);
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { cn } from "cn";
 
 import { Composer } from "@/components/assistant/composer";
 import { MessageList, type ChatMessage } from "@/components/assistant/message-list";
@@ -19,6 +20,7 @@ export function ChatPanel({
   onSend,
   onRetry,
   footer,
+  className,
 }: {
   title: string;
   messages: ChatMessage[];
@@ -30,13 +32,14 @@ export function ChatPanel({
   onSend: (text: string) => void;
   onRetry?: () => void;
   footer?: ReactNode;
+  className?: string;
 }) {
   const t = useStaffSection(assistantCopy);
   const latest = [...messages].reverse().find((message) => message.role === "assistant");
   const live = pending ? t.typing : failure?.message ?? (latest?.role === "assistant" ? latest.answer.text : "");
 
   return (
-    <section className="grid min-h-[70dvh] grid-rows-[auto_minmax(0,1fr)_auto] bg-background" aria-label={title}>
+    <section className={cn("grid min-h-[70dvh] grid-rows-[auto_minmax(0,1fr)_auto] bg-background", className)} aria-label={title}>
       <header className="border-b px-3 py-3">
         <h2 className="text-base font-semibold">{title}</h2>
       </header>

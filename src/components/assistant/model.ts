@@ -29,6 +29,7 @@ export type AssistantAnswerView = {
 export type AssistantFailure =
   | { kind: "disabled"; message: string }
   | { kind: "limit"; message: string }
+  | { kind: "denied"; message: string }
   | { kind: "network"; message: string };
 
 const ARABIC = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
@@ -93,7 +94,7 @@ export function chartRows(chart: AssistantChartView): { rows: { x: string; value
   return { keys, rows: order.map((x) => ({ x, values: byX.get(x) ?? {} })) };
 }
 
-type FailureCopy = { disabled: string; limit: string; network: string };
+type FailureCopy = { disabled: string; limit: string; network: string; outside: string };
 
 function readError(error: unknown): { status: number | null; code: string | null; detail: string | null } {
   if (error instanceof TypeError) return { status: 0, code: null, detail: null };
@@ -124,6 +125,9 @@ export function classifyAssistantError(error: unknown, locale: LocaleCode, copy:
   }
   if (code === "ASSISTANT_LIMIT_REACHED" || status === 429) {
     return { kind: "limit", message: humanLimit(detail, locale, copy.limit) };
+  }
+  if (status === 403 || code === "FORBIDDEN" || code === "BRANCH_ACCESS_FORBIDDEN" || code === "ROLE_FORBIDDEN") {
+    return { kind: "denied", message: copy.outside };
   }
   return { kind: "network", message: copy.network };
 }

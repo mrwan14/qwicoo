@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   BarChart3,
+  MessageCircle,
   ClipboardList,
   ConciergeBell,
   LayoutGrid,
@@ -29,6 +30,7 @@ import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { BranchSwitcher, ScopeBadge } from "@/components/ops/scope-header";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { AlertControls } from "@/features/staff/alerts/alert-controls";
+import { AskQwicooButton } from "@/features/staff/assistant/ask-qwicoo";
 import { usePendingConfirmationCount } from "@/hooks/use-floor-live";
 import { roleLabel, type UserRole } from "@/lib/auth/roles";
 import { endStaffSession } from "@/lib/auth/session-client";
@@ -71,6 +73,7 @@ const ICONS: Record<string, LucideIcon> = {
   "/app/analytics": BarChart3,
   "/app/dashboard": BarChart3,
   "/app/audit": Shield,
+  "/app/assistant": MessageCircle,
   "brand-dashboard": Store,
   "brand-settings": Settings2,
   "branch-settings": Settings2,
@@ -354,6 +357,7 @@ function ShellFrame({
               ) : null}
             </div>
             <div className="flex items-center gap-2">
+              <AskQwicooButton />
               <LocaleSwitch className="min-h-11 rounded-lg px-2 text-sm hover:bg-muted" />
               <AlertControls />
               <p className="hidden text-end text-sm sm:block">

@@ -22,6 +22,13 @@ export function roleHome(role: UserRole): string {
   return ROLE_HOME[role];
 }
 
+/** Roles that may open Ask Qwicoo. Operational roles are intentionally absent. */
+export const ASSISTANT_ROLES = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"] as const satisfies readonly UserRole[];
+
+export function canAskQwicoo(role: UserRole): boolean {
+  return (ASSISTANT_ROLES as readonly UserRole[]).includes(role);
+}
+
 export function isUserRole(value: unknown): value is UserRole {
   return typeof value === "string" && value in ROLE_HOME;
 }

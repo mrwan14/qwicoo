@@ -12,6 +12,17 @@ const en = {
   composerLabel: "Your question",
   you: "You",
   qwicoo: "Qwicoo",
+  ask: "Ask Qwicoo",
+  branch: "Branch",
+  outside: "That stays outside the branches you can see.",
+  starters: {
+    today: "Today vs yesterday",
+    items: "Best and worst items this week",
+    cash: "Any cash drawer differences this week?",
+    cancelled: "Cancelled orders today",
+    hours: "Busiest hours this month",
+    topBranch: "Which branch sold the most this month?",
+  },
 } as const;
 
 const ar = {
@@ -26,6 +37,17 @@ const ar = {
   composerLabel: "سؤالك",
   you: "أنت",
   qwicoo: "كويكو",
+  ask: "اسأل كويكو",
+  branch: "الفرع",
+  outside: "هذا خارج الفروع التي يمكنك الاطلاع عليها.",
+  starters: {
+    today: "اليوم مقارنة بالأمس",
+    items: "أفضل وأسوأ الأصناف هذا الأسبوع",
+    cash: "هل يوجد فرق في درج النقدية هذا الأسبوع؟",
+    cancelled: "الطلبات الملغاة اليوم",
+    hours: "أكثر الساعات ازدحاماً هذا الشهر",
+    topBranch: "أي فرع باع أكثر هذا الشهر؟",
+  },
 } as const;
 
 export const assistantCopy = defineDictionary(en, ar);

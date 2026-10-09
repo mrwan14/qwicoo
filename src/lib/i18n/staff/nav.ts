@@ -21,6 +21,7 @@ const en = {
   till: "Till",
   attendance: "Attendance",
   audit: "Audit",
+  assistant: "Ask Qwicoo",
   settings: "Settings",
   branchSettings: "Branch settings",
   groups: {
@@ -51,6 +52,7 @@ const ar = {
   till: "الصندوق",
   attendance: "الحضور",
   audit: "السجل",
+  assistant: "اسأل كويكو",
   settings: "الإعدادات",
   branchSettings: "إعدادات الفرع",
   groups: {

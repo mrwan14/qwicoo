@@ -1,4 +1,4 @@
-import type { UserProfile, UserRole } from "@/lib/auth/roles";
+import { ASSISTANT_ROLES, type UserProfile, type UserRole } from "@/lib/auth/roles";
 import { homeScopeOf } from "@/lib/auth/scope";
 import type { NavLabelKey } from "@/lib/i18n/staff/nav";
 
@@ -160,6 +160,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     shell: "admin",
     phase: 6,
     roles: [...BRAND_SCOPE],
+  },
+  {
+    href: "/app/assistant",
+    labelKey: "assistant",
+    group: "insight",
+    shell: "admin",
+    phase: 6,
+    roles: [...ASSISTANT_ROLES],
   },
   {
     href: "/app/financials",

@@ -8,6 +8,7 @@ const copy = {
   disabled: "Not available yet",
   limit: "You've reached this month's question limit.",
   network: "The connection dropped. Try again.",
+  outside: "That stays outside the branches you can see.",
 };
 
 const rich: AssistantChatResponse = {
@@ -74,4 +75,8 @@ test("disabled, limit, and network states never show the raw code", () => {
   assert.equal(dropped.kind, "network");
   assert.equal(dropped.message, copy.network);
   assert.equal(dropped.message.includes("ASSISTANT"), false);
+  assert.deepEqual(classifyAssistantError({ status: 403, code: "FORBIDDEN", detail: "FORBIDDEN" }, "en", copy), {
+    kind: "denied",
+    message: copy.outside,
+  });
 });

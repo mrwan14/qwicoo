@@ -40,7 +40,7 @@ test("an answer keeps its table, chart points, and sources", () => {
       { x: "15", values: { Orders: 12 } },
     ],
   });
-  assert.match(answerBlockClass(view.tone), /bg-card/);
+  assert.match(answerBlockClass(view.tone), /border-sage/);
 });
 
 test("a refusal is quiet and drops tables, charts, and sources", () => {
@@ -50,8 +50,8 @@ test("a refusal is quiet and drops tables, charts, and sources", () => {
   assert.deepEqual(view.tables, []);
   assert.equal(view.chart, null);
   assert.deepEqual(view.sources, []);
-  assert.match(answerBlockClass(view.tone), /bg-muted/);
-  assert.doesNotMatch(answerBlockClass(view.tone), /bg-card/);
+  assert.match(answerBlockClass(view.tone), /bg-canvas/);
+  assert.doesNotMatch(answerBlockClass(view.tone), /border-sage/);
 });
 
 test("disabled, limit, and network states never show the raw code", () => {

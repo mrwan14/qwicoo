@@ -2,6 +2,7 @@ import { defineDictionary } from "@/lib/i18n/dictionary";
 
 const en = {
   typing: "Qwicoo is writing…",
+  pendingStep: "Checking today's sales…",
   disabled: "Not available yet",
   limit: "You've reached this month's question limit.",
   network: "The connection dropped. Try again.",
@@ -13,7 +14,14 @@ const en = {
   you: "You",
   qwicoo: "Qwicoo",
   ask: "Ask Qwicoo",
+  shortcut: "⌘K",
+  shortcutCtrl: "Ctrl+K",
   branch: "Branch",
+  allBranches: "All branches",
+  emptyTitle: "Ask about {branch} today",
+  live: "Live",
+  updated: "updated {time}",
+  askAgain: "Ask again",
   outside: "That stays outside the branches you can see.",
   starters: {
     today: "Today vs yesterday",
@@ -40,6 +48,7 @@ const en = {
 
 const ar = {
   typing: "كويكو يكتب…",
+  pendingStep: "جارٍ التحقق من مبيعات اليوم…",
   disabled: "غير متاح بعد",
   limit: "وصلت إلى حد الأسئلة لهذا الشهر.",
   network: "انقطع الاتصال. حاول مرة أخرى.",
@@ -51,7 +60,14 @@ const ar = {
   you: "أنت",
   qwicoo: "كويكو",
   ask: "اسأل كويكو",
+  shortcut: "⌘K",
+  shortcutCtrl: "Ctrl+K",
   branch: "الفرع",
+  allBranches: "كل الفروع",
+  emptyTitle: "اسأل عن {branch} اليوم",
+  live: "مباشر",
+  updated: "محدّث {time}",
+  askAgain: "اسأل مجدداً",
   outside: "هذا خارج الفروع التي يمكنك الاطلاع عليها.",
   starters: {
     today: "اليوم مقارنة بالأمس",

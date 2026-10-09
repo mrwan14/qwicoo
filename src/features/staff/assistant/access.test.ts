@@ -5,7 +5,15 @@ import { ASSISTANT_ROLES, canAskQwicoo } from "@/lib/auth/roles.ts";
 import { deniedUrl } from "@/lib/auth/scope.ts";
 import { getNavItem } from "@/lib/nav.ts";
 
-import { assistantSheetSide, canSeeAssistantUsage, selectAssistantBranch, starterKeys } from "./access.ts";
+import {
+  assistantChatBody,
+  assistantSheetSide,
+  canSeeAssistantUsage,
+  isBrandLevelRole,
+  resolveAssistantBranchId,
+  selectAssistantBranch,
+  starterKeys,
+} from "./access.ts";
 
 const cashier = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -50,4 +58,27 @@ test("the branch picker keeps only accessible branches", () => {
   assert.equal(canSeeAssistantUsage("SUPER_ADMIN"), true);
   assert.equal(canSeeAssistantUsage("BRAND_ADMIN"), true);
   assert.equal(canSeeAssistantUsage("REGIONAL_MANAGER"), false);
+});
+
+test("brand-level roles default to all branches and omit branch_id", () => {
+  const accessible = [
+    { id: "branch-a", name: "Nasr City" },
+    { id: "branch-b", name: "Zamalek" },
+  ];
+  assert.equal(isBrandLevelRole("SUPER_ADMIN"), true);
+  assert.equal(isBrandLevelRole("BRAND_ADMIN"), true);
+  assert.equal(isBrandLevelRole("REGIONAL_MANAGER"), true);
+  assert.equal(isBrandLevelRole("BRANCH_ADMIN"), false);
+  assert.equal(resolveAssistantBranchId("BRAND_ADMIN", accessible, null, "branch-a"), null);
+  assert.equal(resolveAssistantBranchId("BRAND_ADMIN", accessible, "branch-b", null), "branch-b");
+  assert.equal(resolveAssistantBranchId("BRANCH_ADMIN", accessible, null, "branch-a"), "branch-a");
+  assert.deepEqual(assistantChatBody([{ role: "user", content: "hi" }], "en", null), {
+    messages: [{ role: "user", content: "hi" }],
+    locale: "en",
+  });
+  assert.deepEqual(assistantChatBody([{ role: "user", content: "hi" }], "ar", "branch-a"), {
+    messages: [{ role: "user", content: "hi" }],
+    locale: "ar",
+    branch_id: "branch-a",
+  });
 });

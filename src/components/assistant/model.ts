@@ -71,8 +71,8 @@ export function presentAnswer(raw: AssistantChatResponse): AssistantAnswerView {
 
 export function answerBlockClass(tone: AssistantAnswerTone): string {
   return tone === "refusal"
-    ? "border border-border bg-muted px-3 py-3 text-muted-foreground"
-    : "bg-card px-3 py-3 text-card-foreground";
+    ? "border border-qw-line bg-canvas px-3 py-3 text-muted-foreground"
+    : "border-inline-start-[3px] border-sage bg-transparent py-1 ps-4 text-ink";
 }
 
 /** Rows keyed by category, in first-seen order. Arabic callers reverse the list. */

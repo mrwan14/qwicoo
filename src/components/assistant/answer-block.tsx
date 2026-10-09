@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { labelColumns } from "@/components/assistant/column-labels";
+import { extractLeadFigure } from "@/components/assistant/lead-figure";
+import { renderAssistantMarkdown } from "@/components/assistant/markdown";
 import { answerBlockClass, chartRows, type AssistantAnswerView } from "@/components/assistant/model";
 import { useLocale } from "@/lib/i18n/locale-store";
 
-const TERRACOTTA = "var(--primary)";
-const SLICES = [TERRACOTTA, "#e39a62", "#8c4a2f", "#d4a574", "#a66b45"];
+const SLICES = ["var(--orange)", "var(--amber)", "var(--sage)", "var(--sage-deep)", "var(--ink)"];
 
 function useChartReady(): boolean {
   const [ready, setReady] = useState(false);
@@ -25,15 +27,15 @@ function AnswerChart({ chart }: { chart: NonNullable<AssistantAnswerView["chart"
   const axis = locale === "ar" ? "right" : "left";
   const shared = (
     <>
-      <CartesianGrid vertical={false} stroke="var(--border)" />
-      <XAxis dataKey="x" tick={{ fill: "var(--foreground)", fontSize: 12 }} />
+      <CartesianGrid vertical={false} stroke="var(--qw-line)" />
+      <XAxis dataKey="x" tick={{ fill: "var(--ink)", fontSize: 12 }} />
       <YAxis orientation={axis} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
       <Tooltip
-        cursor={{ fill: "var(--secondary)" }}
+        cursor={{ fill: "var(--canvas)" }}
         content={({ active, payload, label }) => {
           if (!active || !payload?.length) return null;
           return (
-            <div className="grid gap-0.5 bg-card px-3 py-2 text-sm text-card-foreground shadow-elev-1">
+            <div className="grid gap-0.5 border border-qw-line bg-white px-3 py-2 text-sm text-ink">
               <p className="font-medium">{label}</p>
               {payload.map((item) => (
                 <p key={String(item.name)}>
@@ -48,7 +50,7 @@ function AnswerChart({ chart }: { chart: NonNullable<AssistantAnswerView["chart"
         chart.type === "line" ? (
           <Line key={key} type="monotone" dataKey={key} stroke={SLICES[index % SLICES.length]} strokeWidth={2} dot={false} />
         ) : (
-          <Bar key={key} dataKey={key} fill={SLICES[index % SLICES.length]} radius={[6, 6, 0, 0]} maxBarSize={28} />
+          <Bar key={key} dataKey={key} fill={SLICES[index % SLICES.length]} radius={0} maxBarSize={28} />
         ),
       )}
     </>
@@ -73,45 +75,103 @@ function AnswerChart({ chart }: { chart: NonNullable<AssistantAnswerView["chart"
   );
 }
 
-export function AnswerBlock({ answer, sourcesLabel }: { answer: AssistantAnswerView; sourcesLabel: string }) {
+function formatClock(at: number, locale: string): string {
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(at));
+}
+
+export function AnswerBlock({
+  answer,
+  sourcesLabel,
+  receivedAt,
+  scopeLabel,
+  liveLabel,
+  updatedTemplate,
+  askAgainLabel,
+  onAskAgain,
+}: {
+  answer: AssistantAnswerView;
+  sourcesLabel: string;
+  receivedAt?: number;
+  scopeLabel?: string;
+  liveLabel?: string;
+  updatedTemplate?: string;
+  askAgainLabel?: string;
+  onAskAgain?: () => void;
+}) {
+  const { locale } = useLocale();
+  const lead = answer.tone === "answer" ? extractLeadFigure(answer.text) : null;
+  const body = lead?.summary ?? answer.text;
+  const html = renderAssistantMarkdown(body);
+
   return (
-    <article className={answerBlockClass(answer.tone)}>
-      <p className="whitespace-pre-wrap text-sm leading-6">{answer.text}</p>
-      {answer.tables.map((table) => (
-        <div key={table.columns.join("|")} className="mt-3 overflow-x-auto">
-          <table className="w-full border-collapse text-start text-sm">
-            <thead>
-              <tr>
-                {table.columns.map((column) => (
-                  <th key={column} className="border border-border px-2 py-1 text-start font-medium">
-                    {column}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {table.rows.map((row, index) => (
-                <tr key={`${table.columns[0] ?? "row"}-${index}`}>
-                  {table.columns.map((column, cell) => (
-                    <td key={column} className="border border-border px-2 py-1 tabular-nums">
-                      {row[cell] ?? ""}
-                    </td>
+    <article className={`asst-fade ${answerBlockClass(answer.tone)}`}>
+      {lead ? (
+        <p className="mb-2 text-3xl font-semibold tracking-tight text-ink tabular-nums" dir="ltr">
+          {lead.figure}
+        </p>
+      ) : null}
+      <div className="text-sm leading-6 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:ms-4 [&_ul]:list-disc [&_ul]:space-y-1" dangerouslySetInnerHTML={{ __html: html }} />
+      {answer.tables.map((table) => {
+        const columns = labelColumns(table.columns, locale);
+        return (
+          <div key={table.columns.join("|")} className="mt-3 w-full overflow-x-auto">
+            <table className="w-full border-collapse text-start text-sm">
+              <thead>
+                <tr className="bg-ink text-canvas">
+                  {columns.map((column) => (
+                    <th key={column} className="px-3 py-2 text-start font-semibold">
+                      {column}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
+              </thead>
+              <tbody>
+                {table.rows.map((row, index) => (
+                  <tr key={`${table.columns[0] ?? "row"}-${index}`} className="border-b border-qw-line">
+                    {table.columns.map((column, cell) => (
+                      <td key={column} className="bg-white px-3 py-2 tabular-nums" dir="ltr">
+                        {row[cell] ?? ""}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
       {answer.chart ? (
         <div className="mt-3">
           <AnswerChart chart={answer.chart} />
         </div>
       ) : null}
       {answer.sources.length > 0 ? (
-        <p className="mt-3 text-xs text-muted-foreground">
-          {sourcesLabel}: {answer.sources.join(" · ")}
-        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {answer.sources.map((source) => (
+            <span key={source} className="border border-qw-line bg-canvas px-2 py-0.5 text-xs text-muted-foreground">
+              {source}
+            </span>
+          ))}
+          <span className="sr-only">
+            {sourcesLabel}: {answer.sources.join(" · ")}
+          </span>
+        </div>
+      ) : null}
+      {receivedAt && liveLabel && updatedTemplate && scopeLabel ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span>
+            {liveLabel} · {updatedTemplate.replace("{time}", formatClock(receivedAt, locale))} · {scopeLabel}
+          </span>
+          {onAskAgain && askAgainLabel ? (
+            <button type="button" className="font-semibold text-ink underline-offset-2 hover:underline" onClick={onAskAgain}>
+              {askAgainLabel}
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </article>
   );

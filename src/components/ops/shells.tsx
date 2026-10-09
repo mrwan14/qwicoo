@@ -360,7 +360,7 @@ function ShellFrame({
             </div>
             <div className="flex items-center gap-2">
               <AskQwicooButton />
-              <LocaleSwitch className="min-h-11 rounded-lg px-2 text-sm hover:bg-muted" />
+              <LocaleSwitch className="min-h-11 px-2 text-sm hover:bg-muted" />
               <AlertControls />
               <p className="hidden text-end text-sm sm:block">
                 <span className="block font-medium">{me.full_name}</span>

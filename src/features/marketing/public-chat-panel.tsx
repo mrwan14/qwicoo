@@ -1,41 +1,47 @@
 "use client";
 
-import { ChatPanel } from "@/components/assistant/chat-panel";
+import { MessageCircle } from "lucide-react";
+
+import { ChatPanel, type StarterTile } from "@/components/assistant/chat-panel";
 import { landingCopy } from "@/features/marketing/copy";
 import { usePublicChatState } from "@/features/marketing/public-assistant-session";
+
+const EDGES = ["var(--amber)", "var(--orange)", "var(--sage)", "var(--amber)"];
 
 export function PublicChatPanel({ onClose, showClose = true }: { onClose?: () => void; showClose?: boolean }) {
   const { locale, messages, pending, failure, submit } = usePublicChatState();
   const copy = landingCopy[locale];
-  const starters = Object.values(copy.assistant.starters);
+  const starters: StarterTile[] = Object.entries(copy.assistant.starters).map(([id, label], index) => ({
+    id,
+    label,
+    icon: <MessageCircle aria-hidden className="size-4" />,
+    edge: EDGES[index % EDGES.length],
+  }));
 
   return (
-    <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] bg-canvas">
-      {showClose && onClose ? (
-        <div className="flex items-center justify-between border-b border-qw-line px-3 py-2">
-          <p className="text-sm font-semibold">{copy.partner.askTitle}</p>
-          <button type="button" className="min-h-11 px-3 text-sm" onClick={onClose}>
+    <ChatPanel
+      title={copy.partner.askTitle}
+      messages={messages}
+      pending={pending}
+      failure={failure}
+      starters={starters}
+      disclaimer={copy.assistant.disclaimer}
+      autoFocus={showClose}
+      className="min-h-0 h-full"
+      onSend={(text) => void submit(text)}
+      onRetry={() => void submit(null)}
+      headerExtra={
+        showClose && onClose ? (
+          <button type="button" className="min-h-9 px-2 text-sm text-canvas" onClick={onClose}>
             {copy.assistant.close}
           </button>
-        </div>
-      ) : null}
-      <ChatPanel
-        title={copy.partner.askTitle}
-        messages={messages}
-        pending={pending}
-        failure={failure}
-        starters={starters}
-        disclaimer={copy.assistant.disclaimer}
-        autoFocus={showClose}
-        className="min-h-0 h-full"
-        onSend={(text) => void submit(text)}
-        onRetry={() => void submit(null)}
-        footer={
-          <a href="#partner" className="inline-flex min-h-11 items-center text-sm font-medium text-ink" onClick={() => onClose?.()}>
-            {copy.assistant.becomePartner}
-          </a>
-        }
-      />
-    </div>
+        ) : null
+      }
+      footer={
+        <a href="#partner" className="inline-flex min-h-11 items-center text-sm font-medium text-ink" onClick={() => onClose?.()}>
+          {copy.assistant.becomePartner}
+        </a>
+      }
+    />
   );
 }

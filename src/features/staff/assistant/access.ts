@@ -11,9 +11,13 @@ const BRAND_LEVEL: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONA
 export const STARTER_KEYS = ["today", "items", "cash", "cancelled", "hours"] as const;
 export type StarterKey = (typeof STARTER_KEYS)[number] | "topBranch";
 
+export function isBrandLevelRole(role: UserRole): boolean {
+  return BRAND_LEVEL.includes(role);
+}
+
 /** Brand-level roles also get the cross-branch starter. A branch admin does not. */
 export function starterKeys(role: UserRole): StarterKey[] {
-  return BRAND_LEVEL.includes(role) ? [...STARTER_KEYS, "topBranch"] : [...STARTER_KEYS];
+  return isBrandLevelRole(role) ? [...STARTER_KEYS, "topBranch"] : [...STARTER_KEYS];
 }
 
 /**
@@ -24,6 +28,33 @@ export function selectAssistantBranch(accessible: readonly { id: string }[], act
   if (accessible.length === 0) return null;
   if (activeId && accessible.some((branch) => branch.id === activeId)) return activeId;
   return accessible[0]?.id ?? null;
+}
+
+/**
+ * Brand-level roles default to all branches (`null` → omit `branch_id`).
+ * Branch-scoped roles stay locked to an accessible branch.
+ */
+export function resolveAssistantBranchId(
+  role: UserRole,
+  accessible: readonly { id: string }[],
+  storedId: string | null,
+  activeId: string | null,
+): string | null {
+  if (!isBrandLevelRole(role)) {
+    return selectAssistantBranch(accessible, storedId ?? activeId);
+  }
+  if (storedId && accessible.some((branch) => branch.id === storedId)) return storedId;
+  return null;
+}
+
+/** Chat body: omit `branch_id` when the scope is all branches. */
+export function assistantChatBody(
+  messages: { role: "user" | "assistant"; content: string }[],
+  locale: "en" | "ar",
+  branchId: string | null,
+): { messages: typeof messages; locale: "en" | "ar"; branch_id?: string } {
+  if (branchId) return { messages, locale, branch_id: branchId };
+  return { messages, locale };
 }
 
 export function assistantSheetSide(mobile: boolean, dir: "ltr" | "rtl"): "bottom" | "left" | "right" {

@@ -56,7 +56,10 @@ function usePublicChat(locale: LocaleCode): PublicChat {
       if (!response.ok || !body || typeof body.answer !== "string" || typeof body.refused !== "boolean" || !Array.isArray(body.sources)) {
         throw { status: response.status, code: body?.code ?? null, detail: typeof body?.detail === "string" ? body.detail : null };
       }
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", answer: presentAnswer(body) }]);
+      setMessages((current) => [
+        ...current,
+        { id: crypto.randomUUID(), role: "assistant", answer: presentAnswer(body), receivedAt: Date.now() },
+      ]);
     } catch (error) {
       setFailure(
         classifyAssistantError(error, locale, {

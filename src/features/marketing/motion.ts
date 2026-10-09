@@ -1,5 +1,5 @@
 /** Class names that move. Reduced motion drops them so the landing stays still. */
-export const MOTION_CLASSES = ["qw-drift", "qw-strip-in", "qw-pulse", "qw-rv", "qw-bar"] as const;
+export const MOTION_CLASSES = ["qw-drift", "qw-strip-in", "qw-pulse", "qw-rv", "qw-bar", "qw-bub"] as const;
 
 const MOTION = new Set<string>(MOTION_CLASSES);
 

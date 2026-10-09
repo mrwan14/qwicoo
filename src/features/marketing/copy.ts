@@ -9,6 +9,12 @@ export type FeatureKey = (typeof FEATURE_KEYS)[number];
 type Entry = { title: string; body: string };
 type Chip = { label: string; detail: string };
 type Ticket = { heading: string; badge: string; item: string };
+type Dish = { name: string; detail: string; price: string };
+
+export const SWAP_KEYS = ["tables", "kitchen", "drive", "branches"] as const;
+export const FLOW_KEYS = ["guest", "kitchen", "expo", "owner", "floor", "pay", "pos", "drive"] as const;
+export type SwapKey = (typeof SWAP_KEYS)[number];
+export type FlowKey = (typeof FLOW_KEYS)[number];
 
 type LandingCopy = {
   meta: { title: string; description: string };
@@ -35,6 +41,50 @@ type LandingCopy = {
     signals: { new: string; cooking: string; ready: string; languages: string; prices: string };
     chips: { newOrder: Chip; ready: Chip; paid: Chip; grill: Chip };
     tickets: { drive: Ticket; table7: Ticket; table12: Ticket; qr: Ticket; pos: Ticket; pickup: Ticket; table9: Ticket };
+  };
+  swap: {
+    line1: string;
+    line2: string;
+    words: Record<SwapKey, string>;
+    items: Record<SwapKey, Entry>;
+  };
+  scan: {
+    ghost: string;
+    left: string;
+    right: string;
+    place: string;
+    menu: string;
+    categories: { grill: string; soups: string; drinks: string; dessert: string };
+    dishes: { grill: Dish; soup: Dish; drink: Dish; dessert: Dish };
+    cart: string;
+    total: string;
+    bubbles: { order: Chip; waiter: Chip; ready: Chip; paid: Chip };
+    caption: string;
+  };
+  offer: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    sample: string;
+    qr: Entry & { tag: string; scan: string };
+    pos: Entry & { tag: string; a: string; b: string; charge: string };
+    kds: Entry & { tag: string; a: string; b: string; c: string };
+    floor: Entry & { tag: string };
+    drive: Entry & { tag: string; lane1: string; car: string; lane2: string; pickup: string };
+    pay: Entry & { tag: string; amount: string };
+    analytics: Entry & { tag: string };
+    ask: Entry & { tag: string; question: string; lead: string; figure: string; summary: string; source: string };
+    menu: Entry & { tag: string; item: string; price: string; soldName: string; sold: string };
+    offline: Entry & { tag: string; status: string };
+    lang: Entry & { tag: string; mark: string };
+  };
+  flowHub: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    order: string;
+    meta: string;
+    nodes: Record<FlowKey, Chip>;
   };
   surfaces: { eyebrow: string; items: Record<SurfaceKey, Entry> };
   problems: { eyebrow: string; title: string; fixLabel: string; items: (Entry & { fix: string })[] };
@@ -180,6 +230,154 @@ const landingEn = {
           title: "Staff and attendance",
           body: "Role-based accounts, check-in and check-out logs, and an audit trail.",
         },
+      },
+    },
+    swap: {
+      line1: "One system",
+      line2: "for your",
+      words: { tables: "Tables.", kitchen: "Kitchen.", drive: "Drive-thru.", branches: "Branches." },
+      items: {
+        tables: {
+          title: "Tables",
+          body: "Guests scan the table QR, order and pay from their phone. Waiters see calls and bills by table.",
+        },
+        kitchen: {
+          title: "Kitchen",
+          body: "Every ticket on a station screen with a timer. Expo sends plates out complete.",
+        },
+        drive: {
+          title: "Drive-thru",
+          body: "Car details and lane on the ticket. Pickup and delivery run on the same flow.",
+        },
+        branches: {
+          title: "Branches",
+          body: "One brand menu with branch prices, and every branch's sales in one dashboard.",
+        },
+      },
+    },
+    scan: {
+      ghost: "QR",
+      left: "Scan.",
+      right: "Order.",
+      place: "Mousa Cafe · Tagamoa · Table 12",
+      menu: "Menu",
+      categories: { grill: "Grill", soups: "Soups", drinks: "Drinks", dessert: "Dessert" },
+      dishes: {
+        grill: { name: "Mixed grill", detail: "Kofta, shish tawook, rice", price: "EGP 185" },
+        soup: { name: "Lentil soup", detail: "Lemon, crispy bread", price: "EGP 45" },
+        drink: { name: "Mint lemonade", detail: "Fresh, crushed ice", price: "EGP 40" },
+        dessert: { name: "Om Ali", detail: "Warm, nuts, cream", price: "EGP 60" },
+      },
+      cart: "3 items · View order",
+      total: "EGP 270",
+      bubbles: {
+        order: { label: "New order · Table 12", detail: "2× Mixed grill, 1× Lentil soup" },
+        waiter: { label: "Waiter called · Table 7", detail: "“Can we get more bread?”" },
+        ready: { label: "Order #128 is ready", detail: "Your runner is on the way" },
+        paid: { label: "Bill paid · EGP 455.00", detail: "Card · Table 12" },
+      },
+      caption:
+        "No app to install. The table QR opens your menu in Arabic or English, keeps a shared cart for the table and shows the order's status live.",
+    },
+    offer: {
+      eyebrow: "What Qwicoo offers",
+      title: "Everything a restaurant runs on.",
+      body: "Eleven parts that share one menu, one order and one drawer — from the first scan to the Z report.",
+      sample: "Sample figures",
+      qr: {
+        tag: "Guests",
+        title: "Table QR ordering",
+        body: "Scan, browse a bilingual menu, order and pay from your own phone. Shared table cart and live status.",
+        scan: "Scan.\nOrder.\nPay.",
+      },
+      pos: {
+        tag: "Cashier",
+        title: "Staff POS",
+        body: "Fast tickets with modifiers, discounts and split payments.",
+        a: "Shawarma ×2",
+        b: "Coffee ×2",
+        charge: "Charge EGP 170.00",
+      },
+      kds: {
+        tag: "Kitchen & expo",
+        title: "KDS + Expo",
+        body: "Station tickets with timers and bump buttons; expo sees the whole pass.",
+        a: "#131 0:15",
+        b: "#130 4:12",
+        c: "#128 ready",
+      },
+      floor: {
+        tag: "Floor",
+        title: "Floor & tables",
+        body: "Live table states and guest calls for waiters and runners.",
+      },
+      drive: {
+        tag: "Drive-thru",
+        title: "Drive-thru & pickup",
+        body: "Car details and lanes on the ticket; delivery fees by zone.",
+        lane1: "Lane 1",
+        car: "White Hyundai · 4821",
+        lane2: "Lane 2",
+        pickup: "Pickup #126",
+      },
+      pay: {
+        tag: "Cashier",
+        title: "Payments & cash drawer",
+        body: "Cash, card and wallets in EGP. Drawer sessions, hand-overs and Z reports.",
+        amount: "EGP 455.00",
+      },
+      analytics: {
+        tag: "Owners",
+        title: "Multi-branch analytics",
+        body: "Sales by hour, top items and branch comparison — in Cairo time.",
+      },
+      ask: {
+        tag: "Admins",
+        title: "Ask Qwicoo",
+        body: "Ask about your own branch in plain English or Arabic. Read-only, scoped to your role.",
+        question: "What were today's sales at Tagamoa?",
+        lead: "Gross sales today:",
+        figure: "EGP 9,340.00",
+        summary: "across 112 orders.",
+        source: "Source: Analytics",
+      },
+      menu: {
+        tag: "Admins",
+        title: "Menu management",
+        body: "One brand menu, branch prices and sold-out lists that update every QR and till.",
+        item: "Mixed grill",
+        price: "EGP 185",
+        soldName: "Om Ali",
+        sold: "Sold out",
+      },
+      offline: {
+        tag: "Cashier",
+        title: "Offline till",
+        body: "Keep taking orders when the internet drops. Orders sync safely when it's back.",
+        status: "Offline · 3 orders queued",
+      },
+      lang: {
+        tag: "Everyone",
+        title: "English / Arabic",
+        body: "Every screen in both languages, with full right-to-left layout.",
+        mark: "EN / ع",
+      },
+    },
+    flowHub: {
+      eyebrow: "One order, every screen",
+      title: "Order #128 goes everywhere at once.",
+      body: "The moment a guest taps “Order”, the kitchen, expo, floor, cashier and owner all see it — and its status moves from new to cooking to ready on every screen.",
+      order: "Order #128",
+      meta: "Table 12 · EGP 455.00",
+      nodes: {
+        guest: { label: "Guest phone", detail: "Ordered from table QR" },
+        kitchen: { label: "Kitchen display", detail: "Grill · cooking 4:12" },
+        expo: { label: "Expo", detail: "Plates complete · send" },
+        owner: { label: "Owner dashboard", detail: "Sales update live" },
+        floor: { label: "Floor & runners", detail: "Runner Karim · Table 12" },
+        pay: { label: "Payments & drawer", detail: "Paid by card · drawer 2" },
+        pos: { label: "Staff POS", detail: "Visible to cashier" },
+        drive: { label: "Drive-thru", detail: "Same flow for lanes" },
       },
     },
     steps: {
@@ -351,6 +549,154 @@ const landingAr = {
           title: "الفريق والحضور",
           body: "حسابات بصلاحيات محددة، وسجل حضور وانصراف، وسجل تدقيق.",
         },
+      },
+    },
+    swap: {
+      line1: "نظام واحد",
+      line2: "لكل",
+      words: { tables: "الطاولات.", kitchen: "المطبخ.", drive: "الدرايف ثرو.", branches: "الفروع." },
+      items: {
+        tables: {
+          title: "الطاولات",
+          body: "يمسح الضيف رمز QR على الطاولة، ويطلب ويدفع من هاتفه. يرى النادل النداءات والفواتير لكل طاولة.",
+        },
+        kitchen: {
+          title: "المطبخ",
+          body: "كل تذكرة على شاشة المحطة مع مؤقت. وشاشة التجميع تُخرج الأطباق كاملة.",
+        },
+        drive: {
+          title: "الدرايف ثرو",
+          body: "بيانات السيارة والمسار على التذكرة. والاستلام والتوصيل على نفس المسار.",
+        },
+        branches: {
+          title: "الفروع",
+          body: "منيو واحد للعلامة بأسعار لكل فرع، ومبيعات كل الفروع في لوحة واحدة.",
+        },
+      },
+    },
+    scan: {
+      ghost: "QR",
+      left: "امسح.",
+      right: "اطلب.",
+      place: "موسى كافيه · التجمع · طاولة 12",
+      menu: "المنيو",
+      categories: { grill: "مشويات", soups: "شوربة", drinks: "مشروبات", dessert: "حلويات" },
+      dishes: {
+        grill: { name: "مشويات مشكلة", detail: "كفتة، شيش طاووق، أرز", price: "EGP 185" },
+        soup: { name: "شوربة عدس", detail: "ليمون، عيش محمص", price: "EGP 45" },
+        drink: { name: "ليمون بالنعناع", detail: "فريش، ثلج مجروش", price: "EGP 40" },
+        dessert: { name: "أم علي", detail: "ساخنة، مكسرات، قشطة", price: "EGP 60" },
+      },
+      cart: "٣ أصناف · عرض الطلب",
+      total: "EGP 270",
+      bubbles: {
+        order: { label: "طلب جديد · طاولة 12", detail: "٢× مشويات، ١× شوربة عدس" },
+        waiter: { label: "نداء نادل · طاولة 7", detail: "«ممكن عيش زيادة؟»" },
+        ready: { label: "الطلب #128 جاهز", detail: "الرانر في الطريق" },
+        paid: { label: "تم الدفع · EGP 455.00", detail: "بطاقة · طاولة 12" },
+      },
+      caption:
+        "بدون تطبيق. رمز QR على الطاولة يفتح المنيو بالعربية أو الإنجليزية، مع سلة مشتركة للطاولة وحالة الطلب لحظة بلحظة.",
+    },
+    offer: {
+      eyebrow: "ما يقدمه كويكو",
+      title: "كل ما يدار به المطعم.",
+      body: "أحد عشر جزءاً تشترك في منيو واحد وطلب واحد ودُرج واحد — من أول مسح حتى تقرير Z.",
+      sample: "أرقام تجريبية",
+      qr: {
+        tag: "الضيوف",
+        title: "الطلب من الطاولة برمز QR",
+        body: "امسح، تصفّح منيو بلغتين، واطلب وادفع من هاتفك. سلة مشتركة للطاولة وحالة مباشرة.",
+        scan: "امسح.\nاطلب.\nادفع.",
+      },
+      pos: {
+        tag: "الكاشير",
+        title: "نقطة البيع",
+        body: "تذاكر سريعة مع الإضافات والخصومات وتقسيم الدفع.",
+        a: "شاورما ×2",
+        b: "قهوة ×2",
+        charge: "تحصيل EGP 170.00",
+      },
+      kds: {
+        tag: "المطبخ والتجميع",
+        title: "شاشة المطبخ والتجميع",
+        body: "تذاكر المحطات مع مؤقتات وأزرار إنهاء، وشاشة التجميع ترى الممر كله.",
+        a: "#131 0:15",
+        b: "#130 4:12",
+        c: "#128 جاهز",
+      },
+      floor: {
+        tag: "الصالة",
+        title: "الصالة والطاولات",
+        body: "حالات الطاولات مباشرة ونداءات الضيوف للنادل والرانر.",
+      },
+      drive: {
+        tag: "الدرايف ثرو",
+        title: "الدرايف ثرو والاستلام",
+        body: "بيانات السيارة والمسار على التذكرة، ورسوم التوصيل حسب المنطقة.",
+        lane1: "مسار 1",
+        car: "هيونداي بيضاء · 4821",
+        lane2: "مسار 2",
+        pickup: "استلام #126",
+      },
+      pay: {
+        tag: "الكاشير",
+        title: "المدفوعات ودُرج النقد",
+        body: "نقد وبطاقة ومحافظ بالجنيه. جلسات الدُرج والتسليم وتقارير Z.",
+        amount: "EGP 455.00",
+      },
+      analytics: {
+        tag: "الملاك",
+        title: "تحليلات الفروع",
+        body: "المبيعات بالساعة وأفضل الأصناف ومقارنة الفروع — بتوقيت القاهرة.",
+      },
+      ask: {
+        tag: "الإدارة",
+        title: "اسأل كويكو",
+        body: "اسأل عن فرعك بالإنجليزية أو العربية. للقراءة فقط، وفي حدود صلاحيتك.",
+        question: "كم كانت مبيعات التجمع اليوم؟",
+        lead: "إجمالي المبيعات اليوم:",
+        figure: "EGP 9,340.00",
+        summary: "عبر 112 طلباً.",
+        source: "المصدر: التحليلات",
+      },
+      menu: {
+        tag: "الإدارة",
+        title: "إدارة المنيو",
+        body: "منيو واحد للعلامة، وأسعار لكل فرع، وقوائم نفاد تتحدث على كل QR والصندوق.",
+        item: "مشويات مشكلة",
+        price: "EGP 185",
+        soldName: "أم علي",
+        sold: "نفد",
+      },
+      offline: {
+        tag: "الكاشير",
+        title: "الصندوق بدون إنترنت",
+        body: "واصل استقبال الطلبات إذا انقطع الإنترنت. تتزامن الطلبات بأمان عند العودة.",
+        status: "غير متصل · ٣ طلبات في الانتظار",
+      },
+      lang: {
+        tag: "الجميع",
+        title: "العربية / الإنجليزية",
+        body: "كل الشاشات باللغتين، مع تخطيط كامل من اليمين إلى اليسار.",
+        mark: "EN / ع",
+      },
+    },
+    flowHub: {
+      eyebrow: "طلب واحد، كل الشاشات",
+      title: "الطلب #128 يصل إلى كل الشاشات دفعة واحدة.",
+      body: "في اللحظة التي يضغط فيها الضيف «اطلب»، يراه المطبخ والتجميع والصالة والكاشير والمالك — وتنتقل حالته من جديد إلى قيد التحضير إلى جاهز على كل شاشة.",
+      order: "الطلب #128",
+      meta: "طاولة 12 · EGP 455.00",
+      nodes: {
+        guest: { label: "هاتف الضيف", detail: "طلب من رمز الطاولة" },
+        kitchen: { label: "شاشة المطبخ", detail: "المشويات · قيد التحضير 4:12" },
+        expo: { label: "التجميع", detail: "الأطباق كاملة · أرسل" },
+        owner: { label: "لوحة المالك", detail: "المبيعات تتحدث مباشرة" },
+        floor: { label: "الصالة والرانرز", detail: "الرانر كريم · طاولة 12" },
+        pay: { label: "المدفوعات والدُرج", detail: "دُفع بالبطاقة · دُرج 2" },
+        pos: { label: "نقطة البيع", detail: "ظاهرة للكاشير" },
+        drive: { label: "الدرايف ثرو", detail: "نفس المسار للسيارات" },
       },
     },
     steps: {

@@ -1,45 +1,17 @@
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import {
-  BarChart3,
-  Check,
-  ClipboardList,
-  LayoutGrid,
-  Monitor,
-  QrCode,
-  Receipt,
-  Smartphone,
-  Truck,
-  Wallet,
-  type LucideIcon,
-} from "lucide-react";
 
 import { LOGO_ASPECT, LOGO_VIDEO } from "@/components/brand/logo-assets";
-import { FEATURE_KEYS, SURFACE_KEYS, landingCopy, type FeatureKey, type SurfaceKey } from "@/features/marketing/copy";
+import { landingCopy } from "@/features/marketing/copy";
 import { Hero } from "@/features/marketing/hero";
 import { PartnerForm } from "@/features/marketing/partner-form";
 import { PublicAssistantLauncher } from "@/features/marketing/public-assistant-launcher";
 import { formatCount } from "@/lib/i18n/format";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
+const StorySections = dynamic(() => import("@/features/marketing/story-sections").then((mod) => mod.StorySections));
+
 import "./landing.css";
-
-const SURFACE_ICONS: Record<SurfaceKey, LucideIcon> = {
-  guest: Smartphone,
-  pos: Receipt,
-  kds: Monitor,
-  owner: BarChart3,
-};
-
-const FEATURE_ICONS: Record<FeatureKey, LucideIcon> = {
-  qr: QrCode,
-  pos: Receipt,
-  kds: Monitor,
-  floor: LayoutGrid,
-  payments: Wallet,
-  pickup: Truck,
-  analytics: BarChart3,
-  staff: ClipboardList,
-};
 
 const SECTION = "scroll-mt-20";
 const EYEBROW = "text-sm font-medium text-quiet";
@@ -92,96 +64,8 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
         </div>
       </header>
       <Hero locale={locale} />
+      <StorySections locale={locale} />
 
-      <section aria-label={t.surfaces.eyebrow} className="border-y bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-          <p className={`${EYEBROW} mb-5`}>{t.surfaces.eyebrow}</p>
-          <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {SURFACE_KEYS.map((key) => {
-              const Icon = SURFACE_ICONS[key];
-              const item = t.surfaces.items[key];
-              return (
-                <li key={key} className="flex items-center gap-3">
-                  <span
-                    aria-hidden
-                    className="flex size-10 shrink-0 items-center justify-center bg-primary/10 text-primary"
-                  >
-                    <Icon className="size-5" />
-                  </span>
-                  <span className="grid">
-                    <span className="text-sm font-semibold">{item.title}</span>
-                    <span className="text-sm text-muted-foreground">{item.body}</span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </section>
-
-      <section id="problems" className={SECTION}>
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-6 sm:py-20">
-          <div className="grid gap-2">
-            <p className={EYEBROW}>{t.problems.eyebrow}</p>
-            <h2 className={`${heading2} max-w-2xl`}>{t.problems.title}</h2>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {t.problems.items.map((item) => (
-              <article
-                key={item.title}
-                className="grid gap-4 border bg-card p-6 shadow-elev-1 transition-shadow hover:shadow-elev-2"
-              >
-                <div className="grid gap-2">
-                  <h3 className="text-lg leading-snug font-semibold">{item.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{item.body}</p>
-                </div>
-                <div className="flex gap-3 border-t pt-4">
-                  <span
-                    aria-hidden
-                    className="mt-0.5 flex size-5 shrink-0 items-center justify-center bg-primary/10 text-primary"
-                  >
-                    <Check className="size-3" />
-                  </span>
-                  <p className="text-sm leading-relaxed">
-                    <span className="font-semibold">{t.problems.fixLabel}: </span>
-                    {item.fix}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="features" className={`${SECTION} border-y bg-card`}>
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-6 sm:py-20">
-          <div className="grid gap-2">
-            <p className={EYEBROW}>{t.features.eyebrow}</p>
-            <h2 className={`${heading2} max-w-2xl`}>{t.features.title}</h2>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURE_KEYS.map((key) => {
-              const Icon = FEATURE_ICONS[key];
-              const item = t.features.items[key];
-              return (
-                <article
-                  key={key}
-                  className="grid content-start gap-3 border bg-background p-5 transition-colors hover:border-primary/40"
-                >
-                  <span
-                    aria-hidden
-                    className="flex size-10 items-center justify-center bg-primary/10 text-primary"
-                  >
-                    <Icon className="size-5" />
-                  </span>
-                  <h3 className="leading-snug font-semibold">{item.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{item.body}</p>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
       <section id="partner" className={SECTION}>
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-20">

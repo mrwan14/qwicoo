@@ -46,7 +46,7 @@ export function CheckoutScreen() {
   const place = useMutation({
     mutationFn: async () => {
       const lines = cart.data?.items ?? [];
-      const body: components["schemas"]["CheckoutRequest"] = {
+      const body: components["schemas"]["app__schemas__order__CheckoutRequest"] = {
         customer_notes: notes || null,
         promo_code: promoCode,
         items: lines.map((line) => ({

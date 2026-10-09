@@ -167,7 +167,7 @@ export function ExpoScreen() {
   const verify = useMutation({
     mutationFn: async () => {
       const result = await browserApi.POST("/api/v1/orders/handover/verify", {
-        body: { token, branch_id: branchId },
+        body: { token, branch_id: branchId, collect_cash: false },
       });
       if (!result.response.ok) {
         const due = paymentDueBeforeHandover(result.error, locale);

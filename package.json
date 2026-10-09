@@ -7,7 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --import ./scripts/test-alias.mjs --test src/lib/i18n/dictionaries.test.ts src/features/guest/guest-prices.test.ts src/features/staff/alerts/diff.test.ts src/features/staff/offline/queue-core.test.ts src/components/assistant/model.test.ts src/features/staff/assistant/access.test.ts src/features/marketing/public-assistant.test.ts",
+    "test": "node --experimental-strip-types --import ./scripts/test-alias.mjs --test src/lib/i18n/dictionaries.test.ts src/features/guest/guest-prices.test.ts src/features/staff/alerts/diff.test.ts src/features/staff/offline/queue-core.test.ts src/components/assistant/model.test.ts src/components/assistant/markdown.test.ts src/components/assistant/column-labels.test.ts src/components/assistant/lead-figure.test.ts src/features/staff/assistant/access.test.ts src/features/marketing/public-assistant.test.ts src/features/marketing/motion.test.ts",
     "gen:api": "openapi-typescript ${API_BASE_URL:-http://127.0.0.1:8000}/api/v1/openapi.json -o src/lib/api/schema.ts",
     "smoke": "node scripts/smoke.mjs"
   },

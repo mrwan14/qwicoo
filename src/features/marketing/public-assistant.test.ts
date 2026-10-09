@@ -3,7 +3,15 @@ import { test } from "node:test";
 
 import { staffAuthorization } from "@/lib/api/public-proxy.ts";
 
-import { launcherReducer, leadFormPhase, publicAssistantInit, publicChatUrl, publicRequestHasNoAuth, validateLead } from "./public-assistant.ts";
+import {
+  launcherReducer,
+  leadFormPhase,
+  placeLauncher,
+  publicAssistantInit,
+  publicChatUrl,
+  publicRequestHasNoAuth,
+  validateLead,
+} from "./public-assistant.ts";
 
 const draft = {
   name: "Mona Adel",
@@ -44,4 +52,20 @@ test("the partner form validates and then shows thanks", () => {
   }
   assert.equal(leadFormPhase(false), "form");
   assert.equal(leadFormPhase(true), "thanks");
+});
+
+test("launcher geometry does not overlap the hero or the form at 390px", () => {
+  const viewport = { width: 390, height: 844 };
+  const hero = { top: -600, left: 0, right: 390, bottom: 80 };
+  const form = { top: 400, left: 16, right: 374, bottom: 900 };
+  const placed = placeLauncher(viewport, [hero, form]);
+  assert.equal(placed.hidden, false);
+  if (placed.hidden) return;
+  const tab = {
+    top: placed.top,
+    left: viewport.width - placed.inset - 56,
+    right: viewport.width - placed.inset,
+    bottom: placed.top + 56,
+  };
+  assert.equal(tab.bottom <= form.top && tab.top >= hero.bottom, true);
 });

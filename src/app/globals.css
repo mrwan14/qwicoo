@@ -161,6 +161,13 @@
     @apply font-sans;
     scroll-behavior: smooth;
   }
+  html[lang="ar"] {
+    --font-sans: var(--font-plex-arabic);
+    --font-heading: var(--font-plex-arabic);
+    --font-display: var(--font-plex-arabic);
+    --font-geist-sans: var(--font-plex-arabic);
+    --font-fraunces: var(--font-plex-arabic);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

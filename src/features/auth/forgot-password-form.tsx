@@ -6,9 +6,13 @@ import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RESET_LINK_SENT_MESSAGE } from "@/lib/auth/password-policy";
+import { useLocale } from "@/lib/i18n/locale-store";
+import { authCopy } from "@/lib/i18n/staff/auth";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 
 export function ForgotPasswordForm() {
+  const t = useStaffSection(authCopy);
+  const { locale } = useLocale();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -25,25 +29,25 @@ export function ForgotPasswordForm() {
     try {
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "accept-language": locale },
         body: JSON.stringify({ email }),
       });
       const payload = (await response.json().catch(() => null)) as { message?: unknown; detail?: unknown } | null;
       if (response.status === 429) {
-        setError("Try again in a minute.");
+        setError(t.forgot.retryMinute);
         return;
       }
       if (response.status === 422) {
-        setError(typeof payload?.detail === "string" ? payload.detail : "Enter a valid email address.");
+        setError(typeof payload?.detail === "string" ? payload.detail : t.forgot.invalidEmail);
         return;
       }
       if (!response.ok) {
-        setError(typeof payload?.detail === "string" ? payload.detail : "Could not send a reset link right now.");
+        setError(typeof payload?.detail === "string" ? payload.detail : t.forgot.sendFailed);
         return;
       }
-      setMessage(typeof payload?.message === "string" ? payload.message : RESET_LINK_SENT_MESSAGE);
+      setMessage(t.forgot.sent);
     } catch {
-      setError("The app could not reach the sign-in service.");
+      setError(t.shared.unreachable);
     } finally {
       flight.current = false;
       setPending(false);
@@ -53,7 +57,7 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={onSubmit} className="grid gap-4">
       <div className="grid gap-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{t.shared.email}</Label>
         <Input
           id="email"
           name="email"
@@ -76,12 +80,12 @@ export function ForgotPasswordForm() {
         </p>
       ) : null}
       <Button type="submit" className="min-h-11" disabled={pending}>
-        {pending ? "Sending…" : "Send reset link"}
+        {pending ? t.forgot.pending : t.forgot.submit}
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        Remembered it?{" "}
+        {t.forgot.remembered}{" "}
         <Link href="/login" className="underline">
-          Sign in
+          {t.shared.signIn}
         </Link>
         .
       </p>

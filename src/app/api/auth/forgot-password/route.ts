@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorDetail } from "@/lib/api/error";
+import { requestLocale } from "@/lib/api/server-client";
 import { callerIpHeaders, createPublicApiClient } from "@/lib/api/password-reset";
 import { RESET_LINK_SENT_MESSAGE } from "@/lib/auth/password-policy";
 
@@ -24,7 +25,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await createPublicApiClient().POST("/api/v1/auth/forgot-password", {
+    const locale = requestLocale(request);
+    const result = await createPublicApiClient(locale).POST("/api/v1/auth/forgot-password", {
       body: { email },
       headers: callerIpHeaders(request),
     });
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     if (result.response.status === 422) {
       return NextResponse.json(
-        { detail: errorDetail(result.error, "Enter a valid email address.") },
+        { detail: errorDetail(result.error, "Enter a valid email address.", locale) },
         { status: 422 },
       );
     }

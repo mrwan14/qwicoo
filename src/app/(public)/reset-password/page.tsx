@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 
 import { AuthShell } from "@/features/auth/auth-shell";
 import { ResetPasswordForm } from "@/features/auth/reset-password-form";
+import { authCopy } from "@/lib/i18n/staff/auth";
 
-export const metadata: Metadata = { title: "Reset password" };
+export const metadata: Metadata = { title: authCopy.en.reset.metaTitle };
 
 function pickToken(value: string | string[] | undefined): string {
   const candidate = Array.isArray(value) ? value[0] : value;
@@ -18,10 +19,7 @@ export default async function ResetPasswordPage({
   const token = pickToken((await searchParams).token);
 
   return (
-    <AuthShell
-      title="Choose a new password"
-      description="Set a password for this account. You will be signed in straight away."
-    >
+    <AuthShell screen="reset">
       <ResetPasswordForm token={token} />
     </AuthShell>
   );

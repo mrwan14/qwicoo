@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { errorDetail } from "@/lib/api/error";
 import { createPublicApiClient } from "@/lib/api/password-reset";
+import { requestLocale } from "@/lib/api/server-client";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { STAFF_TOKEN_COOKIE, staffCookieOptions } from "@/lib/auth/cookies";
 
@@ -41,7 +42,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await createPublicApiClient().POST("/api/v1/auth/reset-password", {
+    const locale = requestLocale(request);
+    const result = await createPublicApiClient(locale).POST("/api/v1/auth/reset-password", {
       body: { token, password },
     });
 
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     if (!result.response.ok || !result.data?.access_token) {
       const status = result.response.status || 502;
-      const detail = MESSAGES[status] ?? errorDetail(result.error, "Could not reset this password.");
+      const detail = MESSAGES[status] ?? errorDetail(result.error, "Could not reset this password.", locale);
       return NextResponse.json({ detail }, { status });
     }
 

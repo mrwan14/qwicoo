@@ -47,6 +47,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${plexArabic.variable}`}
     >
       <body className="min-h-dvh antialiased">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var raw=localStorage.getItem("qwicoo-locale");if(!raw)return;var locale=JSON.parse(raw).state.locale;if(locale!=="ar"&&locale!=="en")return;var root=document.documentElement;root.lang=locale;root.dir=locale==="ar"?"rtl":"ltr";}catch(e){}})();`,
+          }}
+        />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

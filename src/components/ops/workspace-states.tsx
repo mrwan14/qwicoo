@@ -6,18 +6,21 @@ import { toast } from "sonner";
 
 import { LogoMark } from "@/components/ops/logo";
 import { Skeleton } from "@/components/ui/skeleton";
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { DENIED_PARAM } from "@/lib/auth/scope";
 import { endStaffSession } from "@/lib/auth/session-client";
 
 /** Shown until `/auth/me` resolves, so no dashboard renders before the scope is known. */
 export function WorkspaceLoading() {
+  const t = useStaffSection(commonCopy);
   return (
     <main className="grid min-h-dvh place-items-center bg-background px-6">
       <div role="status" aria-live="polite" className="grid w-full max-w-sm justify-items-center gap-5">
         <span className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <LogoMark className="size-9 motion-safe:animate-pulse" />
         </span>
-        <p className="font-display text-xl">Getting your workspace ready</p>
+        <p className="font-display text-xl">{t.workspaceReady}</p>
         <div className="grid w-full gap-2">
           <Skeleton className="h-3 w-full" />
           <Skeleton className="h-3 w-2/3 justify-self-center" />
@@ -28,6 +31,7 @@ export function WorkspaceLoading() {
 }
 
 export function NoWorkspace() {
+  const t = useStaffSection(commonCopy);
   const [pending, setPending] = useState(false);
   return (
     <main className="grid min-h-dvh place-items-center bg-background px-6">
@@ -35,9 +39,9 @@ export function NoWorkspace() {
         <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <LogoMark className="size-8" />
         </span>
-        <h1 className="font-display text-[length:var(--text-28)] leading-tight">No access to any workspace</h1>
+        <h1 className="font-display text-[length:var(--text-28)] leading-tight">{t.noWorkspace}</h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Your account is not linked to a brand or branch right now. Contact your admin to get access, then sign in again.
+          {t.noWorkspaceBody}
         </p>
         <button
           type="button"
@@ -48,7 +52,7 @@ export function NoWorkspace() {
             void endStaffSession();
           }}
         >
-          {pending ? "Signing out…" : "Sign out"}
+          {pending ? t.signingOut : t.signOut}
         </button>
       </div>
     </main>
@@ -60,19 +64,20 @@ export function AccessDeniedToast() {
   const params = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
+  const t = useStaffSection(commonCopy);
   const denied = params.get(DENIED_PARAM) === "1";
 
   useEffect(() => {
     if (!denied) return;
-    toast("You don't have access to that", {
+    toast(t.accessDenied, {
       id: "scope-denied",
-      description: "We brought you back to your workspace.",
+      description: t.accessDeniedBody,
     });
     const next = new URLSearchParams(params.toString());
     next.delete(DENIED_PARAM);
     const query = next.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [denied, params, pathname, router]);
+  }, [denied, params, pathname, router, t]);
 
   return null;
 }

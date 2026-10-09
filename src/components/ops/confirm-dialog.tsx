@@ -1,5 +1,7 @@
 "use client";
 
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,8 +19,8 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
-  cancelLabel = "Cancel",
-  pendingLabel = "Working…",
+  cancelLabel,
+  pendingLabel,
   destructive = false,
   pending = false,
   onConfirm,
@@ -34,6 +36,7 @@ export function ConfirmDialog({
   pending?: boolean;
   onConfirm: () => void;
 }) {
+  const t = useStaffSection(commonCopy);
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -42,13 +45,13 @@ export function ConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{cancelLabel ?? t.cancel}</AlertDialogCancel>
           <AlertDialogAction
             variant={destructive ? "destructive" : "default"}
             disabled={pending}
             onClick={onConfirm}
           >
-            {pending ? pendingLabel : confirmLabel}
+            {pending ? (pendingLabel ?? t.working) : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

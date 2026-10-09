@@ -13,6 +13,10 @@ import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatCairoDateTime } from "@/lib/format/time";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
+import { fill } from "@/lib/i18n/dictionary";
+import { useLocale } from "@/lib/i18n/locale-store";
+import { paymentsCopy } from "@/lib/i18n/staff/payments";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
 import { useScope } from "@/stores/scope";
 
@@ -25,6 +29,8 @@ function paymentTone(status: string): "available" | "browsing" | "ordered" | "so
 }
 
 export function PaymentsScreen() {
+  const t = useStaffSection(paymentsCopy);
+  const { locale } = useLocale();
   const interval = usePollingInterval(7000);
   const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
@@ -33,7 +39,7 @@ export function PaymentsScreen() {
     refetchInterval: pollUnlessRoleDenied(interval),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/payments/branch/pending");
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Payments failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
       return result.data;
     },
   });
@@ -44,20 +50,20 @@ export function PaymentsScreen() {
         params: { path: { payment_id: paymentId } },
         body: { notes: "Verified at the counter" },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Verify failed");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.verifyFailed, locale);
     },
     onSuccess: (_data, paymentId) => {
       const row = (pending.data ?? []).find((payment) => payment.id === paymentId);
       ignoreOwnChange(paymentId, "COMPLETED");
       if (row) ignoreOwnChange(row.order_id, "PAID");
-      toast.success("Payment verified");
+      toast.success(t.verified);
       void queryClient.invalidateQueries({ queryKey: ["payments-pending"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (pending.isLoading) return <LoadingState label="Loading payments" />;
-  if (pending.isError) return <QueryErrorState error={pending.error} screen="Payments" onRetry={() => void pending.refetch()} />;
+  if (pending.isLoading) return <LoadingState label={t.loading} />;
+  if (pending.isError) return <QueryErrorState error={pending.error} screen={t.screen} onRetry={() => void pending.refetch()} />;
 
   const rows = pending.data ?? [];
   const lastPayment = latestTimestamp(rows.map((payment) => payment.created_at));
@@ -65,26 +71,26 @@ export function PaymentsScreen() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">Payments</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Cash and card-terminal payments waiting for you to confirm the money was taken.</p>
+        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.hint}</p>
         {rows.length > 0 ? (
           <p className="text-sm text-muted-foreground">
-            <LiveCount value={rows.length} /> waiting
-            {lastPayment ? <> · last {formatCairoDateTime(lastPayment)}</> : null}
+            <LiveCount value={rows.length} /> {t.waiting}
+            {lastPayment ? <> · {fill(t.lastAt, { time: formatCairoDateTime(lastPayment, locale) })}</> : null}
           </p>
         ) : null}
       </div>
-      {rows.length === 0 ? <p className="text-sm text-muted-foreground">No payments are waiting.</p> : (
+      {rows.length === 0 ? <p className="text-sm text-muted-foreground">{t.empty}</p> : (
         <div className="overflow-x-auto bg-card">
           <table className="w-full min-w-[640px] border-collapse text-sm">
-            <caption className="px-4 py-3 text-start text-sm text-muted-foreground">Confirm a row after you have taken the money.</caption>
+            <caption className="px-4 py-3 text-start text-sm text-muted-foreground">{t.caption}</caption>
             <thead>
               <tr className="border-b text-muted-foreground">
-                <th scope="col" className="px-4 py-3 text-start font-medium">Order</th>
-                <th scope="col" className="px-4 py-3 text-start font-medium">Method</th>
-                <th scope="col" className="px-4 py-3 text-start font-medium">Status</th>
-                <th scope="col" className="px-4 py-3 text-start font-medium">Amount</th>
-                <th scope="col" className="px-4 py-3 text-start font-medium">Action</th>
+                <th scope="col" className="px-4 py-3 text-start font-medium">{t.order}</th>
+                <th scope="col" className="px-4 py-3 text-start font-medium">{t.method}</th>
+                <th scope="col" className="px-4 py-3 text-start font-medium">{t.status}</th>
+                <th scope="col" className="px-4 py-3 text-start font-medium">{t.amount}</th>
+                <th scope="col" className="px-4 py-3 text-start font-medium">{t.action}</th>
               </tr>
             </thead>
             <tbody>
@@ -93,7 +99,7 @@ export function PaymentsScreen() {
                 return (
                   <tr key={payment.id} className="border-b align-middle last:border-b-0">
                     <th scope="row" className="px-4 py-4 text-start font-semibold tabular-nums">
-                      {payment.pickup_number != null ? `Pickup ${payment.pickup_number}` : "Table"}
+                      {payment.pickup_number != null ? fill(t.pickup, { number: payment.pickup_number }) : t.table}
                     </th>
                     <td className="px-4 py-4">{paymentMethodLabel(payment.payment_method)}</td>
                     <td className="px-4 py-4">
@@ -107,7 +113,7 @@ export function PaymentsScreen() {
                         disabled={confirming}
                         onClick={() => verify.mutate(payment.id)}
                       >
-                        {confirming ? "Confirming…" : "Confirm payment"}
+                        {confirming ? t.confirming : t.confirm}
                       </button>
                     </td>
                   </tr>

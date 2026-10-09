@@ -32,7 +32,11 @@ import { AlertControls } from "@/features/staff/alerts/alert-controls";
 import { usePendingConfirmationCount } from "@/hooks/use-floor-live";
 import { roleLabel, type UserRole } from "@/lib/auth/roles";
 import { endStaffSession } from "@/lib/auth/session-client";
-import { isNavActive, navForUser, navKey, splitBottomNav, type NavItem } from "@/lib/nav";
+import { LocaleSwitch } from "@/lib/i18n/locale-switch";
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { navCopy } from "@/lib/i18n/staff/nav";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
+import { isNavActive, navForUser, navKey, splitBottomNav, type NavGroup, type NavItem } from "@/lib/nav";
 import { StaffConnectionBanner } from "@/features/staff/offline/staff-connection-banner";
 import { useScope } from "@/stores/scope";
 import {
@@ -108,7 +112,9 @@ function NavLinks({
   onNavigate?: () => void;
   badges?: NavBadges;
 }) {
-  const groups = ["Portfolio", "Brand ops", "Insight"] as const;
+  const nav = useStaffSection(navCopy);
+  const t = useStaffSection(commonCopy);
+  const groups = ["portfolio", "brandOps", "insight"] as const satisfies readonly NavGroup[];
   const groupClass =
     layout === "compact" ? "hidden" : layout === "auto" ? "hidden lg:block" : "";
   const linkClass =
@@ -120,13 +126,13 @@ function NavLinks({
   const labelClass =
     layout === "compact" ? "sr-only" : layout === "auto" ? "sr-only lg:not-sr-only" : "truncate";
   return (
-    <nav aria-label="Staff" className="grid gap-3">
+    <nav aria-label={t.staffNav} className="grid gap-3">
       {groups.map((group) => {
         const groupItems = items.filter((item) => item.group === group);
         if (groupItems.length === 0) return null;
         return (
           <div key={group} className="grid gap-0.5">
-            <p className={`px-2 text-xs font-medium text-muted-foreground ${groupClass}`}>{group}</p>
+            <p className={`px-2 text-xs font-medium text-muted-foreground ${groupClass}`}>{nav.groups[group]}</p>
             {groupItems.map((item) => {
               const Icon = itemIcon(item);
               const active = isNavActive(pathname, item.href);
@@ -135,8 +141,8 @@ function NavLinks({
                   key={navKey(item)}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  aria-label={item.label}
-                  title={item.label}
+                  aria-label={nav[item.labelKey]}
+                  title={nav[item.labelKey]}
                   onClick={onNavigate}
                   className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
                     active ? "bg-secondary font-medium" : "hover:bg-muted"
@@ -147,15 +153,15 @@ function NavLinks({
                     {layout !== "full" ? (
                       <NavBadge
                         count={badges[navKey(item)]}
-                        label="to confirm"
+                        label={t.toConfirm}
                         className={`absolute -end-2.5 -top-2 ${layout === "auto" ? "lg:hidden" : ""}`}
                       />
                     ) : null}
                   </span>
-                  <span className={`whitespace-nowrap ${labelClass}`}>{item.label}</span>
+                  <span className={`whitespace-nowrap ${labelClass}`}>{nav[item.labelKey]}</span>
                   <NavBadge
                     count={badges[navKey(item)]}
-                    label="to confirm"
+                    label={t.toConfirm}
                     className={`ms-auto ${layout === "compact" ? "hidden" : layout === "auto" ? "hidden lg:inline-flex" : ""}`}
                   />
                 </Link>
@@ -203,6 +209,7 @@ function useSidebarLayout() {
 
 function AdminSidebar({ items, pathname, badges }: { items: readonly NavItem[]; pathname: string; badges: NavBadges }) {
   const { layout, toggle } = useSidebarLayout();
+  const t = useStaffSection(commonCopy);
   const expanded = layout === "full";
   const collapsed = layout === "compact";
 
@@ -226,8 +233,8 @@ function AdminSidebar({ items, pathname, badges }: { items: readonly NavItem[]; 
           type="button"
           onClick={toggle}
           aria-expanded={expanded ? true : collapsed ? false : undefined}
-          aria-label={collapsed ? "Expand sidebar" : expanded ? "Collapse sidebar" : "Toggle sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? t.expandSidebar : expanded ? t.collapseSidebar : t.toggleSidebar}
+          title={collapsed ? t.expandSidebar : t.collapseSidebar}
           className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <PanelLeftClose
@@ -248,6 +255,7 @@ function AdminSidebar({ items, pathname, badges }: { items: readonly NavItem[]; 
 }
 
 function SignOutButton({ className }: { className?: string }) {
+  const t = useStaffSection(commonCopy);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -258,14 +266,14 @@ function SignOutButton({ className }: { className?: string }) {
         className={className ?? "min-h-11 rounded-lg px-3 text-sm hover:bg-muted"}
         onClick={() => setOpen(true)}
       >
-        Sign out
+        {t.signOut}
       </button>
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}
-        title="Sign out?"
-        description="This clears your staff session on this browser."
-        confirmLabel="Sign out"
+        title={t.signOutTitle}
+        description={t.signOutBody}
+        confirmLabel={t.signOut}
         destructive
         pending={pending}
         onConfirm={() => {
@@ -287,6 +295,8 @@ function ShellFrame({
   const pathname = usePathname();
   const me = useStaffSession();
   const activeBranchId = useScope((state) => state.branchId);
+  const nav = useStaffSection(navCopy);
+  const t = useStaffSection(commonCopy);
   const [moreOpen, setMoreOpen] = useState(false);
   const badges = usePendingBadges();
   if (!me) return null;
@@ -301,7 +311,7 @@ function ShellFrame({
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded-lg focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
       >
-        Skip to content
+        {t.skip}
       </a>
       <div className="print:hidden">
         <StaffConnectionBanner canSellOffline={items.some((item) => item.href === "/app/pos")} />
@@ -323,7 +333,7 @@ function ShellFrame({
               ) : null}
               <BranchSwitcher />
               {variant === "ops" ? (
-                <nav aria-label="Ops" className="hidden min-w-0 gap-1 overflow-x-auto sm:flex">
+                <nav aria-label={t.opsNav} className="hidden min-w-0 gap-1 overflow-x-auto sm:flex">
                   {opsTabs.map((item) => {
                     const active = isNavActive(pathname, item.href);
                     return (
@@ -335,8 +345,8 @@ function ShellFrame({
                           active ? "bg-secondary font-medium" : "hover:bg-muted"
                         }`}
                       >
-                        {item.label}
-                        <NavBadge count={badges[navKey(item)]} label="to confirm" />
+                        {nav[item.labelKey]}
+                        <NavBadge count={badges[navKey(item)]} label={t.toConfirm} />
                       </Link>
                     );
                   })}
@@ -344,6 +354,7 @@ function ShellFrame({
               ) : null}
             </div>
             <div className="flex items-center gap-2">
+              <LocaleSwitch className="min-h-11 rounded-lg px-2 text-sm hover:bg-muted" />
               <AlertControls />
               <p className="hidden text-end text-sm sm:block">
                 <span className="block font-medium">{me.full_name}</span>
@@ -358,7 +369,7 @@ function ShellFrame({
         </div>
       </div>
       <nav
-        aria-label="Primary"
+        aria-label={t.primaryNav}
         className={`fixed inset-x-0 bottom-0 z-40 border-t bg-card pb-[env(safe-area-inset-bottom)] print:hidden sm:hidden ${variant === "admin" ? "hidden" : "flex"}`}
       >
         {primary.map((item) => {
@@ -375,9 +386,9 @@ function ShellFrame({
             >
               <span className="relative">
                 <Icon aria-hidden className="size-5" />
-                <NavBadge count={badges[navKey(item)]} label="to confirm" className="absolute -end-3 -top-2" />
+                <NavBadge count={badges[navKey(item)]} label={t.toConfirm} className="absolute -end-3 -top-2" />
               </span>
-              {item.label}
+              {nav[item.labelKey]}
             </Link>
           );
         })}
@@ -387,18 +398,18 @@ function ShellFrame({
             className="flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-xs"
             onClick={() => setMoreOpen(true)}
           >
-            More
+            {t.more}
           </button>
         ) : null}
       </nav>
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent side="bottom" className="max-h-[80dvh]">
           <SheetHeader>
-            <SheetTitle>More</SheetTitle>
+            <SheetTitle>{t.more}</SheetTitle>
           </SheetHeader>
           <div className="overflow-y-auto px-4 pb-6">
             {overflow.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No other modules for this role.</p>
+              <p className="text-sm text-muted-foreground">{t.noOtherModules}</p>
             ) : (
               <NavLinks
                 items={overflow}

@@ -352,9 +352,9 @@ export function summarise(orders: OfflineOrder[], branchId?: string | null): Que
 }
 
 /** Number to show for an order: the real pickup / table number once synced, else OFF-n. */
-export function displayNumber(order: OfflineOrder): string {
+export function displayNumber(order: OfflineOrder, tableLabel = "Table"): string {
   if (order.pickupNumber != null) return `#${order.pickupNumber}`;
-  if (order.serverId && order.tableNumber) return `Table ${order.tableNumber}`;
+  if (order.serverId && order.tableNumber) return `${tableLabel} ${order.tableNumber}`;
   return order.offlineNumber;
 }
 

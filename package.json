@@ -7,7 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/features/guest/guest-prices.test.ts src/features/staff/alerts/diff.test.ts src/features/staff/offline/queue-core.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/i18n/dictionaries.test.ts src/features/guest/guest-prices.test.ts src/features/staff/alerts/diff.test.ts src/features/staff/offline/queue-core.test.ts",
     "gen:api": "openapi-typescript ${API_BASE_URL:-http://127.0.0.1:8000}/api/v1/openapi.json -o src/lib/api/schema.ts",
     "smoke": "node scripts/smoke.mjs"
   },

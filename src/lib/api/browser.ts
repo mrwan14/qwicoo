@@ -2,6 +2,7 @@ import createClient from "openapi-fetch";
 
 import type { paths } from "@/lib/api/schema";
 import { SCOPE_DENIALS, denyAccess, endStaffSession } from "@/lib/auth/session-client";
+import { currentLocale } from "@/lib/i18n/locale-store";
 import { useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
 
@@ -12,6 +13,7 @@ export const browserApi = createClient<paths>({
 
 browserApi.use({
   onRequest({ request }) {
+    request.headers.set("accept-language", currentLocale());
     const { brandId, branchId } = useScope.getState();
     if (brandId) request.headers.set("x-brand-id", brandId);
     if (branchId) request.headers.set("x-branch-id", branchId);

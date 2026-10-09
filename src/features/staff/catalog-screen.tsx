@@ -7,12 +7,22 @@ import { toast } from "sonner";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { menuCopy } from "@/lib/i18n/staff/menu";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
+import { useLocale } from "@/lib/i18n/locale-store";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
 const COMBO_STATIONS = ["GRILL", "HOT_SIDE", "BEVERAGE", "ASSEMBLY"] as const;
 
+function comboStationLabel(code: string, labels: (typeof menuCopy)["en"]["comboStations"]): string {
+  if (code === "GRILL" || code === "HOT_SIDE" || code === "BEVERAGE" || code === "ASSEMBLY") return labels[code];
+  return code;
+}
+
 export function ComboScreen() {
+  const t = useStaffSection(menuCopy);
+  const { locale } = useLocale();
   const brandId = useScope((state) => state.brandId);
   const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
@@ -30,7 +40,7 @@ export function ComboScreen() {
     enabled: Boolean(branchId),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/menu/tree", { params: { query: { branch_id: branchId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Menu failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.menuFailed);
       return result.data;
     },
   });
@@ -40,7 +50,7 @@ export function ComboScreen() {
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/menus");
       if (result.response.status === 404) return [];
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Menus failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.menusFailed);
       return result.data;
     },
   });
@@ -64,12 +74,12 @@ export function ComboScreen() {
         item_type: "COMBO",
       };
       const result = await browserApi.POST("/api/v1/staff/menu/items", { body });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Could not create combo");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.couldNotCreateCombo);
       return result.data;
     },
     onSuccess: (item) => {
       setParentId(item.id);
-      toast.success("Combo created");
+      toast.success(t.comboCreated);
       void queryClient.invalidateQueries({ queryKey: ["menu-tree"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -78,7 +88,7 @@ export function ComboScreen() {
     mutationFn: async () => {
       const body: components["schemas"]["MenuCreate"] = { name_en: nameEn, name_ar: nameAr, brand_id: brandId, is_active: true, menu_type: "STANDARD" };
       const result = await browserApi.POST("/api/v1/menus", { body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not create menu");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotCreateMenu);
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["menus"] }),
     onError: (error: Error) => toast.error(error.message),
@@ -95,7 +105,7 @@ export function ComboScreen() {
         params: { path: { item_id: parentId } },
         body,
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not add component");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotAddComponent);
     },
     onSuccess: () => void components.refetch(),
     onError: (error: Error) => toast.error(error.message),
@@ -105,7 +115,7 @@ export function ComboScreen() {
       const result = await browserApi.DELETE("/api/v1/menus/combo-components/{component_id}", {
         params: { path: { component_id: componentRowId } },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not remove component");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotRemoveComponent);
     },
     onSuccess: () => void components.refetch(),
     onError: (error: Error) => toast.error(error.message),
@@ -113,44 +123,44 @@ export function ComboScreen() {
 
   return (
     <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Combos</h1>
-      {!brandId ? <p className="text-sm">Choose a brand first. Combo menus are stored on the brand.</p> : null}
+      <h1 className="text-[length:var(--text-28)] font-semibold">{t.combos}</h1>
+      {!brandId ? <p className="text-sm">{t.chooseBrand}</p> : null}
       <form className="grid gap-2" onSubmit={(event) => { event.preventDefault(); createCombo.mutate(); }}>
-        <h2 className="font-medium">New combo</h2>
-        {!branchId ? <p className="text-sm text-muted-foreground">Choose a branch before creating a combo.</p> : null}
+        <h2 className="font-medium">{t.newCombo}</h2>
+        {!branchId ? <p className="text-sm text-muted-foreground">{t.chooseBranch}</p> : null}
         <select className={control} value={comboCategoryId} onChange={(event) => setComboCategoryId(event.target.value)} required>
-          <option value="">Category</option>
+          <option value="">{t.category}</option>
           {(tree.data?.categories ?? []).map((category) => (
             <option key={category.id} value={category.id}>{category.name}</option>
           ))}
         </select>
-        <input className={control} placeholder="English name" value={comboEn} onChange={(event) => setComboEn(event.target.value)} required />
-        <input className={control} placeholder="Arabic name" value={comboAr} onChange={(event) => setComboAr(event.target.value)} required />
-        <input className={control} placeholder="Price" value={comboPrice} onChange={(event) => setComboPrice(event.target.value)} inputMode="decimal" required />
-        <button className="min-h-11 w-fit rounded-lg bg-primary px-4 text-sm text-primary-foreground" type="submit" disabled={!branchId}>Create combo</button>
+        <input className={control} placeholder={t.englishName} value={comboEn} onChange={(event) => setComboEn(event.target.value)} required />
+        <input className={control} placeholder={t.arabicName} value={comboAr} onChange={(event) => setComboAr(event.target.value)} required />
+        <input className={control} placeholder={t.price} value={comboPrice} onChange={(event) => setComboPrice(event.target.value)} inputMode="decimal" required />
+        <button className="min-h-11 w-fit rounded-lg bg-primary px-4 text-sm text-primary-foreground" type="submit" disabled={!branchId}>{t.createCombo}</button>
       </form>
       {menus.isError ? <p className="text-sm text-destructive">{menus.error.message}</p> : null}
       <form className="grid gap-2 sm:grid-cols-3" onSubmit={(event) => { event.preventDefault(); createMenu.mutate(); }}>
-        <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} />
-        <input className={control} value={nameAr} onChange={(event) => setNameAr(event.target.value)} />
-        <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">Create menu</button>
+        <input className={control} aria-label={t.englishName} value={nameEn} onChange={(event) => setNameEn(event.target.value)} />
+        <input className={control} aria-label={t.arabicName} value={nameAr} onChange={(event) => setNameAr(event.target.value)} />
+        <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit">{t.createMenu}</button>
       </form>
       <ul className="grid gap-2">
         {(menus.data ?? []).map((menu) => (
-          <li key={menu.id} className="rounded-lg border p-3 text-sm">{menu.name_en}</li>
+          <li key={menu.id} className="rounded-lg border p-3 text-sm">{locale === "ar" ? menu.name_ar || menu.name_en : menu.name_en}</li>
         ))}
       </ul>
-      <input className={control} placeholder="Parent item id" value={parentId} onChange={(event) => setParentId(event.target.value)} />
-      <input className={control} placeholder="Component item id" value={componentId} onChange={(event) => setComponentId(event.target.value)} />
+      <input className={control} placeholder={t.parentItemId} value={parentId} onChange={(event) => setParentId(event.target.value)} />
+      <input className={control} placeholder={t.componentItemId} value={componentId} onChange={(event) => setComponentId(event.target.value)} />
       <select className={control} value={station} onChange={(event) => setStation(event.target.value as typeof station)}>
-        {COMBO_STATIONS.map((item) => <option key={item}>{item}</option>)}
+        {COMBO_STATIONS.map((item) => <option key={item} value={item}>{t.comboStations[item]}</option>)}
       </select>
-      <button type="button" className="min-h-11 w-fit rounded-lg border px-4 text-sm" onClick={() => addComponent.mutate()}>Add component</button>
+      <button type="button" className="min-h-11 w-fit rounded-lg border px-4 text-sm" onClick={() => addComponent.mutate()}>{t.addComponent}</button>
       <ul className="grid gap-2">
         {(components.data ?? []).map((component) => (
           <li key={component.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-            <span>{component.target_station}</span>
-            <button type="button" className="min-h-11 text-destructive" onClick={() => remove.mutate(component.id)}>Remove</button>
+            <span>{comboStationLabel(component.target_station, t.comboStations)}</span>
+            <button type="button" className="min-h-11 text-destructive" onClick={() => remove.mutate(component.id)}>{t.remove}</button>
           </li>
         ))}
       </ul>
@@ -159,6 +169,7 @@ export function ComboScreen() {
 }
 
 export function OverrideScreen() {
+  const t = useStaffSection(menuCopy);
   const branchId = useScope((state) => state.branchId);
   const [itemId, setItemId] = useState("");
   const [price, setPrice] = useState("");
@@ -173,9 +184,9 @@ export function OverrideScreen() {
         params: { path: { branch_id: branchId ?? "", item_id: itemId } },
         body,
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Override failed");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.overrideFailed);
     },
-    onSuccess: () => toast.success("Override saved"),
+    onSuccess: () => toast.success(t.overrideSaved),
     onError: (error: Error) => toast.error(error.message),
   });
   const patchCatalog = useMutation({
@@ -184,18 +195,18 @@ export function OverrideScreen() {
         params: { path: { item_id: itemId } },
         body: { base_price: price },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Catalog update failed");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.catalogUpdateFailed);
     },
-    onSuccess: () => toast.success("Catalog price updated"),
+    onSuccess: () => toast.success(t.catalogPriceUpdated),
     onError: (error: Error) => toast.error(error.message),
   });
   return (
     <div className="grid max-w-lg gap-3">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Branch overrides</h1>
-      <input className={control} placeholder="Item id" value={itemId} onChange={(event) => setItemId(event.target.value)} />
-      <input className={control} placeholder="Price override" value={price} onChange={(event) => setPrice(event.target.value)} />
-      <button type="button" className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" onClick={() => save.mutate()}>Save branch override</button>
-      <button type="button" className="min-h-11 rounded-lg border text-sm" onClick={() => patchCatalog.mutate()}>Update catalog price</button>
+      <h1 className="text-[length:var(--text-28)] font-semibold">{t.branchOverrides}</h1>
+      <input className={control} placeholder={t.itemId} value={itemId} onChange={(event) => setItemId(event.target.value)} />
+      <input className={control} placeholder={t.priceOverride} value={price} onChange={(event) => setPrice(event.target.value)} />
+      <button type="button" className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" onClick={() => save.mutate()}>{t.saveOverride}</button>
+      <button type="button" className="min-h-11 rounded-lg border text-sm" onClick={() => patchCatalog.mutate()}>{t.updateCatalogPrice}</button>
     </div>
   );
 }

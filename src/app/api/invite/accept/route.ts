@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { errorDetail } from "@/lib/api/error";
 import type { components } from "@/lib/api/schema";
-import { createApiClient } from "@/lib/api/server-client";
+import { createApiClient, requestLocale } from "@/lib/api/server-client";
 import { STAFF_TOKEN_COOKIE, staffCookieOptions } from "@/lib/auth/cookies";
 
 export const dynamic = "force-dynamic";
@@ -37,10 +37,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await createApiClient().POST("/api/v1/invitations/accept", { body });
+    const locale = requestLocale(request);
+    const result = await createApiClient({ locale }).POST("/api/v1/invitations/accept", { body });
     if (!result.response.ok || !result.data) {
       const status = result.response.status || 502;
-      const detail = MESSAGES[status] ?? errorDetail(result.error, "Could not accept this invitation.");
+      const detail = MESSAGES[status] ?? errorDetail(result.error, "Could not accept this invitation.", locale);
       return NextResponse.json({ detail }, { status });
     }
 

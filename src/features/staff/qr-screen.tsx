@@ -13,18 +13,21 @@ import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { PIN_ROLES } from "@/lib/auth/scope";
 import type { components } from "@/lib/api/schema";
+import { fill } from "@/lib/i18n/dictionary";
+import { qrCopy } from "@/lib/i18n/staff/qr";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 type Table = components["schemas"]["TableDetailResponse"];
 
 const secondary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 text-sm hover:bg-muted disabled:opacity-50";
 
-async function copyText(text: string, label: string) {
+async function copyText(text: string, success: string, failed: string) {
   try {
     await navigator.clipboard.writeText(text);
-    toast.success(`${label} copied`);
+    toast.success(success);
   } catch {
-    toast.error("Couldn't copy. Select the link and copy it manually.");
+    toast.error(failed);
   }
 }
 
@@ -42,6 +45,7 @@ function fileSafe(value: string) {
 }
 
 export function QrScreen() {
+  const t = useStaffSection(qrCopy);
   const branchId = useScope((state) => state.branchId);
   const me = useStaffSession();
   const canSeePin = Boolean(me && PIN_ROLES.includes(me.role));
@@ -55,7 +59,7 @@ export function QrScreen() {
       const result = await browserApi.GET("/api/v1/branches/{branch_id}/access-pin", {
         params: { path: { branch_id: branchId ?? "" } },
       });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "PIN failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.pinFailed);
       return result.data;
     },
   });
@@ -67,7 +71,7 @@ export function QrScreen() {
       const result = await browserApi.GET("/api/v1/branches/{branch_id}/tables", {
         params: { path: { branch_id: branchId ?? "" } },
       });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Tables failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.tablesFailed);
       return [...result.data].sort((a, b) => a.table_number.localeCompare(b.table_number, undefined, { numeric: true }));
     },
   });
@@ -78,7 +82,7 @@ export function QrScreen() {
         body: { table_ids: null, format: "png", scale: 10, include_label: true },
         parseAs: "blob",
       });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Couldn't build the QR zip");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.couldntBuildZip);
       saveBlob(result.data as Blob, "table-qr-codes.zip");
     },
     onError: (error: Error) => toast.error(error.message),
@@ -89,27 +93,27 @@ export function QrScreen() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader title="QR codes" />
+      <PageHeader title={t.title} />
 
       {canSeePin ? (
         <section className="grid gap-2 rounded-xl border bg-card p-4 shadow-elev-1">
-          <h2 className="text-lg font-semibold">Guest PIN</h2>
-          <p className="text-sm text-muted-foreground">Guests enter this PIN after they scan a table QR.</p>
-          {pin.isLoading ? <LoadingState label="Loading PIN" /> : null}
-          {pin.isError ? <p className="text-sm text-destructive">{pin.error instanceof Error ? pin.error.message : "PIN failed"}</p> : null}
+          <h2 className="text-lg font-semibold">{t.guestPin}</h2>
+          <p className="text-sm text-muted-foreground">{t.guestPinHint}</p>
+          {pin.isLoading ? <LoadingState label={t.loadingPin} /> : null}
+          {pin.isError ? <p className="text-sm text-destructive">{pin.error instanceof Error ? pin.error.message : t.pinFailed}</p> : null}
           {pin.data ? <p className="text-2xl font-semibold tracking-widest">{pin.data.access_pin}</p> : null}
         </section>
       ) : null}
 
       <section className="grid gap-3 rounded-xl border bg-card p-4 shadow-elev-1">
-        <h2 className="text-lg font-semibold">Pickup link</h2>
-        <p className="text-sm text-muted-foreground">Guests use this to order ahead for pickup.</p>
+        <h2 className="text-lg font-semibold">{t.pickup}</h2>
+        <p className="text-sm text-muted-foreground">{t.pickupHint}</p>
         {pickupLink ? (
           <div className="flex flex-wrap items-center gap-2">
             <code className="min-w-0 flex-1 rounded-lg bg-muted px-3 py-2 text-xs break-all">{pickupLink}</code>
-            <button type="button" className={secondary} onClick={() => void copyText(pickupLink, "Pickup link")}>
+            <button type="button" className={secondary} onClick={() => void copyText(pickupLink, fill(t.copied, { label: t.pickup }), t.copyFailed)}>
               <Copy aria-hidden className="size-4" />
-              Copy
+              {t.copy}
             </button>
           </div>
         ) : null}
@@ -118,20 +122,20 @@ export function QrScreen() {
       <section className="grid gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-lg font-semibold">Table QR codes</h2>
-            <p className="text-sm text-muted-foreground">Print one per table. Guests scan it to open the menu at that table.</p>
+            <h2 className="text-lg font-semibold">{t.tableQr}</h2>
+            <p className="text-sm text-muted-foreground">{t.tableQrHint}</p>
           </div>
           {list.length > 0 ? (
             <button type="button" className={secondary} disabled={batch.isPending} onClick={() => batch.mutate()}>
               <Download aria-hidden className="size-4" />
-              {batch.isPending ? "Preparing…" : "Download all (zip)"}
+              {batch.isPending ? t.preparing : t.downloadAll}
             </button>
           ) : null}
         </div>
-        {tables.isLoading ? <LoadingState label="Loading tables" /> : null}
-        {tables.isError ? <QueryErrorState error={tables.error} screen="Table QR codes" onRetry={() => void tables.refetch()} /> : null}
+        {tables.isLoading ? <LoadingState label={t.loadingTables} /> : null}
+        {tables.isError ? <QueryErrorState error={tables.error} screen={t.tableQr} onRetry={() => void tables.refetch()} /> : null}
         {tables.isSuccess && list.length === 0 ? (
-          <EmptyState title="No tables yet" body="Add tables in this branch's settings, then come back to print their QR codes." />
+          <EmptyState title={t.emptyTitle} body={t.emptyBody} />
         ) : null}
         {list.length > 0 ? (
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -148,6 +152,7 @@ export function QrScreen() {
 }
 
 function TableQrCard({ table }: { table: Table }) {
+  const t = useStaffSection(qrCopy);
   const link = useQuery({
     queryKey: ["table-qr-url", table.id],
     staleTime: Infinity,
@@ -155,7 +160,7 @@ function TableQrCard({ table }: { table: Table }) {
       const result = await browserApi.GET("/api/v1/qr-export/tables/{table_id}/url", {
         params: { path: { table_id: table.id } },
       });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Couldn't load the guest link");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.couldntLoadLink);
       return result.data.signed_url;
     },
   });
@@ -168,7 +173,7 @@ function TableQrCard({ table }: { table: Table }) {
         params: { path: { table_id: table.id }, query: { format: "png", scale: 10, include_label: true } },
         parseAs: "blob",
       });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Couldn't load the QR code");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.couldntLoadQr);
       return result.data;
     },
   });
@@ -186,16 +191,16 @@ function TableQrCard({ table }: { table: Table }) {
   return (
     <article className="grid gap-3 rounded-xl border bg-card p-4 shadow-elev-1">
       <header className="flex items-baseline justify-between gap-2">
-        <h3 className="text-[length:var(--text-20)] font-semibold">Table {table.table_number}</h3>
+        <h3 className="text-[length:var(--text-20)] font-semibold">{fill(t.tableTitle, { number: table.table_number })}</h3>
         <span className="truncate text-xs text-muted-foreground">{table.zone_name}</span>
       </header>
       <div className="grid aspect-square place-items-center overflow-hidden rounded-lg border bg-white">
         {src ? (
           // Blob URLs from the QR export are not a remote image host, so next/image cannot optimize them.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt={`QR code for table ${table.table_number}`} className="size-full object-contain" />
+          <img src={src} alt={fill(t.qrAlt, { number: table.table_number })} className="size-full object-contain" />
         ) : image.isError ? (
-          <p className="p-4 text-center text-sm text-muted-foreground">QR code unavailable</p>
+          <p className="p-4 text-center text-sm text-muted-foreground">{t.qrUnavailable}</p>
         ) : (
           <Skeleton className="size-full" />
         )}
@@ -209,9 +214,9 @@ function TableQrCard({ table }: { table: Table }) {
       ) : null}
       {error instanceof Error ? <p className="text-sm text-destructive">{error.message}</p> : null}
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" className={secondary} disabled={!link.data} onClick={() => link.data && void copyText(link.data, "Guest link")}>
+        <button type="button" className={secondary} disabled={!link.data} onClick={() => link.data && void copyText(link.data, fill(t.copied, { label: t.guestLink }), t.copyFailed)}>
           <Copy aria-hidden className="size-4" />
-          Copy link
+          {t.copyLink}
         </button>
         <button
           type="button"
@@ -220,7 +225,7 @@ function TableQrCard({ table }: { table: Table }) {
           onClick={() => image.data && saveBlob(image.data, `table-${fileSafe(table.table_number)}-qr.png`)}
         >
           <Download aria-hidden className="size-4" />
-          Download
+          {t.download}
         </button>
       </div>
     </article>

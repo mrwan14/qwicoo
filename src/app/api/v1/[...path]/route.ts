@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { requestLocale } from "@/lib/api/server-client";
 import { STAFF_TOKEN_COOKIE } from "@/lib/auth/cookies";
 import { getApiV1Base } from "@/lib/env";
 
@@ -24,8 +25,7 @@ async function proxy(
   if (contentType) headers.set("content-type", contentType);
   headers.set("accept", request.headers.get("accept") ?? "application/json");
   headers.set("authorization", `Bearer ${token}`);
-  // The staff UI is English; the API otherwise answers in Arabic.
-  headers.set("accept-language", "en");
+  headers.set("accept-language", requestLocale(request));
 
   const brandId = request.headers.get("x-brand-id");
   const branchId = request.headers.get("x-branch-id");

@@ -8,7 +8,11 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { EntityCard } from "@/components/ops/entity-card";
+import { fill } from "@/lib/i18n/dictionary";
+import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
+import { brandsCopy } from "@/lib/i18n/staff/brands";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
 import { LiveCount } from "@/components/ops/live-fact";
 import { PageHeader } from "@/components/ops/page-header";
@@ -33,13 +37,14 @@ const control = "h-11 w-full rounded-lg border px-3 text-sm";
 const cardGrid = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3";
 
 function BrandMeta({ brand }: { brand: components["schemas"]["BrandResponse"] }) {
+  const t = useStaffSection(brandsCopy);
   return (
     <>
       {brand.slug}
       {Array.isArray(brand.branches) ? (
         <>
           {" · "}
-          <LiveCount value={brand.branches.length} /> {brand.branches.length === 1 ? "branch" : "branches"}
+          <LiveCount value={brand.branches.length} /> {brand.branches.length === 1 ? t.branch : t.branches}
         </>
       ) : null}
     </>
@@ -57,10 +62,11 @@ function BrandMenu({
   onDeactivate: () => void;
   onActivate: () => void;
 }) {
+  const t = useStaffSection(brandsCopy);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label="Brand actions"
+        aria-label={t.actions}
         className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <MoreHorizontal aria-hidden className="size-4" />
@@ -68,11 +74,11 @@ function BrandMenu({
       <DropdownMenuContent align="end">
         {active ? (
           <DropdownMenuItem variant="destructive" className="min-h-11" onClick={onDeactivate}>
-            Deactivate
+            {t.deactivate}
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem className="min-h-11" disabled={pending} onClick={onActivate}>
-            {pending ? "Activating…" : "Activate"}
+            {pending ? t.activating : t.activate}
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
@@ -81,6 +87,7 @@ function BrandMenu({
 }
 
 export function BrandsScreen() {
+  const t = useStaffSection(brandsCopy);
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -89,7 +96,7 @@ export function BrandsScreen() {
     queryKey: ["brands"],
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/brands", { params: { query: { limit: 100 } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Brands failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.brandsFailed);
       return result.data.items;
     },
   });
@@ -101,10 +108,10 @@ export function BrandsScreen() {
       const result = await browserApi.POST("/api/v1/brands", {
         body: body as components["schemas"]["BrandCreate"],
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not create brand");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotCreate);
     },
     onSuccess: () => {
-      toast.success("Brand created");
+      toast.success(t.created);
       setName("");
       setCreateOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["brands"] });
@@ -114,7 +121,7 @@ export function BrandsScreen() {
   const remove = useMutation({
     mutationFn: async (brandId: string) => {
       const result = await browserApi.DELETE("/api/v1/brands/{brand_id}", { params: { path: { brand_id: brandId } } });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not deactivate brand");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotDeactivate);
     },
     onSuccess: () => {
       setRemoveId(null);
@@ -128,16 +135,16 @@ export function BrandsScreen() {
         params: { path: { brand_id: brandId } },
         body: { is_active: true },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not activate brand");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotActivate);
     },
     onSuccess: () => {
-      toast.success("Brand activated");
+      toast.success(t.activated);
       void queryClient.invalidateQueries({ queryKey: ["brands"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (brands.isLoading) return <LoadingState label="Loading brands" />;
+  if (brands.isLoading) return <LoadingState label={t.loadingBrands} />;
   if (brands.isError) return <ErrorState body={brands.error.message} onRetry={() => void brands.refetch()} />;
 
   const list = brands.data ?? [];
@@ -145,22 +152,22 @@ export function BrandsScreen() {
   return (
     <div className="grid gap-4">
       <PageHeader
-        title="Brands"
+        title={t.title}
         detail={
           list.length > 0 ? (
             <>
-              <LiveCount value={list.length} /> {list.length === 1 ? "brand" : "brands"}
+              <LiveCount value={list.length} /> {list.length === 1 ? t.brand : t.brands}
             </>
           ) : undefined
         }
         action={
           <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>
-            Create brand
+            {t.create}
           </button>
         }
       />
       {list.length === 0 ? (
-        <EmptyState title="Create your first brand" body="A brand is the home for branches, menus, and staff." action={<button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>Create brand</button>} />
+        <EmptyState title={t.emptyTitle} body={t.emptyBody} action={<button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>{t.create}</button>} />
       ) : (
         <ul className={cardGrid}>
           {list.map((brand) => (
@@ -169,7 +176,7 @@ export function BrandsScreen() {
                 href={`/app/brands/${brand.id}`}
                 title={brand.name}
                 meta={<BrandMeta brand={brand} />}
-                badge={<StatusChip tone={brand.is_active ? "available" : "soldout"}>{brand.is_active ? "Active" : "Inactive"}</StatusChip>}
+                badge={<StatusChip tone={brand.is_active ? "available" : "soldout"}>{brand.is_active ? t.active : t.inactive}</StatusChip>}
                 menu={
                   <BrandMenu
                     active={brand.is_active}
@@ -191,49 +198,52 @@ export function BrandsScreen() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create brand</DialogTitle>
+            <DialogTitle>{t.create}</DialogTitle>
           </DialogHeader>
           <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-            <input className={control} placeholder="Name" value={name} onChange={(event) => setName(event.target.value)} required />
-            <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground" type="submit" disabled={create.isPending}>Create brand</button>
+            <input className={control} placeholder={t.namePlaceholder} value={name} onChange={(event) => setName(event.target.value)} required />
+            <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground" type="submit" disabled={create.isPending}>{t.create}</button>
           </form>
         </DialogContent>
       </Dialog>
-      <ConfirmDialog open={Boolean(removeId)} onOpenChange={(open) => !open && setRemoveId(null)} title="Deactivate this brand?" description="Branches under the brand are deactivated with it." confirmLabel="Deactivate" destructive onConfirm={() => removeId && remove.mutate(removeId)} />
+      <ConfirmDialog open={Boolean(removeId)} onOpenChange={(open) => !open && setRemoveId(null)} title={t.deactivateTitle} description={t.deactivateBody} confirmLabel={t.deactivate} destructive onConfirm={() => removeId && remove.mutate(removeId)} />
     </div>
   );
 }
 
 export function BrandDetailScreen({ brandId }: { brandId: string }) {
+  const t = useStaffSection(brandsCopy);
   const isPlatform = useScope((state) => state.homeScope === "platform");
   if (!isPlatform) return <BrandOwnerDashboard brandId={brandId} />;
-  return <BrandSetup brandId={brandId} backHref="/app/brands" backLabel="Back" />;
+  return <BrandSetup brandId={brandId} backHref="/app/brands" backLabel={t.back} />;
 }
 
 export function BrandSettingsScreen({ brandId }: { brandId: string }) {
-  return <BrandSetup brandId={brandId} backHref={`/app/brands/${brandId}`} backLabel="Dashboard" />;
+  const t = useStaffSection(brandsCopy);
+  return <BrandSetup brandId={brandId} backHref={`/app/brands/${brandId}`} backLabel={t.dashboard} />;
 }
 
 function BrandOwnerDashboard({ brandId }: { brandId: string }) {
+  const t = useStaffSection(brandsCopy);
   const brand = useQuery({
     queryKey: ["brand", brandId],
     retry: false,
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/brands/{brand_id}", { params: { path: { brand_id: brandId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Brand failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.brandFailed);
       return result.data;
     },
   });
   const missing = useDenyWhenMissing(brand.error);
-  if (brand.isLoading || missing) return <LoadingState label="Loading brand" />;
-  if (brand.isError || !brand.data) return <ErrorState body={brand.error?.message ?? "Brand missing"} onRetry={() => void brand.refetch()} />;
+  if (brand.isLoading || missing) return <LoadingState label={t.loadingBrand} />;
+  if (brand.isError || !brand.data) return <ErrorState body={brand.error?.message ?? t.brandMissing} onRetry={() => void brand.refetch()} />;
   return (
     <div className="grid gap-4">
       <PageHeader
         title={brand.data.name}
         action={
           <Link href={`/app/brands/${brandId}/settings`} className="inline-flex min-h-11 items-center bg-secondary px-4 text-sm font-medium hover:bg-muted">
-            Settings
+            {t.settings}
           </Link>
         }
       />
@@ -243,6 +253,8 @@ function BrandOwnerDashboard({ brandId }: { brandId: string }) {
 }
 
 function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHref: string; backLabel: string }) {
+  const t = useStaffSection(brandsCopy);
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [branchOpen, setBranchOpen] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -258,7 +270,7 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
     retry: false,
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/brands/{brand_id}", { params: { path: { brand_id: brandId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Brand failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.brandFailed);
       return result.data;
     },
   });
@@ -271,7 +283,7 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
     enabled: brand.isSuccess && (!isPlatform || focusedBrandId === brandId),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/brands/{brand_id}/branches", { params: { path: { brand_id: brandId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Branches failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.branchesFailed);
       return result.data;
     },
   });
@@ -282,10 +294,10 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
         body: { logo_url: publicUrl },
         headers: { "Content-Type": "application/json" },
       } as never);
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Logo failed");
-    }),
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.logoFailed);
+    }, { url: t.uploadUrlFailed, upload: t.uploadFailed }),
     onSuccess: () => {
-      toast.success("Logo saved");
+      toast.success(t.logoSaved);
       void queryClient.invalidateQueries({ queryKey: ["brand", brandId] });
     },
     onError: (error: Error) => {
@@ -297,8 +309,8 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
     },
   });
 
-  if (brand.isLoading || missing) return <LoadingState label="Loading brand" />;
-  if (brand.isError || !brand.data) return <ErrorState body={brand.error?.message ?? "Brand missing"} onRetry={() => void brand.refetch()} />;
+  if (brand.isLoading || missing) return <LoadingState label={t.loadingBrand} />;
+  if (brand.isError || !brand.data) return <ErrorState body={brand.error?.message ?? t.brandMissing} onRetry={() => void brand.refetch()} />;
 
   return (
     <div className="grid gap-4">
@@ -306,7 +318,7 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
         href={backHref}
         className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        <ArrowLeft aria-hidden className="size-4" />
+        <ArrowLeft aria-hidden className="size-4 rtl:-scale-x-100" />
         {backLabel}
       </Link>
       <PageHeader
@@ -314,7 +326,7 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
         action={
           isPlatform ? (
             <Link href="/app/invitations" className="inline-flex min-h-11 items-center bg-secondary px-4 text-sm font-medium hover:bg-muted">
-              Invite Brand Admin
+              {t.inviteAdmin}
             </Link>
           ) : undefined
         }
@@ -334,15 +346,15 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
       />
       <div className="flex items-center justify-between gap-3">
         <div className="grid gap-0.5">
-          <h2 className="text-lg font-semibold">Branches</h2>
+          <h2 className="text-lg font-semibold">{t.branchesTitle}</h2>
           {branches.isSuccess ? (
             <p className="text-sm text-muted-foreground">
-              <LiveCount value={branches.data.length} /> {branches.data.length === 1 ? "branch" : "branches"}
+              <LiveCount value={branches.data.length} /> {branches.data.length === 1 ? t.branch : t.branches}
             </p>
           ) : null}
         </div>
         <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setBranchOpen(true)}>
-          Add branch
+          {t.addBranch}
         </button>
       </div>
       <CreateBranchDialog brandId={brandId} open={branchOpen} onOpenChange={setBranchOpen} />
@@ -351,11 +363,11 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
           <li key={branch.id}>
             <EntityCard
               href={`/app/branches/${branch.id}`}
-              title={pickLocale(branch.name)}
+              title={pickLocale(branch.name, locale)}
               meta={branch.slug}
               imageUrl={mediaUrl(logoPreview ?? brand.data.logo_url)}
-              imageAlt={`${brand.data.name} logo`}
-              badge={<StatusChip tone={branch.is_active ? "available" : "soldout"}>{branch.is_active ? "Active" : "Inactive"}</StatusChip>}
+              imageAlt={fill(t.logoAlt, { name: brand.data.name })}
+              badge={<StatusChip tone={branch.is_active ? "available" : "soldout"}>{branch.is_active ? t.active : t.inactive}</StatusChip>}
             />
           </li>
         ))}
@@ -375,6 +387,7 @@ function BrandLogo({
   pending: boolean;
   onFile: (file: File) => void;
 }) {
+  const t = useStaffSection(brandsCopy);
   const inputRef = useRef<HTMLInputElement>(null);
   const mark = name.trim().charAt(0).toUpperCase() || "B";
   const shown = mediaUrl(logoUrl?.trim() ? logoUrl : null);
@@ -384,15 +397,15 @@ function BrandLogo({
         {shown ? (
           // Logo files are stored on the upload host, which next/image is not set up to optimise.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={shown} alt={`${name} logo`} className="size-full object-cover" />
+          <img src={shown} alt={fill(t.logoAlt, { name })} className="size-full object-cover" />
         ) : (
           <span className="text-2xl font-semibold text-primary">{mark}</span>
         )}
       </div>
       <div className="grid gap-2">
         <div>
-          <h2 className="font-semibold">Logo</h2>
-          <p id="brand-logo-hint" className="text-sm leading-6 text-muted-foreground">Shown to guests and staff. A square image works best.</p>
+          <h2 className="font-semibold">{t.logo}</h2>
+          <p id="brand-logo-hint" className="text-sm leading-6 text-muted-foreground">{t.logoHint}</p>
         </div>
         <input
           ref={inputRef}
@@ -414,7 +427,7 @@ function BrandLogo({
           onClick={() => inputRef.current?.click()}
         >
           <ImagePlus aria-hidden className="size-4" />
-          {pending ? "Uploading…" : shown ? "Replace logo" : "Choose logo"}
+          {pending ? t.uploading : shown ? t.replaceLogo : t.chooseLogo}
         </button>
       </div>
     </section>
@@ -422,6 +435,7 @@ function BrandLogo({
 }
 
 function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useStaffSection(brandsCopy);
   const queryClient = useQueryClient();
   const [nameEn, setNameEn] = useState("");
   const [nameAr, setNameAr] = useState("");
@@ -444,7 +458,7 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
 
   const create = useMutation({
     mutationFn: async () => {
-      if (!location) throw new Error("Pick the branch location on the map");
+      if (!location) throw new Error(t.pickLocation);
       const body: components["schemas"]["BranchCreate"] = {
         name: { en: nameEn.trim(), ar: nameAr.trim() || nameEn.trim() },
         display_name: displayName.trim() || null,
@@ -464,10 +478,10 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
         is_active: true,
       };
       const result = await browserApi.POST("/api/v1/brands/{brand_id}/branches", { params: { path: { brand_id: brandId } }, body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not create branch");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotCreateBranch);
     },
     onSuccess: () => {
-      toast.success("Branch created");
+      toast.success(t.branchCreated);
       reset();
       onOpenChange(false);
       void queryClient.invalidateQueries({ queryKey: ["brand-branches", brandId] });
@@ -479,26 +493,26 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add branch</DialogTitle>
+          <DialogTitle>{t.addBranch}</DialogTitle>
         </DialogHeader>
         <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              Name (English)
+              {t.nameEn}
               <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
             </label>
             <label className="grid gap-1 text-sm">
-              Name (Arabic)
+              {t.nameAr}
               <input className={control} dir="rtl" value={nameAr} onChange={(event) => setNameAr(event.target.value)} placeholder={nameEn} />
             </label>
           </div>
           <label className="grid gap-1 text-sm">
-            Display name
-            <input className={control} value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Shown to guests, optional" />
+            {t.displayName}
+            <input className={control} value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder={t.displayNamePlaceholder} />
           </label>
 
           <div className="grid gap-1 text-sm">
-            <span>Location</span>
+            <span>{t.location}</span>
             <button
               type="button"
               className="flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-start hover:border-primary/40"
@@ -507,33 +521,33 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
               <MapPin aria-hidden className="size-4 shrink-0 text-primary" />
               {location ? (
                 <span className="grid gap-0.5">
-                  <span className="line-clamp-2">{location.address || "Pinned location"}</span>
+                  <span className="line-clamp-2">{location.address || t.pinned}</span>
                   <span className="text-xs text-muted-foreground tabular-nums">{location.latitude}, {location.longitude}</span>
                 </span>
               ) : (
-                <span className="text-muted-foreground">Choose on map</span>
+                <span className="text-muted-foreground">{t.chooseOnMap}</span>
               )}
-              <span className="ms-auto text-xs text-primary">{location ? "Change" : "Open map"}</span>
+              <span className="ms-auto text-xs text-primary">{location ? t.change : t.openMap}</span>
             </button>
           </div>
           <label className="grid gap-1 text-sm">
-            Street address
-            <input className={control} value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Filled from the map, edit if needed" />
+            {t.streetAddress}
+            <input className={control} value={address} onChange={(event) => setAddress(event.target.value)} placeholder={t.streetPlaceholder} />
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              Geofence radius (m)
+              {t.geofence}
               <input className={control} type="number" min={5} max={5000} value={radius} onChange={(event) => setRadius(Number(event.target.value))} required />
             </label>
             <label className="grid gap-1 text-sm">
-              Prep time (min)
+              {t.prepTime}
               <input className={control} type="number" min={1} value={prepMinutes} onChange={(event) => setPrepMinutes(Number(event.target.value))} required />
             </label>
           </div>
 
           <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={create.isPending || !location}>
-            {create.isPending ? "Creating…" : "Create branch"}
+            {create.isPending ? t.creating : t.createBranch}
           </button>
         </form>
         <LocationPickerDialog
@@ -551,16 +565,21 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
   );
 }
 
-async function uploadLogo(file: File, folder: "brands" | "items" | "general", after: (publicUrl: string) => Promise<void>) {
+async function uploadLogo(
+  file: File,
+  folder: "brands" | "items" | "general",
+  after: (publicUrl: string) => Promise<void>,
+  failed: { url: string; upload: string },
+) {
   const body: components["schemas"]["PresignedUrlRequest"] = {
     filename: file.name,
     content_type: file.type || "image/png",
     folder,
   };
   const signed = await browserApi.POST("/api/v1/media/presigned-url", { body });
-  if (!signed.response.ok || !signed.data) throw asApiError(signed.error, signed.response, "Upload URL failed");
+  if (!signed.response.ok || !signed.data) throw asApiError(signed.error, signed.response, failed.url);
   const uploadUrl = presignedUploadUrl(signed.data.upload_url);
   const uploaded = await fetch(uploadUrl, { method: "PUT", body: file, headers: { "content-type": file.type || "image/png" } });
-  if (!uploaded.ok) throw new Error("Upload failed");
+  if (!uploaded.ok) throw new Error(failed.upload);
   await after(signed.data.public_url);
 }

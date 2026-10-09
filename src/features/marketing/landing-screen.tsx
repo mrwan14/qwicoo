@@ -19,7 +19,7 @@ import {
 import { AnimatedLogo } from "@/components/brand/animated-logo";
 import { LOGO_ASPECT, LOGO_VIDEO } from "@/components/brand/logo-assets";
 import { FEATURE_KEYS, SURFACE_KEYS, landingCopy, type FeatureKey, type SurfaceKey } from "@/features/marketing/copy";
-import { formatMoney } from "@/lib/format/money";
+import { formatCount, formatMoney } from "@/lib/i18n/format";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
 const SURFACE_ICONS: Record<SurfaceKey, LucideIcon> = {
@@ -281,7 +281,7 @@ function pathFor(locale: LocaleCode): string {
 }
 
 function localeDigits(value: number, locale: LocaleCode): string {
-  return value.toLocaleString(locale === "ar" ? "ar-EG" : "en");
+  return formatCount(value, locale);
 }
 
 /** Decorative composition of the three screens an order passes through. */

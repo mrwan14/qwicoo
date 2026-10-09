@@ -9,6 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { components } from "@/lib/api/schema";
 import { roleLabel } from "@/lib/auth/roles";
+import { fill } from "@/lib/i18n/dictionary";
+import { formatCairoDateTime } from "@/lib/i18n/format";
+import { useLocale } from "@/lib/i18n/locale-store";
+import { authCopy } from "@/lib/i18n/staff/auth";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 
 type Preview = components["schemas"]["InvitationPreviewResponse"];
 
@@ -19,23 +24,24 @@ type PreviewState =
 
 const MIN_PASSWORD = 8;
 
-function formatExpiry(iso: string): string {
+function formatExpiry(iso: string, locale: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return formatCairoDateTime(iso, locale);
 }
 
 function InvalidInvite({ message, expired }: { message: string; expired: boolean }) {
+  const t = useStaffSection(authCopy);
   return (
     <div className="grid gap-4">
       <div role="alert" className="rounded-xl border border-destructive/40 bg-background p-4">
-        <p className="font-medium">{expired ? "This invitation has expired" : "This link does not work"}</p>
+        <p className="font-medium">{expired ? t.invite.expired : t.shared.linkBroken}</p>
         <p className="mt-1 text-sm text-muted-foreground">{message}</p>
       </div>
       <p className="text-sm text-muted-foreground">
-        Already have an account?{" "}
+        {t.invite.already}{" "}
         <Link href="/login" className="underline">
-          Sign in
+          {t.shared.signIn}
         </Link>
         .
       </p>
@@ -44,11 +50,9 @@ function InvalidInvite({ message, expired }: { message: string; expired: boolean
 }
 
 export function AcceptInviteForm({ token }: { token: string }) {
-  const [state, setState] = useState<PreviewState>(() =>
-    token
-      ? { kind: "loading" }
-      : { kind: "invalid", message: "The link is missing its invitation code. Open the link from your email again.", expired: false },
-  );
+  const t = useStaffSection(authCopy);
+  const { locale } = useLocale();
+  const [state, setState] = useState<PreviewState>({ kind: "loading" });
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -63,29 +67,34 @@ export function AcceptInviteForm({ token }: { token: string }) {
       try {
         const response = await fetch(`/api/invite/preview?token=${encodeURIComponent(token)}`, {
           cache: "no-store",
+          headers: { "accept-language": locale },
         });
         const payload = (await response.json().catch(() => null)) as (Preview & { detail?: unknown }) | null;
         if (cancelled) return;
         if (!response.ok || !payload || typeof payload.email !== "string") {
           setState({
             kind: "invalid",
-            message: typeof payload?.detail === "string" ? payload.detail : "Could not load this invitation.",
+            message: typeof payload?.detail === "string" ? payload.detail : t.invite.loadFailed,
             expired: response.status === 410,
           });
           return;
         }
         setState({ kind: "ready", preview: payload });
-        setFullName(payload.full_name ?? "");
+        setFullName((current) => (current.trim() ? current : (payload.full_name ?? "")));
       } catch {
         if (!cancelled) {
-          setState({ kind: "invalid", message: "The app could not reach the sign-in service. Try again in a moment.", expired: false });
+          setState({ kind: "invalid", message: t.shared.unreachableRetry, expired: false });
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, locale, t.invite.loadFailed, t.shared.unreachableRetry]);
+
+  if (!token) {
+    return <InvalidInvite message={t.invite.missing} expired={false} />;
+  }
 
   if (state.kind === "loading") {
     return (
@@ -93,7 +102,7 @@ export function AcceptInviteForm({ token }: { token: string }) {
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-11 w-full" />
         <Skeleton className="h-11 w-full" />
-        <span className="sr-only">Loading your invitation</span>
+        <span className="sr-only">{t.invite.loading}</span>
       </div>
     );
   }
@@ -105,22 +114,22 @@ export function AcceptInviteForm({ token }: { token: string }) {
   const { preview } = state;
   const needsName = !preview.full_name;
   const scope = [preview.brand_name, preview.branch_name].filter(Boolean).join(" · ");
-  const expiry = formatExpiry(preview.expires_at);
+  const expiry = formatExpiry(preview.expires_at, locale);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (flight.current) return;
     setError("");
     if (password.length < MIN_PASSWORD) {
-      setError(`Use at least ${MIN_PASSWORD} characters.`);
+      setError(fill(t.invite.tooShort, { min: MIN_PASSWORD }));
       return;
     }
     if (password !== confirm) {
-      setError("The two passwords do not match.");
+      setError(t.invite.mismatch);
       return;
     }
     if (needsName && !fullName.trim()) {
-      setError("Enter your name.");
+      setError(t.invite.nameRequired);
       return;
     }
     flight.current = true;
@@ -128,12 +137,12 @@ export function AcceptInviteForm({ token }: { token: string }) {
     try {
       const response = await fetch("/api/invite/accept", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "accept-language": locale },
         body: JSON.stringify({ token, password, full_name: fullName.trim() || undefined }),
       });
       const payload = (await response.json().catch(() => null)) as { detail?: unknown; home?: unknown } | null;
       if (!response.ok) {
-        const message = typeof payload?.detail === "string" ? payload.detail : "Could not accept this invitation.";
+        const message = typeof payload?.detail === "string" ? payload.detail : t.invite.failed;
         if (response.status === 404 || response.status === 410) {
           setState({ kind: "invalid", message, expired: response.status === 410 });
         } else {
@@ -143,7 +152,7 @@ export function AcceptInviteForm({ token }: { token: string }) {
       }
       window.location.assign(typeof payload?.home === "string" ? payload.home : "/app");
     } catch {
-      setError("The app could not reach the sign-in service.");
+      setError(t.shared.unreachable);
     } finally {
       flight.current = false;
       setPending(false);
@@ -154,29 +163,29 @@ export function AcceptInviteForm({ token }: { token: string }) {
     <form onSubmit={onSubmit} className="grid gap-4">
       <dl className="grid gap-2 rounded-xl bg-secondary p-4 text-sm">
         <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
-          <dt className="text-muted-foreground">Role</dt>
-          <dd className="font-medium">{roleLabel(preview.role)}</dd>
+          <dt className="text-muted-foreground">{t.invite.role}</dt>
+          <dd className="font-medium">{roleLabel(preview.role, locale)}</dd>
         </div>
         {scope ? (
           <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
-            <dt className="text-muted-foreground">Where</dt>
+            <dt className="text-muted-foreground">{t.invite.where}</dt>
             <dd className="font-medium">{scope}</dd>
           </div>
         ) : null}
         {expiry ? (
           <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
-            <dt className="text-muted-foreground">Link valid until</dt>
+            <dt className="text-muted-foreground">{t.shared.validUntil}</dt>
             <dd>{expiry}</dd>
           </div>
         ) : null}
       </dl>
 
       <div className="grid gap-2">
-        <Label htmlFor="invite-email">Email</Label>
+        <Label htmlFor="invite-email">{t.shared.email}</Label>
         <Input id="invite-email" type="email" value={preview.email} readOnly autoComplete="username" className="h-11 bg-muted" />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="invite-name">Full name</Label>
+        <Label htmlFor="invite-name">{t.invite.fullName}</Label>
         <Input
           id="invite-name"
           name="full_name"
@@ -188,7 +197,7 @@ export function AcceptInviteForm({ token }: { token: string }) {
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="invite-password">Password</Label>
+        <Label htmlFor="invite-password">{t.shared.password}</Label>
         <Input
           id="invite-password"
           name="password"
@@ -200,10 +209,10 @@ export function AcceptInviteForm({ token }: { token: string }) {
           onChange={(event) => setPassword(event.target.value)}
           className="h-11"
         />
-        <p className="text-xs text-muted-foreground">At least {MIN_PASSWORD} characters.</p>
+        <p className="text-xs text-muted-foreground">{fill(t.invite.lengthHint, { min: MIN_PASSWORD })}</p>
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="invite-confirm">Confirm password</Label>
+        <Label htmlFor="invite-confirm">{t.shared.confirmPassword}</Label>
         <Input
           id="invite-confirm"
           name="confirm_password"
@@ -222,12 +231,12 @@ export function AcceptInviteForm({ token }: { token: string }) {
         </p>
       ) : null}
       <Button type="submit" className="min-h-11" disabled={pending}>
-        {pending ? "Setting up your account…" : "Set password and sign in"}
+        {pending ? t.invite.pending : t.invite.submit}
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        Wrong person?{" "}
+        {t.invite.wrongPerson}{" "}
         <Link href="/login" className="underline">
-          Sign in to a different account
+          {t.invite.differentAccount}
         </Link>
         .
       </p>

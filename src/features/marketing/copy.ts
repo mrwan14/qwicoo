@@ -1,4 +1,4 @@
-import type { LocaleCode } from "@/lib/i18n/locale-text";
+import { defineDictionary } from "@/lib/i18n/dictionary";
 
 export const SURFACE_KEYS = ["guest", "pos", "kds", "owner"] as const;
 export const FEATURE_KEYS = ["qr", "pos", "kds", "floor", "payments", "pickup", "analytics", "staff"] as const;
@@ -29,8 +29,7 @@ type LandingCopy = {
   footer: { rights: string; dashboard: string; signInLabel: string };
 };
 
-export const landingCopy: Record<LocaleCode, LandingCopy> = {
-  en: {
+const landingEn = {
     meta: {
       title: "Qwicoo · Run your restaurant from the table to the kitchen",
       description:
@@ -155,8 +154,9 @@ export const landingCopy: Record<LocaleCode, LandingCopy> = {
       dashboard: "Sign in",
       signInLabel: "Sign in",
     },
-  },
-  ar: {
+} satisfies LandingCopy;
+
+const landingAr = {
     meta: {
       title: "Qwicoo · شغّل مطعمك من الطاولة إلى المطبخ",
       description:
@@ -275,5 +275,6 @@ export const landingCopy: Record<LocaleCode, LandingCopy> = {
       dashboard: "تسجيل الدخول",
       signInLabel: "تسجيل الدخول",
     },
-  },
-};
+} satisfies LandingCopy;
+
+export const landingCopy = defineDictionary(landingEn, landingAr);

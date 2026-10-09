@@ -8,6 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
+import { fill } from "@/lib/i18n/dictionary";
+import { formatCairoDateTime } from "@/lib/i18n/format";
+import { useLocale } from "@/lib/i18n/locale-store";
+import { authCopy } from "@/lib/i18n/staff/auth";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 
 type Preview = { email: string; expires_at: string };
 
@@ -16,22 +21,23 @@ type PreviewState =
   | { kind: "ready"; preview: Preview }
   | { kind: "invalid"; message: string; expired: boolean };
 
-function formatExpiry(iso: string): string {
+function formatExpiry(iso: string, locale: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return formatCairoDateTime(iso, locale);
 }
 
 function UnusableLink({ message, expired }: { message: string; expired: boolean }) {
+  const t = useStaffSection(authCopy);
   return (
     <div className="grid gap-4">
       <div role="alert" className="rounded-xl border border-destructive/40 bg-background p-4">
-        <p className="font-medium">{expired ? "This reset link has expired" : "This link does not work"}</p>
+        <p className="font-medium">{expired ? t.reset.expired : t.shared.linkBroken}</p>
         <p className="mt-1 text-sm text-muted-foreground">{message}</p>
       </div>
       <p className="text-sm text-muted-foreground">
         <Link href="/forgot-password" className="underline">
-          Request a new link
+          {t.reset.requestNew}
         </Link>
         .
       </p>
@@ -40,15 +46,9 @@ function UnusableLink({ message, expired }: { message: string; expired: boolean 
 }
 
 export function ResetPasswordForm({ token }: { token: string }) {
-  const [state, setState] = useState<PreviewState>(() =>
-    token
-      ? { kind: "loading" }
-      : {
-          kind: "invalid",
-          message: "This link is missing its reset code. Open the link from your email again.",
-          expired: false,
-        },
-  );
+  const t = useStaffSection(authCopy);
+  const { locale } = useLocale();
+  const [state, setState] = useState<PreviewState>({ kind: "loading" });
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -62,13 +62,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
       try {
         const response = await fetch(`/api/auth/reset-password/preview?token=${encodeURIComponent(token)}`, {
           cache: "no-store",
+          headers: { "accept-language": locale },
         });
         const payload = (await response.json().catch(() => null)) as (Preview & { detail?: unknown }) | null;
         if (cancelled) return;
         if (!response.ok || !payload || typeof payload.email !== "string") {
           setState({
             kind: "invalid",
-            message: typeof payload?.detail === "string" ? payload.detail : "Could not open this reset link.",
+            message: typeof payload?.detail === "string" ? payload.detail : t.reset.openFailed,
             expired: response.status === 410,
           });
           return;
@@ -78,7 +79,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         if (!cancelled) {
           setState({
             kind: "invalid",
-            message: "The app could not reach the sign-in service. Try again in a moment.",
+            message: t.shared.unreachableRetry,
             expired: false,
           });
         }
@@ -87,7 +88,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, locale, t.reset.openFailed, t.shared.unreachableRetry]);
+
+  if (!token) {
+    return <UnusableLink message={t.reset.missing} expired={false} />;
+  }
 
   if (state.kind === "loading") {
     return (
@@ -95,7 +100,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-11 w-full" />
         <Skeleton className="h-11 w-full" />
-        <span className="sr-only">Loading this reset link</span>
+        <span className="sr-only">{t.reset.loading}</span>
       </div>
     );
   }
@@ -105,7 +110,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   }
 
   const { preview } = state;
-  const expiry = formatExpiry(preview.expires_at);
+  const expiry = formatExpiry(preview.expires_at, locale);
   const lengthOk = password.length >= MIN_PASSWORD_LENGTH && password.length <= MAX_PASSWORD_LENGTH;
   const matches = password.length > 0 && password === confirm;
   const canSubmit = lengthOk && matches && !pending;
@@ -119,12 +124,12 @@ export function ResetPasswordForm({ token }: { token: string }) {
     try {
       const response = await fetch("/api/auth/reset-password", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "accept-language": locale },
         body: JSON.stringify({ token, password }),
       });
       const payload = (await response.json().catch(() => null)) as { detail?: unknown } | null;
       if (!response.ok) {
-        const message = typeof payload?.detail === "string" ? payload.detail : "Could not reset this password.";
+        const message = typeof payload?.detail === "string" ? payload.detail : t.reset.failed;
         if (response.status === 404 || response.status === 410) {
           setState({ kind: "invalid", message, expired: response.status === 410 });
         } else {
@@ -134,7 +139,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       }
       window.location.assign("/app");
     } catch {
-      setError("The app could not reach the sign-in service.");
+      setError(t.shared.unreachable);
     } finally {
       flight.current = false;
       setPending(false);
@@ -146,18 +151,18 @@ export function ResetPasswordForm({ token }: { token: string }) {
       {expiry ? (
         <dl className="grid gap-2 rounded-xl bg-secondary p-4 text-sm">
           <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
-            <dt className="text-muted-foreground">Link valid until</dt>
+            <dt className="text-muted-foreground">{t.shared.validUntil}</dt>
             <dd>{expiry}</dd>
           </div>
         </dl>
       ) : null}
 
       <div className="grid gap-2">
-        <Label htmlFor="reset-email">Email</Label>
+        <Label htmlFor="reset-email">{t.shared.email}</Label>
         <Input id="reset-email" type="email" value={preview.email} readOnly autoComplete="username" className="h-11 bg-muted" />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="reset-password">New password</Label>
+        <Label htmlFor="reset-password">{t.reset.newPassword}</Label>
         <Input
           id="reset-password"
           name="password"
@@ -171,11 +176,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
           className="h-11"
         />
         <p className="text-xs text-muted-foreground">
-          {MIN_PASSWORD_LENGTH}–{MAX_PASSWORD_LENGTH} characters.
+          {fill(t.reset.lengthHint, { min: MIN_PASSWORD_LENGTH, max: MAX_PASSWORD_LENGTH })}
         </p>
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="reset-confirm">Confirm password</Label>
+        <Label htmlFor="reset-confirm">{t.shared.confirmPassword}</Label>
         <Input
           id="reset-confirm"
           name="confirm_password"
@@ -190,7 +195,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           className="h-11"
         />
         {confirm.length > 0 && password !== confirm ? (
-          <p className="text-xs text-muted-foreground">Passwords must match.</p>
+          <p className="text-xs text-muted-foreground">{t.reset.mismatch}</p>
         ) : null}
       </div>
       {error ? (
@@ -199,7 +204,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         </p>
       ) : null}
       <Button type="submit" className="min-h-11" disabled={!canSubmit}>
-        {pending ? "Saving your password…" : "Save password and sign in"}
+        {pending ? t.reset.pending : t.reset.submit}
       </Button>
     </form>
   );

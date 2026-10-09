@@ -1,4 +1,7 @@
 import type { components } from "@/lib/api/schema";
+import { currentLocale } from "@/lib/i18n/locale-store";
+import type { LocaleCode } from "@/lib/i18n/locale-text";
+import { commonCopy } from "@/lib/i18n/staff/common";
 
 export type UserRole = components["schemas"]["UserRole"];
 export type UserProfile = components["schemas"]["UserResponse"];
@@ -17,6 +20,13 @@ const ROLE_HOME: Record<UserRole, string> = {
 
 export function roleHome(role: UserRole): string {
   return ROLE_HOME[role];
+}
+
+/** Roles that may open Ask Qwicoo. Operational roles are intentionally absent. */
+export const ASSISTANT_ROLES = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"] as const satisfies readonly UserRole[];
+
+export function canAskQwicoo(role: UserRole): boolean {
+  return (ASSISTANT_ROLES as readonly UserRole[]).includes(role);
 }
 
 export function isUserRole(value: unknown): value is UserRole {
@@ -46,10 +56,6 @@ export function isBranchScopedRole(role: UserRole): boolean {
   return role === "BRANCH_ADMIN" || (OPERATIONAL_ROLES as readonly UserRole[]).includes(role);
 }
 
-export function roleLabel(role: UserRole): string {
-  return role
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+export function roleLabel(role: UserRole, locale?: LocaleCode): string {
+  return commonCopy[locale ?? currentLocale()].roles[role] ?? role;
 }

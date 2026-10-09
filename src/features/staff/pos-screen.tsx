@@ -1,17 +1,29 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { MoreHorizontal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Money } from "@/components/ops/money";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { StatusChip } from "@/components/ops/status-chip";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { fill } from "@/lib/i18n/dictionary";
+import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
+import { posCopy } from "@/lib/i18n/staff/pos";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
+import { paymentMethodLabel } from "@/lib/status-labels";
 import { mediaUrl } from "@/lib/media";
 import type { components } from "@/lib/api/schema";
 import { useNetwork } from "@/lib/offline/network";
@@ -45,15 +57,9 @@ type Confirmation = {
   orderType: components["schemas"]["OrderType"];
 };
 
-const TENDER_LABEL: Partial<Record<components["schemas"]["PaymentMethod"], string>> = {
-  CASH: "Cash",
-  POS_TERMINAL: "Card terminal",
-  CARD_TERMINAL: "Card terminal",
-};
-
-function paymentLabel(confirmation: Confirmation): string {
-  if (confirmation.paid) return `Paid · ${TENDER_LABEL[confirmation.tender] ?? "Card"}`;
-  return confirmation.orderType === "TAKEAWAY" ? "Payment pending" : "On the table's bill";
+function paymentLabel(confirmation: Confirmation, copy: typeof posCopy.en): string {
+  if (confirmation.paid) return fill(copy.paidWith, { method: paymentMethodLabel(confirmation.tender) });
+  return confirmation.orderType === "TAKEAWAY" ? copy.paymentPending : copy.onTableBill;
 }
 
 function OrderConfirmation({
@@ -65,43 +71,52 @@ function OrderConfirmation({
   onCancel: () => void;
   onDismiss: () => void;
 }) {
+  const t = useStaffSection(posCopy);
   const queued = useOfflineQueue((state) => (confirmation.offlineId ? state.orders.find((order) => order.id === confirmation.offlineId) : undefined));
   const offline = Boolean(confirmation.offlineId);
   const waiting = queued ? isWaiting(queued) : false;
   const number = queued ? displayNumber(queued) : confirmation.pickup != null ? `#${confirmation.pickup}` : null;
   const realNumber = queued ? queued.pickupNumber != null || Boolean(queued.serverId && queued.tableNumber) : true;
   return (
-    <section role="status" aria-live="polite" className="grid gap-3 rounded-xl border bg-background p-4">
+    <section role="status" aria-live="polite" className="grid gap-3 rounded-xl bg-muted/70 p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">{offline ? (waiting ? "Saved on this till" : "Order synced") : "Order sent"}</p>
-        <StatusChip tone={confirmation.paid ? "available" : "ordered"}>{paymentLabel(confirmation)}</StatusChip>
+        <p className="text-sm font-medium">{offline ? (waiting ? t.savedOnTill : t.orderSynced) : t.orderSent}</p>
+        <StatusChip tone={confirmation.paid ? "available" : "ordered"}>{paymentLabel(confirmation, t)}</StatusChip>
       </div>
       {number ? (
         <p className="grid gap-0.5">
-          <span className="text-xs text-muted-foreground">{realNumber ? (confirmation.orderType === "DINE_IN" ? "Order for" : "Pickup number") : "Offline number"}</span>
+          <span className="text-xs text-muted-foreground">{realNumber ? (confirmation.orderType === "DINE_IN" ? t.orderFor : t.pickupNumber) : t.offlineNumber}</span>
           <span className="text-[length:var(--text-28)] leading-none font-semibold tabular-nums">{number}</span>
         </p>
       ) : null}
       {offline && waiting ? (
-        <p className="text-sm leading-6 text-muted-foreground">
-          Give the guest this number. It syncs when the connection is back, and the real number replaces it.
-        </p>
+        <p className="text-sm leading-6 text-muted-foreground">{t.giveGuestNumber}</p>
       ) : null}
-      {queued?.status === "CANCELLED" ? <p className="text-sm text-muted-foreground">Cancelled on this till.</p> : null}
+      {queued?.status === "CANCELLED" ? <p className="text-sm text-muted-foreground">{t.cancelledOnTill}</p> : null}
       <p className="flex justify-between text-sm">
-        <span>{confirmation.paid ? "Collected" : "Total"}</span>
+        <span>{confirmation.paid ? t.collected : t.total}</span>
         <span className="font-semibold">
           <Money amount={confirmation.total} />
         </span>
       </p>
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <button type="button" className="min-h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onClick={onDismiss}>
-          New order
+          {t.newOrder}
         </button>
         {queued?.status === "CANCELLED" ? null : (
-          <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm" onClick={onCancel}>
-            Cancel order
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={t.orderActions}
+              className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <MoreHorizontal aria-hidden className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem variant="destructive" className="min-h-11" onClick={onCancel}>
+                {t.cancelOrder}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </section>
@@ -147,6 +162,8 @@ function previewSubtotal(item: MenuItem, quantity: number, selected: Record<stri
 }
 
 export function PosScreen() {
+  const t = useStaffSection(posCopy);
+  const { locale } = useLocale();
   const branchId = useScope((state) => state.branchId);
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -204,10 +221,10 @@ export function PosScreen() {
     }
     return categories.flatMap((category) =>
       (category.items ?? [])
-        .filter((item) => pickLocale(item.name, "en").toLowerCase().includes(itemSearch))
-        .map((item) => ({ item, categoryName: pickLocale(category.name, "en") })),
+        .filter((item) => pickLocale(item.name, locale).toLowerCase().includes(itemSearch))
+        .map((item) => ({ item, categoryName: pickLocale(category.name, locale) })),
     );
-  }, [activeCategory, categories, itemSearch]);
+  }, [activeCategory, categories, itemSearch, locale]);
 
   function appendLine(item: MenuItem, quantity: number, optionIds: string[]) {
     const selected: Record<string, string[]> = {};
@@ -218,7 +235,7 @@ export function PosScreen() {
       ...current,
       {
         itemId: item.id,
-        name: pickLocale(item.name, "en"),
+        name: pickLocale(item.name, locale),
         quantity,
         optionIds,
         subtotal: previewSubtotal(item, quantity, selected),
@@ -228,7 +245,7 @@ export function PosScreen() {
 
   function addItem(item: MenuItem) {
     if (!item.is_available) {
-      toast.error("Sold out. This item cannot be added.");
+      toast.error(t.soldOutToast);
       return;
     }
     if (needsModifiers(item)) {
@@ -238,7 +255,7 @@ export function PosScreen() {
     setLines((current) => {
       const index = current.findIndex((line) => line.itemId === item.id && line.optionIds.length === 0);
       if (index === -1) {
-        return [...current, { itemId: item.id, name: pickLocale(item.name, "en"), quantity: 1, optionIds: [], subtotal: previewSubtotal(item, 1, {}) }];
+        return [...current, { itemId: item.id, name: pickLocale(item.name, locale), quantity: 1, optionIds: [], subtotal: previewSubtotal(item, 1, {}) }];
       }
       const next = [...current];
       const quantity = next[index].quantity + 1;
@@ -251,11 +268,11 @@ export function PosScreen() {
     const catalogue = new Map((menu.data?.categories ?? []).flatMap((category) => (category.items ?? []).map((item) => [item.id, item] as const)));
     return lines.map((line) => {
       const item = catalogue.get(line.itemId);
-      if (!item) throw new Error(`${line.name} isn't on this till's saved menu. Remove it and try again.`);
+      if (!item) throw new Error(fill(t.notOnMenu, { name: line.name }));
       const modifiers = (item.modifier_groups ?? []).flatMap((group) =>
         (group.options ?? [])
           .filter((option) => line.optionIds.includes(option.id))
-          .map((option) => ({ option_id: option.id, group_id: group.id, name: pickLocale(option.name, "en"), price_delta: String(option.price_delta) })),
+          .map((option) => ({ option_id: option.id, group_id: group.id, name: pickLocale(option.name, locale), price_delta: String(option.price_delta) })),
       );
       const unit = moneyToCents(String(item.base_price)) + modifiers.reduce((sum, mod) => sum + moneyToCents(mod.price_delta), 0);
       return { item_id: item.id, name: line.name, quantity: line.quantity, unit_price: centsToMoney(unit), modifiers };
@@ -265,15 +282,15 @@ export function PosScreen() {
   /** Keep the sale on this device; it syncs (create + cash payment) when the API is back. */
   async function saveOffline(): Promise<Confirmation> {
     const config = offlineConfig.data;
-    if (!branchId) throw new Error("Choose a branch first.");
-    if (!config) throw new Error("This till hasn't saved the branch's offline settings yet. Connect once, then try again.");
-    if (!config.offline_pos_enabled) throw new Error("Offline selling is switched off for this branch. Take the order when the connection is back.");
+    if (!branchId) throw new Error(t.chooseBranch);
+    if (!config) throw new Error(t.noOfflineSettings);
+    if (!config.offline_pos_enabled) throw new Error(t.offlineOff);
     const table = (tables.data ?? []).find((row) => row.id === tableId);
     const order = await useOfflineQueue.getState().addSale({
       branchId,
       orderType,
       tableId: orderType === "DINE_IN" ? tableId : null,
-      tableLabel: table ? `Table ${table.table_number}` : null,
+      tableLabel: table ? fill(t.tableNumber, { number: table.table_number }) : null,
       lines: offlineLines(),
       rules: config,
       payCash: true,
@@ -295,7 +312,7 @@ export function PosScreen() {
     networkMode: "always",
     mutationFn: async (): Promise<Confirmation> => {
       if (!branchId || useScope.getState().branchId !== branchId) {
-        throw new Error("The branch changed. Check the ticket before sending.");
+        throw new Error(t.branchChanged);
       }
       if (!useNetwork.getState().online) return saveOffline();
       const body: components["schemas"]["POSCheckoutRequest"] = {
@@ -319,7 +336,7 @@ export function PosScreen() {
       }
       // 502 is our proxy saying the API refused the connection: nothing was created.
       if (result.response.status === 502 && effectiveTender === "CASH") return saveOffline();
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Checkout failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.checkoutFailed, locale);
       const order = result.data;
       return {
         id: order.id,
@@ -333,8 +350,8 @@ export function PosScreen() {
     onSuccess: (order) => {
       setConfirmation(order);
       setLines([]);
-      if (order.offlineId) toast.success(`Saved on this till · ${order.offlineNumber}`);
-      else toast.success(order.pickup != null ? `Order sent · Pickup #${order.pickup}` : "Order sent");
+      if (order.offlineId) toast.success(fill(t.savedTillToast, { number: order.offlineNumber ?? "" }));
+      else toast.success(order.pickup != null ? fill(t.sentPickup, { number: order.pickup }) : t.orderSent);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -355,24 +372,24 @@ export function PosScreen() {
         params: { path: { order_id: cancelId } },
         body,
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Cancel failed");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.cancelFailed, locale);
     },
     onSuccess: () => {
-      toast.success("Order cancelled");
+      toast.success(t.orderCancelled);
       setCancelId(null);
       if (!confirmation?.offlineId) setConfirmation(null);
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (menu.isLoading) return <LoadingState label="Loading POS" />;
-  if (menu.isError) return <QueryErrorState error={menu.error} screen="POS" onRetry={() => void menu.refetch()} />;
+  if (menu.isLoading) return <LoadingState label={t.loading} />;
+  if (menu.isError) return <QueryErrorState error={menu.error} screen={t.screen} onRetry={() => void menu.refetch()} />;
 
   const total = centsToMoney(lines.reduce((sum, line) => sum + moneyToCents(line.subtotal), 0));
   const sendDisabled = lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim());
 
   const ticket = (
-    <aside className="grid gap-3 rounded-xl border bg-card p-4">
+    <aside className="grid gap-3 bg-card p-4">
       {confirmation ? (
         <OrderConfirmation
           confirmation={confirmation}
@@ -381,10 +398,10 @@ export function PosScreen() {
         />
       ) : null}
       <div>
-        <h2 className="text-lg font-semibold">Ticket</h2>
-        <p className="text-sm leading-6 text-muted-foreground">Tap an item to add it. Sending the ticket starts the order.</p>
+        <h2 className="text-lg font-semibold">{t.ticket}</h2>
+        <p className="text-sm leading-6 text-muted-foreground">{t.ticketHint}</p>
       </div>
-      {lines.length === 0 ? <p className="text-sm text-muted-foreground">No items yet.</p> : null}
+      {lines.length === 0 ? <p className="text-sm text-muted-foreground">{t.noItems}</p> : null}
       <ul className="grid gap-2">
         {lines.map((line, index) => (
           <li key={`${line.itemId}-${index}`} className="flex items-center justify-between gap-2 text-sm">
@@ -392,7 +409,7 @@ export function PosScreen() {
             <span className="flex items-center gap-2">
               <Money amount={line.subtotal} />
               <button type="button" className="min-h-11 rounded-lg px-2 text-sm text-muted-foreground hover:text-foreground" onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}>
-                Remove
+                {t.remove}
               </button>
             </span>
           </li>
@@ -400,45 +417,45 @@ export function PosScreen() {
       </ul>
       {lines.length > 0 ? (
         <p className="flex justify-between text-sm font-semibold">
-          <span>Total</span>
+          <span>{t.total}</span>
           <Money amount={total} />
         </p>
       ) : null}
       <label className="grid gap-1 text-sm">
-        Order type
-        <span className="text-sm leading-6 text-muted-foreground">{orderType === "TAKEAWAY" ? "The guest collects it, and you take payment now." : "The order is for a table. Choose the table before sending."}</span>
+        {t.orderType}
+        <span className="text-sm leading-6 text-muted-foreground">{orderType === "TAKEAWAY" ? t.takeawayHint : t.dineInHint}</span>
         <select className="h-12 rounded-xl border bg-background px-3" value={orderType} onChange={(event) => setOrderType(event.target.value as typeof orderType)}>
-          <option value="TAKEAWAY">Takeaway</option>
-          <option value="DINE_IN">Dine in</option>
+          <option value="TAKEAWAY">{t.takeaway}</option>
+          <option value="DINE_IN">{t.dineIn}</option>
         </select>
       </label>
       {orderType === "DINE_IN" ? (
         <label className="grid gap-1 text-sm">
-          Table
-          <span className="text-sm leading-6 text-muted-foreground">The order is added to this table.</span>
+          {t.table}
+          <span className="text-sm leading-6 text-muted-foreground">{t.tableHint}</span>
           <select className="h-12 rounded-xl border bg-background px-3" value={tableId} onChange={(event) => setTableId(event.target.value)}>
-            <option value="">{tables.isFetching ? "Loading tables…" : "Choose a table"}</option>
+            <option value="">{tables.isFetching ? t.loadingTables : t.chooseTable}</option>
             {(tables.data ?? []).map((table) => (
-              <option key={table.id} value={table.id}>Table {table.table_number}</option>
+              <option key={table.id} value={table.id}>{fill(t.tableNumber, { number: table.table_number })}</option>
             ))}
           </select>
-          {tables.isError ? <span className="text-sm text-destructive">{tables.error instanceof Error ? tables.error.message : "Tables failed"}</span> : null}
+          {tables.isError ? <span className="text-sm text-destructive">{tables.error instanceof Error ? tables.error.message : t.tablesFailed}</span> : null}
         </label>
       ) : null}
       <label className="grid gap-1 text-sm">
-        Tender
-        <span className="text-sm leading-6 text-muted-foreground">{online ? "How this order is paid." : "Cash only while you're offline. Card payments come back with the connection."}</span>
+        {t.tender}
+        <span className="text-sm leading-6 text-muted-foreground">{online ? t.tenderOnline : t.tenderOffline}</span>
         <select className="h-12 rounded-xl border bg-background px-3" value={effectiveTender} onChange={(event) => setTender(event.target.value as typeof tender)}>
-          <option value="CASH">Cash</option>
+          <option value="CASH">{paymentMethodLabel("CASH")}</option>
           <option value="POS_TERMINAL" disabled={!online}>
-            {online ? "Card terminal" : "Card terminal (offline)"}
+            {online ? paymentMethodLabel("POS_TERMINAL") : fill(t.methodOffline, { method: paymentMethodLabel("POS_TERMINAL") })}
           </option>
         </select>
       </label>
       <button type="button" className="min-h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={sendDisabled} onClick={() => checkout.mutate()}>
-        {checkout.isPending ? "Sending…" : "Send order"}
+        {checkout.isPending ? t.sending : t.sendOrder}
       </button>
-      {lines.length === 0 ? <p className="text-sm text-muted-foreground">Add an item before sending.</p> : null}
+      {lines.length === 0 ? <p className="text-sm text-muted-foreground">{t.addBeforeSend}</p> : null}
       <TillOfflineOrders />
     </aside>
   );
@@ -454,7 +471,7 @@ export function PosScreen() {
             <button
               key={category.id}
               type="button"
-              className={`flex min-h-14 shrink-0 items-center gap-2 rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-card shadow-elev-1"}`}
+              className={`flex min-h-14 shrink-0 items-center gap-2 px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-secondary"}`}
               onClick={() => {
                 setCategoryId(category.id);
                 setQuery("");
@@ -465,8 +482,8 @@ export function PosScreen() {
                 <img src={image} alt="" className="size-10 shrink-0 rounded-lg bg-secondary object-contain" />
               ) : null}
               <span className="grid">
-              <span className="text-sm">{pickLocale(category.name, "en")}</span>
-              <span className={`text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{count === 1 ? "1 item" : `${count} items`}</span>
+              <span className="text-sm">{pickLocale(category.name, locale)}</span>
+              <span className={`text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{count === 1 ? t.oneItem : fill(t.manyItems, { count })}</span>
               </span>
             </button>
           );
@@ -474,17 +491,17 @@ export function PosScreen() {
       </aside>
       <div className="grid content-start gap-3">
         <label className="grid gap-1 text-sm">
-          Search items
-          <span className="text-sm leading-6 text-muted-foreground">Finds an item in any category. Tap a result to add it.</span>
+          {t.searchItems}
+          <span className="text-sm leading-6 text-muted-foreground">{t.searchHint}</span>
           <input className="h-12 rounded-xl border bg-card px-3" value={query} onChange={(event) => setQuery(event.target.value)} autoFocus />
         </label>
-        {items.length === 0 ? <p className="text-sm text-muted-foreground">{itemSearch ? "No items match that search." : "No items in this category."}</p> : null}
+        {items.length === 0 ? <p className="text-sm text-muted-foreground">{itemSearch ? t.noSearch : t.noCategory}</p> : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {items.map(({ item, categoryName }) => {
-            const name = pickLocale(item.name, "en");
+            const name = pickLocale(item.name, locale);
             const image = mediaUrl(item.image_url);
             return (
-              <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 ring-1 ring-foreground/5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
+              <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden bg-card text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
                 {image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={image} alt="" className="h-24 w-full bg-secondary object-contain" />
@@ -493,7 +510,7 @@ export function PosScreen() {
                 )}
                 <span className="block px-3 pt-2 font-medium">{name}</span>
                 {categoryName ? <span className="block px-3 text-xs text-muted-foreground">{categoryName}</span> : null}
-                <span className="block px-3 pb-3 text-sm text-muted-foreground">{item.is_available ? <Money amount={String(item.base_price)} /> : "Sold out"}</span>
+                <span className="block px-3 pb-3 text-sm text-muted-foreground">{item.is_available ? <Money amount={String(item.base_price)} /> : t.soldOut}</span>
               </button>
             );
           })}
@@ -501,12 +518,12 @@ export function PosScreen() {
       </div>
       <div className="hidden lg:sticky lg:top-4 lg:block lg:self-start">{ticket}</div>
       <button type="button" className="fixed inset-x-4 bottom-20 z-30 min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground lg:hidden" onClick={() => setTicketOpen(true)}>
-        Ticket ({lines.length})
+        {fill(t.ticketCount, { count: lines.length })}
       </button>
       {ticketOpen ? (
         <div className="fixed inset-0 z-40 overflow-y-auto bg-background p-4 lg:hidden">
           <button type="button" className="mb-3 min-h-11 text-sm underline" onClick={() => setTicketOpen(false)}>
-            Close ticket
+            {t.closeTicket}
           </button>
           {ticket}
         </div>
@@ -524,13 +541,9 @@ export function PosScreen() {
       <ConfirmDialog
         open={Boolean(cancelId)}
         onOpenChange={(open) => !open && setCancelId(null)}
-        title="Cancel this order?"
-        description={
-          confirmation?.offlineId === cancelId
-            ? "The cancel syncs with this order, and the cash is marked as refunded. Hand the cash back to the guest."
-            : "Staff cancel uses the POS cancel path and can refund the payment."
-        }
-        confirmLabel="Cancel order"
+        title={t.cancelTitle}
+        description={confirmation?.offlineId === cancelId ? t.cancelOffline : t.cancelOnline}
+        confirmLabel={t.cancelOrder}
         destructive
         onConfirm={() => cancel.mutate()}
       />
@@ -547,6 +560,8 @@ function ModifierSheet({
   onClose: () => void;
   onAdd: (quantity: number, optionIds: string[]) => void;
 }) {
+  const t = useStaffSection(posCopy);
+  const { locale } = useLocale();
   const [quantity, setQuantity] = useState(1);
   const [selected, setSelected] = useState<Record<string, string[]>>({});
   const groups = item.modifier_groups ?? [];
@@ -568,14 +583,14 @@ function ModifierSheet({
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right">
         <SheetHeader>
-          <SheetTitle>{pickLocale(item.name, "en")}</SheetTitle>
+          <SheetTitle>{pickLocale(item.name, locale)}</SheetTitle>
         </SheetHeader>
         <div className="grid gap-4 overflow-y-auto px-4 pb-6">
           {groups.map((group) => (
             <fieldset key={group.id} className="grid gap-2">
               <legend className="text-sm font-medium">
-                {pickLocale(group.name, "en")}
-                {groupRequired(group) ? " · Required" : ""}
+                {pickLocale(group.name, locale)}
+                {groupRequired(group) ? ` · ${t.required}` : ""}
               </legend>
               {(group.options ?? []).map((option) => (
                 <label key={option.id} className="flex min-h-12 items-center gap-3 text-sm">
@@ -586,21 +601,21 @@ function ModifierSheet({
                     disabled={!option.is_available}
                     onChange={() => toggle(group, option.id)}
                   />
-                  <span className="flex-1">{pickLocale(option.name, "en")}{option.is_available ? "" : " · Sold out"}</span>
+                  <span className="flex-1">{pickLocale(option.name, locale)}{option.is_available ? "" : ` · ${t.soldOut}`}</span>
                   <span className="text-muted-foreground">{option.price_delta}</span>
                 </label>
               ))}
             </fieldset>
           ))}
           <label className="grid gap-1 text-sm font-medium">
-            Quantity
+            {t.quantity}
             <input type="number" min={1} className="h-12 rounded-lg border px-3" value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} />
           </label>
           <p className="text-sm font-medium">
             <Money amount={previewSubtotal(item, quantity, selected)} />
           </p>
           <button type="button" className="min-h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={!ready} onClick={() => onAdd(quantity, optionIds)}>
-            Add to ticket
+            {t.addToTicket}
           </button>
         </div>
       </SheetContent>

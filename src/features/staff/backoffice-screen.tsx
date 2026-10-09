@@ -7,6 +7,9 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { BranchesBarChart, CategoryDonut, ItemsBarChart } from "@/features/staff/analytics-charts";
+import { AssistantUsage } from "@/features/staff/assistant/leads-screen";
+import { canSeeAssistantUsage } from "@/features/staff/assistant/access";
+import { LiveCount } from "@/components/ops/live-fact";
 import { Money } from "@/components/ops/money";
 import { StatusChip } from "@/components/ops/status-chip";
 import { ErrorState, LoadingState, QueryErrorState, RoleUnavailableState } from "@/components/ops/states";
@@ -16,9 +19,14 @@ import { browserApi } from "@/lib/api/browser";
 import { formatMoney } from "@/lib/format/money";
 import { auditActionLabel, auditStatusLabel } from "@/lib/audit-labels";
 import { isUserRole, roleLabel } from "@/lib/auth/roles";
+import { fill } from "@/lib/i18n/dictionary";
 import { formatCairoDateTime } from "@/lib/format/time";
+import { useLocale } from "@/lib/i18n/locale-store";
 import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
 import { pickLocale } from "@/lib/i18n/locale-text";
+import { analyticsCopy } from "@/lib/i18n/staff/analytics";
+import { attendanceCopy } from "@/lib/i18n/staff/attendance";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import type { components } from "@/lib/api/schema";
 import { useScope } from "@/stores/scope";
 
@@ -28,17 +36,27 @@ function cairoBusinessDate(now = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
 
-function attendanceStatusLabel(status: string | null | undefined): string {
+function attendanceStatusLabel(status: string | null | undefined, labels: {
+  notCheckedIn: string;
+  onTime: string;
+  late: string;
+  absent: string;
+}): string {
   const value = status?.trim().toUpperCase();
-  if (!value || value === "UNKNOWN") return "Not checked in";
-  if (value === "PRESENT") return "On time";
-  if (value === "LATE") return "Late";
-  if (value === "ABSENT") return "Absent";
-  return status?.trim() || "Not checked in";
+  if (!value || value === "UNKNOWN") return labels.notCheckedIn;
+  if (value === "PRESENT") return labels.onTime;
+  if (value === "LATE") return labels.late;
+  if (value === "ABSENT") return labels.absent;
+  return status?.trim() || labels.notCheckedIn;
 }
 
-function attendanceHeading(name: string | null | undefined, status: string | null | undefined): string {
-  const label = attendanceStatusLabel(status);
+function attendanceHeading(name: string | null | undefined, status: string | null | undefined, labels: {
+  notCheckedIn: string;
+  onTime: string;
+  late: string;
+  absent: string;
+}): string {
+  const label = attendanceStatusLabel(status, labels);
   const who = name?.trim();
   return who ? `${who} · ${label}` : label;
 }
@@ -46,25 +64,28 @@ function attendanceHeading(name: string | null | undefined, status: string | nul
 const CAIRO_WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
 function TodayHoursNote({ hours, branchId }: { hours: components["schemas"]["OpeningHours"] | null | undefined; branchId: string | null }) {
-  if (!branchId) return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Choose a branch. Your check-in uses that branch&apos;s opening time.</p>;
+  const t = useStaffSection(attendanceCopy);
+  if (!branchId) return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.chooseBranch}</p>;
   const settings = (
     <Link href={`/app/branches/${branchId}`} className="font-medium text-foreground underline-offset-2 hover:underline">
-      Branch settings
+      {t.branchSettings}
     </Link>
   );
   if (!hours) {
-    return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">No operating hours are set yet. Open {settings} and choose Operating hours. Until then, arriving by 10:00 counts as on time.</p>;
+    return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.noHoursBefore} {settings} {t.noHoursAfter}</p>;
   }
   const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "Africa/Cairo", weekday: "short" }).format(new Date()).slice(0, 3).toLowerCase();
   const key = CAIRO_WEEKDAYS.find((day) => day.startsWith(weekday)) ?? "mon";
   const range = hours[key]?.[0];
   if (!range) {
-    return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">This branch is closed today, so arriving by 10:00 counts as on time. Change the day in {settings}.</p>;
+    return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.closedToday} {settings}.</p>;
   }
-  return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Today this branch opens at {range.open.slice(0, 5)} and closes at {range.close.slice(0, 5)}. Arriving by {range.open.slice(0, 5)}, plus a short grace, counts as on time. Change the hours in {settings}.</p>;
+  return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{fill(t.opensToday, { open: range.open.slice(0, 5), close: range.close.slice(0, 5) })} {settings}.</p>;
 }
 
 export function FinancialsScreen() {
+  const t = useStaffSection(analyticsCopy).till;
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const branchId = useScope((state) => state.branchId);
   const [opening, setOpening] = useState("0.00");
@@ -75,14 +96,14 @@ export function FinancialsScreen() {
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/financials/drawer/current");
       if (result.response.status === 404) return null;
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Drawer failed");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.drawerFailed);
       return result.data ?? null;
     },
   });
   const open = useMutation({
     mutationFn: async () => {
       const result = await browserApi.POST("/api/v1/financials/drawer/open", { body: { opening_balance: opening } });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not open drawer");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.openFailed);
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["drawer"] }),
     onError: (error: Error) => toast.error(error.message),
@@ -92,7 +113,7 @@ export function FinancialsScreen() {
       const result = await browserApi.POST("/api/v1/financials/drawer/close", {
         body: { declared_cash_amount: counted, closing_notes: "End of shift" },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not close drawer");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.closeFailed);
     },
     onSuccess: () => {
       setCloseOpen(false);
@@ -104,20 +125,20 @@ export function FinancialsScreen() {
     queryKey: ["z-reports", branchId],
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/financials/z-reports");
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Z reports failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.reportsFailed);
       return result.data.items ?? [];
     },
   });
   const generate = useMutation({
     mutationFn: async () => {
       const result = await browserApi.POST("/api/v1/financials/z-report/generate", { body: {} });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not generate Z");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.generateFailed);
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["z-reports"] }),
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (isRoleDenied(drawer.error) && isRoleDenied(reports.error)) return <RoleUnavailableState screen="Till" />;
+  if (isRoleDenied(drawer.error) && isRoleDenied(reports.error)) return <RoleUnavailableState screen={t.screen} />;
 
   const shiftOpen = drawer.data?.status === "OPEN";
   const reportRows = reports.data ?? [];
@@ -126,42 +147,42 @@ export function FinancialsScreen() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">Till</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">The cash drawer for this shift, and the report you print at the end of the day.</p>
+        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.intro}</p>
       </div>
-      {drawer.isLoading ? <LoadingState label="Loading the till" /> : null}
-      {drawer.isError ? <QueryErrorState error={drawer.error} screen="The cash drawer" onRetry={() => void drawer.refetch()} /> : null}
-      {reports.isError ? <QueryErrorState error={reports.error} screen="End-of-day reports" onRetry={() => void reports.refetch()} /> : null}
+      {drawer.isLoading ? <LoadingState label={t.loading} /> : null}
+      {drawer.isError ? <QueryErrorState error={drawer.error} screen={t.drawerScreen} onRetry={() => void drawer.refetch()} /> : null}
+      {reports.isError ? <QueryErrorState error={reports.error} screen={t.reportsScreen} onRetry={() => void reports.refetch()} /> : null}
       <section className="grid gap-4 rounded-2xl border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-medium">Cash drawer</h2>
-            <p className="text-sm leading-6 text-muted-foreground">The notes and coins in the till. Start a shift with the cash already in it. End the shift by counting what is left.</p>
+            <h2 className="font-medium">{t.drawerTitle}</h2>
+            <p className="text-sm leading-6 text-muted-foreground">{t.drawerHint}</p>
           </div>
-          <StatusChip tone={shiftOpen ? "ready" : "neutral"}>{shiftOpen ? "Shift open" : "No shift open"}</StatusChip>
+          <StatusChip tone={shiftOpen ? "ready" : "neutral"}>{shiftOpen ? t.shiftOpen : t.noShift}</StatusChip>
         </div>
         {drawer.data ? (
           <p className="text-sm">
-            Started with <Money amount={drawer.data.opening_balance} />
-            {drawer.data.opened_at ? ` · ${formatCairoDateTime(drawer.data.opened_at)}` : ""}
+            {t.startedWith} <Money amount={drawer.data.opening_balance} />
+            {drawer.data.opened_at ? ` · ${formatCairoDateTime(drawer.data.opened_at, locale)}` : ""}
           </p>
         ) : null}
         <div className="grid gap-4 lg:grid-cols-2">
           <label className="grid gap-1 text-sm">
-            Opening cash (EGP)
-            <span className="text-sm leading-6 text-muted-foreground">The cash in the drawer when this shift starts.</span>
+            {t.opening}
+            <span className="text-sm leading-6 text-muted-foreground">{t.openingHint}</span>
             <input className={control} inputMode="decimal" value={opening} onChange={(event) => setOpening(event.target.value)} />
             <button type="button" className="mt-2 min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={shiftOpen || open.isPending} onClick={() => open.mutate()}>
-              {open.isPending ? "Starting…" : "Start the shift"}
+              {open.isPending ? t.starting : t.startShift}
             </button>
-            {shiftOpen ? <span className="text-sm text-muted-foreground">A shift is already open. Count the cash and end it first.</span> : null}
+            {shiftOpen ? <span className="text-sm text-muted-foreground">{t.shiftAlready}</span> : null}
           </label>
           <label className="grid gap-1 text-sm">
-            Counted cash (EGP)
-            <span className="text-sm leading-6 text-muted-foreground">The cash you count when the shift ends.</span>
+            {t.counted}
+            <span className="text-sm leading-6 text-muted-foreground">{t.countedHint}</span>
             <input className={control} inputMode="decimal" value={counted} onChange={(event) => setCounted(event.target.value)} />
             <button type="button" className="mt-2 min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={!shiftOpen || close.isPending} onClick={() => setCloseOpen(true)}>
-              End the shift
+              {t.endShift}
             </button>
           </label>
         </div>
@@ -169,21 +190,21 @@ export function FinancialsScreen() {
       <section className="grid gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="font-medium">End-of-day report</h2>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">One report for today in Cairo time. It counts paid orders, and a later press refreshes that same report when the figures change. Ending the shift records the cash count and does not fill this report.</p>
+            <h2 className="font-medium">{t.reportTitle}</h2>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.reportHint}</p>
           </div>
           <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={generate.isPending} onClick={() => generate.mutate()}>
-            {generate.isPending ? (todayReport ? "Updating…" : "Creating…") : todayReport ? "Update today's report" : "Create end-of-day report"}
+            {generate.isPending ? (todayReport ? t.updating : t.creating) : todayReport ? t.updateToday : t.createReport}
           </button>
         </div>
-        {reportRows.length === 0 ? <p className="text-sm text-muted-foreground">No end-of-day reports yet.</p> : (
+        {reportRows.length === 0 ? <p className="text-sm text-muted-foreground">{t.noReports}</p> : (
           <div className="overflow-x-auto rounded-2xl border bg-card">
             <table className="w-full min-w-[520px] border-collapse text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Report</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Day</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Gross sales</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.report}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.day}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.grossSales}</th>
                 </tr>
               </thead>
               <tbody>
@@ -201,57 +222,56 @@ export function FinancialsScreen() {
           </div>
         )}
       </section>
-      <ConfirmDialog open={closeOpen} onOpenChange={setCloseOpen} title="End this shift?" description="This saves the cash you counted and closes the till." confirmLabel="End the shift" onConfirm={() => close.mutate()} />
+      <ConfirmDialog open={closeOpen} onOpenChange={setCloseOpen} title={t.endTitle} description={t.endBody} confirmLabel={t.endShift} onConfirm={() => close.mutate()} />
     </div>
   );
 }
 
 export function ZReportScreen({ reportId }: { reportId: string }) {
+  const t = useStaffSection(analyticsCopy).z;
   const report = useQuery({
     queryKey: ["z", reportId],
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/financials/z-report/{report_id}", { params: { path: { report_id: reportId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Report failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.failed);
       return result.data;
     },
   });
-  if (report.isLoading) return <LoadingState label="Loading report" />;
+  if (report.isLoading) return <LoadingState label={t.loading} />;
   if (report.isError) return <ErrorState body={report.error.message} onRetry={() => void report.refetch()} />;
   const data = report.data;
-  if (!data) return <ErrorState body="Report missing" onRetry={() => void report.refetch()} />;
+  if (!data) return <ErrorState body={t.missing} onRetry={() => void report.refetch()} />;
   return (
     <article className="grid gap-4">
       <div className="grid gap-1">
-        <Link href="/app/financials" className="text-sm text-muted-foreground underline-offset-2 hover:underline print:hidden">Back to the till</Link>
-        <h1 className="text-[length:var(--text-28)] font-semibold">End-of-day report</h1>
+        <Link href="/app/financials" className="text-sm text-muted-foreground underline-offset-2 hover:underline print:hidden">{t.back}</Link>
+        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
         <p className="text-sm text-muted-foreground">{data.report_number} · {data.business_date}</p>
       </div>
       <dl className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border bg-card p-4">
-          <dt className="text-sm text-muted-foreground">Gross sales</dt>
+          <dt className="text-sm text-muted-foreground">{t.gross}</dt>
           <dd className="text-lg font-semibold"><Money amount={data.gross_sales} /></dd>
         </div>
         <div className="rounded-2xl border bg-card p-4">
-          <dt className="text-sm text-muted-foreground">Net sales</dt>
+          <dt className="text-sm text-muted-foreground">{t.net}</dt>
           <dd className="text-lg font-semibold"><Money amount={data.net_sales} /></dd>
         </div>
         <div className="rounded-2xl border bg-card p-4">
-          <dt className="text-sm text-muted-foreground">Tax</dt>
+          <dt className="text-sm text-muted-foreground">{t.tax}</dt>
           <dd className="text-lg font-semibold"><Money amount={data.total_tax} /></dd>
         </div>
       </dl>
-      <button type="button" className="min-h-11 w-fit rounded-xl border px-4 text-sm print:hidden" onClick={() => window.print()}>Print</button>
+      <button type="button" className="min-h-11 w-fit rounded-xl border px-4 text-sm print:hidden" onClick={() => window.print()}>{t.print}</button>
     </article>
   );
 }
 
-const ATTENDANCE_RANGES = [
-  { value: "daily", label: "Today" },
-  { value: "weekly", label: "This week" },
-  { value: "monthly", label: "This month" },
-] as const;
+const ATTENDANCE_RANGES = ["daily", "weekly", "monthly"] as const;
 
 export function AttendanceScreen() {
+  const t = useStaffSection(attendanceCopy);
+  const { locale } = useLocale();
   const me = useStaffSession();
   const branchId = useScope((state) => state.branchId);
   const branches = useScope((state) => state.branches);
@@ -262,13 +282,13 @@ export function AttendanceScreen() {
   const canOverride = me?.role === "SUPER_ADMIN" || me?.role === "BRAND_ADMIN";
   const [reason, setReason] = useState("");
   const [logId, setLogId] = useState<string | null>(null);
-  const [range, setRange] = useState<(typeof ATTENDANCE_RANGES)[number]["value"]>("daily");
+  const [range, setRange] = useState<(typeof ATTENDANCE_RANGES)[number]>("daily");
   const hoursBranch = useQuery({
     queryKey: ["branch", branchId],
     enabled: Boolean(branchId) && isAdmin,
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/branches/{branch_id}", { params: { path: { branch_id: branchId ?? "" } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Branch failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.branchFailed);
       return result.data;
     },
   });
@@ -276,7 +296,7 @@ export function AttendanceScreen() {
     queryKey: ["attendance-me"],
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/attendance/my-status");
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Status failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.statusFailed);
       return result.data;
     },
   });
@@ -288,7 +308,7 @@ export function AttendanceScreen() {
         const result = await browserApi.GET("/api/v1/branches/{branch_id}/attendance-logs", {
           params: { path: { branch_id: id }, query: { filter_type: range } },
         });
-        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Logs failed");
+        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.logsFailed);
         return result.data.records ?? [];
       }));
       return pages.flat().sort((left, right) => right.date.localeCompare(left.date) || left.employee_name.localeCompare(right.employee_name));
@@ -299,7 +319,7 @@ export function AttendanceScreen() {
     enabled: canReviewStaff && Boolean(branchId),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/branches/{branch_id}/cashier-transactions", { params: { path: { branch_id: branchId ?? "" } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Transactions failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.transactionsFailed);
       return result.data.records ?? [];
     },
   });
@@ -308,7 +328,7 @@ export function AttendanceScreen() {
       navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 8000 });
     }).catch(() => null);
     if (!position) {
-      toast.error("Allow location so we can confirm you are at the branch.");
+      toast.error(t.locationNeeded);
       return;
     }
     const body: components["schemas"]["CheckInRequest"] = {
@@ -319,11 +339,11 @@ export function AttendanceScreen() {
       ? await browserApi.POST("/api/v1/attendance/check-in", { body })
       : await browserApi.POST("/api/v1/attendance/check-out", { body });
     if (!result.response.ok) {
-      const error = asApiError(result.error, result.response, "Attendance failed");
-      toast.error(error.code === "OUT_OF_GEOFENCE" ? "You need to be at the branch to check in." : error.message);
+      const error = asApiError(result.error, result.response, t.attendanceFailed);
+      toast.error(error.code === "OUT_OF_GEOFENCE" ? t.outsideBranch : error.message);
       return;
     }
-    toast.success(kind === "in" ? "Checked in" : "Checked out");
+    toast.success(kind === "in" ? t.checkedIn : t.checkedOut);
     void status.refetch();
     void logs.refetch();
   }
@@ -335,7 +355,7 @@ export function AttendanceScreen() {
         params: { path: { log_id: logId } },
         body,
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Override failed");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.overrideFailed);
     },
     onSuccess: () => {
       setLogId(null);
@@ -347,56 +367,56 @@ export function AttendanceScreen() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">Attendance</h1>
+        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Check in when you arrive at the branch.
-          {canReviewStaff ? " The list shows the staff at the branches you look after." : ""}
+          {t.intro}
+          {canReviewStaff ? ` ${t.introReview}` : ""}
         </p>
         {isAdmin && !hoursBranch.isLoading ? <TodayHoursNote hours={hoursBranch.data?.opening_hours} branchId={branchId} /> : null}
       </div>
       {status.isError ? (
-        <ErrorState body={status.error instanceof Error ? status.error.message : "Status failed"} onRetry={() => void status.refetch()} />
+        <ErrorState body={status.error instanceof Error ? status.error.message : t.statusFailed} onRetry={() => void status.refetch()} />
       ) : (
         <p className="text-sm">
           {status.isLoading
-            ? "Loading your attendance…"
-            : attendanceHeading(status.data?.employee_name, status.data?.attendance?.status)}
-          {status.data?.attendance?.check_in ? ` · In ${formatCairoDateTime(status.data.attendance.check_in)}` : ""}
-          {status.data?.attendance?.check_out ? ` · Out ${formatCairoDateTime(status.data.attendance.check_out)}` : ""}
+            ? t.loadingYours
+            : attendanceHeading(status.data?.employee_name, status.data?.attendance?.status, t)}
+          {status.data?.attendance?.check_in ? ` · ${fill(t.inAt, { time: formatCairoDateTime(status.data.attendance.check_in, locale) })}` : ""}
+          {status.data?.attendance?.check_out ? ` · ${fill(t.outAt, { time: formatCairoDateTime(status.data.attendance.check_out, locale) })}` : ""}
         </p>
       )}
       <div className="flex gap-2">
-        <button type="button" className="min-h-12 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => void punch("in")}>Check in</button>
-        <button type="button" className="min-h-12 rounded-lg border px-4 text-sm" onClick={() => void punch("out")}>Check out</button>
+        <button type="button" className="min-h-12 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => void punch("in")}>{t.checkIn}</button>
+        <button type="button" className="min-h-12 rounded-lg border px-4 text-sm" onClick={() => void punch("out")}>{t.checkOut}</button>
       </div>
       {canReviewStaff ? (
       <>
       <section className="grid gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="font-medium">Staff attendance</h2>
+          <h2 className="font-medium">{t.staffTitle}</h2>
           <label className="grid gap-1 text-sm">
-            Period
+            {t.period}
             <select className={control} value={range} onChange={(event) => setRange(event.target.value as typeof range)}>
-              {ATTENDANCE_RANGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              {ATTENDANCE_RANGES.map((item) => <option key={item} value={item}>{t.ranges[item]}</option>)}
             </select>
           </label>
         </div>
-        {logs.isLoading ? <p className="text-sm text-muted-foreground">Loading attendance…</p> : null}
-        {logs.isError ? <ErrorState body={logs.error instanceof Error ? logs.error.message : "Logs failed"} onRetry={() => void logs.refetch()} /> : null}
-        {!logs.isLoading && !logs.isError && watchedBranchIds.length === 0 ? <p className="text-sm text-muted-foreground">Choose a branch to see who has checked in.</p> : null}
-        {!logs.isLoading && !logs.isError && watchedBranchIds.length > 0 && (logs.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No one has checked in for this period.</p> : null}
+        {logs.isLoading ? <p className="text-sm text-muted-foreground">{t.loadingLogs}</p> : null}
+        {logs.isError ? <ErrorState body={logs.error instanceof Error ? logs.error.message : t.logsFailed} onRetry={() => void logs.refetch()} /> : null}
+        {!logs.isLoading && !logs.isError && watchedBranchIds.length === 0 ? <p className="text-sm text-muted-foreground">{t.chooseBranchLogs}</p> : null}
+        {!logs.isLoading && !logs.isError && watchedBranchIds.length > 0 && (logs.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">{t.nobody}</p> : null}
         {(logs.data ?? []).length > 0 ? (
           <div className="overflow-x-auto rounded-2xl border bg-card">
             <table className="w-full min-w-[720px] border-collapse text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Person</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Branch</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Day</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Arrived</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Left</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Status</th>
-                  {canOverride ? <th scope="col" className="px-4 py-3 text-start font-medium">Action</th> : null}
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.person}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.branch}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.day}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.arrived}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.left}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.status}</th>
+                  {canOverride ? <th scope="col" className="px-4 py-3 text-start font-medium">{t.action}</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -405,12 +425,12 @@ export function AttendanceScreen() {
                     <th scope="row" className="px-4 py-4 text-start font-medium">{log.employee_name}</th>
                     <td className="px-4 py-4">{log.branch_name}</td>
                     <td className="px-4 py-4">{log.date}</td>
-                    <td className="px-4 py-4">{log.check_in ? formatCairoDateTime(log.check_in) : "—"}</td>
-                    <td className="px-4 py-4">{log.check_out ? formatCairoDateTime(log.check_out) : "—"}</td>
-                    <td className="px-4 py-4">{attendanceStatusLabel(log.status)}</td>
+                    <td className="px-4 py-4">{log.check_in ? formatCairoDateTime(log.check_in, locale) : "—"}</td>
+                    <td className="px-4 py-4">{log.check_out ? formatCairoDateTime(log.check_out, locale) : "—"}</td>
+                    <td className="px-4 py-4">{attendanceStatusLabel(log.status, t)}</td>
                     {canOverride ? (
                       <td className="px-4 py-4">
-                        <button type="button" className="min-h-11 underline" onClick={() => setLogId(log.id)}>Correct</button>
+                        <button type="button" className="min-h-11 underline" onClick={() => setLogId(log.id)}>{t.correct}</button>
                       </td>
                     ) : null}
                   </tr>
@@ -422,27 +442,27 @@ export function AttendanceScreen() {
       </section>
       <section className="grid gap-3">
         <div>
-          <h2 className="font-medium">Payments taken</h2>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Every payment recorded at this branch, newest first. A payment that is still waiting to be confirmed stays on the Payments page.</p>
+          <h2 className="font-medium">{t.paymentsTitle}</h2>
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.paymentsHint}</p>
         </div>
-        {txns.isLoading ? <p className="text-sm text-muted-foreground">Loading payments…</p> : null}
-        {txns.isError ? <QueryErrorState error={txns.error} screen="Payments taken" onRetry={() => void txns.refetch()} /> : null}
-        {!txns.isLoading && !txns.isError && (txns.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No payments recorded yet.</p> : null}
+        {txns.isLoading ? <p className="text-sm text-muted-foreground">{t.loadingPayments}</p> : null}
+        {txns.isError ? <QueryErrorState error={txns.error} screen={t.paymentsScreen} onRetry={() => void txns.refetch()} /> : null}
+        {!txns.isLoading && !txns.isError && (txns.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">{t.noPayments}</p> : null}
         {(txns.data ?? []).length > 0 ? (
           <div className="overflow-x-auto rounded-2xl border bg-card">
             <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th scope="col" className="px-4 py-3 text-start font-medium">When</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Method</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Status</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">Amount</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.when}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.method}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.status}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.amount}</th>
                 </tr>
               </thead>
               <tbody>
                 {(txns.data ?? []).map((txn) => (
                   <tr key={txn.id} className="border-b align-middle last:border-b-0">
-                    <th scope="row" className="px-4 py-4 text-start font-medium">{formatCairoDateTime(txn.created_at)}</th>
+                    <th scope="row" className="px-4 py-4 text-start font-medium">{formatCairoDateTime(txn.created_at, locale)}</th>
                     <td className="px-4 py-4">
                       {paymentMethodLabel(txn.payment_method)}
                       {txn.transaction_reference ? <span className="mt-1 block text-muted-foreground">{txn.transaction_reference}</span> : null}
@@ -460,36 +480,25 @@ export function AttendanceScreen() {
       ) : null}
       {canOverride ? (
         <>
-          <ConfirmDialog open={Boolean(logId)} onOpenChange={(open) => !open && setLogId(null)} title="Correct this attendance record?" description="Add a reason. This is stored on the record." confirmLabel="Correct" onConfirm={() => override.mutate()} />
-          {logId ? <textarea className="min-h-20 rounded-lg border px-3 py-2" placeholder="Reason" value={reason} onChange={(event) => setReason(event.target.value)} /> : null}
+          <ConfirmDialog open={Boolean(logId)} onOpenChange={(open) => !open && setLogId(null)} title={t.correctTitle} description={t.correctBody} confirmLabel={t.correct} onConfirm={() => override.mutate()} />
+          {logId ? <textarea className="min-h-20 rounded-lg border px-3 py-2" placeholder={t.reason} value={reason} onChange={(event) => setReason(event.target.value)} /> : null}
         </>
       ) : null}
     </div>
   );
 }
 
-const PERIODS: { value: components["schemas"]["TimePeriod"]; label: string }[] = [
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "last_7_days", label: "Last 7 days" },
-  { value: "last_30_days", label: "Last 30 days" },
-];
-
-const KPI_LABELS: Record<string, string> = {
-  gmv: "Gross sales",
-  net_revenue: "Net revenue",
-  total_tax: "Tax",
-  total_service_fees: "Service fees",
-  total_discounts: "Discounts",
-  total_refunds: "Refunds",
-  total_orders: "Orders",
-  paid_orders: "Paid orders",
-  cancelled_orders: "Cancelled orders",
-  aov: "Average order",
-  average_items_per_order: "Items per order",
-};
+const PERIODS = ["today", "yesterday", "last_7_days", "last_30_days"] as const satisfies readonly components["schemas"]["TimePeriod"][];
 
 const MONEY_KPIS = new Set(["gmv", "net_revenue", "total_tax", "total_service_fees", "total_discounts", "total_refunds", "aov"]);
+
+function dashboardOrderCount(data: unknown): number | null {
+  if (!data || typeof data !== "object" || !("kpis" in data)) return null;
+  const kpis = (data as { kpis?: unknown }).kpis;
+  if (!kpis || typeof kpis !== "object" || !("total_orders" in kpis)) return null;
+  const count = (kpis as { total_orders?: unknown }).total_orders;
+  return typeof count === "number" ? count : null;
+}
 
 function chartAmount(amount: string): number {
   const value = Number(amount);
@@ -497,6 +506,9 @@ function chartAmount(amount: string): number {
 }
 
 export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "dashboard" | "menu" | "branches"; embedded?: boolean; branchId?: string | null }) {
+  const t = useStaffSection(analyticsCopy).analytics;
+  const { locale } = useLocale();
+  const me = useStaffSession();
   const [period, setPeriod] = useState<components["schemas"]["TimePeriod"]>("last_7_days");
   const data = useQuery({
     queryKey: ["analytics", view, period, branchId ?? "all"],
@@ -504,65 +516,73 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
       const scoped = branchId ? { period, branch_id: branchId } : { period };
       if (view === "menu") {
         const result = await browserApi.GET("/api/v1/analytics/menu-performance", { params: { query: scoped } });
-        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Analytics failed");
+        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.failed);
         return result.data;
       }
       if (view === "branches") {
         const result = await browserApi.GET("/api/v1/analytics/branches-matrix", { params: { query: { period } } });
-        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Analytics failed");
+        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.failed);
         return result.data;
       }
       const result = await browserApi.GET("/api/v1/analytics/dashboard", { params: { query: scoped } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Analytics failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.failed);
       return result.data;
     },
   });
   const tabs = [
-    { id: "dashboard", href: "/app/analytics", label: "Dashboard" },
-    { id: "menu", href: "/app/analytics/menu", label: "Menu" },
-    { id: "branches", href: "/app/analytics/branches", label: "Branches" },
+    { id: "dashboard", href: "/app/analytics", label: t.tabs.dashboard },
+    { id: "menu", href: "/app/analytics/menu", label: t.tabs.menu },
+    { id: "branches", href: "/app/analytics/branches", label: t.tabs.branches },
   ] as const;
+
+  const orders = view === "dashboard" ? dashboardOrderCount(data.data) : null;
 
   return (
     <div className="grid gap-4">
+      {embedded && orders != null ? (
+        <p className="text-sm text-muted-foreground">
+          <LiveCount value={orders} /> {orders === 1 ? t.oneOrder : t.orders}
+        </p>
+      ) : null}
       {embedded ? null : (
         <>
           <div className="grid gap-1">
-            <h1 className="text-[length:var(--text-28)] font-semibold">Analytics</h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Sales for the period you choose.</p>
+            <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.intro}</p>
+            {me && canSeeAssistantUsage(me.role) ? <AssistantUsage /> : null}
           </div>
           <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
-              <Link key={tab.id} className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm ${tab.id === view ? "bg-primary font-medium text-primary-foreground" : "border bg-card"}`} href={tab.href}>{tab.label}</Link>
+              <Link key={tab.id} className={`inline-flex min-h-11 items-center px-3 text-sm ${tab.id === view ? "bg-primary font-medium text-primary-foreground" : "bg-secondary"}`} href={tab.href}>{tab.label}</Link>
             ))}
           </div>
         </>
       )}
       <label className="grid max-w-xs gap-1 text-sm">
-        Period
+        {t.period}
         <select className={control} value={period} onChange={(event) => setPeriod(event.target.value as typeof period)}>
-          {PERIODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          {PERIODS.map((item) => <option key={item} value={item}>{t.periods[item]}</option>)}
         </select>
       </label>
-      {data.isLoading ? <LoadingState label="Loading analytics" /> : null}
+      {data.isLoading ? <LoadingState label={t.loading} /> : null}
       {data.isError ? <ErrorState body={data.error.message} onRetry={() => void data.refetch()} /> : null}
       {data.data && "kpis" in data.data && data.data.kpis && typeof data.data.kpis === "object" ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {Object.entries(data.data.kpis as Record<string, unknown>).map(([key, value]) => (
-            <article key={key} className="rounded-2xl border bg-card p-4">
-              <p className="text-sm text-muted-foreground">{KPI_LABELS[key] ?? key.replaceAll("_", " ")}</p>
-              <p className="text-lg font-semibold tabular-nums">{typeof value === "string" && MONEY_KPIS.has(key) ? formatMoney(value) : String(value ?? "")}</p>
+            <article key={key} className="bg-card p-4">
+              <p className="text-sm text-muted-foreground">{key in t.kpis ? t.kpis[key as keyof typeof t.kpis] : key.replaceAll("_", " ")}</p>
+              <p className="text-lg font-semibold tabular-nums">{typeof value === "string" && MONEY_KPIS.has(key) ? formatMoney(value, undefined, locale) : String(value ?? "")}</p>
             </article>
           ))}
         </div>
       ) : null}
       {data.data && "top_selling_items" in data.data ? (
         <ItemsBarChart
-          title="Top items"
-          caption="How many of each item sold. The details show the sales as well."
+          title={t.topTitle}
+          caption={t.topCaption}
           rows={data.data.top_selling_items.map((item) => ({
             id: item.item_id,
-            label: pickLocale(item.item_name, "en"),
+            label: pickLocale(item.item_name, locale),
             quantity: item.total_quantity_sold,
             revenue: item.gross_revenue,
           }))}
@@ -570,11 +590,11 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
       ) : null}
       {data.data && "bottom_selling_items" in data.data ? (
         <ItemsBarChart
-          title="Slowest items"
-          caption="The items that sold the least in this period."
+          title={t.slowTitle}
+          caption={t.slowCaption}
           rows={data.data.bottom_selling_items.map((item) => ({
             id: item.item_id,
-            label: pickLocale(item.item_name, "en"),
+            label: pickLocale(item.item_name, locale),
             quantity: item.total_quantity_sold,
             revenue: item.gross_revenue,
           }))}
@@ -584,7 +604,7 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
         <CategoryDonut
           rows={data.data.category_breakdown.map((item) => ({
             id: item.category_id,
-            label: pickLocale(item.category_name, "en"),
+            label: pickLocale(item.category_name, locale),
             revenue: item.total_revenue,
             share: chartAmount(item.gmv_share_percentage),
             shareLabel: `${item.gmv_share_percentage}%`,
@@ -595,13 +615,13 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
         <BranchesBarChart
           rows={data.data.branches.map((row) => ({
             id: row.branch_id,
-            label: pickLocale(row.branch_name, "en"),
+            label: pickLocale(row.branch_name, locale),
             gmv: chartAmount(row.gmv),
             cash: chartAmount(row.cash_revenue),
             digital: chartAmount(row.digital_revenue),
-            gmvText: formatMoney(row.gmv),
-            cashText: formatMoney(row.cash_revenue),
-            digitalText: formatMoney(row.digital_revenue),
+            gmvText: formatMoney(row.gmv, undefined, locale),
+            cashText: formatMoney(row.cash_revenue, undefined, locale),
+            digitalText: formatMoney(row.digital_revenue, undefined, locale),
             orders: row.total_paid_orders,
           }))}
         />
@@ -610,13 +630,13 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
         <BranchesBarChart
           rows={(data.data.branch_rankings as components["schemas"]["BranchPerformanceRow"][]).map((row) => ({
             id: row.branch_id,
-            label: pickLocale(row.branch_name, "en"),
+            label: pickLocale(row.branch_name, locale),
             gmv: chartAmount(row.gmv),
             cash: chartAmount(row.cash_revenue),
             digital: chartAmount(row.digital_revenue),
-            gmvText: formatMoney(row.gmv),
-            cashText: formatMoney(row.cash_revenue),
-            digitalText: formatMoney(row.digital_revenue),
+            gmvText: formatMoney(row.gmv, undefined, locale),
+            cashText: formatMoney(row.cash_revenue, undefined, locale),
+            digitalText: formatMoney(row.digital_revenue, undefined, locale),
             orders: row.total_paid_orders,
           }))}
         />
@@ -625,12 +645,14 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
   );
 }
 
-function auditRoleLabel(role: string | null | undefined): string {
-  if (!role || role === "ANONYMOUS") return "Not signed in";
+function auditRoleLabel(role: string | null | undefined, notSignedIn: string): string {
+  if (!role || role === "ANONYMOUS") return notSignedIn;
   return isUserRole(role) ? roleLabel(role) : role;
 }
 
 export function AuditScreen() {
+  const t = useStaffSection(analyticsCopy).audit;
+  const { locale } = useLocale();
   const [action, setAction] = useState("");
   const [role, setRole] = useState("");
   const logs = useQuery({
@@ -639,7 +661,7 @@ export function AuditScreen() {
       const result = await browserApi.GET("/api/v1/audit/logs", {
         params: { query: { limit: 50 } },
       });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Audit failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.failed);
       return result.data;
     },
   });
@@ -647,49 +669,49 @@ export function AuditScreen() {
   const roleNeedle = role.trim().toLowerCase();
   const rows = (logs.data?.items ?? []).filter((item) => {
     const actionMatches = !actionNeedle || auditActionLabel(item.action).toLowerCase().includes(actionNeedle);
-    const roleText = `${auditRoleLabel(item.actor_role)} ${item.actor_role ?? ""}`.toLowerCase();
+    const roleText = `${auditRoleLabel(item.actor_role, t.notSignedIn)} ${item.actor_role ?? ""}`.toLowerCase();
     const roleMatches = !roleNeedle || roleText.includes(roleNeedle);
     return actionMatches && roleMatches;
   });
   return (
     <div className="grid gap-3">
-      <h1 className="text-[length:var(--text-28)] font-semibold">Audit</h1>
+      <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
-          What happened
+          {t.what}
           <input className={control} value={action} onChange={(event) => setAction(event.target.value)} />
         </label>
         <label className="grid gap-1 text-sm">
-          Role
-          <input className={control} placeholder="Cashier, Super admin" value={role} onChange={(event) => setRole(event.target.value)} />
+          {t.role}
+          <input className={control} placeholder={t.rolePlaceholder} value={role} onChange={(event) => setRole(event.target.value)} />
         </label>
       </div>
-      {logs.isLoading ? <LoadingState label="Loading audit" /> : null}
+      {logs.isLoading ? <LoadingState label={t.loading} /> : null}
       {logs.isError ? <ErrorState body={logs.error.message} onRetry={() => void logs.refetch()} /> : null}
-      {!logs.isLoading && !logs.isError && rows.length === 0 ? <p className="text-sm text-muted-foreground">Nothing matches.</p> : null}
+      {!logs.isLoading && !logs.isError && rows.length === 0 ? <p className="text-sm text-muted-foreground">{t.empty}</p> : null}
       <ul className="grid gap-2 lg:hidden">
         {rows.map((item) => (
           <li key={item.id} className="rounded-lg border p-3 text-sm">
             <p className="font-medium">{auditActionLabel(item.action)}</p>
-            <p>{auditRoleLabel(item.actor_role)} · {formatCairoDateTime(item.created_at)} · {auditStatusLabel(item.status)}</p>
+            <p>{auditRoleLabel(item.actor_role, t.notSignedIn)} · {formatCairoDateTime(item.created_at, locale)} · {auditStatusLabel(item.status)}</p>
           </li>
         ))}
       </ul>
       <table className="hidden w-full text-sm lg:table">
         <thead>
           <tr className="text-start">
-            <th className="p-2">When</th>
-            <th className="p-2">What happened</th>
-            <th className="p-2">Role</th>
-            <th className="p-2">Result</th>
+            <th className="p-2">{t.when}</th>
+            <th className="p-2">{t.what}</th>
+            <th className="p-2">{t.role}</th>
+            <th className="p-2">{t.result}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((item) => (
             <tr key={item.id} className="border-t">
-              <td className="p-2">{formatCairoDateTime(item.created_at)}</td>
+              <td className="p-2">{formatCairoDateTime(item.created_at, locale)}</td>
               <td className="p-2">{auditActionLabel(item.action)}</td>
-              <td className="p-2">{auditRoleLabel(item.actor_role)}</td>
+              <td className="p-2">{auditRoleLabel(item.actor_role, t.notSignedIn)}</td>
               <td className="p-2">{auditStatusLabel(item.status)}</td>
             </tr>
           ))}

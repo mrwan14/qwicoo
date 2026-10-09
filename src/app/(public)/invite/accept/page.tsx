@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 
 import { AcceptInviteForm } from "@/features/auth/accept-invite-form";
 import { AuthShell } from "@/features/auth/auth-shell";
+import { authCopy } from "@/lib/i18n/staff/auth";
 
-export const metadata: Metadata = { title: "Accept your invitation" };
+export const metadata: Metadata = { title: authCopy.en.invite.metaTitle };
 
 function pickToken(value: string | string[] | undefined): string {
   const candidate = Array.isArray(value) ? value[0] : value;
@@ -18,10 +19,7 @@ export default async function AcceptInvitePage({
   const token = pickToken((await searchParams).token);
 
   return (
-    <AuthShell
-      title="Welcome to the team"
-      description="Set a password to finish creating your account. You will be signed in straight away."
-    >
+    <AuthShell screen="invite">
       <AcceptInviteForm token={token} />
     </AuthShell>
   );

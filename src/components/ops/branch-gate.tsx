@@ -9,7 +9,11 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { focusPlatformBranch, switchBranch } from "@/lib/auth/session-client";
+import { fill } from "@/lib/i18n/dictionary";
+import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
@@ -32,11 +36,17 @@ export function BranchGate({ screen, children }: { screen: string; children: Rea
   );
 }
 
-function branchLabel(branch: { display_name?: string | null; name?: unknown; slug?: string | null }) {
-  return branch.display_name || pickLocale(branch.name, "en") || branch.slug || "Branch";
+function branchLabel(
+  branch: { display_name?: string | null; name?: unknown; slug?: string | null },
+  locale: "en" | "ar",
+  fallback: string,
+) {
+  return branch.display_name || pickLocale(branch.name, locale) || branch.slug || fallback;
 }
 
 function PlatformBranchBar({ branchId }: { branchId: string }) {
+  const t = useStaffSection(commonCopy);
+  const { locale } = useLocale();
   const brandId = useScope((state) => state.brandId);
   const branch = useQuery({
     queryKey: ["branch", branchId],
@@ -52,27 +62,28 @@ function PlatformBranchBar({ branchId }: { branchId: string }) {
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card px-3 py-2 text-sm shadow-elev-1">
       <span className="inline-flex min-w-0 items-center gap-2">
         <Store aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        <span className="text-muted-foreground">Working in</span>
-        <span className="truncate font-medium">{branch.data ? branchLabel(branch.data) : "…"}</span>
+        <span className="text-muted-foreground">{t.workingIn}</span>
+        <span className="truncate font-medium">{branch.data ? branchLabel(branch.data, locale, t.branch) : "…"}</span>
       </span>
       <button
         type="button"
         className="min-h-10 rounded-lg border px-3 text-sm hover:bg-muted"
         onClick={() => void focusPlatformBranch({ brandId, branchId: null })}
       >
-        Change branch
+        {t.changeBranch}
       </button>
     </div>
   );
 }
 
 function ChooseBranch({ screen }: { screen: string }) {
+  const t = useStaffSection(commonCopy);
   const isPlatform = useScope((state) => state.homeScope === "platform");
   return (
     <div className="grid max-w-xl gap-4 rounded-xl border border-dashed bg-card p-6 shadow-elev-1">
       <div>
-        <h2 className="text-[length:var(--text-20)] font-semibold">Choose a branch first</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{screen} works on one branch at a time. Pick the branch to open.</p>
+        <h2 className="text-[length:var(--text-20)] font-semibold">{t.chooseBranch}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{fill(t.chooseBranchBody, { screen })}</p>
       </div>
       {isPlatform ? <PlatformBranchPicker /> : <OwnBranchPicker />}
     </div>
@@ -93,9 +104,10 @@ function BranchButton({ label, onClick }: { label: string; onClick: () => void }
 }
 
 function OwnBranchPicker() {
+  const t = useStaffSection(commonCopy);
   const branches = useScope((state) => state.branches);
   if (branches.length === 0) {
-    return <p className="text-sm text-muted-foreground">No branch is assigned to your account yet. Ask your admin to add you to one.</p>;
+    return <p className="text-sm text-muted-foreground">{t.noBranchAssigned}</p>;
   }
   return (
     <ul className="grid gap-2">
@@ -109,6 +121,8 @@ function OwnBranchPicker() {
 }
 
 function PlatformBranchPicker() {
+  const t = useStaffSection(commonCopy);
+  const { locale } = useLocale();
   const focusedBrand = useScope((state) => state.brandId);
   const [picked, setPicked] = useState<string | null>(null);
 
@@ -142,14 +156,14 @@ function PlatformBranchPicker() {
     },
   });
 
-  if (brands.isLoading) return <LoadingState label="Loading brands" />;
+  if (brands.isLoading) return <LoadingState label={t.loadingBrands} />;
   if (brands.isError) return <ErrorState body={brands.error.message} onRetry={() => void brands.refetch()} />;
   if (list.length === 0) {
     return (
       <EmptyState
-        title="No brands yet"
-        body="Create a brand and a branch first."
-        action={<Link href="/app/brands" className="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground">Go to Brands</Link>}
+        title={t.noBrands}
+        body={t.noBrandsBody}
+        action={<Link href="/app/brands" className="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground">{t.goToBrands}</Link>}
       />
     );
   }
@@ -158,23 +172,23 @@ function PlatformBranchPicker() {
     <div className="grid gap-3">
       {list.length > 1 ? (
         <label className="grid gap-1 text-sm">
-          Brand
+          {t.brand}
           <select className={control} value={brandId ?? ""} onChange={(event) => setPicked(event.target.value)}>
             {list.map((brand) => (
               <option key={brand.id} value={brand.id}>
-                {brand.is_active ? brand.name : `${brand.name} (inactive)`}
+                {brand.is_active ? brand.name : `${brand.name} (${t.inactive})`}
               </option>
             ))}
           </select>
         </label>
       ) : null}
-      {branches.isLoading ? <LoadingState label="Loading branches" /> : null}
+      {branches.isLoading ? <LoadingState label={t.loadingBranches} /> : null}
       {branches.isError ? <ErrorState body={branches.error.message} onRetry={() => void branches.refetch()} /> : null}
       {branches.data && branches.data.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          This brand has no branches yet.{" "}
+          {t.noBranches}{" "}
           <Link className="underline" href={`/app/brands/${brandId}`}>
-            Add one
+            {t.addOne}
           </Link>
           .
         </p>
@@ -183,7 +197,7 @@ function PlatformBranchPicker() {
         <ul className="grid gap-2">
           {branches.data.map((branch) => (
             <li key={branch.id}>
-              <BranchButton label={branchLabel(branch)} onClick={() => void focusPlatformBranch({ brandId, branchId: branch.id })} />
+              <BranchButton label={branchLabel(branch, locale, t.branch)} onClick={() => void focusPlatformBranch({ brandId, branchId: branch.id })} />
             </li>
           ))}
         </ul>

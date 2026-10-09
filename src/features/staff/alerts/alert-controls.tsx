@@ -2,6 +2,8 @@
 
 import { Bell, BellOff, Volume2, VolumeX } from "lucide-react";
 
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { playTone, unlockAudio } from "@/lib/sound/tones";
 import { useWorkspace } from "@/stores/workspace";
 
@@ -13,6 +15,7 @@ const chip =
 
 /** Header controls for order alerts. Hidden when a role can't use them. */
 export function AlertControls() {
+  const t = useStaffSection(commonCopy);
   const { active, isAdmin } = useAlertPreferences();
   const [sound, setSound] = useSoundSetting();
   const adminOptIn = useWorkspace((state) => state.adminOrderAlerts);
@@ -26,11 +29,11 @@ export function AlertControls() {
           className={`${chip} ${adminOptIn ? "text-primary" : ""}`}
           aria-pressed={adminOptIn}
           onClick={() => setAdminOptIn(!adminOptIn)}
-          title={adminOptIn ? "Order alerts on" : "Order alerts off"}
+          title={adminOptIn ? t.orderAlertsOn : t.orderAlertsOff}
         >
           {adminOptIn ? <Bell className="size-4" aria-hidden /> : <BellOff className="size-4" aria-hidden />}
-          <span className="hidden md:inline">Order alerts</span>
-          <span className="sr-only md:hidden">Order alerts {adminOptIn ? "on" : "off"}</span>
+          <span className="hidden md:inline">{t.orderAlerts}</span>
+          <span className="sr-only md:hidden">{t.orderAlerts} {adminOptIn ? t.alertsOn : t.alertsOff}</span>
         </button>
       ) : null}
       {active ? (
@@ -38,7 +41,7 @@ export function AlertControls() {
           type="button"
           className={`${chip} ${sound ? "text-primary" : "text-muted-foreground"}`}
           aria-pressed={sound}
-          aria-label={sound ? "Mute alert sound" : "Turn alert sound on"}
+          aria-label={sound ? t.muteSound : t.soundOn}
           onClick={() => {
             const next = !sound;
             setSound(next);
@@ -46,7 +49,7 @@ export function AlertControls() {
           }}
         >
           {sound ? <Volume2 className="size-4" aria-hidden /> : <VolumeX className="size-4" aria-hidden />}
-          <span className="hidden md:inline">{sound ? "Sound on" : "Muted"}</span>
+          <span className="hidden md:inline">{sound ? t.soundOnLabel : t.muted}</span>
         </button>
       ) : null}
       <NotificationsControl />

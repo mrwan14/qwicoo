@@ -2,20 +2,13 @@ import type { Metadata } from "next";
 
 import { AuthShell } from "@/features/auth/auth-shell";
 import { LoginForm } from "@/features/auth/login-form";
+import { authCopy } from "@/lib/i18n/staff/auth";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = { title: authCopy.en.login.metaTitle };
 
 export default function LoginPage() {
   return (
-    <AuthShell
-      title="Welcome back"
-      description="Sign in once. We take you straight to your brand, your branch, or the Qwicoo platform."
-      footer={
-        <p>
-          No account yet? Your brand or branch admin invites you by email, and the link sets your password.
-        </p>
-      }
-    >
+    <AuthShell screen="login">
       <LoginForm />
     </AuthShell>
   );

@@ -7,6 +7,9 @@ import { useState } from "react";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Logo } from "@/components/ops/logo";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { fill } from "@/lib/i18n/dictionary";
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { initials } from "@/lib/auth/scope";
 import { switchBranch } from "@/lib/auth/session-client";
 import { mediaUrl } from "@/lib/media";
@@ -14,6 +17,7 @@ import { useScope } from "@/stores/scope";
 
 /** Brand identity for brand and branch scope; Qwicoo platform branding for App Admin. */
 export function ScopeBadge({ compact = false }: { compact?: boolean }) {
+  const t = useStaffSection(commonCopy);
   const homeScope = useScope((state) => state.homeScope);
   const brandName = useScope((state) => state.brandName);
   const brandLogoUrl = useScope((state) => state.brandLogoUrl);
@@ -29,7 +33,7 @@ export function ScopeBadge({ compact = false }: { compact?: boolean }) {
     );
   }
 
-  const name = brandName ?? "Your brand";
+  const name = brandName ?? t.yourBrand;
   const logo = brandLogoUrl && !logoFailed ? mediaUrl(brandLogoUrl) : null;
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
@@ -47,6 +51,7 @@ export function ScopeBadge({ compact = false }: { compact?: boolean }) {
 }
 
 function useBranchChoice() {
+  const t = useStaffSection(commonCopy);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState(0);
 
@@ -64,9 +69,9 @@ function useBranchChoice() {
     <ConfirmDialog
       open={Boolean(pendingId)}
       onOpenChange={(open) => !open && setPendingId(null)}
-      title="Switch branch?"
-      description={`The open ticket has ${pendingItems} ${pendingItems === 1 ? "item" : "items"}. Switching clears it so nothing is sent to the wrong branch.`}
-      confirmLabel="Clear ticket and switch"
+      title={t.switchBranchTitle}
+      description={fill(t.switchBranchBody, { count: pendingItems, items: pendingItems === 1 ? t.item : t.items })}
+      confirmLabel={t.clearAndSwitch}
       destructive
       onConfirm={() => {
         const target = pendingId;
@@ -83,6 +88,7 @@ function useBranchChoice() {
 export function BranchSwitcher() {
   const branches = useScope((state) => state.branches);
   const branchId = useScope((state) => state.branchId);
+  const t = useStaffSection(commonCopy);
   const busy = useIsMutating() > 0;
   const [sheetOpen, setSheetOpen] = useState(false);
   const { choose, confirm } = useBranchChoice();
@@ -94,12 +100,12 @@ export function BranchSwitcher() {
     <>
       <label className="hidden min-w-0 items-center gap-2 text-sm lg:flex">
         <Store aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        <span className="sr-only">Branch</span>
+        <span className="sr-only">{t.branch}</span>
         <select
           className="h-10 max-w-56 rounded-lg border border-input bg-background px-3 text-sm disabled:opacity-60"
           value={current.id}
           disabled={busy}
-          title={busy ? "Finish the current action before switching branch" : undefined}
+          title={busy ? t.finishAction : undefined}
           onChange={(event) => choose(event.target.value)}
         >
           {branches.map((branch) => (
@@ -120,7 +126,7 @@ export function BranchSwitcher() {
         </SheetTrigger>
         <SheetContent side="bottom" className="max-h-[80dvh]">
           <SheetHeader>
-            <SheetTitle>Switch branch</SheetTitle>
+            <SheetTitle>{t.switchBranch}</SheetTitle>
           </SheetHeader>
           <ul className="grid gap-1 px-4 pb-6">
             {branches.map((branch) => {

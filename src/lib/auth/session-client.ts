@@ -69,6 +69,12 @@ export async function endStaffSession(redirectTo = "/login") {
   useScope.getState().reset();
   clearStoredBranches();
   try {
+    const { clearAssistantSession } = await import("@/features/staff/assistant/session");
+    clearAssistantSession();
+  } catch {
+    // The conversation is memory-only; navigation drops it if this import fails.
+  }
+  try {
     await fetch("/api/auth/logout", { method: "POST" });
   } catch {
     // The cookie is httpOnly; if the call fails the next /auth/me 401s anyway.

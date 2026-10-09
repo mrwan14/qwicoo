@@ -6,6 +6,10 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { fill } from "@/lib/i18n/dictionary";
+import { useLocale } from "@/lib/i18n/locale-store";
+import { authCopy } from "@/lib/i18n/staff/auth";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 
 /**
  * Plain email + password for every role. Credentials are never embedded here;
@@ -13,6 +17,8 @@ import { Label } from "@/components/ui/label";
  * Where the user lands is decided after sign-in from `/auth/me`.
  */
 export function LoginForm() {
+  const t = useStaffSection(authCopy);
+  const { locale } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -39,25 +45,25 @@ export function LoginForm() {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "accept-language": locale },
         body: JSON.stringify({ email, password }),
       });
       if (response.status === 429) {
         const delay = Math.min(1000 * 2 ** attempt.current, 16_000);
         attempt.current += 1;
         setLockUntil(Date.now() + delay);
-        setError("Too many sign-in attempts. The button stays disabled until the wait ends.");
+        setError(t.login.tooMany);
         return;
       }
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { detail?: unknown } | null;
-        setError(typeof payload?.detail === "string" ? payload.detail : "Sign-in failed.");
+        setError(typeof payload?.detail === "string" ? payload.detail : t.login.failed);
         return;
       }
       attempt.current = 0;
       window.location.assign("/app");
     } catch {
-      setError("The app could not reach the sign-in service.");
+      setError(t.shared.unreachable);
     } finally {
       flight.current = false;
       setPending(false);
@@ -67,7 +73,7 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="grid gap-4">
       <div className="grid gap-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{t.shared.email}</Label>
         <Input
           id="email"
           name="email"
@@ -80,7 +86,7 @@ export function LoginForm() {
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{t.shared.password}</Label>
         <Input
           id="password"
           name="password"
@@ -94,17 +100,17 @@ export function LoginForm() {
       </div>
       <div className="flex justify-end">
         <Link href="/forgot-password" className="text-sm font-medium underline underline-offset-4">
-          Forgot password?
+          {t.login.forgot}
         </Link>
       </div>
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}
-          {waitMs > 0 ? ` Try again in ${Math.ceil(waitMs / 1000)}s.` : null}
+          {waitMs > 0 ? ` ${fill(t.login.retryIn, { seconds: Math.ceil(waitMs / 1000) })}` : null}
         </p>
       ) : null}
       <Button type="submit" className="min-h-11" disabled={pending || waitMs > 0}>
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? t.login.pending : t.login.submit}
       </Button>
     </form>
   );

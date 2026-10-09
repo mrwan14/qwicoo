@@ -10,6 +10,12 @@ import { StatusChip } from "@/components/ops/status-chip";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { fill } from "@/lib/i18n/dictionary";
+import { formatCairoDateTime } from "@/lib/format/time";
+import { useLocale } from "@/lib/i18n/locale-store";
+import { offlineCopy } from "@/lib/i18n/staff/offline";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
+import { orderStatusLabel } from "@/lib/status-labels";
 import { useScope } from "@/stores/scope";
 
 import { reasonLabel } from "./review-reasons";
@@ -17,27 +23,22 @@ import { reasonLabel } from "./review-reasons";
 type ReviewOrder = components["schemas"]["OfflineReviewOrder"];
 type ReviewState = "pending" | "reviewed" | "all";
 
-const STATE_LABEL: Record<ReviewState, string> = { pending: "Needs review", reviewed: "Reviewed", all: "All offline orders" };
+const REVIEW_STATES: ReviewState[] = ["pending", "reviewed", "all"];
 
-function when(iso: string | null | undefined): string {
+function when(iso: string | null | undefined, locale: string): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-}
-
-function realNumber(order: ReviewOrder): string {
-  if (order.pickup_number != null) return `#${order.pickup_number}`;
-  if (order.table_number) return `Table ${order.table_number}`;
-  return order.order_type === "DINE_IN" ? "Dine in" : "Takeaway";
+  return formatCairoDateTime(iso, locale) || "—";
 }
 
 export function OfflineReviewScreen() {
+  const t = useStaffSection(offlineCopy).review;
   const branchId = useScope((state) => state.branchId);
   const [state, setState] = useState<ReviewState>("pending");
   const list = useQuery({
     queryKey: ["offline-review", branchId, state],
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/pos/offline/review", { params: { query: { state, limit: 100 } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Offline orders failed");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.failed);
       return result.data;
     },
   });
@@ -45,13 +46,11 @@ export function OfflineReviewScreen() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">Offline orders</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Sales a till took while it was offline. Every sale is kept at the price the guest paid; anything unusual is flagged here so you can approve it or correct the prices.
-        </p>
+        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.intro}</p>
       </div>
-      <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Offline orders">
-        {(Object.keys(STATE_LABEL) as ReviewState[]).map((item) => (
+      <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label={t.tabsAria}>
+        {REVIEW_STATES.map((item) => (
           <button
             key={item}
             type="button"
@@ -60,15 +59,15 @@ export function OfflineReviewScreen() {
             className={`min-h-11 shrink-0 rounded-full border px-3 text-sm ${state === item ? "border-primary/40 bg-secondary font-medium" : ""}`}
             onClick={() => setState(item)}
           >
-            {STATE_LABEL[item]}
+            {t.states[item]}
             {item === "pending" && list.data && state === "pending" ? ` · ${list.data.pending}` : ""}
           </button>
         ))}
       </div>
-      {list.isLoading ? <LoadingState label="Loading offline orders" /> : null}
-      {list.isError ? <QueryErrorState error={list.error} screen="Offline orders" onRetry={() => void list.refetch()} /> : null}
+      {list.isLoading ? <LoadingState label={t.loading} /> : null}
+      {list.isError ? <QueryErrorState error={list.error} screen={t.screen} onRetry={() => void list.refetch()} /> : null}
       {list.data && list.data.orders.length === 0 ? (
-        <EmptyState title={state === "pending" ? "Nothing to review" : "No offline orders yet"} body={state === "pending" ? "Offline sales that need a look will appear here after the till syncs." : "Orders a till takes offline appear here once they sync."} />
+        <EmptyState title={state === "pending" ? t.nothingTitle : t.emptyTitle} body={state === "pending" ? t.nothingBody : t.emptyBody} />
       ) : null}
       <div className="grid gap-3 lg:grid-cols-2">
         {(list.data?.orders ?? []).map((order) => (
@@ -80,6 +79,8 @@ export function OfflineReviewScreen() {
 }
 
 function ReviewCard({ order }: { order: ReviewOrder }) {
+  const t = useStaffSection(offlineCopy).review;
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<"view" | "approve" | "adjust">("view");
   const [note, setNote] = useState("");
@@ -99,9 +100,9 @@ function ReviewCard({ order }: { order: ReviewOrder }) {
         params: { path: { order_id: order.order_id } },
         body: { note: note.trim() || null },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Approve failed");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.approveFailed);
     },
-    onSuccess: () => done(`${order.offline_number ?? "Order"} approved`),
+    onSuccess: () => done(fill(t.approved, { number: order.offline_number ?? t.orderFallback })),
     onError: (error: Error) => toast.error(error.message),
   });
 
@@ -114,31 +115,40 @@ function ReviewCard({ order }: { order: ReviewOrder }) {
         params: { path: { order_id: order.order_id } },
         body: { note: note.trim(), lines },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Adjust failed");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.adjustFailed);
     },
-    onSuccess: () => done(`${order.offline_number ?? "Order"} adjusted`),
+    onSuccess: () => done(fill(t.adjusted, { number: order.offline_number ?? t.orderFallback })),
     onError: (error: Error) => toast.error(error.message),
   });
 
   const priceInvalid = Object.values(prices).some((value) => !/^\d{1,8}(\.\d{1,2})?$/.test(value.trim()));
+  const place = order.pickup_number != null
+    ? `#${order.pickup_number}`
+    : order.table_number
+      ? fill(t.table, { number: order.table_number })
+      : order.order_type === "DINE_IN" ? t.dineIn : t.takeaway;
+  const wasLabel = order.offline_number ? fill(t.was, { number: order.offline_number }) : t.wasOffline;
+  const payDetail = order.is_paid
+    ? fill(t.paidCash, { amount: String(order.paid_amount) })
+    : order.status === "CANCELLED" ? t.cancelled : t.notPaid;
 
   return (
     <article className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="grid gap-0.5">
           <span className="text-lg font-semibold tabular-nums">
-            {realNumber(order)} <span className="text-sm font-normal text-muted-foreground">was {order.offline_number ?? "offline"}</span>
+            {place} <span className="text-sm font-normal text-muted-foreground">{wasLabel}</span>
           </span>
           <span className="text-xs text-muted-foreground">
-            Sold {when(order.offline_created_at)} · synced {when(order.offline_synced_at)}
+            {fill(t.soldSynced, { sold: when(order.offline_created_at, locale), synced: when(order.offline_synced_at, locale) })}
           </span>
         </div>
-        <StatusChip tone={pending ? "ordered" : order.reviewed_at ? "available" : "neutral"}>{pending ? "Needs review" : order.reviewed_at ? "Reviewed" : "No flags"}</StatusChip>
+        <StatusChip tone={pending ? "ordered" : order.reviewed_at ? "available" : "neutral"}>{pending ? t.needsReview : order.reviewed_at ? t.reviewed : t.noFlags}</StatusChip>
       </div>
       {order.review_reasons.length ? (
         <ul className="grid gap-1 rounded-xl bg-secondary px-3 py-2 text-sm">
           {order.review_reasons.map((reason, index) => (
-            <li key={index}>• {reasonLabel(reason)}</li>
+            <li key={index}>• {reasonLabel(reason, locale)}</li>
           ))}
         </ul>
       ) : null}
@@ -148,7 +158,7 @@ function ReviewCard({ order }: { order: ReviewOrder }) {
             <span>{line.quantity} × {line.name}</span>
             {mode === "adjust" ? (
               <label className="flex items-center gap-1 text-xs text-muted-foreground">
-                Unit price
+                {t.unitPrice}
                 <input
                   className="h-10 w-24 rounded-lg border bg-background px-2 text-end text-sm tabular-nums text-foreground"
                   inputMode="decimal"
@@ -164,20 +174,20 @@ function ReviewCard({ order }: { order: ReviewOrder }) {
       </ul>
       <p className="flex justify-between border-t pt-2 text-sm font-semibold">
         <span>
-          Total · {order.is_paid ? `paid ${order.paid_amount} in cash` : order.status === "CANCELLED" ? "cancelled" : "not paid"}
+          {fill(t.total, { detail: payDetail })}
         </span>
         <Money amount={String(order.total_amount)} />
       </p>
-      <p className="text-xs text-muted-foreground">Till {order.offline_device_id ?? "unknown"} · status {order.status.toLowerCase()}</p>
-      {order.reviewed_at ? <p className="text-sm text-muted-foreground">Reviewed {when(order.reviewed_at)}{order.review_note ? ` · “${order.review_note}”` : ""}</p> : null}
+      <p className="text-xs text-muted-foreground">{fill(t.device, { device: order.offline_device_id ?? t.unknownDevice, status: orderStatusLabel(order.status, locale) })}</p>
+      {order.reviewed_at ? <p className="text-sm text-muted-foreground">{fill(t.reviewedWhen, { when: when(order.reviewed_at, locale) })}{order.review_note ? ` · “${order.review_note}”` : ""}</p> : null}
 
       {pending && mode === "view" ? (
         <div className="flex gap-2">
           <button type="button" className="min-h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onClick={() => setMode("approve")}>
-            Approve
+            {t.approve}
           </button>
           <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm" onClick={() => setMode("adjust")}>
-            Adjust prices
+            {t.adjustPrices}
           </button>
         </div>
       ) : null}
@@ -191,23 +201,23 @@ function ReviewCard({ order }: { order: ReviewOrder }) {
           }}
         >
           <label className="grid gap-1 text-sm">
-            {mode === "approve" ? "Note (optional)" : "Why are you changing the prices?"}
+            {mode === "approve" ? t.noteOptional : t.whyChange}
             <span className="text-sm leading-6 text-muted-foreground">
-              {mode === "approve" ? "Keeps the sale as it is. The note goes in the audit log." : "Totals are worked out again with the branch's tax and service rates. The change goes in the audit log."}
+              {mode === "approve" ? t.approveHint : t.adjustHint}
             </span>
             <input className="h-11 rounded-lg border bg-background px-3" value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} />
           </label>
-          {mode === "adjust" && priceInvalid ? <p className="text-sm text-destructive">Enter prices like 30 or 30.50.</p> : null}
+          {mode === "adjust" && priceInvalid ? <p className="text-sm text-destructive">{t.priceInvalid}</p> : null}
           <div className="flex gap-2">
             <button
               type="submit"
               className="min-h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
               disabled={approve.isPending || adjust.isPending || (mode === "adjust" && (note.trim().length < 3 || priceInvalid))}
             >
-              {mode === "approve" ? "Approve sale" : "Save prices"}
+              {mode === "approve" ? t.approveSale : t.savePrices}
             </button>
             <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm" onClick={() => setMode("view")}>
-              Back
+              {t.back}
             </button>
           </div>
         </form>

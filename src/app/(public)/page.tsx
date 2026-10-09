@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { landingCopy } from "@/features/marketing/copy";
 import { LandingScreen } from "@/features/marketing/landing-screen";
+import { RememberLocale } from "@/lib/i18n/locale-sync";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
 type SearchParams = Promise<{ lang?: string | string[] }>;
@@ -27,6 +28,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
 
   return (
     <main>
+      <RememberLocale locale={locale} />
       <LandingScreen locale={locale} />
     </main>
   );

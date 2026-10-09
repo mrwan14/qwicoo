@@ -1,40 +1,46 @@
-/** Plain-English labels for the flags the API puts on offline orders. */
+import { fill } from "@/lib/i18n/dictionary";
+import { currentLocale } from "@/lib/i18n/locale-store";
+import type { LocaleCode } from "@/lib/i18n/locale-text";
+import { offlineCopy } from "@/lib/i18n/staff/offline";
+
+/** Plain labels for the flags the API puts on offline orders. */
 type Reason = Record<string, unknown>;
 
 function money(value: unknown): string {
   return typeof value === "string" || typeof value === "number" ? String(value) : "";
 }
 
-export function reasonLabel(reason: Reason): string {
-  const name = typeof reason.name === "string" && reason.name ? reason.name : "An item";
+export function reasonLabel(reason: Reason, locale?: LocaleCode): string {
+  const copy = offlineCopy[locale ?? currentLocale()].reasons;
+  const name = typeof reason.name === "string" && reason.name ? reason.name : copy.item;
   switch (reason.code) {
     case "OFFLINE_DISABLED":
-      return "Offline selling was switched off for this branch";
+      return copy.offlineDisabled;
     case "CLOCK_AHEAD":
-      return "The till's clock was ahead, so the sync time was used";
+      return copy.clockAhead;
     case "OFFLINE_TOO_LONG":
-      return `Synced more than ${money(reason.max_hours) || "the allowed"} hours after the sale`;
+      return fill(copy.offlineTooLong, { hours: money(reason.max_hours) || copy.theAllowed });
     case "NO_OPEN_DRAWER":
-      return "No cash drawer was open at the time";
+      return copy.noOpenDrawer;
     case "DRAWER_CLOSED_BEFORE_SYNC":
-      return "Its drawer closed before it synced, so the cash counts in the current drawer";
+      return copy.drawerClosed;
     case "TABLE_MISSING":
-      return "The table wasn't found, so it's kept without a table";
+      return copy.tableMissing;
     case "ITEM_MISSING":
-      return `${name} is no longer on the menu and wasn't added`;
+      return fill(copy.itemMissing, { name });
     case "ITEM_SOLD_OUT":
-      return `${name} was sold out`;
+      return fill(copy.itemSoldOut, { name });
     case "PRICE_CHANGED":
-      return `${name} sold at ${money(reason.offline_price)}, now ${money(reason.current_price)}`;
+      return fill(copy.priceChanged, { name, offline: money(reason.offline_price), current: money(reason.current_price) });
     case "TOTAL_MISMATCH":
-      return `The till's total ${money(reason.device_total)} differs from ${money(reason.calculated_total)}`;
+      return fill(copy.totalMismatch, { device: money(reason.device_total), calculated: money(reason.calculated_total) });
     case "NO_KNOWN_ITEMS":
-      return "None of the items are on the menu any more";
+      return copy.noKnownItems;
     case "CASH_AMOUNT_MISMATCH":
-      return `Cash taken ${money(reason.paid)} differs from the total ${money(reason.total)}`;
+      return fill(copy.cashMismatch, { paid: money(reason.paid), total: money(reason.total) });
     case "CANCELLED_AFTER_CLOSE":
-      return "Cancelled on the till after the order was already closed";
+      return copy.cancelledAfterClose;
     default:
-      return typeof reason.code === "string" ? reason.code.replace(/_/g, " ").toLowerCase() : "Needs a look";
+      return typeof reason.code === "string" ? reason.code.replace(/_/g, " ").toLowerCase() : copy.needsLook;
   }
 }

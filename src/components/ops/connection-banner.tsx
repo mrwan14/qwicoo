@@ -5,6 +5,8 @@ import { WifiOff } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 
 import { usePageVisible, usePollingInterval } from "@/hooks/use-page-visible";
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useNetwork } from "@/lib/offline/network";
 
 type ReadyPayload = {
@@ -26,6 +28,7 @@ export function ConnectionBanner({
   offlineDetail?: ReactNode;
   syncDetail?: ReactNode;
 }) {
+  const t = useStaffSection(commonCopy);
   const visible = usePageVisible();
   const online = useNetwork((state) => state.online);
   const interval = usePollingInterval(online ? 30_000 : 10_000);
@@ -55,15 +58,13 @@ export function ConnectionBanner({
         <span className="flex items-center gap-2">
           <WifiOff aria-hidden className="size-4 shrink-0" />
           <span>
-            <span className="font-medium">You&apos;re offline.</span>{" "}
-            {canSellOffline
-              ? "Keep taking cash orders – they're saved on this till and sync when the connection is back. Card payments are paused."
-              : "You're seeing the last saved screen. Changes need a connection."}
+            <span className="font-medium">{t.offline}</span>{" "}
+            {canSellOffline ? t.offlineTill : t.offlineRead}
             {offlineDetail ? <> {offlineDetail}</> : null}
           </span>
         </span>
         <button type="button" className="min-h-11 underline" onClick={() => void query.refetch()}>
-          Try again
+          {t.tryAgain}
         </button>
       </div>
     );
@@ -80,7 +81,7 @@ export function ConnectionBanner({
   if (!visible) {
     return (
       <p className="bg-muted px-4 py-2 text-xs text-muted-foreground" role="status">
-        Updates paused while this tab is hidden.
+        {t.updatesPaused}
       </p>
     );
   }
@@ -88,7 +89,7 @@ export function ConnectionBanner({
   if (query.isPending) {
     return (
       <p className="bg-muted px-4 py-1 text-xs text-muted-foreground" role="status">
-        Checking service…
+        {t.checking}
       </p>
     );
   }
@@ -97,14 +98,14 @@ export function ConnectionBanner({
     return (
       <p className="px-4 py-1 text-xs text-muted-foreground" role="status">
         <span className="me-2 inline-block size-2 rounded-full bg-success align-middle" aria-hidden />
-        Connected
+        {t.connected}
       </p>
     );
   }
 
   return (
     <p className="bg-muted px-4 py-1 text-xs text-muted-foreground" role="status">
-      Service is not ready.
+      {t.serviceNotReady}
     </p>
   );
 }

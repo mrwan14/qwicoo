@@ -1,13 +1,14 @@
 import type { NextRequest } from "next/server";
 
 import { createApiClient } from "@/lib/api/server-client";
+import type { LocaleCode } from "@/lib/i18n/locale-text";
 
 /**
  * Auth client with no bearer token. These routes are public; do not copy
  * Authorization or the staff session cookie onto the upstream request.
  */
-export function createPublicApiClient() {
-  return createApiClient();
+export function createPublicApiClient(locale?: LocaleCode) {
+  return createApiClient({ locale });
 }
 
 /** So the API can rate-limit the caller rather than this server. */

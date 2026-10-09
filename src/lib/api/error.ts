@@ -248,6 +248,14 @@ const CATALOG: Record<string, Catalog> = {
     en: "Can't reach the server. Check the connection and try again.",
     aliases: ["API unreachable."],
   },
+  ASSISTANT_DISABLED: {
+    en: "Not available yet",
+    ar: "غير متاح بعد",
+  },
+  ASSISTANT_LIMIT_REACHED: {
+    en: "You've reached this month's question limit.",
+    ar: "وصلت إلى حد الأسئلة لهذا الشهر.",
+  },
 };
 
 /** Free-text API replies that carry a known meaning. */

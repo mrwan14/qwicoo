@@ -29,7 +29,7 @@ export function occupancyTone(state: components["schemas"]["TableOccupancyState"
 
 export function StatusChip({ tone, children }: { tone: Tone; children: string }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TONE_CLASS[tone]}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium ${TONE_CLASS[tone]}`}>
       {children}
     </span>
   );

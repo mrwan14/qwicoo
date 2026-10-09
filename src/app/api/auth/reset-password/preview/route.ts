@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { errorDetail } from "@/lib/api/error";
 import { createPublicApiClient } from "@/lib/api/password-reset";
+import { requestLocale } from "@/lib/api/server-client";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +19,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await createPublicApiClient().GET("/api/v1/auth/reset-password/preview", {
+    const locale = requestLocale(request);
+    const result = await createPublicApiClient(locale).GET("/api/v1/auth/reset-password/preview", {
       params: { query: { token } },
     });
     if (!result.response.ok || !result.data) {
       const status = result.response.status || 502;
-      const detail = MESSAGES[status] ?? errorDetail(result.error, "Could not open this reset link.");
+      const detail = MESSAGES[status] ?? errorDetail(result.error, "Could not open this reset link.", locale);
       return NextResponse.json({ detail }, { status });
     }
     return NextResponse.json({ email: result.data.email, expires_at: result.data.expires_at });

@@ -10,6 +10,8 @@ import { OrderAlerts } from "@/features/staff/alerts/order-alerts";
 import { StaffPushRuntime } from "@/features/staff/alerts/staff-push";
 import { OfflineRuntime } from "@/features/staff/offline/offline-runtime";
 import { AccessDeniedToast, NoWorkspace, WorkspaceLoading } from "@/components/ops/workspace-states";
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { browserApi } from "@/lib/api/browser";
 import { endStaffSession } from "@/lib/auth/session-client";
 import { offlineKeys, withOfflineCopy } from "@/lib/offline/cache";
@@ -17,6 +19,7 @@ import { useScope } from "@/stores/scope";
 import { useWorkspace } from "@/stores/workspace";
 
 export function StaffRuntime({ children }: { children: ReactNode }) {
+  const t = useStaffSection(commonCopy);
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
 
@@ -66,9 +69,9 @@ export function StaffRuntime({ children }: { children: ReactNode }) {
     return (
       <main className="grid min-h-dvh place-items-center p-6">
         <p className="text-sm" role="alert">
-          Your session could not be loaded.{" "}
+          {t.sessionFailed}{" "}
           <button type="button" className="underline" onClick={() => void endStaffSession()}>
-            Sign in again
+            {t.signInAgain}
           </button>
         </p>
       </main>

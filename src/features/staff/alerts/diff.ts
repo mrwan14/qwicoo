@@ -126,10 +126,13 @@ export function sourcesFor(audience: AlertAudience): Source[] {
   return [...new Set(kindsFor(audience).map((kind) => KIND_SOURCE[kind]))];
 }
 
-export function placeLabel(row: { pickup_number?: number | null; table_number?: string | null; display_number?: string | null }): string {
-  if (row.pickup_number != null) return `Pickup ${row.pickup_number}`;
+export function placeLabel(
+  row: { pickup_number?: number | null; table_number?: string | null; display_number?: string | null },
+  labels: { pickup: string; table: string; order: string } = { pickup: "Pickup", table: "Table", order: "Order" },
+): string {
+  if (row.pickup_number != null) return `${labels.pickup} ${row.pickup_number}`;
   const table = (row.table_number ?? row.display_number ?? "").trim();
-  return table ? `Table ${table}` : "Order";
+  return table ? `${labels.table} ${table}` : labels.order;
 }
 
 const READY_STATUSES = new Set(["READY"]);

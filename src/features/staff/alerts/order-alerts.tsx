@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { fetchFloorLive, floorLiveQueryKey } from "@/hooks/use-floor-live";
 import { pollUnlessRoleDenied, usePageVisible } from "@/hooks/use-page-visible";
+import { fill } from "@/lib/i18n/dictionary";
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { isAudioUnlocked, playTone, unlockAudio } from "@/lib/sound/tones";
 import { orderStatusLabel, paymentMethodLabel } from "@/lib/status-labels";
 import { useScope } from "@/stores/scope";
@@ -50,31 +53,40 @@ const PAGE: Record<AlertEvent["kind"], string> = {
   "handover-ready": "/app/kds/expo",
 };
 
-function requestLabel(type: string | null | undefined): string {
-  if (!type) return "Service request";
+function localizePlace(place: string, labels: { pickup: string; table: string; order: string }): string {
+  if (place.startsWith("Pickup ")) return `${labels.pickup} ${place.slice("Pickup ".length)}`;
+  if (place.startsWith("Table ")) return `${labels.table} ${place.slice("Table ".length)}`;
+  if (place === "Order") return labels.order;
+  return place;
+}
+
+function requestLabel(type: string | null | undefined, fallback: string): string {
+  if (!type) return fallback;
   const text = type.replaceAll("_", " ").toLowerCase();
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-export function alertTitle(event: AlertEvent): string {
+export function alertTitle(event: AlertEvent, copy: (typeof commonCopy)["en"]): string {
+  const place = localizePlace(event.place, copy);
   switch (event.kind) {
     case "confirmation":
-      return `${event.place} · ${orderStatusLabel(event.status)}`;
+      return `${place} · ${orderStatusLabel(event.status)}`;
     case "floor-status":
-      return `${event.place} · ${orderStatusLabel(event.status)}`;
+      return `${place} · ${orderStatusLabel(event.status)}`;
     case "payment":
-      return `${event.place} · Payment waiting (${paymentMethodLabel(event.detail)})`;
+      return fill(copy.paymentWaiting, { place, method: paymentMethodLabel(event.detail) });
     case "service-request":
-      return `${event.place} · ${requestLabel(event.detail)}`;
+      return `${place} · ${requestLabel(event.detail, copy.serviceRequest)}`;
     case "kitchen-ticket":
-      return `${event.place} · New kitchen ticket`;
+      return fill(copy.newTicket, { place });
     case "handover-ready":
-      return `${event.place} · Ready to hand over`;
+      return fill(copy.handoverReady, { place });
   }
 }
 
 /** One watcher for the whole staff app. Mounted once from StaffRuntime. */
 export function OrderAlerts() {
+  const copy = useStaffSection(commonCopy);
   const me = useStaffSession();
   const router = useRouter();
   const branchId = useScope((state) => state.branchId);
@@ -152,21 +164,21 @@ export function OrderAlerts() {
     const tone = toneFor(events);
     const played = soundRef.current && tone ? playTone(tone) : false;
     const locked = soundRef.current && !played && !isAudioUnlocked();
-    const hint = locked ? "Tap to enable sound" : undefined;
-    const enable = locked ? { label: "Enable", onClick: () => void unlockAudio() } : undefined;
+    const hint = locked ? copy.tapSound : undefined;
+    const enable = locked ? { label: copy.enable, onClick: () => void unlockAudio() } : undefined;
 
     if (returning && events.length > 3) {
-      toast(`${events.length} new while you were away`, { description: hint, action: enable });
+      toast(fill(copy.newWhileAway, { count: events.length }), { description: hint, action: enable });
       return;
     }
     const { shown, more } = groupForToasts(events);
     for (const event of shown) {
-      toast(alertTitle(event), {
+      toast(alertTitle(event, copy), {
         description: hint,
-        action: enable ?? { label: "View", onClick: () => router.push(PAGE[event.kind]) },
+        action: enable ?? { label: copy.view, onClick: () => router.push(PAGE[event.kind]) },
       });
     }
-    if (more > 0) toast(`and ${more} more`);
+    if (more > 0) toast(fill(copy.andMore, { count: more }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [floor.data, kitchen.data, expo.data, service.data, payments.data]);
 

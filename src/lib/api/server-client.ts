@@ -4,9 +4,14 @@ import { getApiOrigin } from "@/lib/env";
 import type { paths } from "@/lib/api/schema";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
-/** The guest's chosen language, sent by the guest client. Anything else gets English. */
-export function guestLocale(request: Request): LocaleCode {
+/** `ar` when the caller asked for Arabic. Anything else gets English. */
+export function requestLocale(request: Request): LocaleCode {
   return request.headers.get("accept-language")?.trim().toLowerCase().startsWith("ar") ? "ar" : "en";
+}
+
+/** The guest's chosen language, sent by the guest client. */
+export function guestLocale(request: Request): LocaleCode {
+  return requestLocale(request);
 }
 
 export function createApiClient(options?: {

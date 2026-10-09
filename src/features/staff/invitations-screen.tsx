@@ -16,20 +16,20 @@ import { browserApi } from "@/lib/api/browser";
 import { ApiError, asApiError } from "@/lib/api/error";
 import type { components } from "@/lib/api/schema";
 import { invitableRoles, isBranchScopedRole, roleLabel, type UserRole } from "@/lib/auth/roles";
+import { fill } from "@/lib/i18n/dictionary";
+import { formatCairoDateTime } from "@/lib/format/time";
+import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { peopleCopy } from "@/lib/i18n/staff/people";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 type Invitation = components["schemas"]["InvitationResponse"];
 type InvitationStatus = Invitation["status"];
 type StatusFilter = "all" | "pending" | "accepted" | "expired" | "revoked";
 
-const FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "pending", label: "Pending" },
-  { value: "accepted", label: "Accepted" },
-  { value: "expired", label: "Expired" },
-  { value: "revoked", label: "Revoked" },
-];
+const FILTERS: StatusFilter[] = ["all", "pending", "accepted", "expired", "revoked"];
 
 const STATUS_TONE: Record<InvitationStatus, "ordered" | "available" | "neutral" | "soldout"> = {
   PENDING: "ordered",
@@ -38,39 +38,33 @@ const STATUS_TONE: Record<InvitationStatus, "ordered" | "available" | "neutral" 
   REVOKED: "soldout",
 };
 
-const STATUS_LABEL: Record<InvitationStatus, string> = {
-  PENDING: "Pending",
-  ACCEPTED: "Accepted",
-  EXPIRED: "Expired",
-  REVOKED: "Revoked",
-};
-
 const select = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
 
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, locale: string): string {
   if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return formatCairoDateTime(iso, locale);
 }
 
-function inviteErrorMessage(error: unknown): string {
+function inviteErrorMessage(error: unknown, copy: (typeof peopleCopy)["en"]["invitations"]): string {
   if (error instanceof ApiError) {
     switch (error.status) {
       case 403:
-        return error.message || "You cannot invite that role or scope.";
+        return error.message || copy.cannotInvite;
       case 409:
-        return "This email already has an account.";
+        return copy.emailTaken;
       case 502:
-        return "The email could not be delivered, so the invitation was not saved. Check the address and try again.";
+        return copy.emailNotDelivered;
       default:
         return error.message;
     }
   }
-  return error instanceof Error ? error.message : "Something went wrong.";
+  return error instanceof Error ? error.message : copy.somethingWrong;
 }
 
 export function InvitationsScreen({ title }: { title: string }) {
+  const t = useStaffSection(peopleCopy).invitations;
+  const common = useStaffSection(commonCopy);
+  const { locale } = useLocale();
   const me = useStaffSession();
   const queryClient = useQueryClient();
   const isSuper = useScope((state) => state.homeScope === "platform");
@@ -119,9 +113,9 @@ export function InvitationsScreen({ title }: { title: string }) {
     if (!isSuper) return scopeBranches;
     return (brandBranches.data ?? []).map((branch) => ({
       id: branch.id,
-      name: pickLocale(branch.name, "en") || branch.slug,
+      name: pickLocale(branch.name, locale) || branch.slug,
     }));
-  }, [isSuper, scopeBranches, brandBranches.data]);
+  }, [isSuper, scopeBranches, brandBranches.data, locale]);
   const branchesLoading = isSuper && brandBranches.isFetching;
 
   const invitations = useQuery({
@@ -131,7 +125,7 @@ export function InvitationsScreen({ title }: { title: string }) {
       const result = await browserApi.GET("/api/v1/invitations", {
         params: { query: filter === "all" ? {} : { status: filter } },
       });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Could not load invitations");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
       return result.data.records;
     },
   });
@@ -146,16 +140,16 @@ export function InvitationsScreen({ title }: { title: string }) {
         ...(fullName.trim() ? { full_name: fullName.trim() } : {}),
       };
       const result = await browserApi.POST("/api/v1/invitations", { body });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Could not send the invitation");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.sendFailed);
       return result.data;
     },
     onSuccess: (invitation) => {
-      toast.success(`Invite sent to ${invitation.email}`);
+      toast.success(fill(t.sent, { email: invitation.email }));
       setEmail("");
       setFullName("");
       void queryClient.invalidateQueries({ queryKey: ["invitations"] });
     },
-    onError: (error) => toast.error(inviteErrorMessage(error)),
+    onError: (error) => toast.error(inviteErrorMessage(error, t)),
   });
 
   const resend = useMutation({
@@ -163,14 +157,14 @@ export function InvitationsScreen({ title }: { title: string }) {
       const result = await browserApi.POST("/api/v1/invitations/{invitation_id}/resend", {
         params: { path: { invitation_id: invitation.id } },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not resend");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.resendFailed);
       return invitation;
     },
     onSuccess: (invitation) => {
-      toast.success(`New link sent to ${invitation.email}`);
+      toast.success(fill(t.resent, { email: invitation.email }));
       void queryClient.invalidateQueries({ queryKey: ["invitations"] });
     },
-    onError: (error) => toast.error(inviteErrorMessage(error)),
+    onError: (error) => toast.error(inviteErrorMessage(error, t)),
   });
 
   const revoke = useMutation({
@@ -178,15 +172,15 @@ export function InvitationsScreen({ title }: { title: string }) {
       const result = await browserApi.POST("/api/v1/invitations/{invitation_id}/revoke", {
         params: { path: { invitation_id: invitation.id } },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, "Could not revoke");
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.revokeFailed);
       return invitation;
     },
     onSuccess: (invitation) => {
-      toast.success(`Invitation for ${invitation.email} revoked`);
+      toast.success(fill(t.revoked, { email: invitation.email }));
       setRevokeTarget(null);
       void queryClient.invalidateQueries({ queryKey: ["invitations"] });
     },
-    onError: (error) => toast.error(inviteErrorMessage(error)),
+    onError: (error) => toast.error(inviteErrorMessage(error, t)),
   });
 
   if (!me) return null;
@@ -218,27 +212,25 @@ export function InvitationsScreen({ title }: { title: string }) {
     <div className="mx-auto grid max-w-4xl gap-6">
       <header>
         <h1 className="text-[length:var(--text-28)] font-semibold">{title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Invite people by email. They open the link, set their own password, and land in the right screen for their role.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t.intro}</p>
       </header>
 
       {noBrandsYet ? (
         <EmptyState
-          title="Create a brand first"
-          body="Every invitation belongs to a brand. Add the brand, then come back here and invite its brand admin."
+          title={t.createBrandTitle}
+          body={t.createBrandBody}
           action={
             <Link href="/app/brands" className="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">
-              Go to Brands
+              {common.goToBrands}
             </Link>
           }
         />
       ) : (
         <form onSubmit={onSubmit} className="grid gap-4 rounded-xl border bg-card p-4 shadow-elev-1">
-          <h2 className="text-[length:var(--text-20)] font-semibold">Send an invitation</h2>
+          <h2 className="text-[length:var(--text-20)] font-semibold">{t.sendTitle}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="invite-email">Email</Label>
+              <Label htmlFor="invite-email">{t.email}</Label>
               <Input
                 id="invite-email"
                 type="email"
@@ -247,11 +239,11 @@ export function InvitationsScreen({ title }: { title: string }) {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className="h-11"
-                placeholder="person@restaurant.com"
+                placeholder={t.emailPlaceholder}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="invite-role">Role</Label>
+              <Label htmlFor="invite-role">{t.role}</Label>
               <select id="invite-role" className={select} value={role} onChange={(event) => onRoleChange(event.target.value as UserRole)}>
                 {roles.map((item) => (
                   <option key={item} value={item}>
@@ -262,7 +254,7 @@ export function InvitationsScreen({ title }: { title: string }) {
             </div>
             {isSuper ? (
               <div className="grid gap-2">
-                <Label htmlFor="invite-brand">Brand</Label>
+                <Label htmlFor="invite-brand">{t.brand}</Label>
                 <select
                   id="invite-brand"
                   className={select}
@@ -273,7 +265,7 @@ export function InvitationsScreen({ title }: { title: string }) {
                     setBranchId("");
                   }}
                 >
-                  <option value="">{brands.isFetching ? "Loading brands…" : "Choose a brand"}</option>
+                  <option value="">{brands.isFetching ? t.loadingBrands : t.chooseBrand}</option>
                   {(brands.data ?? []).map((brand) => (
                     <option key={brand.id} value={brand.id}>
                       {brand.name}
@@ -284,10 +276,10 @@ export function InvitationsScreen({ title }: { title: string }) {
             ) : null}
             {branchScoped ? (
               <div className="grid gap-2">
-                <Label htmlFor="invite-branch">Branch</Label>
+                <Label htmlFor="invite-branch">{t.branch}</Label>
                 <select id="invite-branch" className={select} required value={branchId} onChange={(event) => setBranchId(event.target.value)}>
                   <option value="">
-                    {branchesLoading ? "Loading branches…" : branchOptions.length === 0 ? "No branches yet" : "Choose a branch"}
+                    {branchesLoading ? t.loadingBranches : branchOptions.length === 0 ? t.noBranchesYet : t.chooseBranch}
                   </option>
                   {branchOptions.map((branch) => (
                     <option key={branch.id} value={branch.id}>
@@ -297,59 +289,59 @@ export function InvitationsScreen({ title }: { title: string }) {
                 </select>
                 {isSuper && brandId && brandBranches.isSuccess && branchOptions.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    This brand has no branches.{" "}
+                    {t.noBranches}{" "}
                     <Link href={`/app/brands/${brandId}`} className="underline">
-                      Add one
+                      {common.addOne}
                     </Link>{" "}
-                    before inviting {roleLabel(role).toLowerCase()} staff.
+                    {fill(t.beforeInviting, { role: locale === "en" ? roleLabel(role).toLowerCase() : roleLabel(role) })}
                   </p>
                 ) : null}
               </div>
             ) : null}
             <div className="grid gap-2">
-              <Label htmlFor="invite-name">Full name (optional)</Label>
+              <Label htmlFor="invite-name">{t.fullName}</Label>
               <Input id="invite-name" autoComplete="off" value={fullName} onChange={(event) => setFullName(event.target.value)} className="h-11" />
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" className="min-h-11 px-5" disabled={!canSubmit}>
-              {create.isPending ? "Sending…" : "Send invite"}
+              {create.isPending ? t.sending : t.send}
             </Button>
-            <p className="text-xs text-muted-foreground">The link in the email expires after a few days. You can resend it from the list below.</p>
+            <p className="text-xs text-muted-foreground">{t.linkHint}</p>
           </div>
         </form>
       )}
 
       <section className="grid gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[length:var(--text-20)] font-semibold">Invitations</h2>
-          <div role="tablist" aria-label="Filter invitations" className="flex flex-wrap gap-1">
+          <h2 className="text-[length:var(--text-20)] font-semibold">{t.listTitle}</h2>
+          <div role="tablist" aria-label={t.filterAria} className="flex flex-wrap gap-1">
             {FILTERS.map((item) => {
-              const active = item.value === filter;
+              const active = item === filter;
               return (
                 <button
-                  key={item.value}
+                  key={item}
                   type="button"
                   role="tab"
                   aria-selected={active}
-                  onClick={() => setFilter(item.value)}
+                  onClick={() => setFilter(item)}
                   className={`min-h-9 rounded-full px-3 text-sm ${active ? "bg-secondary font-medium" : "hover:bg-muted"}`}
                 >
-                  {item.label}
+                  {t.filters[item]}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {invitations.isLoading ? <LoadingState label="Loading invitations" /> : null}
+        {invitations.isLoading ? <LoadingState label={t.loading} /> : null}
         {invitations.isError ? (
           <ErrorState body={invitations.error.message} onRetry={() => void invitations.refetch()} />
         ) : null}
         {invitations.isSuccess && invitations.data.length === 0 ? (
           <EmptyState
-            title={filter === "all" ? "No invitations yet" : `No ${filter} invitations`}
-            body={filter === "all" ? "People you invite show up here with their status." : "Change the filter to see other invitations."}
+            title={filter === "all" ? t.emptyAllTitle : fill(t.emptyFilteredTitle, { status: locale === "en" ? t.filters[filter].toLowerCase() : t.filters[filter] })}
+            body={filter === "all" ? t.emptyAllBody : t.emptyFilteredBody}
           />
         ) : null}
         {invitations.isSuccess && invitations.data.length > 0 ? (
@@ -359,23 +351,23 @@ export function InvitationsScreen({ title }: { title: string }) {
               const pending = invitation.status === "PENDING";
               const when =
                 invitation.status === "ACCEPTED"
-                  ? `Accepted ${formatDate(invitation.accepted_at)}`
+                  ? fill(t.acceptedWhen, { when: formatDate(invitation.accepted_at, locale) })
                   : invitation.status === "REVOKED"
-                    ? `Revoked ${formatDate(invitation.revoked_at)}`
-                    : `Expires ${formatDate(invitation.expires_at)}`;
+                    ? fill(t.revokedWhen, { when: formatDate(invitation.revoked_at, locale) })
+                    : fill(t.expiresWhen, { when: formatDate(invitation.expires_at, locale) });
               return (
                 <li key={invitation.id} className="grid gap-3 rounded-xl border bg-card p-4 shadow-elev-1 sm:grid-cols-[1fr_auto] sm:items-center">
                   <div className="grid gap-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium break-all">{invitation.email}</p>
-                      <StatusChip tone={STATUS_TONE[invitation.status]}>{STATUS_LABEL[invitation.status]}</StatusChip>
+                      <StatusChip tone={STATUS_TONE[invitation.status]}>{t.status[invitation.status]}</StatusChip>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {[invitation.full_name, roleLabel(invitation.role), scope].filter(Boolean).join(" · ")}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {when}
-                      {invitation.send_count > 1 ? ` · Sent ${invitation.send_count} times` : ""}
+                      {invitation.send_count > 1 ? fill(t.sentTimes, { count: invitation.send_count }) : ""}
                     </p>
                   </div>
                   {pending ? (
@@ -387,10 +379,10 @@ export function InvitationsScreen({ title }: { title: string }) {
                         disabled={resend.isPending && resend.variables?.id === invitation.id}
                         onClick={() => resend.mutate(invitation)}
                       >
-                        {resend.isPending && resend.variables?.id === invitation.id ? "Sending…" : "Resend"}
+                        {resend.isPending && resend.variables?.id === invitation.id ? t.sending : t.resend}
                       </Button>
                       <Button type="button" variant="destructive" className="min-h-11 px-4" onClick={() => setRevokeTarget(invitation)}>
-                        Revoke
+                        {t.revoke}
                       </Button>
                     </div>
                   ) : null}
@@ -404,9 +396,9 @@ export function InvitationsScreen({ title }: { title: string }) {
       <ConfirmDialog
         open={Boolean(revokeTarget)}
         onOpenChange={(open) => !open && setRevokeTarget(null)}
-        title="Revoke this invitation?"
-        description={`${revokeTarget?.email ?? "This person"} will no longer be able to use the link. You can send a new invitation later.`}
-        confirmLabel="Revoke"
+        title={t.revokeTitle}
+        description={fill(t.revokeBody, { who: revokeTarget?.email ?? t.thisPerson })}
+        confirmLabel={t.revoke}
         destructive
         pending={revoke.isPending}
         onConfirm={() => revokeTarget && revoke.mutate(revokeTarget)}

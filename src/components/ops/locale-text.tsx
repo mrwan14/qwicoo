@@ -1,11 +1,15 @@
+"use client";
+
+import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale, type LocaleCode } from "@/lib/i18n/locale-text";
 
 export function LocaleText({
   value,
-  locale = "en",
+  locale,
 }: {
   value: unknown;
   locale?: LocaleCode;
 }) {
-  return <>{pickLocale(value, locale)}</>;
+  const current = useLocale().locale;
+  return <>{pickLocale(value, locale ?? current)}</>;
 }

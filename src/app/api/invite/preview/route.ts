@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorDetail } from "@/lib/api/error";
-import { createApiClient } from "@/lib/api/server-client";
+import { createApiClient, requestLocale } from "@/lib/api/server-client";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +18,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await createApiClient().GET("/api/v1/invitations/preview", {
+    const locale = requestLocale(request);
+    const result = await createApiClient({ locale }).GET("/api/v1/invitations/preview", {
       params: { query: { token } },
     });
     if (!result.response.ok || !result.data) {
       const status = result.response.status || 502;
-      const detail = MESSAGES[status] ?? errorDetail(result.error, "Could not load this invitation.");
+      const detail = MESSAGES[status] ?? errorDetail(result.error, "Could not load this invitation.", locale);
       return NextResponse.json({ detail }, { status });
     }
     return NextResponse.json(result.data);

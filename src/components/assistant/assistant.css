@@ -1,0 +1,67 @@
+.asst-title {
+  font-family: var(--font-archivo), "Arial Black", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 15px;
+}
+
+[lang="ar"] .asst-title {
+  font-family: var(--font-plex-arabic), sans-serif;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+@keyframes asst-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes asst-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.asst-fade {
+  animation: asst-fade-in 150ms ease both;
+}
+
+.asst-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--amber);
+  animation: asst-dot 1.2s ease-in-out infinite;
+}
+
+.asst-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.asst-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.asst-bar {
+  height: 2px;
+  background: var(--sage);
+  transform-origin: inline-start;
+  animation: asst-fade-in 150ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asst-fade,
+  .asst-dot,
+  .asst-bar {
+    animation: none;
+  }
+}

@@ -3444,6 +3444,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assistant/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the Qwicoo admin assistant
+         * @description Read-only answers about the caller's own restaurants. The turn is logged without the provider key.
+         */
+        post: operations["admin_chat_api_v1_assistant_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/public/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the public Qwicoo assistant
+         * @description Answers from the public knowledge file only. No customer or tenant data is read.
+         */
+        post: operations["public_chat_api_v1_assistant_public_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/public/lead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave a partner enquiry
+         * @description Store a contact-form enquiry. The chat assistant never calls this.
+         */
+        post: operations["public_lead_api_v1_assistant_public_lead_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Assistant questions used this month
+         * @description Brand admins see their brand. A super admin can see every brand.
+         */
+        get: operations["assistant_usage_api_v1_assistant_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/partner-leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Partner enquiries
+         * @description Super admins can read contact-form submissions. The hashed IP stays in the database.
+         */
+        get: operations["list_partner_leads_api_v1_partner_leads_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audit/logs": {
         parameters: {
             query?: never;
@@ -3850,6 +3950,21 @@ export interface components {
             /** Lines */
             lines?: components["schemas"]["AdjustLine"][];
         };
+        /**
+         * AdminChatRequest
+         * @description Admin assistant question. ``branch_id`` cannot widen the caller's scope.
+         */
+        AdminChatRequest: {
+            /** Messages */
+            messages: components["schemas"]["AssistantMessage"][];
+            /**
+             * Locale
+             * @enum {string}
+             */
+            locale: "en" | "ar";
+            /** Branch Id */
+            branch_id?: string | null;
+        };
         /** ApproveOfflineOrderRequest */
         ApproveOfflineOrderRequest: {
             /** Note */
@@ -3869,6 +3984,73 @@ export interface components {
              * @example Grey car near the door
              */
             note?: string | null;
+        };
+        /**
+         * AssistantChart
+         * @description A bar or line chart copied from a tool result.
+         */
+        AssistantChart: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "bar" | "line";
+            /** Series */
+            series: components["schemas"]["ChartSeries"][];
+        };
+        /**
+         * AssistantChatResponse
+         * @description One assistant reply. Tables and charts are present only when a tool produced them.
+         */
+        AssistantChatResponse: {
+            /** Answer */
+            answer: string;
+            /** Tables */
+            tables?: components["schemas"]["AssistantTable"][] | null;
+            chart?: components["schemas"]["AssistantChart"] | null;
+            /** Sources */
+            sources: string[];
+            /** Refused */
+            refused: boolean;
+        };
+        /**
+         * AssistantMessage
+         * @description One turn the client already has. System messages are not accepted.
+         */
+        AssistantMessage: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /** Content */
+            content: string;
+        };
+        /**
+         * AssistantTable
+         * @description A table copied from a tool result, not invented by the model.
+         */
+        AssistantTable: {
+            /** Columns */
+            columns: string[];
+            /** Rows */
+            rows: string[][];
+        };
+        /**
+         * AssistantUsageResponse
+         * @description Monthly assistant usage. A brand admin only receives their own brand.
+         */
+        AssistantUsageResponse: {
+            /** Month */
+            month: string;
+            /** Limit */
+            limit: number;
+            /** Questions */
+            questions: number;
+            /** Refused */
+            refused: number;
+            /** Brands */
+            brands: components["schemas"]["UsageBrandTotal"][];
         };
         /**
          * AttendanceInfo
@@ -5445,6 +5627,20 @@ export interface components {
              * @example MousaCafe2
              */
             new_password: string;
+        };
+        /** ChartPoint */
+        ChartPoint: {
+            /** X */
+            x: string;
+            /** Y */
+            y: string;
+        };
+        /** ChartSeries */
+        ChartSeries: {
+            /** Name */
+            name: string;
+            /** Points */
+            points: components["schemas"]["ChartPoint"][];
         };
         /**
          * CheckInRequest
@@ -9923,6 +10119,79 @@ export interface components {
              */
             customer_notes?: string | null;
         };
+        /**
+         * PartnerLeadItem
+         * @description One stored enquiry. The hashed IP is not returned.
+         */
+        PartnerLeadItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Restaurant Name */
+            restaurant_name: string;
+            /** Phone Or Email */
+            phone_or_email: string;
+            /** City */
+            city: string;
+            /** Branches Count */
+            branches_count: number;
+            /** Message */
+            message: string;
+            /** Locale */
+            locale: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** PartnerLeadListResponse */
+        PartnerLeadListResponse: {
+            /** Items */
+            items: components["schemas"]["PartnerLeadItem"][];
+        };
+        /**
+         * PartnerLeadRequest
+         * @description Contact form. The assistant itself never submits this.
+         */
+        PartnerLeadRequest: {
+            /** Name */
+            name: string;
+            /** Restaurant Name */
+            restaurant_name: string;
+            /** Phone Or Email */
+            phone_or_email: string;
+            /** City */
+            city: string;
+            /** Branches Count */
+            branches_count: number;
+            /**
+             * Message
+             * @default
+             */
+            message: string;
+            /**
+             * Locale
+             * @default en
+             * @enum {string}
+             */
+            locale: "en" | "ar";
+        };
+        /**
+         * PartnerLeadResponse
+         * @description The form was stored. The reply does not echo the details.
+         */
+        PartnerLeadResponse: {
+            /**
+             * Received
+             * @default true
+             */
+            received: boolean;
+        };
         /** PayCashAction */
         PayCashAction: {
             /**
@@ -10689,6 +10958,19 @@ export interface components {
              * @description Localized sentence, for example You saved 10.00 EGP.
              */
             message: string;
+        };
+        /**
+         * PublicChatRequest
+         * @description Public website question. Only the latest turns are kept.
+         */
+        PublicChatRequest: {
+            /** Messages */
+            messages: components["schemas"]["AssistantMessage"][];
+            /**
+             * Locale
+             * @enum {string}
+             */
+            locale: "en" | "ar";
         };
         /**
          * QRExportFormat
@@ -12500,6 +12782,21 @@ export interface components {
         UpdateServiceRequestStatus: {
             /** @description Target lifecycle status (ACKNOWLEDGED, COMPLETED, DISMISSED) */
             status: components["schemas"]["ServiceRequestStatus"];
+        };
+        /**
+         * UsageBrandTotal
+         * @description Questions asked for one brand in the current Cairo month.
+         */
+        UsageBrandTotal: {
+            /**
+             * Brand Id
+             * Format: uuid
+             */
+            brand_id: string;
+            /** Questions */
+            questions: number;
+            /** Refused */
+            refused: number;
         };
         /**
          * UserResponse
@@ -25683,6 +25980,384 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_chat_api_v1_assistant_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantChatResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: ASSISTANT_LIMIT_REACHED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ASSISTANT_LIMIT_REACHED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: ASSISTANT_DISABLED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ASSISTANT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    public_chat_api_v1_assistant_public_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantChatResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: ASSISTANT_LIMIT_REACHED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ASSISTANT_LIMIT_REACHED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: ASSISTANT_DISABLED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ASSISTANT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    public_lead_api_v1_assistant_public_lead_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerLeadResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: ASSISTANT_LIMIT_REACHED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ASSISTANT_LIMIT_REACHED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    assistant_usage_api_v1_assistant_usage_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantUsageResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_partner_leads_api_v1_partner_leads_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerLeadListResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

@@ -7,6 +7,8 @@ import { toast } from "sonner";
 
 import { fetchPushKey, pushSupport, registerStaffServiceWorker, removePushSubscription, syncPushSubscription, type PushSupport } from "@/lib/push/web-push";
 import { useScope } from "@/stores/scope";
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useWorkspace } from "@/stores/workspace";
 
 import { useAlertPreferences } from "./preferences";
@@ -51,6 +53,7 @@ export function StaffPushRuntime() {
 
 /** Header control. Permission is only requested from this tap. Hidden when the server has no push or the role gets no alerts. */
 export function NotificationsControl() {
+  const t = useStaffSection(commonCopy);
   const { active } = useAlertPreferences();
   const support = useSupport();
   const key = usePushKey(active);
@@ -67,10 +70,10 @@ export function NotificationsControl() {
       <button
         type="button"
         className={`${chip} text-muted-foreground`}
-        onClick={() => toast("Add Qwicoo to your Home Screen", { description: "On iPhone and iPad, notifications work once Qwicoo is opened from the Home Screen. Tap Share, then Add to Home Screen." })}
+        onClick={() => toast(t.addHome, { description: t.addHomeBody })}
       >
         <Smartphone className="size-4" aria-hidden />
-        <span className="hidden md:inline">Notifications</span>
+        <span className="hidden md:inline">{t.notifications}</span>
       </button>
     );
   }
@@ -85,25 +88,25 @@ export function NotificationsControl() {
       if (on) {
         await removePushSubscription();
         setPushEnabled(false);
-        toast("Notifications off on this device");
+        toast(t.notificationsOff);
         return;
       }
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        toast("Notifications are blocked", { description: "Allow notifications for Qwicoo in your browser settings, then try again." });
+        toast(t.notificationsBlocked, { description: t.notificationsBlockedBody });
         return;
       }
       if (!branchId) {
-        toast("Choose a branch first");
+        toast(t.chooseBranchFirst);
         return;
       }
       const ok = await syncPushSubscription({ branchId, orderAlertsOptIn: adminOptIn });
       if (!ok) {
-        toast.error("Couldn't turn notifications on. Try again.");
+        toast.error(t.notificationsFailed);
         return;
       }
       setPushEnabled(true);
-      toast.success("Notifications on", { description: "You'll get order alerts on this device when Qwicoo is in the background." });
+      toast.success(t.notificationsOn, { description: t.notificationsOnBody });
     } finally {
       setBusy(false);
     }
@@ -115,12 +118,12 @@ export function NotificationsControl() {
       className={`${chip} ${on ? "text-primary" : ""}`}
       aria-pressed={on}
       disabled={busy}
-      title={denied ? "Notifications are blocked in your browser settings" : undefined}
+      title={denied ? t.notificationsBlockedTitle : undefined}
       onClick={() => void toggle()}
     >
       <BellRing className="size-4" aria-hidden />
-      <span className="hidden md:inline">{on ? "Notifications on" : "Enable notifications"}</span>
-      <span className="sr-only md:hidden">{on ? "Notifications on" : "Enable notifications"}</span>
+      <span className="hidden md:inline">{on ? t.notificationsOn : t.enableNotifications}</span>
+      <span className="sr-only md:hidden">{on ? t.notificationsOn : t.enableNotifications}</span>
     </button>
   );
 }

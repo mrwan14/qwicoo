@@ -227,12 +227,14 @@ export function TrackScreen() {
   const status = activeOrder.status;
   const pending = status === "PENDING_STAFF_CONFIRMATION" || status === "DRAFT";
   const rejected = status === "CANCELLED";
-  const finished = status === "CLOSED" || status === "DELIVERED";
+  const handedOver = status === "DELIVERED" || status === "SERVED";
   const paid = activeOrder.is_paid || status === "PAID" || status === "CLOSED";
+  const payAtCounter = handedOver && !paid;
+  const finished = status === "CLOSED" || (handedOver && paid);
   const cashRequested = !paid && (cashRequestedOrderId === activeOrder.id || notice === t.paymentRequested);
-  const canPay = PAYABLE_STATUSES.has(status) && !paid && !cashRequested && !finished;
+  const canPay = PAYABLE_STATUSES.has(status) && !paid && !cashRequested && !finished && !payAtCounter;
   const current = stepIndex(status);
-  const showKitchen = !rejected && !pending && !finished;
+  const showKitchen = !rejected && !pending && !finished && !payAtCounter;
   const reference =
     activeOrder.display_number?.trim() ||
     (activeOrder.pickup_number != null ? `#${activeOrder.pickup_number}` : null) ||
@@ -260,6 +262,13 @@ export function TrackScreen() {
         </div>
       ) : finished ? (
         <p className="text-[length:var(--text-20)] font-medium">{t.enjoyMeal}</p>
+      ) : payAtCounter ? (
+        <div className="grid gap-2">
+          <p className="text-[length:var(--text-20)] font-medium">
+            {t.amountDue} <Money amount={activeOrder.total_amount} locale={locale} />
+          </p>
+          <p className="text-sm text-muted-foreground">{t.payAtCounter}</p>
+        </div>
       ) : (
         <p className="text-[length:var(--text-20)] font-medium">{guestStatus[locale][status === "PAID" ? "DELIVERED" : status]}</p>
       )}
@@ -301,7 +310,7 @@ export function TrackScreen() {
           {t.handover}: {handover.data.token}
         </p>
       ) : null}
-      {rejected || finished ? null : paid ? (
+      {rejected || finished || payAtCounter ? null : paid ? (
         <p role="status" className="rounded-xl bg-secondary px-4 py-3 text-sm font-medium">
           {t.paid}
         </p>
@@ -319,7 +328,7 @@ export function TrackScreen() {
           {t.orderElse}
         </Link>
       ) : null}
-      {rejected || finished ? null : (
+      {rejected || finished || payAtCounter ? null : (
         <div className="grid gap-2">
           {canPay ? (
             <>

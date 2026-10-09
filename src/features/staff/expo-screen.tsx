@@ -38,7 +38,8 @@ function paymentDueBeforeHandover(error: unknown): string | null {
     root.detail && typeof root.detail === "object"
       ? (root.detail as { code?: unknown; amount_due?: unknown; currency?: unknown })
       : null;
-  if (root.code !== "PAYMENT_REQUIRED_BEFORE_HANDOVER" && detail?.code !== "PAYMENT_REQUIRED_BEFORE_HANDOVER") return null;
+  const code = typeof root.code === "string" ? root.code : typeof detail?.code === "string" ? detail.code : "";
+  if (code !== "PAYMENT_REQUIRED" && code !== "PAYMENT_REQUIRED_BEFORE_HANDOVER") return null;
   if (typeof detail?.amount_due !== "string" || !detail.amount_due) return "";
   const currency = typeof detail.currency === "string" && detail.currency ? detail.currency : "EGP";
   return formatMoney(detail.amount_due, currency);
@@ -160,7 +161,7 @@ export function ExpoScreen() {
   const verify = useMutation({
     mutationFn: async () => {
       const result = await browserApi.POST("/api/v1/orders/handover/verify", {
-        body: { token, branch_id: branchId },
+        body: { token, branch_id: branchId, collect_cash: false },
       });
       if (!result.response.ok) {
         const due = paymentDueBeforeHandover(result.error);
@@ -223,6 +224,7 @@ export function ExpoScreen() {
           <tbody>
         {cards.map(({ order, number, lines }) => {
           const ready = order.status === "READY";
+          const unpaid = ready && !order.is_paid;
           const handingOver = handOver.isPending && handOver.variables === order.order_id;
           const bumping = bump.isPending && bump.variables === order.order_id;
           const savingNote = saveNotes.isPending && saveNotes.variables === order.order_id;
@@ -324,7 +326,9 @@ export function ExpoScreen() {
               )}
               </td>
               <td className="px-4 py-4">
-              {ready ? (
+              {unpaid ? (
+                <p className="max-w-48 text-sm text-muted-foreground">Payment is still due at the counter.</p>
+              ) : ready ? (
                 <button
                     type="button"
                     className="min-h-11 rounded-xl bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"

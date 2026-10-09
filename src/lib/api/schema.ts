@@ -104,6 +104,910 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a customer account
+         * @description Public. Creates a customer for the restaurant configured on the server (MOBILE_BRAND_SLUG) and signs them in. The password is stored with Argon2id. terms_accepted must be true; the accepted terms version is recorded. Email is unique per restaurant, compared case-insensitively. Rate limit: 5 requests per 60 seconds per IP. Side effects: a session, a refresh token, and a CUSTOMER_REGISTERED audit row.
+         */
+        post: operations["register_api_v1_mobile_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in
+         * @description Public. Checks the email and password for the configured restaurant only. Unknown emails take the same time as a wrong password. Five failures lock the account for 15 minutes (429 ACCOUNT_TEMPORARILY_LOCKED, with retry_after_seconds). A disabled account is 403. remember_me false keeps the refresh token for 24 hours; true keeps it for 30 days. The session cannot be extended past 90 days. Rate limit: 10 requests per 60 seconds per IP. Side effects: a new session and refresh token, last_login_at, and a login audit row. The account is never marked as a staff user.
+         */
+        post: operations["login_api_v1_mobile_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate the refresh token
+         * @description Public. Presents the opaque refresh token. The row is locked, marked used, and replaced with a new refresh token in the same session. The session expiry slides forward by the original lifetime, but never past the 90-day absolute cap. Reusing a rotated token within 10 seconds returns REFRESH_TOKEN_ALREADY_ROTATED and does not sign the device out (two refreshes in flight). Reusing it later revokes the whole session (refresh_reuse) and returns REFRESH_TOKEN_REUSED. Rate limit: 30 requests per 60 seconds per IP.
+         */
+        post: operations["refresh_api_v1_mobile_auth_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out this device
+         * @description CustomerBearer. Revokes the session named by the access token, which invalidates that access token immediately and every refresh token on the session. The optional refresh_token body is accepted and ignored. An optional fcm_token revokes that device for this customer so it stops receiving pushes. An unknown token, or a token that belongs to someone else, is ignored. Repeating the call with the same access token, while it is still unexpired, returns 204. No rate limit beyond the access token itself. Side effect: CUSTOMER_LOGOUT audit row when the session was still active, and revoked_at on the device when fcm_token belongs to this customer.
+         */
+        post: operations["logout_api_v1_mobile_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email a password reset link
+         * @description Public. Always returns the same 202 message, whether or not the email exists. For an active customer of this restaurant, previous unused reset links are invalidated and a new link is emailed to MOBILE_PASSWORD_RESET_URL with ?token= appended. The app reads that link on the device and posts the token; the token is not sent as a query parameter. The link is in the customer's language. If email delivery is not configured in development or test, the link is logged with a DEV ONLY prefix and the token is kept. If delivery fails otherwise, the token is not kept. Rate limit: 5 requests per 60 seconds per IP.
+         */
+        post: operations["forgot_password_api_v1_mobile_auth_forgot_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/reset-password/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a reset link
+         * @description Public. The app reads the emailed deep link on the device and posts the token in the JSON body, so the live token is not written to access logs. Returns a masked email and the expiry so the app can show the reset screen. Unknown or already-used links are 404. Expired links are 410. The link is not consumed. Rate limit: 20 requests per 60 seconds per IP.
+         */
+        post: operations["preview_reset_password_api_v1_mobile_auth_reset_password_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a new password from a reset link
+         * @description Public. Consumes a single-use token, sets the password, clears a lockout, and revokes every session so the app can sign in fresh. Unknown or used links are 404. Expired links are 410. A weak password is 422. Rate limit: 10 requests per 60 seconds per IP. Side effect: CUSTOMER_PASSWORD_RESET audit row.
+         */
+        post: operations["reset_password_api_v1_mobile_auth_reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change the password
+         * @description CustomerBearer. Checks the current password, stores the new one, and revokes every other session. This device stays signed in. A wrong current password is 401 INVALID_CREDENTIALS. A weak new password is 422. Rate limit: 5 requests per 60 seconds per IP.
+         */
+        post: operations["change_password_api_v1_mobile_auth_change_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/branches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List branches for the app
+         * @description Public. No sign-in. The restaurant is the one configured on the server, not a value from the app. A branch is listed only when it belongs to that restaurant, is active, and has mobile ordering turned on. Anything else, including a branch of another restaurant, is 404 BRANCH_NOT_FOUND. fulfillment_options lists drive_thru and curbside only for the channels that branch has turned on, and is empty when the restaurant's drive-thru feature is off. opening_hours null means hours are not configured, so is_open_now is null and ordering is still allowed. A close time earlier than open means the shift ends after midnight. Rate limit: 60 requests per 60 seconds per IP. Sorted by distance when lat and lng are both sent, otherwise by name. lat and lng must be sent together and in range, otherwise 422. distance_km is null when coordinates are omitted. Pass fulfillment=drive_thru or fulfillment=curbside to keep only branches that offer that channel.
+         */
+        get: operations["list_branches_api_v1_mobile_branches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/branches/{branch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get one branch for the app
+         * @description Public. No sign-in. The restaurant is the one configured on the server, not a value from the app. A branch is listed only when it belongs to that restaurant, is active, and has mobile ordering turned on. Anything else, including a branch of another restaurant, is 404 BRANCH_NOT_FOUND. fulfillment_options lists drive_thru and curbside only for the channels that branch has turned on, and is empty when the restaurant's drive-thru feature is off. opening_hours null means hours are not configured, so is_open_now is null and ordering is still allowed. A close time earlier than open means the shift ends after midnight. Rate limit: 60 requests per 60 seconds per IP. distance_km is null on this route.
+         */
+        get: operations["get_branch_api_v1_mobile_branches__branch_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/branches/{branch_id}/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a branch menu for the app
+         * @description Public. No sign-in. Same visibility rule as the branch list. Items follow the branch menu: active item, active category, not deleted, visible at the branch, and either offered at every branch or given a branch override. price is the branch price. Sold-out items stay in the list with is_available false. Size, Milk, and Sweetness are modifier groups on the item. Names follow Accept-Language. The response does not include scope, has_override, price_override, is_visible, base_price, or access_pin. Cache-Control: public, max-age=60. Rate limit: 60 requests per 60 seconds per IP.
+         */
+        get: operations["get_catalog_api_v1_mobile_branches__branch_id__catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/notifications/fcm-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register this device for pushes
+         * @description CustomerBearer. Saves this device's Firebase Cloud Messaging token for the signed-in customer. device_os is ios or android. app_version and locale are optional. If the token was registered to another customer, it moves to this customer. A revoked token becomes active again, and last_seen_at is updated. A customer can keep 10 active devices; registering an 11th revokes the oldest. Side effect: a customer_devices row is inserted or updated.
+         */
+        post: operations["register_fcm_token_api_v1_mobile_notifications_fcm_token_post"];
+        /**
+         * Stop pushes to this device
+         * @description CustomerBearer. Revokes this customer's copy of the token so it stops receiving pushes. A token that is unknown, already revoked, or belongs to someone else still returns 204 and does not change that other customer's device. Side effect: sets revoked_at when the token belongs to this customer.
+         */
+        delete: operations["revoke_fcm_token_api_v1_mobile_notifications_fcm_token_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/orders/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Price a cart without placing it
+         * @description CustomerBearer. Same checks as checkout, and it does not write anything. Use it on the cart screen to show totals. The branch must be visible in the app. The pickup option must be turned on at the branch and the restaurant's drive-thru feature must be on. When the branch has opening hours, it must be open; a closed branch is 409 BRANCH_CLOSED and includes next_open_at. The vehicle must belong to this customer. A customer can have at most 3 orders that are placed, preparing, or ready. source cart prices items (1 to 30 lines, quantity 1 to 20). source my_usual ignores items and prices the saved usual, which must be for this branch, otherwise 409 MY_USUAL_NOT_AVAILABLE. Item and modifier errors use the same codes as adding an item. The example is a latte with Size Large (+3.00) and Oat milk (+2.00) on a 40.00 branch price. Optional promo_code is priced by the server. The discount comes off the item subtotal before tax, and tax is computed on the discounted subtotal. An unusable code does not fail the quote: warnings contains the reason code (PROMO_CODE_NOT_FOUND, PROMO_CODE_EXPIRED, PROMO_CODE_MIN_ORDER_NOT_MET, and the other promo codes) and discount_total stays 0.00. A usable code sets pricing.promo_code and pricing.discount_total. payment_options lists cash and demo_wallet. When MOBILE_DEMO_WALLET_ENABLED is off, demo_wallet is unavailable with reason PAYMENT_METHOD_UNAVAILABLE. Asking to quote a demo_wallet payment while the flag is off is 409 PAYMENT_METHOD_UNAVAILABLE, the same as placing the order. Customer status (never the internal kitchen status):
+         *
+         *     | What you see | When |
+         *     | --- | --- |
+         *     | placed | The order is in, including while it waits to be started. |
+         *     | preparing | The kitchen is making it. |
+         *     | ready | It is ready for pickup. |
+         *     | completed | It has been collected. |
+         *     | cancelled | It was cancelled. |
+         *
+         *     Internal statuses map like this: DRAFT, PENDING_STAFF_CONFIRMATION, and SUBMITTED are placed; PREPARING is preparing; READY is ready; DELIVERED, SERVED, PAID, and CLOSED are completed; CANCELLED is cancelled.
+         *
+         *     Payment status: a payment waiting for the cashier, including one still pending, is due_at_pickup; a settled payment is paid; a returned payment is refunded; a failed payment is void.
+         *
+         *     Fulfillment: drive_thru is the drive-thru lane, curbside is curbside pickup.
+         *
+         *     Labels follow Accept-Language. For example, placed is "Order placed" in English and "تم استلام طلبك" in Arabic; preparing is "Being prepared" / "قيد التحضير"; ready is "Ready for pickup" / "جاهز للاستلام"; completed is "Collected" / "تم الاستلام"; cancelled is "Cancelled" / "تم الإلغاء".
+         */
+        post: operations["quote_api_v1_mobile_orders_quote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my orders
+         * @description CustomerBearer. Newest first. Only this customer's orders at this restaurant. scope=active is placed, preparing, and ready. scope=past is collected and cancelled. scope=all is both. limit defaults to 20 and cannot exceed 50. Pass next_cursor back as cursor to read the next page. The cursor is opaque. A cursor this server did not issue is 422 INVALID_CURSOR. Customer status (never the internal kitchen status):
+         *
+         *     | What you see | When |
+         *     | --- | --- |
+         *     | placed | The order is in, including while it waits to be started. |
+         *     | preparing | The kitchen is making it. |
+         *     | ready | It is ready for pickup. |
+         *     | completed | It has been collected. |
+         *     | cancelled | It was cancelled. |
+         *
+         *     Internal statuses map like this: DRAFT, PENDING_STAFF_CONFIRMATION, and SUBMITTED are placed; PREPARING is preparing; READY is ready; DELIVERED, SERVED, PAID, and CLOSED are completed; CANCELLED is cancelled.
+         *
+         *     Payment status: a payment waiting for the cashier, including one still pending, is due_at_pickup; a settled payment is paid; a returned payment is refunded; a failed payment is void.
+         *
+         *     Fulfillment: drive_thru is the drive-thru lane, curbside is curbside pickup.
+         *
+         *     Labels follow Accept-Language. For example, placed is "Order placed" in English and "تم استلام طلبك" in Arabic; preparing is "Being prepared" / "قيد التحضير"; ready is "Ready for pickup" / "جاهز للاستلام"; completed is "Collected" / "تم الاستلام"; cancelled is "Cancelled" / "تم الإلغاء".
+         */
+        get: operations["list_my_orders_api_v1_mobile_orders_get"];
+        put?: never;
+        /**
+         * Place an order for pickup
+         * @description CustomerBearer. Places an order for pickup. payment_method cash waits for the cashier. payment_method demo_wallet spends DEMO credit only when MOBILE_DEMO_WALLET_ENABLED is on. Keep that flag off in production. There is no real top-up gateway. A demo wallet payment is recorded as LOCAL_WALLET with a DEMO-WALLET- reference, and the order is marked paid only after that server-side ledger debit. When the flag is off, demo_wallet is 409 PAYMENT_METHOD_UNAVAILABLE. A short balance is 409 INSUFFICIENT_WALLET_BALANCE and includes balance, total, and currency. The server never marks the order paid from anything in this request. Optional promo_code is evaluated again inside this transaction with a row lock. An invalid code is 404 or 409 and the order is not created. The discount is taken from the item subtotal before tax. Order.subtotal stays the item subtotal. total_amount is subtotal - discount + service fee + tax, with tax on the discounted subtotal. pricing.discount_total and pricing.promo_code echo what was stored. A cash payment is left waiting for the cashier, so it shows on the cashier pending list. The order is sent to the branch kitchen and runners the same way a drive-thru order is, including a pickup number and a vehicle snapshot. The pickup QR is created now. Only this customer can read it. Handing the order over still requires it to be ready and paid, which the staff scan enforces. Checks run in this order: branch visible in the app (404 BRANCH_NOT_FOUND); pickup option enabled at the branch and the drive-thru feature on (409 FULFILLMENT_NOT_AVAILABLE); branch open when hours are configured (409 BRANCH_CLOSED, with next_open_at); vehicle owned and not deleted (404 VEHICLE_NOT_FOUND); fewer than 3 orders that are placed, preparing, or ready (409 TOO_MANY_ACTIVE_ORDERS); then the items are priced. source my_usual uses the saved usual for this same branch, otherwise 409 MY_USUAL_NOT_AVAILABLE. Optional Idempotency-Key (at most 64 characters): the same customer, key, and body within 24 hours returns the original order with 200 and does not create another. After 24 hours that key still belongs to the original order. The same key with a different body is 409 IDEMPOTENCY_KEY_REUSED. A retail-only order can already be ready when this response returns, because those items do not need the kitchen. Rate limit: 10 requests per 60 seconds. The example is a latte with Size Large (+3.00) and Oat milk (+2.00). Customer status (never the internal kitchen status):
+         *
+         *     | What you see | When |
+         *     | --- | --- |
+         *     | placed | The order is in, including while it waits to be started. |
+         *     | preparing | The kitchen is making it. |
+         *     | ready | It is ready for pickup. |
+         *     | completed | It has been collected. |
+         *     | cancelled | It was cancelled. |
+         *
+         *     Internal statuses map like this: DRAFT, PENDING_STAFF_CONFIRMATION, and SUBMITTED are placed; PREPARING is preparing; READY is ready; DELIVERED, SERVED, PAID, and CLOSED are completed; CANCELLED is cancelled.
+         *
+         *     Payment status: a payment waiting for the cashier, including one still pending, is due_at_pickup; a settled payment is paid; a returned payment is refunded; a failed payment is void.
+         *
+         *     Fulfillment: drive_thru is the drive-thru lane, curbside is curbside pickup.
+         *
+         *     Labels follow Accept-Language. For example, placed is "Order placed" in English and "تم استلام طلبك" in Arabic; preparing is "Being prepared" / "قيد التحضير"; ready is "Ready for pickup" / "جاهز للاستلام"; completed is "Collected" / "تم الاستلام"; cancelled is "Cancelled" / "تم الإلغاء".
+         */
+        post: operations["checkout_api_v1_mobile_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/orders/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List orders still in progress
+         * @description CustomerBearer. Orders that are placed, being prepared, or ready for pickup, newest first. Collected and cancelled orders are left out. Poll this, or poll one order, every 10–15 seconds while the customer is waiting if the realtime socket is down. The socket is documented on GET /mobile/orders/{order_id}. Customer status (never the internal kitchen status):
+         *
+         *     | What you see | When |
+         *     | --- | --- |
+         *     | placed | The order is in, including while it waits to be started. |
+         *     | preparing | The kitchen is making it. |
+         *     | ready | It is ready for pickup. |
+         *     | completed | It has been collected. |
+         *     | cancelled | It was cancelled. |
+         *
+         *     Internal statuses map like this: DRAFT, PENDING_STAFF_CONFIRMATION, and SUBMITTED are placed; PREPARING is preparing; READY is ready; DELIVERED, SERVED, PAID, and CLOSED are completed; CANCELLED is cancelled.
+         *
+         *     Payment status: a payment waiting for the cashier, including one still pending, is due_at_pickup; a settled payment is paid; a returned payment is refunded; a failed payment is void.
+         *
+         *     Fulfillment: drive_thru is the drive-thru lane, curbside is curbside pickup.
+         *
+         *     Labels follow Accept-Language. For example, placed is "Order placed" in English and "تم استلام طلبك" in Arabic; preparing is "Being prepared" / "قيد التحضير"; ready is "Ready for pickup" / "جاهز للاستلام"; completed is "Collected" / "تم الاستلام"; cancelled is "Cancelled" / "تم الإلغاء".
+         */
+        get: operations["list_active_api_v1_mobile_orders_active_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/orders/{order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get one of my orders
+         * @description CustomerBearer. One order that belongs to this customer. An order that belongs to someone else, or that does not exist, is 404 ORDER_NOT_FOUND. Cache-Control is no-store. Send the ETag back as If-None-Match to get 304 when nothing changed. The ETag changes when the status or the order's update time changes. Poll every 10–15 seconds while the order is placed, preparing, or ready if the socket is down. Live updates: connect to wss://<host>/api/v1/ws?token=<customer access token>. The CONNECTED frame lists exactly one channel, customer_<your id>. You never receive branch channels. Events are ORDER_STATUS_CHANGED, and also ORDER_READY, ORDER_COMPLETED, or ORDER_CANCELLED when the order reaches that point. Each event carries order_id, display_number, status (placed, preparing, ready, completed, or cancelled), status_label in the language saved on the profile, previous_status, and updated_at. ORDER_CANCELLED also carries cancelled_by, either staff or customer. Reconnect with backoff, and fall back to polling this order. Customer status (never the internal kitchen status):
+         *
+         *     | What you see | When |
+         *     | --- | --- |
+         *     | placed | The order is in, including while it waits to be started. |
+         *     | preparing | The kitchen is making it. |
+         *     | ready | It is ready for pickup. |
+         *     | completed | It has been collected. |
+         *     | cancelled | It was cancelled. |
+         *
+         *     Internal statuses map like this: DRAFT, PENDING_STAFF_CONFIRMATION, and SUBMITTED are placed; PREPARING is preparing; READY is ready; DELIVERED, SERVED, PAID, and CLOSED are completed; CANCELLED is cancelled.
+         *
+         *     Payment status: a payment waiting for the cashier, including one still pending, is due_at_pickup; a settled payment is paid; a returned payment is refunded; a failed payment is void.
+         *
+         *     Fulfillment: drive_thru is the drive-thru lane, curbside is curbside pickup.
+         *
+         *     Labels follow Accept-Language. For example, placed is "Order placed" in English and "تم استلام طلبك" in Arabic; preparing is "Being prepared" / "قيد التحضير"; ready is "Ready for pickup" / "جاهز للاستلام"; completed is "Collected" / "تم الاستلام"; cancelled is "Cancelled" / "تم الإلغاء".
+         */
+        get: operations["read_order_api_v1_mobile_orders__order_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/orders/{order_id}/pickup-pass": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the pickup QR
+         * @description CustomerBearer. The QR for this customer's order. The image should encode qr_payload. Staff scan it at the window. Handover is only possible once the order is ready, and once it is paid. A collected order, or a pass that was already used, is 410 ORDER_ALREADY_COLLECTED. A cancelled order is 410 ORDER_CANCELLED. If the order is still active and the pass has expired, this replaces it and returns the new one. The previous QR stops working. If an active order has no pass yet, this creates one. Someone else's order is 404 ORDER_NOT_FOUND. Cache-Control is no-store. Do not cache the QR. Customer status (never the internal kitchen status):
+         *
+         *     | What you see | When |
+         *     | --- | --- |
+         *     | placed | The order is in, including while it waits to be started. |
+         *     | preparing | The kitchen is making it. |
+         *     | ready | It is ready for pickup. |
+         *     | completed | It has been collected. |
+         *     | cancelled | It was cancelled. |
+         *
+         *     Internal statuses map like this: DRAFT, PENDING_STAFF_CONFIRMATION, and SUBMITTED are placed; PREPARING is preparing; READY is ready; DELIVERED, SERVED, PAID, and CLOSED are completed; CANCELLED is cancelled.
+         *
+         *     Payment status: a payment waiting for the cashier, including one still pending, is due_at_pickup; a settled payment is paid; a returned payment is refunded; a failed payment is void.
+         *
+         *     Fulfillment: drive_thru is the drive-thru lane, curbside is curbside pickup.
+         *
+         *     Labels follow Accept-Language. For example, placed is "Order placed" in English and "تم استلام طلبك" in Arabic; preparing is "Being prepared" / "قيد التحضير"; ready is "Ready for pickup" / "جاهز للاستلام"; completed is "Collected" / "تم الاستلام"; cancelled is "Cancelled" / "تم الإلغاء".
+         */
+        get: operations["read_pickup_pass_api_v1_mobile_orders__order_id__pickup_pass_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/orders/{order_id}/arrived": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tell the branch I have arrived
+         * @description CustomerBearer. The customer is at the branch. There are no bays and no camera. Sets arrived_at the first time. A later call keeps that time, and may update note (at most 120 characters, for example "Grey car near the door"). Within 60 seconds of the first arrival the call returns 200 and does not notify staff again. Allowed while the order is placed, preparing, or ready. A collected or cancelled order is 409 ORDER_NOT_ACTIVE. Someone else's order is 404 ORDER_NOT_FOUND. Limited to 6 calls per minute. After the first arrival, the kitchen, runners, and cashier screens receive CUSTOMER_ARRIVED with the order, the customer's first name, the vehicle, and whether it is paid. Customer status (never the internal kitchen status):
+         *
+         *     | What you see | When |
+         *     | --- | --- |
+         *     | placed | The order is in, including while it waits to be started. |
+         *     | preparing | The kitchen is making it. |
+         *     | ready | It is ready for pickup. |
+         *     | completed | It has been collected. |
+         *     | cancelled | It was cancelled. |
+         *
+         *     Internal statuses map like this: DRAFT, PENDING_STAFF_CONFIRMATION, and SUBMITTED are placed; PREPARING is preparing; READY is ready; DELIVERED, SERVED, PAID, and CLOSED are completed; CANCELLED is cancelled.
+         *
+         *     Payment status: a payment waiting for the cashier, including one still pending, is due_at_pickup; a settled payment is paid; a returned payment is refunded; a failed payment is void.
+         *
+         *     Fulfillment: drive_thru is the drive-thru lane, curbside is curbside pickup.
+         *
+         *     Labels follow Accept-Language. For example, placed is "Order placed" in English and "تم استلام طلبك" in Arabic; preparing is "Being prepared" / "قيد التحضير"; ready is "Ready for pickup" / "جاهز للاستلام"; completed is "Collected" / "تم الاستلام"; cancelled is "Cancelled" / "تم الإلغاء".
+         */
+        post: operations["arrived_api_v1_mobile_orders__order_id__arrived_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/orders/{order_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel an order that has not been started
+         * @description CustomerBearer. Cancels this customer's order only while it is still just placed and the kitchen has not started it. Once it is being prepared or ready, this is 409 ORDER_CANNOT_BE_CANCELLED: the order can't be cancelled in the app, and the customer should speak to the staff at pickup. The row is locked while this runs, so a kitchen bump and a cancel cannot both win. A waiting cash payment is voided. A payment that was already taken is marked refunded. The pickup QR is expired so it cannot be scanned. The kitchen and runners are told the order was cancelled by the customer. Someone else's order is 404 ORDER_NOT_FOUND. reason is optional and at most 200 characters. Customer status (never the internal kitchen status):
+         *
+         *     | What you see | When |
+         *     | --- | --- |
+         *     | placed | The order is in, including while it waits to be started. |
+         *     | preparing | The kitchen is making it. |
+         *     | ready | It is ready for pickup. |
+         *     | completed | It has been collected. |
+         *     | cancelled | It was cancelled. |
+         *
+         *     Internal statuses map like this: DRAFT, PENDING_STAFF_CONFIRMATION, and SUBMITTED are placed; PREPARING is preparing; READY is ready; DELIVERED, SERVED, PAID, and CLOSED are completed; CANCELLED is cancelled.
+         *
+         *     Payment status: a payment waiting for the cashier, including one still pending, is due_at_pickup; a settled payment is paid; a returned payment is refunded; a failed payment is void.
+         *
+         *     Fulfillment: drive_thru is the drive-thru lane, curbside is curbside pickup.
+         *
+         *     Labels follow Accept-Language. For example, placed is "Order placed" in English and "تم استلام طلبك" in Arabic; preparing is "Being prepared" / "قيد التحضير"; ready is "Ready for pickup" / "جاهز للاستلام"; completed is "Collected" / "تم الاستلام"; cancelled is "Cancelled" / "تم الإلغاء".
+         */
+        post: operations["cancel_api_v1_mobile_orders__order_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/profile/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get my profile
+         * @description CustomerBearer. Returns the signed-in customer's profile for the configured restaurant. preferred_branch.name follows Accept-Language. default_vehicle is the customer's default vehicle, or null when they have not saved one. my_usual is the saved order, priced again on this read, or null when nothing is saved. If that order can no longer be placed, my_usual.is_orderable is false and unavailable_reason explains why. wallet is a DEMO balance, not real money, and is null when MOBILE_DEMO_WALLET_ENABLED is off. Keep that flag off in production. This read does not create the wallet. Does not change any data.
+         */
+        get: operations["get_me_api_v1_mobile_profile_me_get"];
+        /**
+         * Update my profile
+         * @description CustomerBearer. Updates only the fields that are sent. Null preferred_branch_id clears the preference. Explicit null for full_name or phone is 422. The branch must be an active branch of this restaurant, otherwise 422 BRANCH_NOT_AVAILABLE. Email cannot be changed here. Side effect: the profile row is updated.
+         */
+        put: operations["update_me_api_v1_mobile_profile_me_put"];
+        post?: never;
+        /**
+         * Delete my account
+         * @description CustomerBearer. Required by the app stores. Checks the password, then soft-deletes the account: it is marked inactive, the email, name, and phone are replaced, the photo is removed, and every session is revoked. Past orders are kept. A wrong password is 401 INVALID_CREDENTIALS. Side effect: CUSTOMER_ACCOUNT_DELETED audit row. The customer can no longer sign in.
+         */
+        delete: operations["delete_me_api_v1_mobile_profile_me_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update my profile
+         * @description CustomerBearer. Same as PUT /me. Omitted fields stay as they are. Explicit null for full_name or phone is 422. Null preferred_branch_id still clears the preference.
+         */
+        patch: operations["patch_me_api_v1_mobile_profile_me_patch"];
+        trace?: never;
+    };
+    "/api/v1/mobile/profile/my-usual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read my usual order
+         * @description CustomerBearer. Returns the same view PUT /profile/my-usual saves, priced again on this read. When nothing is saved, the body is null. Reading an empty usual does not fail.
+         */
+        get: operations["get_my_usual_api_v1_mobile_profile_my_usual_get"];
+        /**
+         * Save my usual order
+         * @description CustomerBearer. Stores the customer's usual drink or meal for one branch. branch_id defaults to the preferred branch. If neither is set, the response is 422 BRANCH_REQUIRED. The branch must belong to this restaurant and have mobile ordering on, otherwise 404 BRANCH_NOT_FOUND. The item is priced with the branch menu rules. Size, milk, and sweetness are modifier groups on the item (selected_groups), the same groups the catalog returns, not separate fields. A sold-out item is 409 ITEM_UNAVAILABLE and names the item. Only branch, item, quantity, selected groups, and special instructions are stored. Side effect: customers.my_usual is replaced.
+         */
+        put: operations["put_my_usual_api_v1_mobile_profile_my_usual_put"];
+        post?: never;
+        /**
+         * Clear my usual order
+         * @description CustomerBearer. Removes the saved order. Succeeds even when nothing was saved. Side effect: customers.my_usual is cleared.
+         */
+        delete: operations["delete_my_usual_api_v1_mobile_profile_my_usual_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/profile/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a profile photo
+         * @description CustomerBearer. Multipart field name is file. Accepts JPEG, PNG, or WebP up to 2 MB. SVG and other types are 415. The file is stored under the avatars folder with a UUID filename. The previous photo is deleted best-effort after the new one is stored. Rate limit: 10 requests per 60 seconds per IP.
+         */
+        post: operations["post_avatar_api_v1_mobile_profile_avatar_post"];
+        /**
+         * Remove my profile photo
+         * @description CustomerBearer. Clears the photo and deletes the stored file best-effort. Succeeds even when there is no photo.
+         */
+        delete: operations["remove_avatar_api_v1_mobile_profile_avatar_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/promotions/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a promo code against this cart
+         * @description CustomerBearer. Prices the items on the server and says what the code saves. A client subtotal is not accepted and is ignored if one is sent. The discount is taken from the item subtotal before tax. Tax is computed on the discounted subtotal, rounded half up, and is never based on the original subtotal. The discount is never more than the item subtotal. A percent code is subtotal × value / 100, capped by max_discount_amount when that is set. A fixed code is the code's value, still capped by the subtotal. Unknown, inactive, and other-restaurant codes are 404 PROMO_CODE_NOT_FOUND. A code that has not started, has expired, is out of uses, was already used by this customer, or misses the minimum order is 409. A minimum-order error includes min_order_amount and currency. Nothing is saved. Rate limit: 10 requests per 60 seconds, so codes cannot be guessed quickly.
+         */
+        post: operations["validate_promo_api_v1_mobile_promotions_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my vehicles
+         * @description CustomerBearer. Returns this customer's vehicles. Soft-deleted vehicles are left out. The default vehicle is first, then the newest. verification_status is a lowercase word and verification_status_label follows Accept-Language. Each document's download_url is an authenticated API path, never a public file URL. Does not change any data.
+         */
+        get: operations["list_my_vehicles_api_v1_mobile_vehicles_get"];
+        put?: never;
+        /**
+         * Save a vehicle
+         * @description CustomerBearer. Saves a vehicle for the signed-in customer. The plate is stored in uppercase with extra spaces collapsed, so 'abc  123' and 'ABC 123' match. Arabic letters and digits are allowed. The first vehicle becomes the default. set_default makes this one the default and clears the others. A customer can keep up to 5 active vehicles. Side effect: a vehicle row is created. Verification is not required to order.
+         */
+        post: operations["create_my_vehicle_api_v1_mobile_vehicles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/vehicles/{vehicle_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a vehicle
+         * @description CustomerBearer. Soft-deletes the vehicle and its documents. If it was the default, the newest remaining vehicle becomes the default. A missing or unowned vehicle is 404 VEHICLE_NOT_FOUND. Side effect: deleted_at is set. Stored files are kept but can no longer be downloaded.
+         */
+        delete: operations["delete_my_vehicle_api_v1_mobile_vehicles__vehicle_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a vehicle
+         * @description CustomerBearer. Updates only the fields that are sent. Null make, model, color, or plate_number is 422. Null nickname clears the nickname. A missing vehicle, or one that belongs to someone else, is 404 VEHICLE_NOT_FOUND. Changing the plate, make, or model of a verified or rejected vehicle sends it back to pending when documents are still attached, otherwise unverified, and clears the previous review. Color and nickname edits leave the review as it is. Side effect: the vehicle row is updated.
+         */
+        patch: operations["update_my_vehicle_api_v1_mobile_vehicles__vehicle_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/mobile/vehicles/{vehicle_id}/set-default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Make a vehicle the default
+         * @description CustomerBearer. Marks this vehicle as the default and clears the flag on the customer's other vehicles in the same transaction, so exactly one default remains. A missing or unowned vehicle is 404 VEHICLE_NOT_FOUND. Side effect: is_default is updated.
+         */
+        patch: operations["set_my_default_vehicle_api_v1_mobile_vehicles__vehicle_id__set_default_patch"];
+        trace?: never;
+    };
+    "/api/v1/mobile/vehicles/{vehicle_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a vehicle document
+         * @description CustomerBearer. Multipart fields are file and doc_type (license, registration, or other). JPEG, PNG, WebP, and PDF are accepted up to 5 MB. The declared type must match the file's bytes. SVG and a type that does not match the bytes are 415. Files over 5 MB are 413. A vehicle can keep 3 active documents. Uploading sets the review to pending, unless the vehicle is already verified, which stays verified. The file is stored privately. The response download_url is an authenticated API path. A missing or unowned vehicle is 404 VEHICLE_NOT_FOUND. Side effect: a document row is created. Verification is not required to order.
+         */
+        post: operations["upload_my_document_api_v1_mobile_vehicles__vehicle_id__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/vehicles/{vehicle_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a vehicle document
+         * @description CustomerBearer. The owner downloads their document. Local storage streams the bytes. S3 storage answers 307 with a link that lasts 5 minutes. Headers are Content-Type, Content-Disposition: inline, and Cache-Control: private, no-store. A missing vehicle, another customer's vehicle, or a missing document is 404. Does not change any data.
+         */
+        get: operations["download_my_document_api_v1_mobile_vehicles__vehicle_id__documents__document_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Remove a vehicle document
+         * @description CustomerBearer. Soft-deletes one document. A missing vehicle, another customer's vehicle, or a missing document is 404. Side effect: the document's deleted_at is set. The private file is kept but can no longer be downloaded.
+         */
+        delete: operations["delete_my_document_api_v1_mobile_vehicles__vehicle_id__documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the demo wallet
+         * @description CustomerBearer. DEMO only. This is not real money and there is no payment gateway. Demo wallet payments are recorded as LOCAL_WALLET payments with a DEMO-WALLET- reference. Keep MOBILE_DEMO_WALLET_ENABLED off in production. When that flag is off this route returns 404 FEATURE_DISABLED. The wallet is created the first time it is read. currency is the restaurant's first branch currency, or EGP when the restaurant has no branch. is_demo is always true. disclaimer says this credit is for testing only and is not real money. entries are newest first. type_label is a localized sentence. limit defaults to 20.
+         */
+        get: operations["get_wallet_api_v1_mobile_wallet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/wallet/demo-topup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add demo credit
+         * @description CustomerBearer. DEMO only. This is not real money and there is no payment gateway. Demo wallet payments are recorded as LOCAL_WALLET payments with a DEMO-WALLET- reference. Keep MOBILE_DEMO_WALLET_ENABLED off in production. When that flag is off this route returns 404 FEATURE_DISABLED. Adds practice credit only. No card, cash, or gateway is charged. amount must be more than 0 and at most MOBILE_DEMO_WALLET_MAX_TOPUP (500). The balance afterwards must be at most MOBILE_DEMO_WALLET_MAX_BALANCE (2000). Otherwise 422 DEMO_TOPUP_LIMIT. Idempotency-Key is required. The same key returns the wallet and does not add credit again. A missing key is 422 IDEMPOTENCY_KEY_REQUIRED. Rate limit: 10 requests per 60 seconds.
+         */
+        post: operations["post_demo_topup_api_v1_mobile_wallet_demo_topup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/mobile/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List vehicles waiting for review
+         * @description Staff OAuth2. Roles: SUPER_ADMIN, BRAND_ADMIN, BRANCH_ADMIN. A brand admin sees vehicles of their brand. A branch admin sees vehicles whose brand owns one of their branches. A super admin sees vehicles of brands that have a branch in their tenant. Filter with status (pending, verified, rejected, or unverified) and q (plate, customer name, or email). Pending vehicles come first, oldest first. Soft-deleted vehicles are left out. Document download_url values point at the staff download route. Does not change any data.
+         */
+        get: operations["list_vehicles_for_review_api_v1_admin_mobile_vehicles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/mobile/vehicles/{vehicle_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a vehicle for review
+         * @description Staff OAuth2. Same scope as the queue. A vehicle outside the caller's brand or branches is 404 VEHICLE_NOT_FOUND, the same as a missing id, so ids cannot be probed. Documents include staff download paths. Does not change any data.
+         */
+        get: operations["get_vehicle_for_review_api_v1_admin_mobile_vehicles__vehicle_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/mobile/vehicles/{vehicle_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a vehicle document for review
+         * @description Staff OAuth2. Same scope as the queue. Local storage streams the bytes. S3 storage answers 307 with a link that lasts 5 minutes. Headers are Content-Type, Content-Disposition: inline, and Cache-Control: private, no-store. Out of scope, missing vehicle, and missing document are all 404. Does not change any data.
+         */
+        get: operations["download_vehicle_document_api_v1_admin_mobile_vehicles__vehicle_id__documents__document_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/mobile/vehicles/{vehicle_id}/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve or reject a vehicle
+         * @description Staff OAuth2. decision is verified or rejected. A rejection requires note, otherwise 422 VERIFICATION_NOTE_REQUIRED. Sets who reviewed the vehicle and when. Out of scope is 404 VEHICLE_NOT_FOUND. Side effect: VEHICLE_VERIFIED or VEHICLE_REJECTED audit row for the staff user and the tenant of the vehicle's brand. The result is informational and is not required to place an order.
+         */
+        post: operations["decide_vehicle_verification_api_v1_admin_mobile_vehicles__vehicle_id__verification_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/promo-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List promo codes
+         * @description Staff OAuth2. Roles: SUPER_ADMIN, BRAND_ADMIN. A brand admin sees only their restaurant. Passing another restaurant's id is 404. A super admin must pass brand_id for a brand that has a branch in their tenant. Each item includes uses_count. Filter with active and q (code text). A customer access token is 401. Another staff role is 403.
+         */
+        get: operations["list_codes_api_v1_admin_promo_codes_get"];
+        put?: never;
+        /**
+         * Create a promo code
+         * @description Staff OAuth2. Roles: SUPER_ADMIN, BRAND_ADMIN. A brand admin's brand_id is forced to their restaurant. Another restaurant is 404. A super admin must pass brand_id for a brand with a branch in their tenant. A percent value must be more than 0 and at most 100 (422 PROMO_PERCENT_OUT_OF_RANGE). A fixed value must be more than 0 (422 PROMO_VALUE_INVALID). ends_at must be after starts_at (422 PROMO_DATES_INVALID). The same code in the restaurant is 409 PROMO_CODE_EXISTS. The discount later applies to the item subtotal before tax. Writes audit PROMO_CODE_CREATED with the staff user id.
+         */
+        post: operations["create_code_api_v1_admin_promo_codes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/promo-codes/{promo_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a promo code
+         * @description Staff OAuth2. Roles: SUPER_ADMIN, BRAND_ADMIN. A code outside the caller's restaurant is 404, including another brand admin's code.
+         */
+        get: operations["get_code_api_v1_admin_promo_codes__promo_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Deactivate a promo code
+         * @description Staff OAuth2. Roles: SUPER_ADMIN, BRAND_ADMIN. Sets is_active to false. The row is kept so past orders still show the code. A code outside the caller's restaurant is 404. Writes audit PROMO_CODE_DEACTIVATED with the staff user id.
+         */
+        delete: operations["delete_code_api_v1_admin_promo_codes__promo_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a promo code
+         * @description Staff OAuth2. Roles: SUPER_ADMIN, BRAND_ADMIN. The restaurant cannot be changed. The code letters cannot be changed after the first use (409 PROMO_CODE_IN_USE). Percent, value, and date rules match create. A duplicate code in the restaurant is 409 PROMO_CODE_EXISTS. Writes audit PROMO_CODE_UPDATED with the staff user id.
+         */
+        patch: operations["patch_code_api_v1_admin_promo_codes__promo_id__patch"];
+        trace?: never;
+    };
     "/api/v1/invitations/preview": {
         parameters: {
             query?: never;
@@ -408,6 +1312,50 @@ export interface paths {
         patch: operations["update_branch_sla_config_api_v1_branches__branch_id__sla_config_patch"];
         trace?: never;
     };
+    "/api/v1/branches/{branch_id}/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff device check-in
+         * @description Staff apps call this about once a minute while online. At a branch with offline selling on, guest QR ordering pauses when no staff device has checked in for BRANCH_HEARTBEAT_STALE_SECONDS.
+         */
+        post: operations["branch_heartbeat_api_v1_branches__branch_id__heartbeat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branches/{branch_id}/offline-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get branch offline till settings
+         * @description Whether POS devices at this branch may keep selling (cash only) while offline, and for how many hours.
+         */
+        get: operations["get_branch_offline_config_api_v1_branches__branch_id__offline_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update branch offline till settings
+         * @description Branch admins and above. offline_max_hours is 1 to 72.
+         */
+        patch: operations["update_branch_offline_config_api_v1_branches__branch_id__offline_config_patch"];
+        trace?: never;
+    };
     "/api/v1/brands": {
         parameters: {
             query?: never;
@@ -672,6 +1620,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/ordering-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Can this table order from the app now
+         * @description For the guest's branch: ordering_paused is true when the branch sells offline and no staff device has checked in for BRANCH_HEARTBEAT_STALE_SECONDS (the tills are cut off), so guests should order at the counter.
+         */
+        get: operations["get_ordering_status_api_v1_sessions_ordering_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/cart": {
         parameters: {
             query?: never;
@@ -707,7 +1675,7 @@ export interface paths {
         put?: never;
         /**
          * Add Item to Shared Table Cart
-         * @description Add a diner's chosen item and modifiers to the shared table cart, refreshing the 8-hour TTL.
+         * @description Add a diner's chosen item and modifiers to the shared table cart, refreshing the 8-hour TTL. unit_price and modifier prices sent by the client are ignored. The stored unit price is the branch price (the branch override when one is set, otherwise the catalogue price) plus the catalog modifier deltas. The line total is that unit price times quantity, and modifier prices are not added again.
          */
         post: operations["add_item_to_cart_api_v1_sessions__session_id__cart_items_post"];
         delete?: never;
@@ -865,7 +1833,7 @@ export interface paths {
         };
         /**
          * Get Hierarchical Localized Menu Catalog Tree
-         * @description Retrieves the complete hierarchical catalog tree (Categories -> Items -> Modifier Groups -> Options) for the branch associated with the verified table session. Optimized with chained selectinload to prevent N+1 queries. Dynamically localized based on the Accept-Language header. Preserves 86 out-of-stock items (is_available: false) for grayed-out UI rendering.
+         * @description Retrieves the complete hierarchical catalog tree (Categories -> Items -> Modifier Groups -> Options) for the branch associated with the verified table session. Item base_price is the branch override when one exists, otherwise the catalog price. A missing or inactive branch is 404 BRANCH_NOT_FOUND. Optimized with chained selectinload to prevent N+1 queries. Dynamically localized based on the Accept-Language header. Preserves 86 out-of-stock items (is_available: false) for grayed-out UI rendering.
          */
         get: operations["get_menu_tree_api_v1_menu_tree_get"];
         put?: never;
@@ -905,7 +1873,7 @@ export interface paths {
         };
         /**
          * Get Scoped Branch Menu
-         * @description Fetch the effective catalog menu for a branch with brand inheritance, scope filtering, and branch overrides.
+         * @description Fetch the effective catalog menu for a branch with brand inheritance, scope filtering, and branch price overrides. A missing or inactive branch is 404 BRANCH_NOT_FOUND.
          */
         get: operations["get_branch_menu_api_v1_menu_branch__branch_id__get"];
         put?: never;
@@ -1237,7 +2205,11 @@ export interface paths {
         delete: operations["delete_modifier_group_api_v1_staff_menu_modifier_groups__group_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update Modifier Group
+         * @description Update a modifier group's name, required flag, and min/max choices.
+         */
+        patch: operations["update_modifier_group_api_v1_staff_menu_modifier_groups__group_id__patch"];
         trace?: never;
     };
     "/api/v1/staff/menu/modifier-groups/{group_id}/options": {
@@ -1492,7 +2464,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/orders/drive-thru": {
+    "/api/v1/orders/handover/preview": {
         parameters: {
             query?: never;
             header?: never;
@@ -1502,10 +2474,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Place a drive-thru/curbside pickup order (public web pickup page or staff)
-         * @description Public and rate-limited. The order is recorded unpaid, and the customer pays at the window (the cashier settles it on the Payments screen). Any client payment reference is never trusted and stays in the audit log only. order_access_token is returned once and is needed for GET /orders/{id}/handover-token. The Mousa mobile app will use /api/v1/mobile/orders (a later phase).
+         * Preview a pickup QR without handing the order over
+         * @description Staff scan of the customer's pickup QR, or of a web pickup code. Accepts the raw token or the full qr_payload. This does not consume the token and does not change the order. The response is the full order: items, vehicle, customer name and the last four digits of the phone, totals, whether they have arrived, and whether the order can be handed over. can_handover is true only when the customer-facing status is ready and the order is paid. Otherwise blocking_reason is ORDER_NOT_READY, PAYMENT_REQUIRED, ORDER_CANCELLED, TOKEN_ALREADY_USED, or TOKEN_EXPIRED, and blocking_message explains it in the staff language. An unknown code is 404 INVALID_HANDOVER_TOKEN. A code from another branch is 400 HANDOVER_BRANCH_MISMATCH. branch_id in the body, when sent, is the branch being scanned; otherwise X-Branch-ID is used. That branch must be the order's branch for every role, including a super admin. A customer access token is not a staff sign-in.
          */
-        post: operations["create_drive_thru_order_api_v1_orders_drive_thru_post"];
+        post: operations["preview_handover_api_v1_orders_handover_preview_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1523,7 +2495,7 @@ export interface paths {
         put?: never;
         /**
          * Verify Customer Handover Token (Staff)
-         * @description Scan and verify a customer handover token, enforce single-use replay protection, and complete the order. An unpaid drive-thru or curbside order returns 409 PAYMENT_REQUIRED_BEFORE_HANDOVER and does not consume the token. Settle the cash payment on the Payments screen, then scan again.
+         * @description Scan and verify a customer handover token, enforce single-use replay protection, and complete the order. The token may be the raw code or the full qr_payload. An unpaid drive-thru or curbside order, whether it was placed in the Mousa app or on the web pickup page, returns 409 PAYMENT_REQUIRED and does not consume the token. The body includes amount_due, currency, payment_id, and pickup_number. Settle that cash payment on the Payments screen and scan again, or send collect_cash=true to take the cash and hand the order over in this same call. collect_cash is only for a branch admin or super admin. A cashier is not on Expo. Another role gets 403 CASH_COLLECTION_NOT_ALLOWED and the token is left unused. collect_cash on an order that is already paid is ignored. A paid order needs no collect_cash. The order must be READY. A successful handover ends CLOSED when the order is paid, and the runners channel receives ORDER_COMPLETED. branch_id in the body, or X-Branch-ID when the body omits it, must be the order's branch for every role, including a super admin. A mismatch is 400 HANDOVER_BRANCH_MISMATCH. A cancelled order is 400 CANNOT_HANDOVER_CANCELLED_ORDER even when the pickup code has expired. That failure is the error envelope, with code and detail only, and is not a VerifyHandoverResponse.
          */
         post: operations["verify_handover_api_v1_orders_handover_verify_post"];
         delete?: never;
@@ -1532,7 +2504,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/orders/checkout": {
+    "/api/v1/orders/drive-thru": {
         parameters: {
             query?: never;
             header?: never;
@@ -1542,10 +2514,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Checkout Customer Order with ACID Pessimistic Concurrency
-         * @description Atomic order ingestion pipeline. Acquires a pessimistic row-level lock (SELECT ... FOR UPDATE) on the Table record, authoritatively re-validates all submitted items and modifier options, creates the Order (409 ACTIVE_ORDER_EXISTS with order_id if one is already active), computes exact 15% VAT totals using Decimal ROUND_HALF_UP, sets presence-driven initial status, and logs an audit entry.
+         * Place a drive-thru/curbside pickup order (public web pickup page or staff)
+         * @description Public and rate-limited. The order is recorded unpaid, and the customer pays at the window (the cashier settles it on the Payments screen). The item, its category, and every modifier option must belong to this branch (another brand or branch is 422). Required modifier groups are enforced, unavailable options are rejected, and the total uses the branch price override, tax rate, and service fee. The restaurant DRIVE_THRU feature and the branch switch both have to be on: is_drive_thru_enabled for DRIVE_THRU, is_curbside_enabled for CURBSIDE_PICKUP. A closed switch is 422 BRANCH_DRIVE_THRU_DISABLED or BRANCH_CURBSIDE_DISABLED. Any client payment reference is never trusted and stays in the audit log only. order_access_token is returned once and is needed for GET /orders/{id}/handover-token.
          */
-        post: operations["checkout_order_api_v1_orders_checkout_post"];
+        post: operations["create_drive_thru_order_api_v1_orders_drive_thru_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1563,9 +2535,29 @@ export interface paths {
         put?: never;
         /**
          * Price a guest order without placing it
-         * @description Guest session. Same item checks and the same totals as checkout, and it does not write an order. The unit price is the branch price (the branch override when one is set, otherwise the catalogue price) plus modifier deltas. Tax and the service fee use the branch rates via calculate_order_financials, the same function the mobile quote uses.
+         * @description Guest session. Same item checks and the same totals as checkout, and it does not write an order. Use it on the menu, the modifier screen, the cart, and checkout so the amount due matches what checkout will charge. The unit price is the branch price (the branch override when one is set, otherwise the catalogue price) plus modifier deltas. Tax and the service fee use the branch rates via calculate_order_financials, the same function the mobile quote uses. Optional promo_code discounts the item subtotal before tax and the service fee. subtotal stays the pre-discount item subtotal, and discount_total is 0.00 when no code is sent. A code below the minimum order is 409 PROMO_CODE_MIN_ORDER_NOT_MET and does not write an order.
          */
         post: operations["quote_guest_order_api_v1_orders_quote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Checkout Customer Order with ACID Pessimistic Concurrency
+         * @description Atomic order ingestion pipeline. Acquires a pessimistic row-level lock (SELECT ... FOR UPDATE) on the Table record, authoritatively re-validates all submitted items and modifier options, creates the Order (409 ACTIVE_ORDER_EXISTS with order_id if one is already active), computes tax at the branch rate in calculate_order_financials, using Decimal ROUND_HALF_UP, sets presence-driven initial status, and logs an audit entry. Optional promo_code discounts the item subtotal before tax and the service fee. A code below the minimum order is 409 PROMO_CODE_MIN_ORDER_NOT_MET and does not create an order. When the branch sells offline and no staff device has checked in recently, checkout is 409 BRANCH_OFFLINE and no order is created. Staff POS is unaffected.
+         */
+        post: operations["checkout_order_api_v1_orders_checkout_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1623,7 +2615,7 @@ export interface paths {
         put?: never;
         /**
          * Transition Order Lifecycle Status (Staff)
-         * @description Authoritative staff endpoint governing FSM state mutations. Enforces valid transition paths, cancellation guard rules, synchronizes table operational statuses, and writes to the audit trail.
+         * @description Authoritative staff endpoint governing FSM state mutations. Enforces valid transition paths, cancellation guard rules, synchronizes table operational statuses, and writes to the audit trail. DELIVERED and CLOSED return 409 PAYMENT_REQUIRED with amount_due and currency unless the order is paid, completed tenders cover the total, or the total is zero.
          */
         post: operations["transition_order_status_api_v1_orders__order_id__transition_post"];
         delete?: never;
@@ -1643,7 +2635,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel Order (Customer or Staff)
-         * @description Guests may cancel their own DRAFT or PENDING_STAFF_CONFIRMATION order. Front-of-house staff (cashier, waiter, branch/brand/super admin) may reject a PENDING_STAFF_CONFIRMATION order in their branch with a reason (X-Branch-ID required).
+         * @description Guests may cancel their own order in DRAFT, PENDING_STAFF_CONFIRMATION, or SUBMITTED. Once the kitchen has started (PREPARING), a guest cancel is 403 ORDER_ALREADY_IN_THE_KITCHEN. READY and later stay 409 INVALID_STATE_TRANSITION. An order from another table in the same branch is 403 NOT_YOUR_TABLE_SESSION. Front-of-house staff (cashier, waiter, branch/brand/super admin) may reject a PENDING_STAFF_CONFIRMATION order in their branch with a reason (X-Branch-ID required). SUBMITTED and PREPARING stay restricted to a branch admin or above, and need a reason. Cancelling voids pending cash and offline payments so they can no longer be verified.
          */
         post: operations["cancel_order_api_v1_orders__order_id__cancel_post"];
         delete?: never;
@@ -1672,6 +2664,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/{order_id}/arrived": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tell the branch I have arrived
+         * @description Guest pickup page. Requires the X-Order-Access-Token returned once by POST /orders/drive-thru. Sets arrived_at the first time and leaves it on later calls.
+         */
+        post: operations["guest_mark_arrived_api_v1_orders__order_id__arrived_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pos/orders/checkout": {
         parameters: {
             query?: never;
@@ -1683,7 +2695,7 @@ export interface paths {
         put?: never;
         /**
          * POS Counter & Table-Side Order Placement (Staff)
-         * @description Staff order creation pipeline. Supports dine-in (with table assignment and shared bill re-orders) and takeaway (with atomic daily pickup sequence generation from 100 to 1000 and immediate payment settlement).
+         * @description Staff order creation pipeline. Supports dine-in (with table assignment and shared bill re-orders) and takeaway (with atomic daily pickup sequence generation from 100 to 1000 and immediate payment settlement). Optional Idempotency-Key (8–64 chars, letters, digits, - or _; a device UUID). The same branch, user, key and body within IDEMPOTENCY_KEY_TTL_HOURS returns the original response (same status and body, header Idempotent-Replayed: true) and creates nothing. The same key with a different body is 409 IDEMPOTENCY_KEY_MISMATCH; a retry while the first request is still running is 409 IDEMPOTENCY_KEY_IN_PROGRESS; a malformed key is 422 IDEMPOTENCY_KEY_INVALID.
          */
         post: operations["checkout_pos_order_api_v1_pos_orders_checkout_post"];
         delete?: never;
@@ -1706,6 +2718,83 @@ export interface paths {
          * @description Cashier cancellation pipeline. Cancels active order, releases occupied physical table, marks payments as REFUNDED, broadcasts ticket drop event to KDS, and logs audit trail.
          */
         post: operations["cancel_pos_order_api_v1_pos_orders__order_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pos/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync offline till actions
+         * @description Apply what a POS device did offline, in order: create_order, pay_cash (cash only), transition (PREPARING, READY, DELIVERED; skipped steps are walked in order) and cancel. Every action has its own idempotency_key, so re-sending a batch is safe: applied actions come back as replayed. Sales are never rejected: sold-out or missing items, changed prices, totals that don't add up, offline orders older than the branch's offline_max_hours, offline selling switched off, or no open cash drawer at occurred_at are saved at the offline price and flagged needs_review with reasons. Each result maps client_order_id / offline_number to the real order_id and pickup or table number. final=false (code ORDER_NOT_SYNCED) means keep that action queued and retry it later, in order.
+         */
+        post: operations["sync_offline_actions_api_v1_pos_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pos/offline/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Offline orders for review
+         * @description Offline orders at this branch. state=pending (default) lists those flagged needs_review.
+         */
+        get: operations["list_offline_review_api_v1_pos_offline_review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pos/offline/review/{order_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve an offline order as sold */
+        post: operations["approve_offline_order_api_v1_pos_offline_review__order_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pos/offline/review/{order_id}/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adjust an offline order's prices and mark it reviewed
+         * @description Line prices are replaced and totals recalculated with the branch rates. A note is required.
+         */
+        post: operations["adjust_offline_order_api_v1_pos_offline_review__order_id__adjust_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1952,6 +3041,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staff/push/public-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** VAPID public key for staff web push */
+        get: operations["get_public_key_api_v1_staff_push_public_key_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/push/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register this browser for staff order pushes */
+        post: operations["subscribe_api_v1_staff_push_subscriptions_post"];
+        /** Stop staff pushes on this browser */
+        delete: operations["unsubscribe_api_v1_staff_push_subscriptions_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/floor/tables/live": {
         parameters: {
             query?: never;
@@ -1998,6 +3122,26 @@ export interface paths {
          * @description Modify table properties, zone assignment, or layout position with duplicate checking.
          */
         patch: operations["update_table_api_v1_tables__table_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/tables/{table_id}/close-session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Force-close an abandoned guest table session
+         * @description Branch admin and above. Clears the live guest session on a table the guests have left. When the table has no open order it becomes AVAILABLE, so the branch can be deleted. Cashier and waiter cannot call this.
+         */
+        post: operations["force_close_table_session_api_v1_tables__table_id__close_session_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/financials/drawer/open": {
@@ -2191,7 +3335,7 @@ export interface paths {
         put?: never;
         /**
          * Cashier confirms physical cash collection or POS slip
-         * @description Cashier confirms physical payment, settles the ledger, and closes the order.
+         * @description Marks a pending cash or offline payment collected and the order paid when the total is covered. A cancelled order, or a payment voided because the order was cancelled, is 409 ORDER_CANCELLED_CANNOT_PAY and is never marked paid. Optional Idempotency-Key (8–64 chars, letters, digits, - or _; a device UUID). The same branch, user, key and body within IDEMPOTENCY_KEY_TTL_HOURS returns the original response (same status and body, header Idempotent-Replayed: true) and creates nothing. The same key with a different body is 409 IDEMPOTENCY_KEY_MISMATCH; a retry while the first request is still running is 409 IDEMPOTENCY_KEY_IN_PROGRESS; a malformed key is 422 IDEMPOTENCY_KEY_INVALID.
          */
         post: operations["verify_offline_payment_api_v1_payments_offline__payment_id__verify_post"];
         delete?: never;
@@ -2534,6 +3678,26 @@ export interface paths {
         patch: operations["patch_cashier_transaction_api_v1_branches__branch_id__cashier_transactions__txn_id__patch"];
         trace?: never;
     };
+    "/media/{file_path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a public uploaded file
+         * @description Serves an avatar, menu photo, or other public upload. In development the file is read from local disk. In production it is read from S3-compatible storage and this URL stays on the API host. Vehicle documents under private/ are not served here.
+         */
+        get: operations["read_public_media_media__file_path__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -2560,182 +3724,6 @@ export interface paths {
         };
         /** Service Readiness Check */
         get: operations["readiness_check_health_ready_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/staff/push/public-key": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** VAPID public key for staff web push */
-        get: operations["get_public_key_api_v1_staff_push_public_key_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/staff/push/subscriptions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Register this browser for staff order pushes */
-        post: operations["subscribe_api_v1_staff_push_subscriptions_post"];
-        /** Stop staff pushes on this browser */
-        delete: operations["unsubscribe_api_v1_staff_push_subscriptions_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/pos/sync": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Sync offline till actions
-         * @description Apply what a POS device did offline, in order: create_order, pay_cash (cash only), transition (PREPARING, READY, DELIVERED; skipped steps are walked in order) and cancel. Every action has its own idempotency_key, so re-sending a batch is safe: applied actions come back as replayed. Sales are never rejected: sold-out or missing items, changed prices, totals that don't add up, offline orders older than the branch's offline_max_hours, offline selling switched off, or no open cash drawer at occurred_at are saved at the offline price and flagged needs_review with reasons. Each result maps client_order_id / offline_number to the real order_id and pickup or table number. final=false (code ORDER_NOT_SYNCED) means keep that action queued and retry it later, in order.
-         */
-        post: operations["sync_offline_actions_api_v1_pos_sync_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/pos/offline/review": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Offline orders for review
-         * @description Offline orders at this branch. state=pending (default) lists those flagged needs_review.
-         */
-        get: operations["list_offline_review_api_v1_pos_offline_review_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/pos/offline/review/{order_id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Approve an offline order as sold */
-        post: operations["approve_offline_order_api_v1_pos_offline_review__order_id__approve_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/pos/offline/review/{order_id}/adjust": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Adjust an offline order's prices and mark it reviewed
-         * @description Line prices are replaced and totals recalculated with the branch rates. A note is required.
-         */
-        post: operations["adjust_offline_order_api_v1_pos_offline_review__order_id__adjust_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/branches/{branch_id}/offline-config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get branch offline till settings
-         * @description Whether POS devices at this branch may keep selling (cash only) while offline, and for how many hours.
-         */
-        get: operations["get_branch_offline_config_api_v1_branches__branch_id__offline_config_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Update branch offline till settings
-         * @description Branch admins and above. offline_max_hours is 1 to 72.
-         */
-        patch: operations["update_branch_offline_config_api_v1_branches__branch_id__offline_config_patch"];
-        trace?: never;
-    };
-    "/api/v1/branches/{branch_id}/heartbeat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Staff device check-in
-         * @description Staff apps call this about once a minute while online. At a branch with offline selling on, guest QR ordering pauses when no staff device has checked in for BRANCH_HEARTBEAT_STALE_SECONDS.
-         */
-        post: operations["branch_heartbeat_api_v1_branches__branch_id__heartbeat_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/sessions/ordering-status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Can this table order from the app now
-         * @description For the guest's branch: ordering_paused is true when the branch sells offline and no staff device has checked in for BRANCH_HEARTBEAT_STALE_SECONDS (the tills are cut off), so guests should order at the counter.
-         */
-        get: operations["get_ordering_status_api_v1_sessions_ordering_status_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2822,7 +3810,7 @@ export interface components {
             item_name: string;
             /**
              * Unit Price
-             * @description Base unit price for item
+             * @description Ignored. The server stores the branch price.
              */
             unit_price: number | string;
             /**
@@ -2842,6 +3830,46 @@ export interface components {
              */
             notes?: string | null;
         };
+        /** AdjustLine */
+        AdjustLine: {
+            /**
+             * Order Item Id
+             * Format: uuid
+             */
+            order_item_id: string;
+            /** Unit Price */
+            unit_price: number | string;
+        };
+        /**
+         * AdjustOfflineOrderRequest
+         * @description Correct line prices (totals are recalculated with branch rates), then mark the order reviewed.
+         */
+        AdjustOfflineOrderRequest: {
+            /** Note */
+            note: string;
+            /** Lines */
+            lines?: components["schemas"]["AdjustLine"][];
+        };
+        /** ApproveOfflineOrderRequest */
+        ApproveOfflineOrderRequest: {
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * ArrivedRequest
+         * @description The customer is at the branch. There are no bays and no camera.
+         * @example {
+         *       "note": "Grey car near the door"
+         *     }
+         */
+        ArrivedRequest: {
+            /**
+             * Note
+             * @description Optional hint for staff, such as where the car is parked.
+             * @example Grey car near the door
+             */
+            note?: string | null;
+        };
         /**
          * AttendanceInfo
          * @description Attendance record details with calculated hours.
@@ -2849,9 +3877,15 @@ export interface components {
         AttendanceInfo: {
             /** Status */
             status?: string | null;
-            /** Check In */
+            /**
+             * Check In
+             * @description ISO-8601 check-in in the branch timezone, including the offset.
+             */
             check_in?: string | null;
-            /** Check Out */
+            /**
+             * Check Out
+             * @description ISO-8601 check-out in the branch timezone, including the offset.
+             */
             check_out?: string | null;
             /** Total Hours */
             total_hours?: string | null;
@@ -2874,9 +3908,15 @@ export interface components {
             employee_email: string;
             /** Avatar Url */
             avatar_url?: string | null;
-            /** Check In */
+            /**
+             * Check In
+             * @description ISO-8601 check-in in the branch timezone, including the offset.
+             */
             check_in?: string | null;
-            /** Check Out */
+            /**
+             * Check Out
+             * @description ISO-8601 check-out in the branch timezone, including the offset.
+             */
             check_out?: string | null;
             /**
              * Date
@@ -2986,6 +4026,73 @@ export interface components {
             created_at: string;
         };
         /**
+         * AuthResponse
+         * @description Access token, rotating refresh token, and the customer profile.
+         * @example {
+         *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example",
+         *       "customer": {
+         *         "created_at": "2026-09-30T18:00:00Z",
+         *         "email": "mona@example.com",
+         *         "full_name": "Mona Hassan",
+         *         "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+         *         "language": "en",
+         *         "phone": "+201001234567",
+         *         "terms_accepted_at": "2026-09-30T18:00:00Z",
+         *         "terms_version": "2026-10"
+         *       },
+         *       "expires_in": 900,
+         *       "refresh_expires_at": "2026-10-30T18:00:00Z",
+         *       "refresh_token": "opaque-refresh-token",
+         *       "token_type": "bearer"
+         *     }
+         */
+        AuthResponse: {
+            /**
+             * Access Token
+             * @description Customer or staff JWT used as Authorization: Bearer.
+             */
+            access_token: string;
+            /**
+             * Token Type
+             * @description Always bearer.
+             * @default bearer
+             * @constant
+             */
+            token_type: "bearer";
+            /**
+             * Expires In
+             * @description Access token lifetime in seconds.
+             */
+            expires_in: number;
+            /**
+             * Refresh Token
+             * @description Rotating refresh token. Send it once; the response replaces it.
+             */
+            refresh_token: string;
+            /**
+             * Refresh Expires At
+             * Format: date-time
+             * @description When this refresh token stops working, UTC.
+             */
+            refresh_expires_at: string;
+            /** @description Customer. */
+            customer: components["schemas"]["CustomerProfileResponse"];
+        };
+        /**
+         * AvatarResponse
+         * @description Public URL of the photo that was just stored.
+         * @example {
+         *       "avatar_url": "https://cdn.example.com/avatars/2f1c0b7e-1c3a-4b55-9d0e-6a1b2c3d4e5f.jpg"
+         *     }
+         */
+        AvatarResponse: {
+            /**
+             * Avatar Url
+             * @description Avatar Url.
+             */
+            avatar_url: string;
+        };
+        /**
          * BatchQRExportRequest
          * @description Request payload for exporting multiple table QR codes in an in-memory ZIP package.
          */
@@ -3041,6 +4148,28 @@ export interface components {
              * Format: password
              */
             client_secret?: string | null;
+        };
+        /** Body_post_avatar_api_v1_mobile_profile_avatar_post */
+        Body_post_avatar_api_v1_mobile_profile_avatar_post: {
+            /**
+             * File
+             * @description JPEG, PNG, or WebP photo, up to 2 MB.
+             */
+            file: string;
+        };
+        /** Body_upload_my_document_api_v1_mobile_vehicles__vehicle_id__documents_post */
+        Body_upload_my_document_api_v1_mobile_vehicles__vehicle_id__documents_post: {
+            /**
+             * File
+             * @description JPEG, PNG, WebP, or PDF, up to 5 MB.
+             */
+            file: string;
+            /**
+             * Doc Type
+             * @description license, registration, or other.
+             * @example license
+             */
+            doc_type: string;
         };
         /**
          * BranchCreate
@@ -3299,6 +4428,19 @@ export interface components {
             /** Service Fee Dine In Only */
             service_fee_dine_in_only: boolean;
         };
+        /** BranchHeartbeat */
+        BranchHeartbeat: {
+            /**
+             * Branch Id
+             * Format: uuid
+             */
+            branch_id: string;
+            /**
+             * Staff Last Seen At
+             * Format: date-time
+             */
+            staff_last_seen_at: string;
+        };
         /**
          * BranchLocationResponse
          * @description Authoritative response confirming updated branch coordinates and geofence radius.
@@ -3350,6 +4492,65 @@ export interface components {
             is_available?: boolean | null;
             /** Is Visible */
             is_visible?: boolean | null;
+        };
+        /**
+         * BranchOfflineConfig
+         * @description Offline till settings plus the pricing rules a till needs to total a ticket without the API.
+         */
+        BranchOfflineConfig: {
+            /**
+             * Branch Id
+             * Format: uuid
+             */
+            branch_id: string;
+            /** Offline Pos Enabled */
+            offline_pos_enabled: boolean;
+            /** Offline Max Hours */
+            offline_max_hours: number;
+            /** Currency */
+            currency?: string | null;
+            /**
+             * Tax Rate
+             * @default 0
+             */
+            tax_rate: string;
+            /**
+             * Service Fee Rate
+             * @default 0
+             */
+            service_fee_rate: string;
+            /**
+             * Is Service Taxable
+             * @default false
+             */
+            is_service_taxable: boolean;
+            /**
+             * Service Fee Dine In Only
+             * @default true
+             */
+            service_fee_dine_in_only: boolean;
+        };
+        /** BranchOfflineConfigUpdate */
+        BranchOfflineConfigUpdate: {
+            /** Offline Pos Enabled */
+            offline_pos_enabled?: boolean | null;
+            /** Offline Max Hours */
+            offline_max_hours?: number | null;
+        };
+        /**
+         * BranchOrderingStatus
+         * @description Public: whether guests can order from this branch right now.
+         */
+        BranchOrderingStatus: {
+            /**
+             * Branch Id
+             * Format: uuid
+             */
+            branch_id: string;
+            /** Ordering Paused */
+            ordering_paused: boolean;
+            /** Reason */
+            reason?: "BRANCH_OFFLINE" | null;
         };
         /**
          * BranchPerformanceRow
@@ -3491,8 +4692,27 @@ export interface components {
              * @default true
              */
             service_fee_dine_in_only: boolean;
-            /** Weekly hours. A day with an empty list is closed. */
-            opening_hours?: components["schemas"]["OpeningHours"] | null;
+            /** Opening Hours */
+            opening_hours?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Is Drive Thru Enabled
+             * @default false
+             */
+            is_drive_thru_enabled: boolean;
+            /**
+             * Is Curbside Enabled
+             * @default false
+             */
+            is_curbside_enabled: boolean;
+            /**
+             * Is Mobile Ordering Enabled
+             * @default false
+             */
+            is_mobile_ordering_enabled: boolean;
+            /** Phone */
+            phone?: string | null;
             /** Created At */
             created_at?: string | null;
             /** Updated At */
@@ -3608,31 +4828,16 @@ export interface components {
             timezone?: string | null;
             /** Is Active */
             is_active?: boolean | null;
-            /** Weekly hours. Null clears the schedule. */
+            /** @description Weekly hours. Keys are mon through sun. Each day has up to four {open, close} ranges in 24-hour HH:MM. A close earlier than open ends after midnight. Null clears the schedule. */
             opening_hours?: components["schemas"]["OpeningHours"] | null;
-        };
-        /**
-         * OpeningHours
-         * @description Weekly schedule. A missing day or an empty list means closed.
-         */
-        OpeningHours: {
-            mon?: components["schemas"]["OpeningRange"][];
-            tue?: components["schemas"]["OpeningRange"][];
-            wed?: components["schemas"]["OpeningRange"][];
-            thu?: components["schemas"]["OpeningRange"][];
-            fri?: components["schemas"]["OpeningRange"][];
-            sat?: components["schemas"]["OpeningRange"][];
-            sun?: components["schemas"]["OpeningRange"][];
-        };
-        /**
-         * OpeningRange
-         * @description One open interval. A close earlier than open ends after midnight.
-         */
-        OpeningRange: {
-            /** Opening time, 24-hour HH:MM. */
-            open: string;
-            /** Closing time, 24-hour HH:MM. */
-            close: string;
+            /** Is Drive Thru Enabled */
+            is_drive_thru_enabled?: boolean | null;
+            /** Is Curbside Enabled */
+            is_curbside_enabled?: boolean | null;
+            /** Is Mobile Ordering Enabled */
+            is_mobile_ordering_enabled?: boolean | null;
+            /** Phone */
+            phone?: string | null;
         };
         /**
          * BranchesMatrixResponse
@@ -3864,6 +5069,48 @@ export interface components {
             /** Is Serviceable */
             is_serviceable: boolean;
         };
+        /** CancelAction */
+        CancelAction: {
+            /**
+             * Idempotency Key
+             * @description Device-generated UUID, unique per action.
+             */
+            idempotency_key: string;
+            /**
+             * Client Order Id
+             * @description Device-generated id of the order this action is about.
+             */
+            client_order_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             * @description When it happened on the device (ISO 8601 with offset).
+             */
+            occurred_at: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "cancel";
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * CancelOrderRequest
+         * @description Optional note stored with the cancellation.
+         * @example {
+         *       "reason": "I ordered the wrong drink."
+         *     }
+         * @example {}
+         */
+        CancelOrderRequest: {
+            /**
+             * Reason
+             * @description Reason.
+             * @example I ordered the wrong drink.
+             */
+            reason?: string | null;
+        };
         /**
          * CartItemModifier
          * @description Modifier applied to a cart item line.
@@ -3881,7 +5128,7 @@ export interface components {
             name: string;
             /**
              * Price
-             * @description Additional price for modifier
+             * @description Ignored. The server stores the catalog option price.
              * @default 0.00
              */
             price: number | string;
@@ -3903,7 +5150,7 @@ export interface components {
             name: string;
             /**
              * Price
-             * @description Additional price for modifier
+             * @description Ignored. The server stores the catalog option price.
              * @default 0.00
              */
             price: string;
@@ -4178,6 +5425,28 @@ export interface components {
             gmv_share_percentage: string;
         };
         /**
+         * ChangePasswordRequest
+         * @description Change the password while signed in. Other devices are signed out.
+         * @example {
+         *       "current_password": "MousaCafe1",
+         *       "new_password": "MousaCafe2"
+         *     }
+         */
+        ChangePasswordRequest: {
+            /**
+             * Current Password
+             * @description Current Password.
+             * @example MousaCafe1
+             */
+            current_password: string;
+            /**
+             * New Password
+             * @description New Password.
+             * @example MousaCafe2
+             */
+            new_password: string;
+        };
+        /**
          * CheckInRequest
          * @description Employee check-in payload with real-time GPS coordinates.
          */
@@ -4196,27 +5465,6 @@ export interface components {
             latitude: number;
             /** Longitude */
             longitude: number;
-        };
-        /**
-         * CheckoutRequest
-         * @description Atomic order placement payload from verified guest session.
-         */
-        CheckoutRequest: {
-            /**
-             * Items
-             * @description Array of items to order
-             */
-            items: components["schemas"]["OrderItemInput"][];
-            /**
-             * Customer Notes
-             * @description General order-level guest notes
-             */
-            customer_notes?: string | null;
-            /**
-             * Promo Code
-             * @description Optional promo code. The discount comes off the item subtotal before tax and the service fee.
-             */
-            promo_code?: string | null;
         };
         /**
          * ComboComponentCreate
@@ -4309,6 +5557,48 @@ export interface components {
              */
             is_active: boolean;
         };
+        /** CreateOrderAction */
+        CreateOrderAction: {
+            /**
+             * Idempotency Key
+             * @description Device-generated UUID, unique per action.
+             */
+            idempotency_key: string;
+            /**
+             * Client Order Id
+             * @description Device-generated id of the order this action is about.
+             */
+            client_order_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             * @description When it happened on the device (ISO 8601 with offset).
+             */
+            occurred_at: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "create_order";
+            /**
+             * Offline Number
+             * @description Device number shown on the receipt, e.g. OFF-12.
+             */
+            offline_number: string;
+            /**
+             * Order Type
+             * @default TAKEAWAY
+             * @enum {string}
+             */
+            order_type: "TAKEAWAY" | "DINE_IN";
+            /** Table Id */
+            table_id?: string | null;
+            /** Items */
+            items: components["schemas"]["OfflineLine"][];
+            totals: components["schemas"]["OfflineTotals"];
+            /** Customer Notes */
+            customer_notes?: string | null;
+        };
         /**
          * CreateServiceRequest
          * @description Guest input payload for opening a table-side service request.
@@ -4321,6 +5611,82 @@ export interface components {
              * @description Optional customer note; mandatory (3-200 chars) for request_type OTHER
              */
             note?: string | null;
+        };
+        /**
+         * CustomerProfileResponse
+         * @description The signed-in customer's profile. Email is changed only by support, not here.
+         * @example {
+         *       "created_at": "2026-09-30T18:00:00Z",
+         *       "email": "mona@example.com",
+         *       "full_name": "Mona Hassan",
+         *       "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+         *       "language": "en",
+         *       "phone": "+201001234567",
+         *       "preferred_branch": {
+         *         "id": "11111111-1111-1111-1111-111111111111",
+         *         "name": "Downtown"
+         *       },
+         *       "terms_accepted_at": "2026-09-30T18:00:00Z",
+         *       "terms_version": "2026-10"
+         *     }
+         */
+        CustomerProfileResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Full Name
+             * @description Name shown to staff.
+             */
+            full_name: string;
+            /**
+             * Email
+             * @description Email address.
+             */
+            email: string;
+            /**
+             * Phone
+             * @description Phone number in E.164, such as +201001234567.
+             */
+            phone: string;
+            /**
+             * Language
+             * @description Preferred language, ar or en.
+             */
+            language: string;
+            /**
+             * Avatar Url
+             * @description Avatar Url.
+             */
+            avatar_url?: string | null;
+            /** @description Preferred branch. */
+            preferred_branch?: components["schemas"]["PreferredBranch"] | null;
+            /**
+             * Terms Accepted At
+             * Format: date-time
+             * @description Terms Accepted At.
+             */
+            terms_accepted_at: string;
+            /**
+             * Terms Version
+             * @description Terms Version.
+             */
+            terms_version: string;
+            /**
+             * Created At
+             * Format: date-time
+             * @description When this record was created, UTC.
+             */
+            created_at: string;
+            /** @description Default vehicle. */
+            default_vehicle?: components["schemas"]["VehicleResponse"] | null;
+            /** @description The saved order, re-priced on every read. Null when nothing is saved. When it can no longer be ordered, is_orderable is false and unavailable_reason explains why. */
+            my_usual?: components["schemas"]["MyUsualView"] | null;
+            /** @description DEMO wallet balance. Not real money. Null when MOBILE_DEMO_WALLET_ENABLED is off. Keep that flag off in production. */
+            wallet?: components["schemas"]["WalletSnapshot"] | null;
         };
         /**
          * DashboardConsolidatedResponse
@@ -4349,6 +5715,21 @@ export interface components {
              * @default []
              */
             branch_rankings: components["schemas"]["BranchPerformanceRow"][];
+        };
+        /**
+         * DeleteAccountRequest
+         * @description Confirm account deletion with the current password.
+         * @example {
+         *       "password": "MousaCafe1"
+         *     }
+         */
+        DeleteAccountRequest: {
+            /**
+             * Password
+             * @description Password. At least 8 characters, with a letter and a digit, for customers.
+             * @example MousaCafe1
+             */
+            password: string;
         };
         /**
          * DeliveryGovernorateCreate
@@ -4476,6 +5857,21 @@ export interface components {
             is_active?: boolean | null;
         };
         /**
+         * DemoTopupRequest
+         * @description DEMO credit to add. Not a payment and not real money.
+         * @example {
+         *       "amount": "100.00"
+         *     }
+         */
+        DemoTopupRequest: {
+            /**
+             * Amount
+             * @description DEMO amount to add. Not real money. Over the practice limit is rejected.
+             * @example 100.00
+             */
+            amount: number | string;
+        };
+        /**
          * DrawerCloseRequest
          * @description Payload to close an active cash drawer shift and declare physical cash.
          */
@@ -4581,6 +5977,11 @@ export interface components {
              * Format: uuid
              */
             branch_id: string;
+            /**
+             * Customer Id
+             * @description Mobile-app customer who placed the order. Null for guest and staff orders.
+             */
+            customer_id?: string | null;
             /** Table Id */
             table_id?: string | null;
             status: components["schemas"]["OrderStatus"];
@@ -4596,6 +5997,22 @@ export interface components {
             display_number?: string | null;
             /** Subtotal */
             subtotal: string;
+            /**
+             * Discount Total
+             * @description Amount removed from the item subtotal before tax. 0.00 when no promo was applied.
+             * @default 0.00
+             */
+            discount_total: string;
+            /**
+             * Promo Code Id
+             * @description Promo code row used at checkout, if any.
+             */
+            promo_code_id?: string | null;
+            /**
+             * Promo Code
+             * @description Snapshot of the promo code text at checkout.
+             */
+            promo_code?: string | null;
             /**
              * Service Fee Rate
              * @default 0.0000
@@ -4634,6 +6051,10 @@ export interface components {
             expo_notes?: string | null;
             /** Ready At */
             ready_at?: string | null;
+            /** Arrived At */
+            arrived_at?: string | null;
+            /** Arrival Note */
+            arrival_note?: string | null;
             /** Completed At */
             completed_at?: string | null;
             /**
@@ -4696,6 +6117,13 @@ export interface components {
              * @description Preparation instructions
              */
             customer_notes?: string | null;
+            /** Selected Groups */
+            selected_groups?: components["schemas"]["SelectedModifierGroupInput"][];
+            /**
+             * Selected Option Ids
+             * @description Chosen modifier option ids
+             */
+            selected_option_ids?: string[];
         };
         /**
          * EffectiveBrandingResponse
@@ -4722,9 +6150,15 @@ export interface components {
          *     }
          */
         ErrorResponse: {
-            /** Code */
+            /**
+             * Code
+             * @description Machine-readable error or promo code.
+             */
             code: string;
-            /** Detail */
+            /**
+             * Detail
+             * @description Localized explanation of the error.
+             */
             detail: string;
         };
         /**
@@ -4862,17 +6296,6 @@ export interface components {
             pending_service_requests_count: number;
         };
         /**
-         * ForgotPasswordRequest
-         * @description Email address that should receive a password reset link.
-         */
-        ForgotPasswordRequest: {
-            /**
-             * Email
-             * Format: email
-             */
-            email: string;
-        };
-        /**
          * ForgotPasswordResponse
          * @description Same message whether or not the email belongs to an account.
          */
@@ -4951,6 +6374,16 @@ export interface components {
              * @default EGP
              */
             currency: string;
+            /**
+             * Is Drive Thru Enabled
+             * @default false
+             */
+            is_drive_thru_enabled: boolean;
+            /**
+             * Is Curbside Enabled
+             * @default false
+             */
+            is_curbside_enabled: boolean;
             /** Categories */
             categories?: components["schemas"]["GuestBranchMenuCategoryGroup"][];
         };
@@ -4975,7 +6408,12 @@ export interface components {
         };
         /**
          * GuestQuoteResponse
-         * @description Totals checkout will charge. Nothing is saved. Tax and the service fee come from the same function the mobile quote uses.
+         * @description Totals checkout will charge for these items. Nothing is saved.
+         *
+         *     Optional promo_code discounts the item subtotal before tax and the service fee.
+         *     subtotal stays the pre-discount item subtotal. discount_total is 0.00 when no code is sent.
+         *     Tax and the service fee come from OrderService.calculate_order_financials,
+         *     the same function the mobile quote uses.
          */
         GuestQuoteResponse: {
             /** Currency */
@@ -4990,6 +6428,8 @@ export interface components {
             tax_total: string;
             /** Total */
             total: string;
+            /** Promo Code */
+            promo_code?: string | null;
             /** Items */
             items: components["schemas"]["GuestQuoteLine"][];
         };
@@ -4997,6 +6437,256 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HandoverPreviewCustomer
+         * @description Who is picking up. The phone is only the last four digits.
+         */
+        HandoverPreviewCustomer: {
+            /**
+             * Full Name
+             * @description Name shown to staff.
+             */
+            full_name: string;
+            /**
+             * Phone Last4
+             * @description Phone Last4.
+             */
+            phone_last4: string;
+        };
+        /**
+         * HandoverPreviewItem
+         * @description One line the staff should hand over.
+         */
+        HandoverPreviewItem: {
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+            /**
+             * Quantity
+             * @description How many of this item.
+             */
+            quantity: number;
+            /**
+             * Modifiers
+             * @description Selected modifier options.
+             */
+            modifiers?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Notes
+             * @description Notes.
+             */
+            notes?: string | null;
+        };
+        /**
+         * HandoverPreviewRequest
+         * @description Staff scan of a pickup QR. Read-only: the token is not consumed.
+         * @example {
+         *       "token": "HT-A1B2C3D4E5F67890A1B2C3D4"
+         *     }
+         */
+        HandoverPreviewRequest: {
+            /**
+             * Token
+             * @description The raw handover token, or the full qr_payload from the customer's pickup pass.
+             * @example HT-A1B2C3D4E5F67890A1B2C3D4
+             */
+            token: string;
+            /**
+             * Branch Id
+             * @description Optional explicit branch UUID override when scanned by a super admin
+             */
+            branch_id?: string | null;
+        };
+        /**
+         * HandoverPreviewResponse
+         * @description The full order behind a pickup QR, and whether it can be handed over now.
+         * @example {
+         *       "amount_due": "51.35",
+         *       "arrival_note": "Grey car near the door",
+         *       "arrived_at": "2026-10-01T12:20:00Z",
+         *       "blocking_message": "Please take payment before handing this order over.",
+         *       "blocking_reason": "PAYMENT_REQUIRED",
+         *       "can_handover": false,
+         *       "customer": {
+         *         "full_name": "Mona Hassan",
+         *         "phone_last4": "4567"
+         *       },
+         *       "customer_notes": "White car.",
+         *       "customer_status": "ready",
+         *       "display_number": "104",
+         *       "fulfillment_type": "DRIVE_THRU",
+         *       "is_paid": false,
+         *       "items": [
+         *         {
+         *           "modifiers": [
+         *             {
+         *               "name": "Large",
+         *               "price_delta": 3
+         *             }
+         *           ],
+         *           "name": "Latte",
+         *           "notes": "Extra hot, please.",
+         *           "quantity": 1
+         *         }
+         *       ],
+         *       "order_id": "99999999-9999-9999-9999-999999999999",
+         *       "pending_cash_payment_id": "33333333-3333-3333-3333-333333333333",
+         *       "ready_at": "2026-10-01T12:18:00Z",
+         *       "status": "READY",
+         *       "token": {
+         *         "expires_at": "2026-10-01T23:00:00Z",
+         *         "is_used": false
+         *       },
+         *       "totals": {
+         *         "currency": "EGP",
+         *         "total": "51.35"
+         *       },
+         *       "vehicle": {
+         *         "color": "White",
+         *         "make": "Toyota",
+         *         "model": "Corolla",
+         *         "plate_number": "ABC 123"
+         *       }
+         *     }
+         */
+        HandoverPreviewResponse: {
+            /**
+             * Order Id
+             * Format: uuid
+             * @description Order this call applies to.
+             */
+            order_id: string;
+            /**
+             * Display Number
+             * @description Display Number.
+             */
+            display_number: string;
+            /**
+             * Status
+             * @description Internal kitchen status, for staff screens.
+             */
+            status: string;
+            /**
+             * Customer Status
+             * @description The word the customer app shows: placed, preparing, ready, completed, or cancelled.
+             */
+            customer_status: string;
+            /**
+             * Fulfillment Type
+             * @description drive_thru or curbside.
+             */
+            fulfillment_type: string;
+            /** @description Customer. */
+            customer?: components["schemas"]["HandoverPreviewCustomer"] | null;
+            /**
+             * Vehicle
+             * @description Vehicle.
+             */
+            vehicle?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
+             */
+            items?: components["schemas"]["HandoverPreviewItem"][];
+            /**
+             * Customer Notes
+             * @description Customer Notes.
+             */
+            customer_notes?: string | null;
+            /** @description Totals. */
+            totals: components["schemas"]["HandoverPreviewTotals"];
+            /**
+             * Is Paid
+             * @description True only after the server has recorded a completed payment.
+             */
+            is_paid: boolean;
+            /**
+             * Amount Due
+             * @description Amount Due.
+             */
+            amount_due: string;
+            /**
+             * Pending Cash Payment Id
+             * @description Pending Cash Payment Id.
+             */
+            pending_cash_payment_id?: string | null;
+            /**
+             * Arrived At
+             * @description Arrived At.
+             */
+            arrived_at?: string | null;
+            /**
+             * Arrival Note
+             * @description Arrival Note.
+             */
+            arrival_note?: string | null;
+            /**
+             * Ready At
+             * @description Ready At.
+             */
+            ready_at?: string | null;
+            /** @description Secret token. Store it in the Keychain or Keystore, not in plain storage. */
+            token: components["schemas"]["HandoverPreviewToken"];
+            /**
+             * Can Handover
+             * @description Can Handover.
+             */
+            can_handover: boolean;
+            /**
+             * Blocking Reason
+             * @description Blocking Reason.
+             */
+            blocking_reason?: ("ORDER_NOT_READY" | "PAYMENT_REQUIRED" | "ORDER_CANCELLED" | "TOKEN_ALREADY_USED" | "TOKEN_EXPIRED") | null;
+            /**
+             * Blocking Message
+             * @description Blocking Message.
+             */
+            blocking_message: string;
+        };
+        /**
+         * HandoverPreviewToken
+         * @description The scanned pickup code, without consuming it.
+         */
+        HandoverPreviewToken: {
+            /**
+             * Expires At
+             * Format: date-time
+             * @description Expires At.
+             */
+            expires_at: string;
+            /**
+             * Is Used
+             * @description Is Used.
+             */
+            is_used: boolean;
+            /**
+             * Used At
+             * @description Used At.
+             */
+            used_at?: string | null;
+        };
+        /**
+         * HandoverPreviewTotals
+         * @description What the guest owes, or already paid.
+         */
+        HandoverPreviewTotals: {
+            /**
+             * Total
+             * @description Amount due: subtotal minus discount, plus service fee and tax.
+             */
+            total: string;
+            /**
+             * Currency
+             * @description ISO 4217 currency code, such as EGP.
+             */
+            currency: string;
         };
         /**
          * HandoverTokenResponse
@@ -5264,6 +6954,20 @@ export interface components {
             sales_contribution_percentage: string;
         };
         /**
+         * ItemSoldOutError
+         * @description 409 when the item is in the branch menu but cannot be ordered right now.
+         * @example {
+         *       "code": "ITEM_UNAVAILABLE",
+         *       "detail": "Sorry, Latte is sold out right now."
+         *     }
+         */
+        ItemSoldOutError: {
+            /** Code */
+            code: string;
+            /** Detail */
+            detail: string;
+        };
+        /**
          * KDSBumpRequest
          * @description Request payload for bumping or unbumping items on the KDS bump bar.
          */
@@ -5353,6 +7057,21 @@ export interface components {
             status: string;
             /** Fulfillment Type */
             fulfillment_type: string;
+            /**
+             * Order Channel
+             * @description DINE_IN, POS_TAKEAWAY, WEB_PICKUP, DRIVE_THRU, CURBSIDE, or MOBILE
+             * @default DINE_IN
+             */
+            order_channel: string;
+            /** Customer Name */
+            customer_name?: string | null;
+            /**
+             * Vehicle
+             * @description plate, colour, and make. Null when the order has no vehicle.
+             */
+            vehicle?: {
+                [key: string]: unknown;
+            } | null;
             /** Vehicle Info */
             vehicle_info?: {
                 [key: string]: unknown;
@@ -5363,6 +7082,22 @@ export interface components {
             customer_notes?: string | null;
             /** Ready At */
             ready_at?: string | null;
+            /** Arrived At */
+            arrived_at?: string | null;
+            /** Arrival Note */
+            arrival_note?: string | null;
+            /**
+             * Is Mobile Order
+             * @default false
+             */
+            is_mobile_order: boolean;
+            /** Customer First Name */
+            customer_first_name?: string | null;
+            /**
+             * Is Paid
+             * @default false
+             */
+            is_paid: boolean;
             /**
              * Created At
              * Format: date-time
@@ -5433,15 +7168,44 @@ export interface components {
             /** @description Parent order status */
             order_status: components["schemas"]["OrderStatus"];
             /**
-             * @description Dine in or takeaway
+             * @description Dine in or takeaway. Pricing only; the kitchen label is fulfillment_type.
              * @default DINE_IN
              */
             order_type: components["schemas"]["OrderType"];
+            /**
+             * Fulfillment Type
+             * @description How the guest receives the order. DRIVE_THRU stays DRIVE_THRU even when order_type is TAKEAWAY.
+             * @default DINE_IN
+             */
+            fulfillment_type: string;
             /**
              * Customer Notes
              * @description General order customer notes
              */
             customer_notes?: string | null;
+            /**
+             * Order Channel
+             * @description DINE_IN, POS_TAKEAWAY, WEB_PICKUP, DRIVE_THRU, CURBSIDE, or MOBILE
+             * @default DINE_IN
+             */
+            order_channel: string;
+            /**
+             * Customer Name
+             * @description Guest name when the order has one
+             */
+            customer_name?: string | null;
+            /**
+             * Vehicle
+             * @description plate, colour, and make when the guest sent a vehicle
+             */
+            vehicle?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Arrived At
+             * @description When the guest said they arrived
+             */
+            arrived_at?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -5609,6 +7373,53 @@ export interface components {
             created_at: string;
         };
         /**
+         * LocalizedField
+         * @description Bilingual input field strictly enforcing English and Arabic values for admin schemas.
+         */
+        LocalizedField: {
+            /**
+             * En
+             * @description English text representation
+             */
+            en: string;
+            /**
+             * Ar
+             * @description Arabic text representation
+             */
+            ar: string;
+        };
+        /**
+         * LoginRequest
+         * @description Sign in with email and password.
+         * @example {
+         *       "email": "mona@example.com",
+         *       "password": "MousaCafe1",
+         *       "remember_me": false
+         *     }
+         */
+        LoginRequest: {
+            /**
+             * Email
+             * Format: email
+             * @description Email address.
+             * @example mona@example.com
+             */
+            email: string;
+            /**
+             * Password
+             * @description Password. At least 8 characters, with a letter and a digit, for customers.
+             * @example MousaCafe1
+             */
+            password: string;
+            /**
+             * Remember Me
+             * @description False keeps the refresh session for 24 hours. True keeps it for 30 days.
+             * @default false
+             * @example false
+             */
+            remember_me: boolean;
+        };
+        /**
          * LogoUploadResponse
          * @description Confirmation response for brand logo upload.
          */
@@ -5617,6 +7428,28 @@ export interface components {
             brand_id: string;
             /** Logo Url */
             logo_url: string;
+        };
+        /**
+         * LogoutRequest
+         * @description Optional refresh token and device token. The access token's session is what gets revoked.
+         * @example {
+         *       "fcm_token": "fcm-token-abc123",
+         *       "refresh_token": "opaque-refresh-token"
+         *     }
+         */
+        LogoutRequest: {
+            /**
+             * Refresh Token
+             * @description Rotating refresh token. Send it once; the response replaces it.
+             * @example opaque-refresh-token
+             */
+            refresh_token?: string | null;
+            /**
+             * Fcm Token
+             * @description Fcm Token.
+             * @example fcm-token-abc123
+             */
+            fcm_token?: string | null;
         };
         /**
          * MenuCategoryResponse
@@ -5862,6 +7695,1362 @@ export interface components {
             schedule_rules?: components["schemas"]["ScheduleRulesSchema"] | null;
         };
         /**
+         * MessageResponse
+         * @description A short localized confirmation.
+         * @example {
+         *       "message": "If an account exists for that email, a password reset link has been sent."
+         *     }
+         */
+        MessageResponse: {
+            /**
+             * Message
+             * @description Localized sentence for the customer.
+             */
+            message: string;
+        };
+        /**
+         * MobileActiveOrders
+         * @description Orders that are placed, being prepared, or ready for pickup.
+         * @example {
+         *       "items": [
+         *         {
+         *           "branch": {
+         *             "address": "15 Brazil Street, Zamalek, Cairo",
+         *             "id": "11111111-1111-1111-1111-111111111111",
+         *             "latitude": "30.0609000",
+         *             "longitude": "31.2197000",
+         *             "name": "Zamalek",
+         *             "phone": "+20227351234"
+         *           },
+         *           "can_cancel": true,
+         *           "created_at": "2026-10-01T12:00:00Z",
+         *           "customer_notes": "I'll be in a white car.",
+         *           "display_number": "104",
+         *           "estimated_prep_minutes": 12,
+         *           "estimated_ready_at": "2026-10-01T12:12:00Z",
+         *           "fulfillment_type": "drive_thru",
+         *           "id": "99999999-9999-9999-9999-999999999999",
+         *           "items": [
+         *             {
+         *               "item_id": "33333333-3333-3333-3333-333333333333",
+         *               "modifiers": [
+         *                 {
+         *                   "group_name": "Size",
+         *                   "name": "Large",
+         *                   "price_delta": "3.00"
+         *                 },
+         *                 {
+         *                   "group_name": "Milk",
+         *                   "name": "Oat milk",
+         *                   "price_delta": "2.00"
+         *                 }
+         *               ],
+         *               "name": "Latte",
+         *               "quantity": 1,
+         *               "special_instructions": "Extra hot, please.",
+         *               "subtotal": "45.00",
+         *               "unit_price": "45.00"
+         *             }
+         *           ],
+         *           "payment": {
+         *             "amount_due": "51.30",
+         *             "method": "cash",
+         *             "status": "due_at_pickup",
+         *             "status_label": "Pay when you arrive"
+         *           },
+         *           "pickup_pass": {
+         *             "expires_at": "2026-10-01T23:00:00Z",
+         *             "qr_payload": "order:99999999-9999-9999-9999-999999999999:token:HT-A1B2C3D4E5F67890A1B2C3D4",
+         *             "token": "HT-A1B2C3D4E5F67890A1B2C3D4"
+         *           },
+         *           "pricing": {
+         *             "currency": "EGP",
+         *             "discount_total": "0.00",
+         *             "service_fee_total": "0.00",
+         *             "subtotal": "45.00",
+         *             "tax_total": "6.30",
+         *             "total": "51.30"
+         *           },
+         *           "status": "placed",
+         *           "status_label": "Order placed",
+         *           "timeline": {
+         *             "placed_at": "2026-10-01T12:00:00Z"
+         *           },
+         *           "updated_at": "2026-10-01T12:00:00Z",
+         *           "vehicle": {
+         *             "color": "White",
+         *             "id": "88888888-8888-8888-8888-888888888888",
+         *             "make": "Toyota",
+         *             "model": "Corolla",
+         *             "plate_number": "ABC 123",
+         *             "verification_status": "unverified"
+         *           }
+         *         }
+         *       ]
+         *     }
+         */
+        MobileActiveOrders: {
+            /**
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
+             */
+            items: components["schemas"]["MobileOrderResponse"][];
+        };
+        /**
+         * MobileBranchList
+         * @description Mobile-visible branches for this app's restaurant.
+         * @example {
+         *       "items": [
+         *         {
+         *           "address": "15 Brazil Street, Zamalek, Cairo",
+         *           "cover_image_url": "https://cdn.example.com/mousa/zamalek-cover.jpg",
+         *           "currency": "EGP",
+         *           "distance_km": 1.4,
+         *           "estimated_prep_minutes": 12,
+         *           "fulfillment_options": [
+         *             "drive_thru",
+         *             "curbside"
+         *           ],
+         *           "id": "11111111-1111-1111-1111-111111111111",
+         *           "is_open_now": true,
+         *           "latitude": "30.0609000",
+         *           "logo_url": "https://cdn.example.com/mousa/zamalek-logo.png",
+         *           "longitude": "31.2197000",
+         *           "name": "Zamalek",
+         *           "next_change_at": "2026-10-01T21:00:00Z",
+         *           "opening_hours": {
+         *             "fri": [
+         *               {
+         *                 "close": "00:30",
+         *                 "open": "07:00"
+         *               }
+         *             ],
+         *             "mon": [
+         *               {
+         *                 "close": "23:00",
+         *                 "open": "07:00"
+         *               }
+         *             ],
+         *             "sat": [
+         *               {
+         *                 "close": "00:30",
+         *                 "open": "08:00"
+         *               }
+         *             ],
+         *             "sun": [
+         *               {
+         *                 "close": "23:00",
+         *                 "open": "08:00"
+         *               }
+         *             ],
+         *             "thu": [
+         *               {
+         *                 "close": "23:00",
+         *                 "open": "07:00"
+         *               }
+         *             ],
+         *             "tue": [
+         *               {
+         *                 "close": "23:00",
+         *                 "open": "07:00"
+         *               }
+         *             ],
+         *             "wed": [
+         *               {
+         *                 "close": "23:00",
+         *                 "open": "07:00"
+         *               }
+         *             ]
+         *           },
+         *           "phone": "+20227351234",
+         *           "timezone": "Africa/Cairo"
+         *         }
+         *       ]
+         *     }
+         */
+        MobileBranchList: {
+            /**
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
+             */
+            items: components["schemas"]["MobileBranchSummary"][];
+        };
+        /**
+         * MobileBranchSummary
+         * @description A branch the app can show before the customer signs in.
+         * @example {
+         *       "address": "15 Brazil Street, Zamalek, Cairo",
+         *       "cover_image_url": "https://cdn.example.com/mousa/zamalek-cover.jpg",
+         *       "currency": "EGP",
+         *       "distance_km": 1.4,
+         *       "estimated_prep_minutes": 12,
+         *       "fulfillment_options": [
+         *         "drive_thru",
+         *         "curbside"
+         *       ],
+         *       "id": "11111111-1111-1111-1111-111111111111",
+         *       "is_open_now": true,
+         *       "latitude": "30.0609000",
+         *       "logo_url": "https://cdn.example.com/mousa/zamalek-logo.png",
+         *       "longitude": "31.2197000",
+         *       "name": "Zamalek",
+         *       "next_change_at": "2026-10-01T21:00:00Z",
+         *       "opening_hours": {
+         *         "fri": [
+         *           {
+         *             "close": "00:30",
+         *             "open": "07:00"
+         *           }
+         *         ],
+         *         "mon": [
+         *           {
+         *             "close": "23:00",
+         *             "open": "07:00"
+         *           }
+         *         ],
+         *         "sat": [
+         *           {
+         *             "close": "00:30",
+         *             "open": "08:00"
+         *           }
+         *         ],
+         *         "sun": [
+         *           {
+         *             "close": "23:00",
+         *             "open": "08:00"
+         *           }
+         *         ],
+         *         "thu": [
+         *           {
+         *             "close": "23:00",
+         *             "open": "07:00"
+         *           }
+         *         ],
+         *         "tue": [
+         *           {
+         *             "close": "23:00",
+         *             "open": "07:00"
+         *           }
+         *         ],
+         *         "wed": [
+         *           {
+         *             "close": "23:00",
+         *             "open": "07:00"
+         *           }
+         *         ]
+         *       },
+         *       "phone": "+20227351234",
+         *       "timezone": "Africa/Cairo"
+         *     }
+         */
+        MobileBranchSummary: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+            /**
+             * Address
+             * @description Address.
+             */
+            address?: string | null;
+            /**
+             * Phone
+             * @description Phone number in E.164, such as +201001234567.
+             */
+            phone?: string | null;
+            /**
+             * Latitude
+             * @description Latitude.
+             */
+            latitude: string;
+            /**
+             * Longitude
+             * @description Longitude.
+             */
+            longitude: string;
+            /**
+             * Timezone
+             * @description Timezone.
+             */
+            timezone: string;
+            /**
+             * Currency
+             * @description ISO 4217 currency code, such as EGP.
+             */
+            currency: string;
+            /**
+             * Logo Url
+             * @description Logo Url.
+             */
+            logo_url?: string | null;
+            /**
+             * Cover Image Url
+             * @description Cover Image Url.
+             */
+            cover_image_url?: string | null;
+            /**
+             * Opening Hours
+             * @description Opening Hours.
+             */
+            opening_hours?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Is Open Now
+             * @description Is Open Now.
+             */
+            is_open_now?: boolean | null;
+            /**
+             * Next Change At
+             * @description Next Change At.
+             */
+            next_change_at?: string | null;
+            /**
+             * Fulfillment Options
+             * @description Fulfillment Options.
+             */
+            fulfillment_options?: ("drive_thru" | "curbside")[];
+            /**
+             * Estimated Prep Minutes
+             * @description Estimated Prep Minutes.
+             */
+            estimated_prep_minutes: number;
+            /**
+             * Distance Km
+             * @description Kilometers from the supplied coordinates, to 0.1 km. Null when lat and lng were omitted.
+             */
+            distance_km?: number | null;
+        };
+        /**
+         * MobileCatalog
+         * @description The branch menu for the app. Names follow Accept-Language.
+         *
+         *     Internal catalog fields are omitted: scope, has_override, price_override,
+         *     is_visible, base_price, and access_pin.
+         * @example {
+         *       "branch_id": "11111111-1111-1111-1111-111111111111",
+         *       "categories": [
+         *         {
+         *           "display_order": 0,
+         *           "id": "22222222-2222-2222-2222-222222222222",
+         *           "items": [
+         *             {
+         *               "allergens": [
+         *                 "milk"
+         *               ],
+         *               "description": "Espresso with steamed milk.",
+         *               "dietary_badges": [
+         *                 "vegetarian"
+         *               ],
+         *               "id": "33333333-3333-3333-3333-333333333333",
+         *               "image_url": "https://cdn.example.com/mousa/latte.jpg",
+         *               "is_available": true,
+         *               "item_type": "prepared",
+         *               "modifier_groups": [
+         *                 {
+         *                   "id": "44444444-4444-4444-4444-444444444444",
+         *                   "is_required": true,
+         *                   "max_choices": 1,
+         *                   "min_choices": 1,
+         *                   "name": "Size",
+         *                   "options": [
+         *                     {
+         *                       "id": "55555555-5555-5555-5555-555555555551",
+         *                       "is_available": true,
+         *                       "name": "Regular",
+         *                       "price_delta": "0.00"
+         *                     },
+         *                     {
+         *                       "id": "55555555-5555-5555-5555-555555555552",
+         *                       "is_available": true,
+         *                       "name": "Large",
+         *                       "price_delta": "10.00"
+         *                     }
+         *                   ]
+         *                 },
+         *                 {
+         *                   "id": "66666666-6666-6666-6666-666666666666",
+         *                   "is_required": false,
+         *                   "max_choices": 1,
+         *                   "min_choices": 0,
+         *                   "name": "Milk",
+         *                   "options": [
+         *                     {
+         *                       "id": "66666666-6666-6666-6666-666666666661",
+         *                       "is_available": true,
+         *                       "name": "Whole milk",
+         *                       "price_delta": "0.00"
+         *                     },
+         *                     {
+         *                       "id": "66666666-6666-6666-6666-666666666662",
+         *                       "is_available": true,
+         *                       "name": "Oat",
+         *                       "price_delta": "8.00"
+         *                     }
+         *                   ]
+         *                 },
+         *                 {
+         *                   "id": "77777777-7777-7777-7777-777777777777",
+         *                   "is_required": false,
+         *                   "max_choices": 1,
+         *                   "min_choices": 0,
+         *                   "name": "Sweetness",
+         *                   "options": [
+         *                     {
+         *                       "id": "77777777-7777-7777-7777-777777777771",
+         *                       "is_available": true,
+         *                       "name": "Regular",
+         *                       "price_delta": "0.00"
+         *                     },
+         *                     {
+         *                       "id": "77777777-7777-7777-7777-777777777772",
+         *                       "is_available": true,
+         *                       "name": "Extra sweet",
+         *                       "price_delta": "2.00"
+         *                     }
+         *                   ]
+         *                 }
+         *               ],
+         *               "name": "Latte",
+         *               "prep_time_minutes": 5,
+         *               "price": "40.00",
+         *               "tags": [
+         *                 "hot"
+         *               ]
+         *             }
+         *           ],
+         *           "name": "Coffee"
+         *         }
+         *       ],
+         *       "currency": "EGP"
+         *     }
+         */
+        MobileCatalog: {
+            /**
+             * Branch Id
+             * Format: uuid
+             * @description Branch this call applies to.
+             */
+            branch_id: string;
+            /**
+             * Currency
+             * @description ISO 4217 currency code, such as EGP.
+             */
+            currency: string;
+            /**
+             * Categories
+             * @description Categories.
+             */
+            categories: components["schemas"]["MobileCatalogCategory"][];
+        };
+        /**
+         * MobileCatalogCategory
+         * @description A menu section and the items currently offered in it.
+         */
+        MobileCatalogCategory: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+            /**
+             * Display Order
+             * @description Display Order.
+             */
+            display_order: number;
+            /**
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
+             */
+            items: components["schemas"]["MobileCatalogItem"][];
+        };
+        /**
+         * MobileCatalogItem
+         * @description An item the branch can sell in the app, with its branch price and modifier groups.
+         */
+        MobileCatalogItem: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+            /**
+             * Description
+             * @description Description.
+             */
+            description?: string | null;
+            /**
+             * Image Url
+             * @description Image Url.
+             */
+            image_url?: string | null;
+            /**
+             * Price
+             * @description Branch price, using the branch override when one is set.
+             */
+            price: string;
+            /**
+             * Is Available
+             * @description Is Available.
+             */
+            is_available: boolean;
+            /**
+             * Prep Time Minutes
+             * @description Prep Time Minutes.
+             */
+            prep_time_minutes?: number | null;
+            /**
+             * Allergens
+             * @description Allergens.
+             */
+            allergens?: string[];
+            /**
+             * Dietary Badges
+             * @description Dietary Badges.
+             */
+            dietary_badges?: string[];
+            /**
+             * Tags
+             * @description Tags.
+             */
+            tags?: string[];
+            /**
+             * Item Type
+             * @description prepared, retail, or combo.
+             */
+            item_type: string;
+            /**
+             * Modifier Groups
+             * @description Modifier Groups.
+             */
+            modifier_groups?: components["schemas"]["MobileModifierGroup"][];
+        };
+        /**
+         * MobileLineRequest
+         * @description One item in a cart checkout.
+         * @example {
+         *       "item_id": "33333333-3333-3333-3333-333333333333",
+         *       "quantity": 1,
+         *       "selected_groups": [
+         *         {
+         *           "group_id": "44444444-4444-4444-4444-444444444444",
+         *           "option_ids": [
+         *             "55555555-5555-5555-5555-555555555552"
+         *           ]
+         *         },
+         *         {
+         *           "group_id": "66666666-6666-6666-6666-666666666666",
+         *           "option_ids": [
+         *             "66666666-6666-6666-6666-666666666662"
+         *           ]
+         *         }
+         *       ],
+         *       "special_instructions": "Extra hot, please."
+         *     }
+         */
+        MobileLineRequest: {
+            /**
+             * Item Id
+             * Format: uuid
+             * @description Catalog item.
+             */
+            item_id: string;
+            /**
+             * Quantity
+             * @description How many of this item.
+             * @example 1
+             */
+            quantity: number;
+            /**
+             * Selected Groups
+             * @description Selected Groups.
+             */
+            selected_groups?: components["schemas"]["MobileSelectedGroup"][];
+            /**
+             * Special Instructions
+             * @description Special Instructions.
+             * @example Extra hot, please.
+             */
+            special_instructions?: string | null;
+        };
+        /**
+         * MobileModifierGroup
+         * @description A customization group on an item. Size, Milk, and Sweetness are groups, not separate fields.
+         */
+        MobileModifierGroup: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+            /**
+             * Min Choices
+             * @description Min Choices.
+             */
+            min_choices: number;
+            /**
+             * Max Choices
+             * @description Max Choices.
+             */
+            max_choices: number;
+            /**
+             * Is Required
+             * @description Is Required.
+             */
+            is_required: boolean;
+            /**
+             * Options
+             * @description Options.
+             */
+            options: components["schemas"]["MobileModifierOption"][];
+        };
+        /**
+         * MobileModifierLine
+         * @description A modifier as the customer will see it on the order.
+         */
+        MobileModifierLine: {
+            /**
+             * Group Name
+             * @description Group Name.
+             */
+            group_name: string;
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+            /**
+             * Price Delta
+             * @description Price Delta.
+             */
+            price_delta: string;
+        };
+        /**
+         * MobileModifierOption
+         * @description One choice inside a modifier group, such as Oat under Milk.
+         */
+        MobileModifierOption: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+            /**
+             * Price Delta
+             * @description Price Delta.
+             */
+            price_delta: string;
+            /**
+             * Is Available
+             * @description Is Available.
+             */
+            is_available: boolean;
+        };
+        /**
+         * MobileOrderBranch
+         * @description The branch the order will be picked up from.
+         */
+        MobileOrderBranch: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+            /**
+             * Address
+             * @description Address.
+             */
+            address?: string | null;
+            /**
+             * Latitude
+             * @description Latitude.
+             */
+            latitude?: string | null;
+            /**
+             * Longitude
+             * @description Longitude.
+             */
+            longitude?: string | null;
+            /**
+             * Phone
+             * @description Phone number in E.164, such as +201001234567.
+             */
+            phone?: string | null;
+        };
+        /**
+         * MobileOrderItem
+         * @description A priced line. Prices already include the branch price and modifier deltas.
+         */
+        MobileOrderItem: {
+            /**
+             * Item Id
+             * Format: uuid
+             * @description Catalog item.
+             */
+            item_id: string;
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+            /**
+             * Quantity
+             * @description How many of this item.
+             */
+            quantity: number;
+            /**
+             * Unit Price
+             * @description Unit Price.
+             */
+            unit_price: string;
+            /**
+             * Subtotal
+             * @description Item subtotal before discount, tax, and service fee.
+             */
+            subtotal: string;
+            /**
+             * Modifiers
+             * @description Selected modifier options.
+             */
+            modifiers?: components["schemas"]["MobileModifierLine"][];
+            /**
+             * Special Instructions
+             * @description Special Instructions.
+             */
+            special_instructions?: string | null;
+        };
+        /**
+         * MobileOrderList
+         * @description A page of order history, newest first.
+         * @example {
+         *       "items": [
+         *         {
+         *           "branch_name": "Zamalek",
+         *           "created_at": "2026-10-01T12:00:00Z",
+         *           "currency": "EGP",
+         *           "display_number": "104",
+         *           "id": "99999999-9999-9999-9999-999999999999",
+         *           "item_count": 1,
+         *           "status": "placed",
+         *           "status_label": "Order placed",
+         *           "total": "51.30"
+         *         }
+         *       ]
+         *     }
+         */
+        MobileOrderList: {
+            /**
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
+             */
+            items: components["schemas"]["MobileOrderSummary"][];
+            /**
+             * Next Cursor
+             * @description Pass this as cursor to read the next page. Null on the last page.
+             */
+            next_cursor?: string | null;
+        };
+        /**
+         * MobileOrderPayment
+         * @description How this order will be paid.
+         *
+         *     demo_wallet means the DEMO ledger was debited. The stored payment method is
+         *     LOCAL_WALLET and the reference starts with DEMO-WALLET-. That is not real money.
+         */
+        MobileOrderPayment: {
+            /**
+             * Method
+             * @description Method.
+             * @enum {string}
+             */
+            method: "cash" | "demo_wallet";
+            /**
+             * Status
+             * @description Customer-facing status. Internal kitchen statuses are not returned.
+             * @enum {string}
+             */
+            status: "due_at_pickup" | "paid" | "refunded" | "void";
+            /**
+             * Status Label
+             * @description Localized status label for the Accept-Language header.
+             */
+            status_label: string;
+            /**
+             * Amount Due
+             * @description Amount Due.
+             */
+            amount_due: string;
+        };
+        /**
+         * MobileOrderResponse
+         * @description One order belonging to the signed-in customer.
+         * @example {
+         *       "branch": {
+         *         "address": "15 Brazil Street, Zamalek, Cairo",
+         *         "id": "11111111-1111-1111-1111-111111111111",
+         *         "latitude": "30.0609000",
+         *         "longitude": "31.2197000",
+         *         "name": "Zamalek",
+         *         "phone": "+20227351234"
+         *       },
+         *       "can_cancel": true,
+         *       "created_at": "2026-10-01T12:00:00Z",
+         *       "customer_notes": "I'll be in a white car.",
+         *       "display_number": "104",
+         *       "estimated_prep_minutes": 12,
+         *       "estimated_ready_at": "2026-10-01T12:12:00Z",
+         *       "fulfillment_type": "drive_thru",
+         *       "id": "99999999-9999-9999-9999-999999999999",
+         *       "items": [
+         *         {
+         *           "item_id": "33333333-3333-3333-3333-333333333333",
+         *           "modifiers": [
+         *             {
+         *               "group_name": "Size",
+         *               "name": "Large",
+         *               "price_delta": "3.00"
+         *             },
+         *             {
+         *               "group_name": "Milk",
+         *               "name": "Oat milk",
+         *               "price_delta": "2.00"
+         *             }
+         *           ],
+         *           "name": "Latte",
+         *           "quantity": 1,
+         *           "special_instructions": "Extra hot, please.",
+         *           "subtotal": "45.00",
+         *           "unit_price": "45.00"
+         *         }
+         *       ],
+         *       "payment": {
+         *         "amount_due": "51.30",
+         *         "method": "cash",
+         *         "status": "due_at_pickup",
+         *         "status_label": "Pay when you arrive"
+         *       },
+         *       "pickup_pass": {
+         *         "expires_at": "2026-10-01T23:00:00Z",
+         *         "qr_payload": "order:99999999-9999-9999-9999-999999999999:token:HT-A1B2C3D4E5F67890A1B2C3D4",
+         *         "token": "HT-A1B2C3D4E5F67890A1B2C3D4"
+         *       },
+         *       "pricing": {
+         *         "currency": "EGP",
+         *         "discount_total": "0.00",
+         *         "service_fee_total": "0.00",
+         *         "subtotal": "45.00",
+         *         "tax_total": "6.30",
+         *         "total": "51.30"
+         *       },
+         *       "status": "placed",
+         *       "status_label": "Order placed",
+         *       "timeline": {
+         *         "placed_at": "2026-10-01T12:00:00Z"
+         *       },
+         *       "updated_at": "2026-10-01T12:00:00Z",
+         *       "vehicle": {
+         *         "color": "White",
+         *         "id": "88888888-8888-8888-8888-888888888888",
+         *         "make": "Toyota",
+         *         "model": "Corolla",
+         *         "plate_number": "ABC 123",
+         *         "verification_status": "unverified"
+         *       }
+         *     }
+         */
+        MobileOrderResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Display Number
+             * @description Display Number.
+             */
+            display_number: string;
+            /**
+             * Status
+             * @description Customer-facing status. Internal kitchen statuses are not returned.
+             * @enum {string}
+             */
+            status: "placed" | "preparing" | "ready" | "completed" | "cancelled";
+            /**
+             * Status Label
+             * @description Localized status label for the Accept-Language header.
+             */
+            status_label: string;
+            /**
+             * Can Cancel
+             * @description Can Cancel.
+             */
+            can_cancel: boolean;
+            /** @description Branch. */
+            branch: components["schemas"]["MobileOrderBranch"];
+            /**
+             * Fulfillment Type
+             * @description drive_thru or curbside.
+             * @enum {string}
+             */
+            fulfillment_type: "drive_thru" | "curbside";
+            /** @description Vehicle. */
+            vehicle: components["schemas"]["MobileOrderVehicle"];
+            /**
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
+             */
+            items: components["schemas"]["MobileOrderItem"][];
+            /** @description Pricing. */
+            pricing: components["schemas"]["MobilePricing"];
+            /** @description Payment. */
+            payment: components["schemas"]["MobileOrderPayment"];
+            /**
+             * Estimated Prep Minutes
+             * @description Estimated Prep Minutes.
+             */
+            estimated_prep_minutes: number;
+            /**
+             * Estimated Ready At
+             * @description Estimated Ready At.
+             */
+            estimated_ready_at?: string | null;
+            /** @description Pickup pass. */
+            pickup_pass?: components["schemas"]["MobilePickupPass"] | null;
+            /** @description Timeline. */
+            timeline: components["schemas"]["MobileOrderTimeline"];
+            /**
+             * Customer Notes
+             * @description Customer Notes.
+             */
+            customer_notes?: string | null;
+            /**
+             * Arrived At
+             * @description Arrived At.
+             */
+            arrived_at?: string | null;
+            /**
+             * Arrival Note
+             * @description Arrival Note.
+             */
+            arrival_note?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             * @description When this record was created, UTC.
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description When this record was last changed, UTC.
+             */
+            updated_at: string;
+        };
+        /**
+         * MobileOrderSummary
+         * @description A row in the order history list.
+         * @example {
+         *       "branch_name": "Zamalek",
+         *       "created_at": "2026-10-01T12:00:00Z",
+         *       "currency": "EGP",
+         *       "display_number": "104",
+         *       "id": "99999999-9999-9999-9999-999999999999",
+         *       "item_count": 1,
+         *       "status": "placed",
+         *       "status_label": "Order placed",
+         *       "total": "51.30"
+         *     }
+         */
+        MobileOrderSummary: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Display Number
+             * @description Display Number.
+             */
+            display_number: string;
+            /**
+             * Status
+             * @description Customer-facing status. Internal kitchen statuses are not returned.
+             * @enum {string}
+             */
+            status: "placed" | "preparing" | "ready" | "completed" | "cancelled";
+            /**
+             * Status Label
+             * @description Localized status label for the Accept-Language header.
+             */
+            status_label: string;
+            /**
+             * Branch Name
+             * @description Branch Name.
+             */
+            branch_name: string;
+            /**
+             * Total
+             * @description Amount due: subtotal minus discount, plus service fee and tax.
+             */
+            total: string;
+            /**
+             * Currency
+             * @description ISO 4217 currency code, such as EGP.
+             */
+            currency: string;
+            /**
+             * Item Count
+             * @description Item Count.
+             */
+            item_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             * @description When this record was created, UTC.
+             */
+            created_at: string;
+        };
+        /**
+         * MobileOrderTimeline
+         * @description When the order moved. Missing moments are null.
+         */
+        MobileOrderTimeline: {
+            /**
+             * Placed At
+             * Format: date-time
+             * @description Placed At.
+             */
+            placed_at: string;
+            /**
+             * Ready At
+             * @description Ready At.
+             */
+            ready_at?: string | null;
+            /**
+             * Completed At
+             * @description Completed At.
+             */
+            completed_at?: string | null;
+            /**
+             * Cancelled At
+             * @description Cancelled At.
+             */
+            cancelled_at?: string | null;
+        };
+        /**
+         * MobileOrderVehicle
+         * @description The vehicle snapshot taken when the order was placed.
+         */
+        MobileOrderVehicle: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Make
+             * @description Make.
+             */
+            make: string;
+            /**
+             * Model
+             * @description Model.
+             */
+            model: string;
+            /**
+             * Color
+             * @description Color.
+             */
+            color: string;
+            /**
+             * Plate Number
+             * @description Plate Number.
+             */
+            plate_number: string;
+            /**
+             * Verification Status
+             * @description Verification Status.
+             */
+            verification_status: string;
+        };
+        /**
+         * MobilePaymentOption
+         * @description Whether the customer can pay this way right now.
+         */
+        MobilePaymentOption: {
+            /**
+             * Method
+             * @description Method.
+             * @enum {string}
+             */
+            method: "cash" | "demo_wallet";
+            /**
+             * Available
+             * @description Available.
+             */
+            available: boolean;
+            /**
+             * Unavailable Reason
+             * @description PAYMENT_METHOD_UNAVAILABLE when demo_wallet is turned off.
+             */
+            unavailable_reason?: string | null;
+        };
+        /**
+         * MobilePickupPass
+         * @description The QR the customer shows at pickup. Staff scan qr_payload.
+         */
+        MobilePickupPass: {
+            /**
+             * Token
+             * @description Secret token. Store it in the Keychain or Keystore, not in plain storage.
+             */
+            token: string;
+            /**
+             * Qr Payload
+             * @description Qr Payload.
+             */
+            qr_payload: string;
+            /**
+             * Expires At
+             * Format: date-time
+             * @description Expires At.
+             */
+            expires_at: string;
+        };
+        /**
+         * MobilePickupPassResponse
+         * @description The current pickup QR for one order.
+         * @example {
+         *       "display_number": "104",
+         *       "expires_at": "2026-10-01T23:00:00Z",
+         *       "order_id": "99999999-9999-9999-9999-999999999999",
+         *       "qr_payload": "order:99999999-9999-9999-9999-999999999999:token:HT-A1B2C3D4E5F67890A1B2C3D4",
+         *       "status": "placed",
+         *       "status_label": "Order placed",
+         *       "token": "HT-A1B2C3D4E5F67890A1B2C3D4"
+         *     }
+         */
+        MobilePickupPassResponse: {
+            /**
+             * Order Id
+             * Format: uuid
+             * @description Order this call applies to.
+             */
+            order_id: string;
+            /**
+             * Display Number
+             * @description Display Number.
+             */
+            display_number: string;
+            /**
+             * Token
+             * @description Secret token. Store it in the Keychain or Keystore, not in plain storage.
+             */
+            token: string;
+            /**
+             * Qr Payload
+             * @description Qr Payload.
+             */
+            qr_payload: string;
+            /**
+             * Expires At
+             * Format: date-time
+             * @description Expires At.
+             */
+            expires_at: string;
+            /**
+             * Status
+             * @description Customer-facing status. Internal kitchen statuses are not returned.
+             * @enum {string}
+             */
+            status: "placed" | "preparing" | "ready" | "completed" | "cancelled";
+            /**
+             * Status Label
+             * @description Localized status label for the Accept-Language header.
+             */
+            status_label: string;
+        };
+        /**
+         * MobilePricing
+         * @description Totals for the order.
+         *
+         *     subtotal is the item subtotal before any promo. discount_total is removed
+         *     from that subtotal, and tax is computed on what remains.
+         */
+        MobilePricing: {
+            /**
+             * Currency
+             * @description ISO 4217 currency code, such as EGP.
+             */
+            currency: string;
+            /**
+             * Subtotal
+             * @description Item subtotal before discount, tax, and service fee.
+             */
+            subtotal: string;
+            /**
+             * Discount Total
+             * @description Promo discount taken off the item subtotal before tax.
+             */
+            discount_total: string;
+            /**
+             * Service Fee Total
+             * @description Service Fee Total.
+             */
+            service_fee_total: string;
+            /**
+             * Tax Total
+             * @description Tax computed on the discounted subtotal.
+             */
+            tax_total: string;
+            /**
+             * Total
+             * @description Amount due: subtotal minus discount, plus service fee and tax.
+             */
+            total: string;
+            /**
+             * Promo Code
+             * @description The code that was applied, or null when the cart has no usable code.
+             */
+            promo_code?: string | null;
+        };
+        /**
+         * MobileQuoteResponse
+         * @description Totals for the cart. Nothing is saved.
+         * @example {
+         *       "estimated_prep_minutes": 12,
+         *       "items": [
+         *         {
+         *           "item_id": "33333333-3333-3333-3333-333333333333",
+         *           "modifiers": [
+         *             {
+         *               "group_name": "Size",
+         *               "name": "Large",
+         *               "price_delta": "3.00"
+         *             },
+         *             {
+         *               "group_name": "Milk",
+         *               "name": "Oat milk",
+         *               "price_delta": "2.00"
+         *             }
+         *           ],
+         *           "name": "Latte",
+         *           "quantity": 1,
+         *           "special_instructions": "Extra hot, please.",
+         *           "subtotal": "45.00",
+         *           "unit_price": "45.00"
+         *         }
+         *       ],
+         *       "payment_options": [
+         *         {
+         *           "available": true,
+         *           "method": "cash"
+         *         },
+         *         {
+         *           "available": false,
+         *           "method": "demo_wallet",
+         *           "unavailable_reason": "PAYMENT_METHOD_UNAVAILABLE"
+         *         }
+         *       ],
+         *       "pricing": {
+         *         "currency": "EGP",
+         *         "discount_total": "0.00",
+         *         "service_fee_total": "0.00",
+         *         "subtotal": "45.00",
+         *         "tax_total": "6.30",
+         *         "total": "51.30"
+         *       },
+         *       "warnings": []
+         *     }
+         */
+        MobileQuoteResponse: {
+            /** @description Pricing. */
+            pricing: components["schemas"]["MobilePricing"];
+            /**
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
+             */
+            items: components["schemas"]["MobileOrderItem"][];
+            /**
+             * Estimated Prep Minutes
+             * @description Estimated Prep Minutes.
+             */
+            estimated_prep_minutes: number;
+            /**
+             * Payment Options
+             * @description cash is always available. demo_wallet is unavailable, with reason PAYMENT_METHOD_UNAVAILABLE, when MOBILE_DEMO_WALLET_ENABLED is off.
+             */
+            payment_options?: components["schemas"]["MobilePaymentOption"][];
+            /**
+             * Warnings
+             * @description Reason codes when promo_code was sent but cannot be used. Quote does not fail. Checkout returns that code as an error instead.
+             */
+            warnings?: string[];
+        };
+        /**
+         * MobileSelectedGroup
+         * @description One modifier group and the options chosen in it.
+         * @example {
+         *       "group_id": "44444444-4444-4444-4444-444444444444",
+         *       "option_ids": [
+         *         "55555555-5555-5555-5555-555555555552"
+         *       ]
+         *     }
+         */
+        MobileSelectedGroup: {
+            /**
+             * Group Id
+             * Format: uuid
+             * @description Group Id.
+             */
+            group_id: string;
+            /**
+             * Option Ids
+             * @description Option Ids.
+             */
+            option_ids?: string[];
+        };
+        /**
          * ModifierGroupResponse
          * @description Modifier group specification enforcing selection boundaries and mandatory flags.
          */
@@ -5938,6 +9127,295 @@ export interface components {
             is_available: boolean;
         };
         /**
+         * ModifierSelectionError
+         * @description 400 when the Size, Milk, or Sweetness choices don't match the item's groups.
+         * @example {
+         *       "code": "MODIFIER_GROUP_REQUIRED",
+         *       "detail": "Please choose an option. This modifier group is required."
+         *     }
+         */
+        ModifierSelectionError: {
+            /** Code */
+            code: string;
+            /** Detail */
+            detail: string;
+        };
+        /**
+         * MyUsualModifier
+         * @description A priced, localized modifier choice on the saved order.
+         */
+        MyUsualModifier: {
+            /**
+             * Group Id
+             * Format: uuid
+             * @description Group Id.
+             */
+            group_id: string;
+            /**
+             * Group Name
+             * @description Group Name.
+             */
+            group_name: string;
+            /**
+             * Option Id
+             * Format: uuid
+             * @description Option Id.
+             */
+            option_id: string;
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+            /**
+             * Price Delta
+             * @description Price Delta.
+             */
+            price_delta: string;
+        };
+        /**
+         * MyUsualSelection
+         * @description Options the customer picked inside one modifier group.
+         */
+        MyUsualSelection: {
+            /**
+             * Group Id
+             * Format: uuid
+             * @description Group Id.
+             */
+            group_id: string;
+            /**
+             * Option Ids
+             * @description Option Ids.
+             */
+            option_ids?: string[];
+        };
+        /**
+         * MyUsualUpdate
+         * @description Replace the customer's saved order.
+         *
+         *     Size, milk, and sweetness are sent as modifier groups on the item
+         *     (selected_groups), the same groups the catalog returns.
+         * @example {
+         *       "branch_id": "11111111-1111-1111-1111-111111111111",
+         *       "item_id": "33333333-3333-3333-3333-333333333333",
+         *       "quantity": 1,
+         *       "selected_groups": [
+         *         {
+         *           "group_id": "44444444-4444-4444-4444-444444444444",
+         *           "option_ids": [
+         *             "55555555-5555-5555-5555-555555555552"
+         *           ]
+         *         },
+         *         {
+         *           "group_id": "66666666-6666-6666-6666-666666666666",
+         *           "option_ids": [
+         *             "66666666-6666-6666-6666-666666666662"
+         *           ]
+         *         },
+         *         {
+         *           "group_id": "77777777-7777-7777-7777-777777777777",
+         *           "option_ids": [
+         *             "77777777-7777-7777-7777-777777777771"
+         *           ]
+         *         }
+         *       ],
+         *       "special_instructions": "Extra hot, please."
+         *     }
+         */
+        MyUsualUpdate: {
+            /**
+             * Branch Id
+             * @description Branch to price against. Defaults to the customer's preferred branch.
+             */
+            branch_id?: string | null;
+            /**
+             * Item Id
+             * Format: uuid
+             * @description Catalog item.
+             */
+            item_id: string;
+            /**
+             * Quantity
+             * @description How many of this item.
+             * @example 1
+             */
+            quantity: number;
+            /**
+             * Selected Groups
+             * @description Selected Groups.
+             */
+            selected_groups?: components["schemas"]["MyUsualSelection"][];
+            /**
+             * Special Instructions
+             * @description Special Instructions.
+             * @example Extra hot, please.
+             */
+            special_instructions?: string | null;
+        };
+        /**
+         * MyUsualView
+         * @description The saved order, priced again on every read.
+         *
+         *     When the branch, item, or modifiers can no longer be ordered, is_orderable
+         *     is false and unavailable_reason explains why. The read itself still succeeds.
+         * @example {
+         *       "branch_id": "11111111-1111-1111-1111-111111111111",
+         *       "branch_name": "Zamalek",
+         *       "currency": "EGP",
+         *       "is_orderable": true,
+         *       "item_id": "33333333-3333-3333-3333-333333333333",
+         *       "item_name": "Latte",
+         *       "quantity": 1,
+         *       "selected_groups": [
+         *         {
+         *           "group_id": "44444444-4444-4444-4444-444444444444",
+         *           "option_ids": [
+         *             "55555555-5555-5555-5555-555555555552"
+         *           ]
+         *         },
+         *         {
+         *           "group_id": "66666666-6666-6666-6666-666666666666",
+         *           "option_ids": [
+         *             "66666666-6666-6666-6666-666666666662"
+         *           ]
+         *         }
+         *       ],
+         *       "selected_modifiers": [
+         *         {
+         *           "group_id": "44444444-4444-4444-4444-444444444444",
+         *           "group_name": "Size",
+         *           "name": "Large",
+         *           "option_id": "55555555-5555-5555-5555-555555555552",
+         *           "price_delta": "10.00"
+         *         },
+         *         {
+         *           "group_id": "66666666-6666-6666-6666-666666666666",
+         *           "group_name": "Milk",
+         *           "name": "Oat",
+         *           "option_id": "66666666-6666-6666-6666-666666666662",
+         *           "price_delta": "8.00"
+         *         }
+         *       ],
+         *       "special_instructions": "Extra hot, please.",
+         *       "subtotal": "58.00",
+         *       "unit_price": "58.00"
+         *     }
+         */
+        MyUsualView: {
+            /**
+             * Branch Id
+             * Format: uuid
+             * @description Branch this call applies to.
+             */
+            branch_id: string;
+            /**
+             * Branch Name
+             * @description Branch Name.
+             */
+            branch_name: string;
+            /**
+             * Item Id
+             * Format: uuid
+             * @description Catalog item.
+             */
+            item_id: string;
+            /**
+             * Item Name
+             * @description Item Name.
+             */
+            item_name: string;
+            /**
+             * Quantity
+             * @description How many of this item.
+             */
+            quantity: number;
+            /**
+             * Selected Groups
+             * @description Selected Groups.
+             */
+            selected_groups: components["schemas"]["MyUsualSelection"][];
+            /**
+             * Selected Modifiers
+             * @description Selected Modifiers.
+             */
+            selected_modifiers?: components["schemas"]["MyUsualModifier"][];
+            /**
+             * Special Instructions
+             * @description Special Instructions.
+             */
+            special_instructions?: string | null;
+            /**
+             * Unit Price
+             * @description Unit Price.
+             */
+            unit_price?: string | null;
+            /**
+             * Subtotal
+             * @description Item subtotal before discount, tax, and service fee.
+             */
+            subtotal?: string | null;
+            /**
+             * Currency
+             * @description ISO 4217 currency code, such as EGP.
+             */
+            currency?: string | null;
+            /**
+             * Is Orderable
+             * @description Is Orderable.
+             */
+            is_orderable: boolean;
+            /**
+             * Unavailable Reason
+             * @description Unavailable Reason.
+             */
+            unavailable_reason?: string | null;
+        };
+        /**
+         * OfflineLine
+         * @description One line exactly as the till sold it. ``unit_price`` includes modifiers.
+         */
+        OfflineLine: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /** Quantity */
+            quantity: number;
+            /** Unit Price */
+            unit_price: number | string;
+            /** Modifiers */
+            modifiers?: components["schemas"]["OfflineModifier"][];
+            /** Special Instructions */
+            special_instructions?: string | null;
+        };
+        /**
+         * OfflineModifier
+         * @description Modifier as the device priced it.
+         */
+        OfflineModifier: {
+            /** Option Id */
+            option_id?: string | null;
+            /** Group Id */
+            group_id?: string | null;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /**
+             * Price Delta
+             * @default 0.00
+             */
+            price_delta: number | string;
+        };
+        /**
          * OfflinePaymentRequest
          * @description Customer request for on-site cash collection or mobile POS terminal at the table.
          */
@@ -5957,6 +9435,136 @@ export interface components {
              * @description Specific amount to pay (defaults to remaining unpaid balance)
              */
             amount?: number | string | null;
+        };
+        /** OfflineReviewLine */
+        OfflineReviewLine: {
+            /**
+             * Order Item Id
+             * Format: uuid
+             */
+            order_item_id: string;
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity: number;
+            /** Unit Price */
+            unit_price: string;
+            /** Subtotal */
+            subtotal: string;
+        };
+        /** OfflineReviewList */
+        OfflineReviewList: {
+            /** Pending */
+            pending: number;
+            /** Orders */
+            orders: components["schemas"]["OfflineReviewOrder"][];
+        };
+        /** OfflineReviewOrder */
+        OfflineReviewOrder: {
+            /**
+             * Order Id
+             * Format: uuid
+             */
+            order_id: string;
+            /** Offline Number */
+            offline_number: string | null;
+            /** Offline Device Id */
+            offline_device_id: string | null;
+            /** Pickup Number */
+            pickup_number: number | null;
+            /** Table Number */
+            table_number: string | null;
+            /** Order Type */
+            order_type: string;
+            /** Status */
+            status: string;
+            /** Is Paid */
+            is_paid: boolean;
+            /** Total Amount */
+            total_amount: string;
+            /** Paid Amount */
+            paid_amount: string;
+            /** Offline Created At */
+            offline_created_at: string | null;
+            /** Offline Synced At */
+            offline_synced_at: string | null;
+            /** Needs Review */
+            needs_review: boolean;
+            /** Review Reasons */
+            review_reasons: {
+                [key: string]: unknown;
+            }[];
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Reviewed By User Id */
+            reviewed_by_user_id: string | null;
+            /** Review Note */
+            review_note: string | null;
+            /** Items */
+            items: components["schemas"]["OfflineReviewLine"][];
+        };
+        /**
+         * OfflineTotals
+         * @description Totals the device showed the guest (and collected in cash).
+         */
+        OfflineTotals: {
+            /** Subtotal */
+            subtotal: number | string;
+            /**
+             * Service Fee Total
+             * @default 0.00
+             */
+            service_fee_total: number | string;
+            /**
+             * Tax Total
+             * @default 0.00
+             */
+            tax_total: number | string;
+            /** Total Amount */
+            total_amount: number | string;
+        };
+        /**
+         * OpeningHours
+         * @description Weekly schedule. A missing day or an empty list means closed that day. At most four ranges per day.
+         */
+        OpeningHours: {
+            /** Mon */
+            mon?: components["schemas"]["OpeningRange"][];
+            /** Tue */
+            tue?: components["schemas"]["OpeningRange"][];
+            /** Wed */
+            wed?: components["schemas"]["OpeningRange"][];
+            /** Thu */
+            thu?: components["schemas"]["OpeningRange"][];
+            /** Fri */
+            fri?: components["schemas"]["OpeningRange"][];
+            /** Sat */
+            sat?: components["schemas"]["OpeningRange"][];
+            /** Sun */
+            sun?: components["schemas"]["OpeningRange"][];
+        };
+        /**
+         * OpeningRange
+         * @description One open interval. close earlier than open means the range ends after midnight.
+         */
+        OpeningRange: {
+            /**
+             * Open
+             * @description Opening time, 24-hour HH:MM.
+             * @example 07:00
+             */
+            open: string;
+            /**
+             * Close
+             * @description Closing time, 24-hour HH:MM.
+             * @example 23:00
+             */
+            close: string;
         };
         /**
          * OrderItemInput
@@ -6053,6 +9661,11 @@ export interface components {
              * Format: uuid
              */
             branch_id: string;
+            /**
+             * Customer Id
+             * @description Mobile-app customer who placed the order. Null for guest and staff orders.
+             */
+            customer_id?: string | null;
             /** Table Id */
             table_id?: string | null;
             status: components["schemas"]["OrderStatus"];
@@ -6068,6 +9681,22 @@ export interface components {
             display_number?: string | null;
             /** Subtotal */
             subtotal: string;
+            /**
+             * Discount Total
+             * @description Amount removed from the item subtotal before tax. 0.00 when no promo was applied.
+             * @default 0.00
+             */
+            discount_total: string;
+            /**
+             * Promo Code Id
+             * @description Promo code row used at checkout, if any.
+             */
+            promo_code_id?: string | null;
+            /**
+             * Promo Code
+             * @description Snapshot of the promo code text at checkout.
+             */
+            promo_code?: string | null;
             /**
              * Service Fee Rate
              * @default 0.0000
@@ -6106,6 +9735,10 @@ export interface components {
             expo_notes?: string | null;
             /** Ready At */
             ready_at?: string | null;
+            /** Arrived At */
+            arrived_at?: string | null;
+            /** Arrival Note */
+            arrival_note?: string | null;
             /** Completed At */
             completed_at?: string | null;
             /**
@@ -6290,6 +9923,38 @@ export interface components {
              */
             customer_notes?: string | null;
         };
+        /** PayCashAction */
+        PayCashAction: {
+            /**
+             * Idempotency Key
+             * @description Device-generated UUID, unique per action.
+             */
+            idempotency_key: string;
+            /**
+             * Client Order Id
+             * @description Device-generated id of the order this action is about.
+             */
+            client_order_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             * @description When it happened on the device (ISO 8601 with offset).
+             */
+            occurred_at: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "pay_cash";
+            /** Amount */
+            amount: number | string;
+            /**
+             * Payment Method
+             * @description Only CASH is accepted offline.
+             * @default CASH
+             */
+            payment_method: string;
+        };
         /**
          * PaymentChannelBreakdown
          * @description Sales partitioned across tender types.
@@ -6339,10 +10004,10 @@ export interface components {
          * PaymentRequiredErrorResponse
          * @description 409 from POST /orders/handover/verify when the pickup order is still unpaid.
          * @example {
-         *       "code": "PAYMENT_REQUIRED_BEFORE_HANDOVER",
+         *       "code": "PAYMENT_REQUIRED",
          *       "detail": {
          *         "amount_due": "23.00",
-         *         "code": "PAYMENT_REQUIRED_BEFORE_HANDOVER",
+         *         "code": "PAYMENT_REQUIRED",
          *         "currency": "SAR",
          *         "detail": "Please take payment of 23.00 before handing this order over.",
          *         "payment_id": "33333333-3333-3333-3333-333333333333",
@@ -6518,6 +10183,27 @@ export interface components {
             default_enabled?: boolean | null;
         };
         /**
+         * PreferredBranch
+         * @description A branch the customer picked as their usual pickup location.
+         * @example {
+         *       "id": "11111111-1111-1111-1111-111111111111",
+         *       "name": "Downtown"
+         *     }
+         */
+        PreferredBranch: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Name
+             * @description Name.
+             */
+            name: string;
+        };
+        /**
          * PresignedUrlRequest
          * @description Payload to request an S3/R2 presigned upload URL.
          */
@@ -6566,6 +10252,443 @@ export interface components {
              * @description Storage key identifier
              */
             key: string;
+        };
+        /**
+         * ProfileUpdateRequest
+         * @description Fields the customer may change. Omitted fields stay as they are. Email is not editable.
+         *
+         *     full_name and phone cannot be sent as null. preferred_branch_id null clears the preference.
+         * @example {
+         *       "full_name": "Mona Hassan",
+         *       "language": "ar",
+         *       "phone": "+201001234567",
+         *       "preferred_branch_id": "11111111-1111-1111-1111-111111111111"
+         *     }
+         */
+        ProfileUpdateRequest: {
+            /**
+             * Full Name
+             * @description Name shown to staff.
+             * @example Mona Hassan
+             */
+            full_name?: string | null;
+            /**
+             * Phone
+             * @description Phone number in E.164, such as +201001234567.
+             * @example +201001234567
+             */
+            phone?: string | null;
+            /**
+             * Preferred Branch Id
+             * @description An active branch of this app's restaurant. Null clears the preference.
+             * @example 11111111-1111-1111-1111-111111111111
+             */
+            preferred_branch_id?: string | null;
+            /**
+             * Language
+             * @description Preferred language, ar or en.
+             * @example ar
+             */
+            language?: string | null;
+        };
+        /**
+         * PromoCodeListResponse
+         * @description A page of promo codes.
+         * @example {
+         *       "items": [
+         *         {
+         *           "brand_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+         *           "code": "WELCOME10",
+         *           "created_at": "2026-10-01T12:00:00Z",
+         *           "description": {
+         *             "ar": "خصم ١٠٪ على طلبك الأول",
+         *             "en": "10% off your first order"
+         *           },
+         *           "discount_type": "percent",
+         *           "ends_at": "2026-12-31T23:59:00Z",
+         *           "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+         *           "is_active": true,
+         *           "max_discount_amount": "50.00",
+         *           "max_total_uses": 100,
+         *           "max_uses_per_customer": 1,
+         *           "min_order_amount": "30.00",
+         *           "starts_at": "2026-10-01T00:00:00Z",
+         *           "updated_at": "2026-10-01T12:00:00Z",
+         *           "uses_count": 4,
+         *           "value": "10.00"
+         *         }
+         *       ],
+         *       "total": 1
+         *     }
+         */
+        PromoCodeListResponse: {
+            /**
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
+             */
+            items: components["schemas"]["PromoCodeResponse"][];
+            /**
+             * Total
+             * @description Amount due: subtotal minus discount, plus service fee and tax.
+             */
+            total: number;
+        };
+        /**
+         * PromoCodePatch
+         * @description Fields that can change. The code letters cannot change after the first use.
+         * @example {
+         *       "is_active": false
+         *     }
+         * @example {
+         *       "max_total_uses": 200
+         *     }
+         */
+        PromoCodePatch: {
+            /**
+             * Code
+             * @description Machine-readable error or promo code.
+             */
+            code?: string | null;
+            /** @description Description. */
+            description?: components["schemas"]["LocalizedField"] | null;
+            /**
+             * Discount Type
+             * @description Discount Type.
+             */
+            discount_type?: ("percent" | "fixed") | null;
+            /**
+             * Value
+             * @description Value.
+             */
+            value?: number | string | null;
+            /**
+             * Max Discount Amount
+             * @description Max Discount Amount.
+             */
+            max_discount_amount?: number | string | null;
+            /**
+             * Min Order Amount
+             * @description Min Order Amount.
+             */
+            min_order_amount?: number | string | null;
+            /**
+             * Starts At
+             * @description Starts At.
+             */
+            starts_at?: string | null;
+            /**
+             * Ends At
+             * @description Ends At.
+             */
+            ends_at?: string | null;
+            /**
+             * Max Total Uses
+             * @description Max Total Uses.
+             */
+            max_total_uses?: number | null;
+            /**
+             * Max Uses Per Customer
+             * @description Max Uses Per Customer.
+             */
+            max_uses_per_customer?: number | null;
+            /**
+             * Is Active
+             * @description Is Active.
+             */
+            is_active?: boolean | null;
+        };
+        /**
+         * PromoCodeResponse
+         * @description One promo code, including how many times it has been used.
+         * @example {
+         *       "brand_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+         *       "code": "WELCOME10",
+         *       "created_at": "2026-10-01T12:00:00Z",
+         *       "description": {
+         *         "ar": "خصم ١٠٪ على طلبك الأول",
+         *         "en": "10% off your first order"
+         *       },
+         *       "discount_type": "percent",
+         *       "ends_at": "2026-12-31T23:59:00Z",
+         *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+         *       "is_active": true,
+         *       "max_discount_amount": "50.00",
+         *       "max_total_uses": 100,
+         *       "max_uses_per_customer": 1,
+         *       "min_order_amount": "30.00",
+         *       "starts_at": "2026-10-01T00:00:00Z",
+         *       "updated_at": "2026-10-01T12:00:00Z",
+         *       "uses_count": 4,
+         *       "value": "10.00"
+         *     }
+         */
+        PromoCodeResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Brand Id
+             * Format: uuid
+             * @description Brand Id.
+             */
+            brand_id: string;
+            /**
+             * Code
+             * @description Machine-readable error or promo code.
+             */
+            code: string;
+            /**
+             * Description
+             * @description Description.
+             */
+            description?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Discount Type
+             * @description Discount Type.
+             * @enum {string}
+             */
+            discount_type: "percent" | "fixed";
+            /**
+             * Value
+             * @description Value.
+             */
+            value: string;
+            /**
+             * Max Discount Amount
+             * @description Max Discount Amount.
+             */
+            max_discount_amount?: string | null;
+            /**
+             * Min Order Amount
+             * @description Min Order Amount.
+             */
+            min_order_amount?: string | null;
+            /**
+             * Starts At
+             * @description Starts At.
+             */
+            starts_at?: string | null;
+            /**
+             * Ends At
+             * @description Ends At.
+             */
+            ends_at?: string | null;
+            /**
+             * Max Total Uses
+             * @description Max Total Uses.
+             */
+            max_total_uses?: number | null;
+            /**
+             * Max Uses Per Customer
+             * @description Max Uses Per Customer.
+             */
+            max_uses_per_customer?: number | null;
+            /**
+             * Uses Count
+             * @description Uses Count.
+             */
+            uses_count: number;
+            /**
+             * Is Active
+             * @description Is Active.
+             */
+            is_active: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             * @description When this record was created, UTC.
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description When this record was last changed, UTC.
+             */
+            updated_at: string;
+        };
+        /**
+         * PromoCodeWrite
+         * @description Fields for a new code. Percent value is more than 0 and at most 100.
+         * @example {
+         *       "code": "WELCOME10",
+         *       "description": {
+         *         "ar": "خصم ١٠٪ على طلبك الأول",
+         *         "en": "10% off your first order"
+         *       },
+         *       "discount_type": "percent",
+         *       "max_discount_amount": "50.00",
+         *       "max_uses_per_customer": 1,
+         *       "min_order_amount": "30.00",
+         *       "value": "10.00"
+         *     }
+         */
+        PromoCodeWrite: {
+            /**
+             * Brand Id
+             * @description Required for a super admin. A brand admin's restaurant is used instead.
+             */
+            brand_id?: string | null;
+            /**
+             * Code
+             * @description Machine-readable error or promo code.
+             * @example WELCOME10
+             */
+            code: string;
+            /** @description Description. */
+            description?: components["schemas"]["LocalizedField"] | null;
+            /**
+             * Discount Type
+             * @description Discount Type.
+             * @enum {string}
+             */
+            discount_type: "percent" | "fixed";
+            /**
+             * Value
+             * @description Value.
+             * @example 10.00
+             */
+            value: number | string;
+            /**
+             * Max Discount Amount
+             * @description Max Discount Amount.
+             */
+            max_discount_amount?: number | string | null;
+            /**
+             * Min Order Amount
+             * @description Min Order Amount.
+             */
+            min_order_amount?: number | string | null;
+            /**
+             * Starts At
+             * @description Starts At.
+             */
+            starts_at?: string | null;
+            /**
+             * Ends At
+             * @description Ends At.
+             */
+            ends_at?: string | null;
+            /**
+             * Max Total Uses
+             * @description Max Total Uses.
+             */
+            max_total_uses?: number | null;
+            /**
+             * Max Uses Per Customer
+             * @description Max Uses Per Customer.
+             * @default 1
+             */
+            max_uses_per_customer: number | null;
+            /**
+             * Is Active
+             * @description Is Active.
+             * @default true
+             */
+            is_active: boolean;
+        };
+        /**
+         * PromoValidateRequest
+         * @description Ask whether a code applies to these items at this branch.
+         *
+         *     items are priced on the server. Any subtotal sent by the client is ignored.
+         * @example {
+         *       "branch_id": "11111111-1111-1111-1111-111111111111",
+         *       "code": "WELCOME10",
+         *       "items": [
+         *         {
+         *           "item_id": "33333333-3333-3333-3333-333333333333",
+         *           "quantity": 1,
+         *           "selected_groups": []
+         *         }
+         *       ]
+         *     }
+         */
+        PromoValidateRequest: {
+            /**
+             * Code
+             * @description Machine-readable error or promo code.
+             * @example WELCOME10
+             */
+            code: string;
+            /**
+             * Branch Id
+             * Format: uuid
+             * @description Branch this call applies to.
+             */
+            branch_id: string;
+            /**
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
+             */
+            items: components["schemas"]["MobileLineRequest"][];
+        };
+        /**
+         * PromoValidateResponse
+         * @description What the code saves. Tax is on the discounted subtotal, not the original one.
+         * @example {
+         *       "code": "WELCOME10",
+         *       "currency": "EGP",
+         *       "discount_amount": "10.00",
+         *       "discount_type": "percent",
+         *       "discounted_subtotal": "90.00",
+         *       "message": "You saved 10.00 EGP",
+         *       "subtotal": "100.00",
+         *       "tax_total": "12.60",
+         *       "total": "102.60"
+         *     }
+         */
+        PromoValidateResponse: {
+            /**
+             * Code
+             * @description Machine-readable error or promo code.
+             */
+            code: string;
+            /**
+             * Discount Type
+             * @description Discount Type.
+             * @enum {string}
+             */
+            discount_type: "percent" | "fixed";
+            /**
+             * Discount Amount
+             * @description Discount Amount.
+             */
+            discount_amount: string;
+            /**
+             * Subtotal
+             * @description Item subtotal before the discount.
+             */
+            subtotal: string;
+            /**
+             * Discounted Subtotal
+             * @description Item subtotal after the discount. Tax uses this.
+             */
+            discounted_subtotal: string;
+            /**
+             * Tax Total
+             * @description Tax computed on the discounted subtotal.
+             */
+            tax_total: string;
+            /**
+             * Total
+             * @description Amount due: subtotal minus discount, plus service fee and tax.
+             */
+            total: string;
+            /**
+             * Currency
+             * @description ISO 4217 currency code, such as EGP.
+             */
+            currency: string;
+            /**
+             * Message
+             * @description Localized sentence, for example You saved 10.00 EGP.
+             */
+            message: string;
         };
         /**
          * QRExportFormat
@@ -6715,6 +10838,132 @@ export interface components {
             longitude?: number | null;
         };
         /**
+         * RefreshRequest
+         * @description Exchange a refresh token for a new access token and a new refresh token.
+         * @example {
+         *       "refresh_token": "opaque-refresh-token"
+         *     }
+         */
+        RefreshRequest: {
+            /**
+             * Refresh Token
+             * @description Rotating refresh token. Send it once; the response replaces it.
+             * @example opaque-refresh-token
+             */
+            refresh_token: string;
+        };
+        /**
+         * RegisterFcmTokenRequest
+         * @description The device token the app got from Firebase.
+         * @example {
+         *       "app_version": "1.4.0",
+         *       "device_os": "ios",
+         *       "fcm_token": "fcm-token-abc123",
+         *       "locale": "ar"
+         *     }
+         */
+        RegisterFcmTokenRequest: {
+            /**
+             * Fcm Token
+             * @description Fcm Token.
+             * @example fcm-token-abc123
+             */
+            fcm_token: string;
+            /**
+             * Device Os
+             * @description Device Os.
+             * @example ios
+             * @enum {string}
+             */
+            device_os: "ios" | "android";
+            /**
+             * App Version
+             * @description App Version.
+             * @example 1.4.0
+             */
+            app_version?: string | null;
+            /**
+             * Locale
+             * @description Locale.
+             * @example ar
+             */
+            locale?: string | null;
+        };
+        /**
+         * RegisterFcmTokenResponse
+         * @description The token is saved for this customer.
+         * @example {
+         *       "registered": true
+         *     }
+         */
+        RegisterFcmTokenResponse: {
+            /**
+             * Registered
+             * @description Registered.
+             * @example true
+             */
+            registered: boolean;
+        };
+        /**
+         * RegisterRequest
+         * @description Create a customer account and sign in.
+         * @example {
+         *       "email": "mona@example.com",
+         *       "full_name": "Mona Hassan",
+         *       "language": "en",
+         *       "password": "MousaCafe1",
+         *       "phone": "+201001234567",
+         *       "remember_me": true,
+         *       "terms_accepted": true
+         *     }
+         */
+        RegisterRequest: {
+            /**
+             * Full Name
+             * @description Name shown to staff.
+             * @example Mona Hassan
+             */
+            full_name: string;
+            /**
+             * Email
+             * Format: email
+             * @description Email address.
+             * @example mona@example.com
+             */
+            email: string;
+            /**
+             * Phone
+             * @description Phone number in E.164, such as +201001234567.
+             * @example +201001234567
+             */
+            phone: string;
+            /**
+             * Password
+             * @description Password. At least 8 characters, with a letter and a digit, for customers.
+             * @example MousaCafe1
+             */
+            password: string;
+            /**
+             * Terms Accepted
+             * @description Terms Accepted.
+             * @example true
+             */
+            terms_accepted: boolean;
+            /**
+             * Language
+             * @description Preferred language. Defaults to the Accept-Language header (ar or en).
+             * @example en
+             */
+            language?: ("ar" | "en") | null;
+            /**
+             * Remember Me
+             * @description Keep the refresh session for 30 days. False keeps it for 24 hours.
+             * @default true
+             * @example true
+             */
+            remember_me: boolean;
+        };
+        /**
          * ResetPasswordPreviewResponse
          * @description Public preview so the reset page can show which account the link belongs to.
          */
@@ -6726,16 +10975,6 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
-        };
-        /**
-         * ResetPasswordRequest
-         * @description Single-use reset token plus the new password.
-         */
-        ResetPasswordRequest: {
-            /** Token */
-            token: string;
-            /** Password */
-            password: string;
         };
         /**
          * ResetPasswordResponse
@@ -6752,6 +10991,59 @@ export interface components {
             /** Expires In */
             expires_in: number;
             user: components["schemas"]["UserResponse"];
+        };
+        /**
+         * ResetPreviewRequest
+         * @description The reset token the app read from the emailed deep link.
+         *
+         *     It is posted in the body so access logs do not record a live token.
+         * @example {
+         *       "token": "reset-token"
+         *     }
+         */
+        ResetPreviewRequest: {
+            /**
+             * Token
+             * @description Secret token. Store it in the Keychain or Keystore, not in plain storage.
+             * @example reset-token
+             */
+            token: string;
+        };
+        /**
+         * ResetPreviewResponse
+         * @description Enough to show a reset screen without revealing the full email address.
+         * @example {
+         *       "email_masked": "m***@example.com",
+         *       "expires_at": "2026-09-30T18:30:00Z"
+         *     }
+         */
+        ResetPreviewResponse: {
+            /**
+             * Email Masked
+             * @description Email Masked.
+             */
+            email_masked: string;
+            /**
+             * Expires At
+             * Format: date-time
+             * @description Expires At.
+             */
+            expires_at: string;
+        };
+        /**
+         * RevokeFcmTokenRequest
+         * @description The token to stop sending to.
+         * @example {
+         *       "fcm_token": "fcm-token-abc123"
+         *     }
+         */
+        RevokeFcmTokenRequest: {
+            /**
+             * Fcm Token
+             * @description Fcm Token.
+             * @example fcm-token-abc123
+             */
+            fcm_token: string;
         };
         /**
          * ScheduleRulesSchema
@@ -7414,6 +11706,34 @@ export interface components {
             updated_at: string;
         };
         /**
+         * StaffModifierGroupUpdate
+         * @description Payload for updating a modifier group.
+         */
+        StaffModifierGroupUpdate: {
+            /**
+             * Name
+             * @description Updated bilingual name
+             */
+            name?: {
+                [key: string]: string;
+            } | null;
+            /**
+             * Min Choices
+             * @description Updated min choices
+             */
+            min_choices?: number | null;
+            /**
+             * Max Choices
+             * @description Updated max choices
+             */
+            max_choices?: number | null;
+            /**
+             * Is Required
+             * @description Updated mandatory flag
+             */
+            is_required?: boolean | null;
+        };
+        /**
          * StaffModifierOptionAvailabilityUpdate
          * @description Payload for toggling modifier option availability.
          */
@@ -7506,6 +11826,60 @@ export interface components {
              */
             is_available?: boolean | null;
         };
+        /** StaffPushKeys */
+        StaffPushKeys: {
+            /** P256Dh */
+            p256dh: string;
+            /** Auth */
+            auth: string;
+        };
+        /** StaffPushPublicKeyResponse */
+        StaffPushPublicKeyResponse: {
+            /**
+             * Enabled
+             * @description False when the server has no VAPID keys. The app hides the control.
+             */
+            enabled: boolean;
+            /**
+             * Public Key
+             * @description VAPID application server key (base64url).
+             */
+            public_key?: string | null;
+        };
+        /** StaffPushSubscribeRequest */
+        StaffPushSubscribeRequest: {
+            /** Endpoint */
+            endpoint: string;
+            keys: components["schemas"]["StaffPushKeys"];
+            /**
+             * Branch Id
+             * @description Branch to hear. Defaults to X-Branch-ID.
+             */
+            branch_id?: string | null;
+            /**
+             * Order Alerts Opt In
+             * @description Admins only: hear order alerts.
+             * @default false
+             */
+            order_alerts_opt_in: boolean;
+        };
+        /** StaffPushSubscriptionResponse */
+        StaffPushSubscriptionResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Branch Id */
+            branch_id: string | null;
+            /** Order Alerts Opt In */
+            order_alerts_opt_in: boolean;
+        };
+        /** StaffPushUnsubscribeRequest */
+        StaffPushUnsubscribeRequest: {
+            /** Endpoint */
+            endpoint: string;
+        };
         /**
          * StaffResponse
          * @description Staff account response representation.
@@ -7556,6 +11930,225 @@ export interface components {
             late_grace_period_minutes?: number | null;
             /** Is Active */
             is_active?: boolean | null;
+        };
+        /**
+         * StaffVehicleListResponse
+         * @description A page of vehicles. Pending vehicles are listed first, oldest first.
+         * @example {
+         *       "items": [
+         *         {
+         *           "color": "White",
+         *           "created_at": "2026-10-01T08:00:00Z",
+         *           "customer": {
+         *             "email": "mona@example.com",
+         *             "full_name": "Mona Hassan",
+         *             "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+         *             "phone": "+201001234567"
+         *           },
+         *           "documents": [
+         *             {
+         *               "content_type": "application/pdf",
+         *               "doc_type": "license",
+         *               "download_url": "/api/v1/admin/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc",
+         *               "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+         *               "size_bytes": 12000,
+         *               "uploaded_at": "2026-10-01T09:00:00Z"
+         *             }
+         *           ],
+         *           "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+         *           "is_default": true,
+         *           "make": "Toyota",
+         *           "model": "Corolla",
+         *           "nickname": "Work car",
+         *           "plate_number": "ABC 123",
+         *           "updated_at": "2026-10-01T09:00:00Z",
+         *           "verification_status": "pending",
+         *           "verification_status_label": "Waiting for review"
+         *         }
+         *       ],
+         *       "total": 1
+         *     }
+         */
+        StaffVehicleListResponse: {
+            /**
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
+             */
+            items: components["schemas"]["StaffVehicleResponse"][];
+            /**
+             * Total
+             * @description Amount due: subtotal minus discount, plus service fee and tax.
+             */
+            total: number;
+        };
+        /**
+         * StaffVehicleResponse
+         * @description A vehicle plus the customer, for the staff verification queue.
+         * @example {
+         *       "color": "White",
+         *       "created_at": "2026-10-01T08:00:00Z",
+         *       "customer": {
+         *         "email": "mona@example.com",
+         *         "full_name": "Mona Hassan",
+         *         "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+         *         "phone": "+201001234567"
+         *       },
+         *       "documents": [
+         *         {
+         *           "content_type": "application/pdf",
+         *           "doc_type": "license",
+         *           "download_url": "/api/v1/admin/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc",
+         *           "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+         *           "size_bytes": 12000,
+         *           "uploaded_at": "2026-10-01T09:00:00Z"
+         *         }
+         *       ],
+         *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+         *       "is_default": true,
+         *       "make": "Toyota",
+         *       "model": "Corolla",
+         *       "nickname": "Work car",
+         *       "plate_number": "ABC 123",
+         *       "updated_at": "2026-10-01T09:00:00Z",
+         *       "verification_status": "pending",
+         *       "verification_status_label": "Waiting for review"
+         *     }
+         */
+        StaffVehicleResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Make
+             * @description Make.
+             */
+            make: string;
+            /**
+             * Model
+             * @description Model.
+             */
+            model: string;
+            /**
+             * Color
+             * @description Color.
+             */
+            color: string;
+            /**
+             * Plate Number
+             * @description Plate Number.
+             */
+            plate_number: string;
+            /**
+             * Nickname
+             * @description Nickname.
+             */
+            nickname?: string | null;
+            /**
+             * Is Default
+             * @description Is Default.
+             */
+            is_default: boolean;
+            /**
+             * Verification Status
+             * @description Verification Status.
+             * @enum {string}
+             */
+            verification_status: "unverified" | "pending" | "verified" | "rejected";
+            /**
+             * Verification Status Label
+             * @description Verification Status Label.
+             */
+            verification_status_label: string;
+            /**
+             * Verification Note
+             * @description Verification Note.
+             */
+            verification_note?: string | null;
+            /**
+             * Documents
+             * @description Documents.
+             */
+            documents: components["schemas"]["VehicleDocumentResponse"][];
+            /**
+             * Created At
+             * Format: date-time
+             * @description When this record was created, UTC.
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description When this record was last changed, UTC.
+             */
+            updated_at: string;
+            /** @description Customer. */
+            customer: components["schemas"]["VehicleCustomerSummary"];
+        };
+        /** SyncActionResult */
+        SyncActionResult: {
+            /** Index */
+            index: number;
+            /** Type */
+            type: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Client Order Id */
+            client_order_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "applied" | "replayed" | "skipped" | "error";
+            /** Code */
+            code?: string | null;
+            /**
+             * Final
+             * @default true
+             */
+            final: boolean;
+            /** Order Id */
+            order_id?: string | null;
+            /** Offline Number */
+            offline_number?: string | null;
+            /** Pickup Number */
+            pickup_number?: number | null;
+            /** Table Number */
+            table_number?: string | null;
+            /** Order Status */
+            order_status?: string | null;
+            /** Is Paid */
+            is_paid?: boolean | null;
+            /** Total Amount */
+            total_amount?: string | null;
+            /** Needs Review */
+            needs_review?: boolean | null;
+            /** Review Reasons */
+            review_reasons?: {
+                [key: string]: unknown;
+            }[] | null;
+        };
+        /**
+         * SyncRequest
+         * @description Offline actions in the order they happened on one device.
+         */
+        SyncRequest: {
+            /** Device Id */
+            device_id: string;
+            /** Actions */
+            actions: (components["schemas"]["CreateOrderAction"] | components["schemas"]["PayCashAction"] | components["schemas"]["TransitionAction"] | components["schemas"]["CancelAction"])[];
+        };
+        /** SyncResponse */
+        SyncResponse: {
+            /**
+             * Synced At
+             * Format: date-time
+             */
+            synced_at: string;
+            /** Results */
+            results: components["schemas"]["SyncActionResult"][];
         };
         /**
          * TableCreateRequest
@@ -7797,6 +12390,35 @@ export interface components {
             token_type: string;
             /** Expires In */
             expires_in: number;
+        };
+        /** TransitionAction */
+        TransitionAction: {
+            /**
+             * Idempotency Key
+             * @description Device-generated UUID, unique per action.
+             */
+            idempotency_key: string;
+            /**
+             * Client Order Id
+             * @description Device-generated id of the order this action is about.
+             */
+            client_order_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             * @description When it happened on the device (ISO 8601 with offset).
+             */
+            occurred_at: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "transition";
+            /**
+             * Target Status
+             * @enum {string}
+             */
+            target_status: "PREPARING" | "READY" | "DELIVERED";
         };
         /**
          * UpdateBranchFinancialSettingsRequest
@@ -8065,15 +12687,153 @@ export interface components {
         ValidationErrorResponse: {
             /**
              * Code
+             * @description Machine-readable error or promo code.
              * @default INPUT_VALIDATION_FAILED
              */
             code: string;
-            /** Detail */
+            /**
+             * Detail
+             * @description Localized explanation of the error.
+             */
             detail: string;
-            /** Errors */
+            /**
+             * Errors
+             * @description Field-level validation problems.
+             */
             errors?: {
                 [key: string]: unknown;
             }[];
+        };
+        /**
+         * VehicleCreateRequest
+         * @description Fields for a new vehicle. The first vehicle becomes the default on its own.
+         * @example {
+         *       "color": "White",
+         *       "make": "Toyota",
+         *       "model": "Corolla",
+         *       "nickname": "Work car",
+         *       "plate_number": "ABC 123",
+         *       "set_default": false
+         *     }
+         */
+        VehicleCreateRequest: {
+            /**
+             * Make
+             * @description Make.
+             * @example Toyota
+             */
+            make: string;
+            /**
+             * Model
+             * @description Model.
+             * @example Corolla
+             */
+            model: string;
+            /**
+             * Color
+             * @description Color.
+             * @example White
+             */
+            color: string;
+            /**
+             * Plate Number
+             * @description Plate Number.
+             * @example ABC 123
+             */
+            plate_number: string;
+            /**
+             * Nickname
+             * @description Nickname.
+             * @example Work car
+             */
+            nickname?: string | null;
+            /**
+             * Set Default
+             * @description Set Default.
+             * @default false
+             * @example false
+             */
+            set_default: boolean;
+        };
+        /**
+         * VehicleCustomerSummary
+         * @description The customer who owns a vehicle, shown to staff reviewing documents.
+         * @example {
+         *       "email": "mona@example.com",
+         *       "full_name": "Mona Hassan",
+         *       "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+         *       "phone": "+201001234567"
+         *     }
+         */
+        VehicleCustomerSummary: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Full Name
+             * @description Name shown to staff.
+             */
+            full_name: string;
+            /**
+             * Email
+             * @description Email address.
+             */
+            email: string;
+            /**
+             * Phone
+             * @description Phone number in E.164, such as +201001234567.
+             */
+            phone: string;
+        };
+        /**
+         * VehicleDocumentResponse
+         * @description A document the customer uploaded. download_url is an authenticated API path.
+         * @example {
+         *       "content_type": "application/pdf",
+         *       "doc_type": "license",
+         *       "download_url": "/api/v1/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc",
+         *       "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+         *       "size_bytes": 12000,
+         *       "uploaded_at": "2026-10-01T09:00:00Z"
+         *     }
+         */
+        VehicleDocumentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Doc Type
+             * @description Doc Type.
+             * @enum {string}
+             */
+            doc_type: "license" | "registration" | "other";
+            /**
+             * Content Type
+             * @description Content Type.
+             */
+            content_type: string;
+            /**
+             * Size Bytes
+             * @description Size Bytes.
+             */
+            size_bytes: number;
+            /**
+             * Uploaded At
+             * Format: date-time
+             * @description Uploaded At.
+             */
+            uploaded_at: string;
+            /**
+             * Download Url
+             * @description Download Url.
+             */
+            download_url: string;
         };
         /**
          * VehicleInfoSchema
@@ -8097,13 +12857,188 @@ export interface components {
             plate_number?: string | null;
         };
         /**
+         * VehicleResponse
+         * @description A saved vehicle. verification_status is a lowercase word; the label is localized.
+         * @example {
+         *       "color": "White",
+         *       "created_at": "2026-10-01T08:00:00Z",
+         *       "documents": [
+         *         {
+         *           "content_type": "application/pdf",
+         *           "doc_type": "license",
+         *           "download_url": "/api/v1/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc",
+         *           "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+         *           "size_bytes": 12000,
+         *           "uploaded_at": "2026-10-01T09:00:00Z"
+         *         }
+         *       ],
+         *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+         *       "is_default": true,
+         *       "make": "Toyota",
+         *       "model": "Corolla",
+         *       "nickname": "Work car",
+         *       "plate_number": "ABC 123",
+         *       "updated_at": "2026-10-01T09:00:00Z",
+         *       "verification_status": "pending",
+         *       "verification_status_label": "Waiting for review"
+         *     }
+         */
+        VehicleResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Make
+             * @description Make.
+             */
+            make: string;
+            /**
+             * Model
+             * @description Model.
+             */
+            model: string;
+            /**
+             * Color
+             * @description Color.
+             */
+            color: string;
+            /**
+             * Plate Number
+             * @description Plate Number.
+             */
+            plate_number: string;
+            /**
+             * Nickname
+             * @description Nickname.
+             */
+            nickname?: string | null;
+            /**
+             * Is Default
+             * @description Is Default.
+             */
+            is_default: boolean;
+            /**
+             * Verification Status
+             * @description Verification Status.
+             * @enum {string}
+             */
+            verification_status: "unverified" | "pending" | "verified" | "rejected";
+            /**
+             * Verification Status Label
+             * @description Verification Status Label.
+             */
+            verification_status_label: string;
+            /**
+             * Verification Note
+             * @description Verification Note.
+             */
+            verification_note?: string | null;
+            /**
+             * Documents
+             * @description Documents.
+             */
+            documents: components["schemas"]["VehicleDocumentResponse"][];
+            /**
+             * Created At
+             * Format: date-time
+             * @description When this record was created, UTC.
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description When this record was last changed, UTC.
+             */
+            updated_at: string;
+        };
+        /**
+         * VehicleUpdateRequest
+         * @description Any subset of the vehicle's identifying fields. Omitted fields stay as they are.
+         *
+         *     make, model, color, and plate_number cannot be sent as null. nickname null clears the nickname.
+         * @example {
+         *       "color": "Silver",
+         *       "nickname": "Weekend car"
+         *     }
+         */
+        VehicleUpdateRequest: {
+            /**
+             * Make
+             * @description Make.
+             * @example Toyota
+             */
+            make?: string | null;
+            /**
+             * Model
+             * @description Model.
+             * @example Corolla
+             */
+            model?: string | null;
+            /**
+             * Color
+             * @description Color.
+             * @example White
+             */
+            color?: string | null;
+            /**
+             * Plate Number
+             * @description Plate Number.
+             * @example ABC 123
+             */
+            plate_number?: string | null;
+            /**
+             * Nickname
+             * @description Nickname.
+             * @example Work car
+             */
+            nickname?: string | null;
+        };
+        /**
+         * VerificationDecisionRequest
+         * @description Staff decision. A rejection needs a note the customer can read.
+         * @example {
+         *       "decision": "verified"
+         *     }
+         * @example {
+         *       "decision": "rejected",
+         *       "note": "The plate photo is too dark."
+         *     }
+         */
+        VerificationDecisionRequest: {
+            /**
+             * Decision
+             * @description Decision.
+             * @example verified
+             * @enum {string}
+             */
+            decision: "verified" | "rejected";
+            /**
+             * Note
+             * @description Note.
+             * @example The plate photo is too dark.
+             */
+            note?: string | null;
+        };
+        /**
          * VerifyHandoverRequest
          * @description Payload for staff scanning / verifying a customer handover token.
+         * @example {
+         *       "collect_cash": false,
+         *       "token": "HT-A1B2C3D4E5F67890A1B2C3D4"
+         *     }
+         * @example {
+         *       "collect_cash": true,
+         *       "token": "order:99999999-9999-9999-9999-999999999999:token:HT-A1B2C3D4E5F67890A1B2C3D4"
+         *     }
          */
         VerifyHandoverRequest: {
             /**
              * Token
-             * @description Raw handover token string presented by customer
+             * @description The raw handover token, or the full qr_payload from the customer's pickup pass.
+             * @example HT-A1B2C3D4E5F67890A1B2C3D4
              */
             token: string;
             /**
@@ -8111,42 +13046,90 @@ export interface components {
              * @description Optional explicit branch UUID override when verified by super admin
              */
             branch_id?: string | null;
+            /**
+             * Collect Cash
+             * @description When true, a branch admin or super admin settles the pending cash payment and hands the order over in this same call. Ignored when the order is already paid. Other roles receive 403 CASH_COLLECTION_NOT_ALLOWED.
+             * @default false
+             */
+            collect_cash: boolean;
         };
         /**
          * VerifyHandoverResponse
          * @description Response confirming fast handover completion and order closure.
+         * @example {
+         *       "completed_at": "2026-10-01T12:30:00Z",
+         *       "customer_first_name": "Mona",
+         *       "display_number": "104",
+         *       "fulfillment_type": "DRIVE_THRU",
+         *       "is_paid": true,
+         *       "message": "Order handover successfully verified and completed.",
+         *       "order_id": "99999999-9999-9999-9999-999999999999",
+         *       "pickup_number": 104,
+         *       "success": true,
+         *       "vehicle_info": {
+         *         "color": "White",
+         *         "model": "Corolla",
+         *         "plate_number": "ABC 123"
+         *       }
+         *     }
          */
         VerifyHandoverResponse: {
             /**
              * Success
+             * @description Success.
              * @default true
              */
             success: boolean;
             /**
              * Order Id
              * Format: uuid
+             * @description Order this call applies to.
              */
             order_id: string;
-            /** Fulfillment Type */
+            /**
+             * Fulfillment Type
+             * @description drive_thru or curbside.
+             */
             fulfillment_type: string;
-            /** Vehicle Info */
+            /**
+             * Vehicle Info
+             * @description Vehicle Info.
+             */
             vehicle_info?: {
                 [key: string]: unknown;
             } | null;
             /**
              * Completed At
              * Format: date-time
+             * @description Completed At.
              */
             completed_at: string;
             /**
              * Message
+             * @description Localized sentence for the customer.
              * @default Order handover successfully verified and completed.
              */
             message: string;
-            /** Is Paid */
+            /**
+             * Is Paid
+             * @description True only after the server has recorded a completed payment.
+             */
             is_paid?: boolean | null;
-            /** Pickup Number */
+            /**
+             * Pickup Number
+             * @description Pickup Number.
+             */
             pickup_number?: number | null;
+            /**
+             * Display Number
+             * @description Display Number.
+             */
+            display_number?: string | null;
+            /**
+             * Customer First Name
+             * @description Customer First Name.
+             */
+            customer_first_name?: string | null;
         };
         /**
          * VerifyOfflinePaymentRequest
@@ -8158,6 +13141,142 @@ export interface components {
              * @description Optional cashier notes or terminal receipt number
              */
             notes?: string | null;
+        };
+        /**
+         * WalletEntry
+         * @description One DEMO ledger row. type_label is a sentence, not the stored code.
+         * @example {
+         *       "amount": "100.00",
+         *       "balance_after": "100.00",
+         *       "created_at": "2026-10-01T12:00:00Z",
+         *       "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
+         *       "type": "demo_topup",
+         *       "type_label": "Demo top-up"
+         *     }
+         */
+        WalletEntry: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier.
+             */
+            id: string;
+            /**
+             * Type
+             * @description Type.
+             * @enum {string}
+             */
+            type: "demo_topup" | "order_charge" | "order_refund";
+            /**
+             * Type Label
+             * @description Localized label. The stored code is not shown as the message.
+             */
+            type_label: string;
+            /**
+             * Amount
+             * @description Signed DEMO amount. A charge is negative. Not real money.
+             */
+            amount: string;
+            /**
+             * Balance After
+             * @description DEMO balance after this row. Not real money.
+             */
+            balance_after: string;
+            /**
+             * Order Id
+             * @description Order this call applies to.
+             */
+            order_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             * @description When this record was created, UTC.
+             */
+            created_at: string;
+        };
+        /**
+         * WalletResponse
+         * @description DEMO wallet. Not real money.
+         *
+         *     Payments from this wallet are recorded as LOCAL_WALLET payments whose
+         *     transaction reference starts with DEMO-WALLET-. Keep MOBILE_DEMO_WALLET_ENABLED
+         *     off in production. There is no real top-up gateway.
+         * @example {
+         *       "balance": "100.00",
+         *       "currency": "EGP",
+         *       "disclaimer": "Demo credit for testing only. Not real money.",
+         *       "entries": [
+         *         {
+         *           "amount": "100.00",
+         *           "balance_after": "100.00",
+         *           "created_at": "2026-10-01T12:00:00Z",
+         *           "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
+         *           "type": "demo_topup",
+         *           "type_label": "Demo top-up"
+         *         }
+         *       ],
+         *       "is_demo": true
+         *     }
+         */
+        WalletResponse: {
+            /**
+             * Is Demo
+             * @description DEMO. Always true. This wallet is not real money.
+             * @constant
+             */
+            is_demo: true;
+            /**
+             * Balance
+             * @description DEMO credit. Not real money.
+             */
+            balance: string;
+            /**
+             * Currency
+             * @description ISO 4217 currency code, such as EGP.
+             */
+            currency: string;
+            /**
+             * Entries
+             * @description Entries.
+             */
+            entries: components["schemas"]["WalletEntry"][];
+            /**
+             * Next Cursor
+             * @description Pass this as cursor to read the next page. Null on the last page.
+             */
+            next_cursor?: string | null;
+            /**
+             * Disclaimer
+             * @description DEMO. States that this credit is not real money.
+             */
+            disclaimer: string;
+        };
+        /**
+         * WalletSnapshot
+         * @description DEMO balance shown on the profile. Not real money. Null on the profile when the flag is off.
+         * @example {
+         *       "balance": "100.00",
+         *       "currency": "EGP",
+         *       "is_demo": true
+         *     }
+         */
+        WalletSnapshot: {
+            /**
+             * Is Demo
+             * @description DEMO. Always true. This balance is not real money.
+             * @constant
+             */
+            is_demo: true;
+            /**
+             * Balance
+             * @description DEMO credit. Not real money.
+             */
+            balance: string;
+            /**
+             * Currency
+             * @description ISO 4217 currency code, such as EGP.
+             */
+            currency: string;
         };
         /**
          * ZReportGenerateRequest
@@ -8251,438 +13370,172 @@ export interface components {
              */
             created_at: string;
         };
-        StaffPushKeys: {
-            /** P256Dh */
-            p256dh: string;
-            /** Auth */
-            auth: string;
-        };
-        StaffPushPublicKeyResponse: {
+        /**
+         * ForgotPasswordRequest
+         * @description Email address that should receive a password reset link.
+         */
+        app__schemas__auth__ForgotPasswordRequest: {
             /**
-             * Enabled
-             * @description False when the server has no VAPID keys. The app hides the control.
+             * Email
+             * Format: email
              */
-            enabled: boolean;
-            /**
-             * Public Key
-             * @description VAPID application server key (base64url).
-             */
-            public_key?: string | null;
+            email: string;
         };
-        StaffPushSubscribeRequest: {
-            /** Endpoint */
-            endpoint: string;
-            keys: components["schemas"]["StaffPushKeys"];
+        /**
+         * ResetPasswordRequest
+         * @description Single-use reset token plus the new password.
+         */
+        app__schemas__auth__ResetPasswordRequest: {
+            /** Token */
+            token: string;
+            /** Password */
+            password: string;
+        };
+        /**
+         * ForgotPasswordRequest
+         * @description Ask for a password reset link. The response does not reveal whether the email exists.
+         * @example {
+         *       "email": "mona@example.com"
+         *     }
+         */
+        app__schemas__mobile_auth__ForgotPasswordRequest: {
+            /**
+             * Email
+             * Format: email
+             * @description Email address.
+             * @example mona@example.com
+             */
+            email: string;
+        };
+        /**
+         * ResetPasswordRequest
+         * @description Set a new password from a reset link. Signs every device out.
+         * @example {
+         *       "new_password": "MousaCafe2",
+         *       "token": "reset-token"
+         *     }
+         */
+        app__schemas__mobile_auth__ResetPasswordRequest: {
+            /**
+             * Token
+             * @description Secret token. Store it in the Keychain or Keystore, not in plain storage.
+             * @example reset-token
+             */
+            token: string;
+            /**
+             * New Password
+             * @description New Password.
+             * @example MousaCafe2
+             */
+            new_password: string;
+        };
+        /**
+         * CheckoutRequest
+         * @description Place an order, or ask for the same totals without placing it.
+         *
+         *     source cart uses items. source my_usual ignores items and uses the saved usual,
+         *     which must be for this same branch.
+         * @example {
+         *       "branch_id": "11111111-1111-1111-1111-111111111111",
+         *       "customer_notes": "I'll be in a white car.",
+         *       "fulfillment_type": "drive_thru",
+         *       "items": [
+         *         {
+         *           "item_id": "33333333-3333-3333-3333-333333333333",
+         *           "quantity": 1,
+         *           "selected_groups": [
+         *             {
+         *               "group_id": "44444444-4444-4444-4444-444444444444",
+         *               "option_ids": [
+         *                 "55555555-5555-5555-5555-555555555552"
+         *               ]
+         *             },
+         *             {
+         *               "group_id": "66666666-6666-6666-6666-666666666666",
+         *               "option_ids": [
+         *                 "66666666-6666-6666-6666-666666666662"
+         *               ]
+         *             }
+         *           ],
+         *           "special_instructions": "Extra hot, please."
+         *         }
+         *       ],
+         *       "payment_method": "cash",
+         *       "source": "cart",
+         *       "vehicle_id": "88888888-8888-8888-8888-888888888888"
+         *     }
+         */
+        app__schemas__mobile_orders__CheckoutRequest: {
             /**
              * Branch Id
-             * @description Branch to hear. Defaults to X-Branch-ID.
-             */
-            branch_id?: string | null;
-            /**
-             * Order Alerts Opt In
-             * @description Admins only: hear order alerts.
-             * @default false
-             */
-            order_alerts_opt_in: boolean;
-        };
-        StaffPushSubscriptionResponse: {
-            /**
-             * Id
              * Format: uuid
-             */
-            id: string;
-            /** Branch Id */
-            branch_id: string | null;
-            /** Order Alerts Opt In */
-            order_alerts_opt_in: boolean;
-        };
-        StaffPushUnsubscribeRequest: {
-            /** Endpoint */
-            endpoint: string;
-        };
-        AdjustLine: {
-            /**
-             * Order Item Id
-             * Format: uuid
-             */
-            order_item_id: string;
-            /** Unit Price */
-            unit_price: number | string;
-        };
-        AdjustOfflineOrderRequest: {
-            /** Note */
-            note: string;
-            /** Lines */
-            lines?: components["schemas"]["AdjustLine"][];
-        };
-        ApproveOfflineOrderRequest: {
-            /** Note */
-            note?: string | null;
-        };
-        BranchOfflineConfig: {
-            /**
-             * Branch Id
-             * Format: uuid
+             * @description Branch this call applies to.
              */
             branch_id: string;
-            /** Offline Pos Enabled */
-            offline_pos_enabled: boolean;
-            /** Offline Max Hours */
-            offline_max_hours: number;
-            /** Currency */
-            currency?: string | null;
             /**
-             * Tax Rate
-             * @default 0
-             */
-            tax_rate: string;
-            /**
-             * Service Fee Rate
-             * @default 0
-             */
-            service_fee_rate: string;
-            /**
-             * Is Service Taxable
-             * @default false
-             */
-            is_service_taxable: boolean;
-            /**
-             * Service Fee Dine In Only
-             * @default true
-             */
-            service_fee_dine_in_only: boolean;
-        };
-        BranchOfflineConfigUpdate: {
-            /** Offline Pos Enabled */
-            offline_pos_enabled?: boolean | null;
-            /** Offline Max Hours */
-            offline_max_hours?: number | null;
-        };
-        CancelAction: {
-            /**
-             * Idempotency Key
-             * @description Device-generated UUID, unique per action.
-             */
-            idempotency_key: string;
-            /**
-             * Client Order Id
-             * @description Device-generated id of the order this action is about.
-             */
-            client_order_id: string;
-            /**
-             * Occurred At
-             * Format: date-time
-             * @description When it happened on the device (ISO 8601 with offset).
-             */
-            occurred_at: string;
-            /**
-             * @description discriminator enum property added by openapi-typescript
+             * Fulfillment Type
+             * @description drive_thru or curbside.
              * @enum {string}
              */
-            type: "cancel";
-            /** Reason */
-            reason: string;
-        };
-        CreateOrderAction: {
+            fulfillment_type: "drive_thru" | "curbside";
             /**
-             * Idempotency Key
-             * @description Device-generated UUID, unique per action.
-             */
-            idempotency_key: string;
-            /**
-             * Client Order Id
-             * @description Device-generated id of the order this action is about.
-             */
-            client_order_id: string;
-            /**
-             * Occurred At
-             * Format: date-time
-             * @description When it happened on the device (ISO 8601 with offset).
-             */
-            occurred_at: string;
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "create_order";
-            /**
-             * Offline Number
-             * @description Device number shown on the receipt, e.g. OFF-12.
-             */
-            offline_number: string;
-            /**
-             * Order Type
-             * @default TAKEAWAY
-             * @enum {string}
-             */
-            order_type: "TAKEAWAY" | "DINE_IN";
-            /** Table Id */
-            table_id?: string | null;
-            /** Items */
-            items: components["schemas"]["OfflineLine"][];
-            totals: components["schemas"]["OfflineTotals"];
-            /** Customer Notes */
-            customer_notes?: string | null;
-        };
-        OfflineLine: {
-            /**
-             * Item Id
+             * Vehicle Id
              * Format: uuid
+             * @description Saved vehicle.
              */
-            item_id: string;
-            /**
-             * Name
-             * @default
-             */
-            name: string;
-            /** Quantity */
-            quantity: number;
-            /** Unit Price */
-            unit_price: number | string;
-            /** Modifiers */
-            modifiers?: components["schemas"]["OfflineModifier"][];
-            /** Special Instructions */
-            special_instructions?: string | null;
-        };
-        OfflineModifier: {
-            /** Option Id */
-            option_id?: string | null;
-            /** Group Id */
-            group_id?: string | null;
-            /**
-             * Name
-             * @default
-             */
-            name: string;
-            /**
-             * Price Delta
-             * @default 0.00
-             */
-            price_delta: number | string;
-        };
-        OfflineReviewLine: {
-            /**
-             * Order Item Id
-             * Format: uuid
-             */
-            order_item_id: string;
-            /**
-             * Item Id
-             * Format: uuid
-             */
-            item_id: string;
-            /** Name */
-            name: string;
-            /** Quantity */
-            quantity: number;
-            /** Unit Price */
-            unit_price: string;
-            /** Subtotal */
-            subtotal: string;
-        };
-        OfflineReviewList: {
-            /** Pending */
-            pending: number;
-            /** Orders */
-            orders: components["schemas"]["OfflineReviewOrder"][];
-        };
-        OfflineReviewOrder: {
-            /**
-             * Order Id
-             * Format: uuid
-             */
-            order_id: string;
-            /** Offline Number */
-            offline_number: string | null;
-            /** Offline Device Id */
-            offline_device_id: string | null;
-            /** Pickup Number */
-            pickup_number: number | null;
-            /** Table Number */
-            table_number: string | null;
-            /** Order Type */
-            order_type: string;
-            /** Status */
-            status: string;
-            /** Is Paid */
-            is_paid: boolean;
-            /** Total Amount */
-            total_amount: string;
-            /** Paid Amount */
-            paid_amount: string;
-            /** Offline Created At */
-            offline_created_at: string | null;
-            /** Offline Synced At */
-            offline_synced_at: string | null;
-            /** Needs Review */
-            needs_review: boolean;
-            /** Review Reasons */
-            review_reasons: {
-                [key: string]: unknown;
-            }[];
-            /** Reviewed At */
-            reviewed_at: string | null;
-            /** Reviewed By User Id */
-            reviewed_by_user_id: string | null;
-            /** Review Note */
-            review_note: string | null;
-            /** Items */
-            items: components["schemas"]["OfflineReviewLine"][];
-        };
-        OfflineTotals: {
-            /** Subtotal */
-            subtotal: number | string;
-            /**
-             * Service Fee Total
-             * @default 0.00
-             */
-            service_fee_total: number | string;
-            /**
-             * Tax Total
-             * @default 0.00
-             */
-            tax_total: number | string;
-            /** Total Amount */
-            total_amount: number | string;
-        };
-        PayCashAction: {
-            /**
-             * Idempotency Key
-             * @description Device-generated UUID, unique per action.
-             */
-            idempotency_key: string;
-            /**
-             * Client Order Id
-             * @description Device-generated id of the order this action is about.
-             */
-            client_order_id: string;
-            /**
-             * Occurred At
-             * Format: date-time
-             * @description When it happened on the device (ISO 8601 with offset).
-             */
-            occurred_at: string;
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "pay_cash";
-            /** Amount */
-            amount: number | string;
+            vehicle_id: string;
             /**
              * Payment Method
-             * @description Only CASH is accepted offline.
-             * @default CASH
-             */
-            payment_method: string;
-        };
-        SyncActionResult: {
-            /** Index */
-            index: number;
-            /** Type */
-            type: string;
-            /** Idempotency Key */
-            idempotency_key: string;
-            /** Client Order Id */
-            client_order_id: string;
-            /**
-             * Status
+             * @description cash is pay at pickup. demo_wallet spends DEMO credit and is available only when MOBILE_DEMO_WALLET_ENABLED is on. Keep that flag off in production. A demo wallet payment is stored as LOCAL_WALLET with a DEMO-WALLET- reference. The client cannot mark the order paid.
+             * @default cash
              * @enum {string}
              */
-            status: "applied" | "replayed" | "skipped" | "error";
-            /** Code */
-            code?: string | null;
+            payment_method: "cash" | "demo_wallet";
             /**
-             * Final
-             * @default true
-             */
-            final: boolean;
-            /** Order Id */
-            order_id?: string | null;
-            /** Offline Number */
-            offline_number?: string | null;
-            /** Pickup Number */
-            pickup_number?: number | null;
-            /** Table Number */
-            table_number?: string | null;
-            /** Order Status */
-            order_status?: string | null;
-            /** Is Paid */
-            is_paid?: boolean | null;
-            /** Total Amount */
-            total_amount?: string | null;
-            /** Needs Review */
-            needs_review?: boolean | null;
-            /** Review Reasons */
-            review_reasons?: {
-                [key: string]: unknown;
-            }[] | null;
-        };
-        SyncRequest: {
-            /** Device Id */
-            device_id: string;
-            /** Actions */
-            actions: (components["schemas"]["CreateOrderAction"] | components["schemas"]["PayCashAction"] | components["schemas"]["TransitionAction"] | components["schemas"]["CancelAction"])[];
-        };
-        SyncResponse: {
-            /**
-             * Synced At
-             * Format: date-time
-             */
-            synced_at: string;
-            /** Results */
-            results: components["schemas"]["SyncActionResult"][];
-        };
-        TransitionAction: {
-            /**
-             * Idempotency Key
-             * @description Device-generated UUID, unique per action.
-             */
-            idempotency_key: string;
-            /**
-             * Client Order Id
-             * @description Device-generated id of the order this action is about.
-             */
-            client_order_id: string;
-            /**
-             * Occurred At
-             * Format: date-time
-             * @description When it happened on the device (ISO 8601 with offset).
-             */
-            occurred_at: string;
-            /**
-             * @description discriminator enum property added by openapi-typescript
+             * Source
+             * @description Source.
+             * @default cart
              * @enum {string}
              */
-            type: "transition";
+            source: "cart" | "my_usual";
             /**
-             * Target Status
-             * @enum {string}
+             * Items
+             * @description Line items. The server prices them; a client subtotal is ignored.
              */
-            target_status: "PREPARING" | "READY" | "DELIVERED";
+            items?: components["schemas"]["MobileLineRequest"][];
+            /**
+             * Promo Code
+             * @description Optional promo code. The server prices the cart and applies the discount to the item subtotal before tax. A client subtotal is not accepted.
+             * @example WELCOME10
+             */
+            promo_code?: string | null;
+            /**
+             * Customer Notes
+             * @description Customer Notes.
+             * @example I'll be in a white car.
+             */
+            customer_notes?: string | null;
         };
-        BranchHeartbeat: {
+        /**
+         * CheckoutRequest
+         * @description Atomic order placement payload from verified guest session.
+         */
+        app__schemas__order__CheckoutRequest: {
             /**
-             * Branch Id
-             * Format: uuid
+             * Items
+             * @description Array of items to order
              */
-            branch_id: string;
+            items: components["schemas"]["OrderItemInput"][];
             /**
-             * Staff Last Seen At
-             * Format: date-time
+             * Customer Notes
+             * @description General order-level guest notes
              */
-            staff_last_seen_at: string;
-        };
-        BranchOrderingStatus: {
+            customer_notes?: string | null;
             /**
-             * Branch Id
-             * Format: uuid
+             * Promo Code
+             * @description Optional promo code. The discount comes off the item subtotal before tax and the service fee.
              */
-            branch_id: string;
-            /** Ordering Paused */
-            ordering_paused: boolean;
-            /** Reason */
-            reason?: "BRANCH_OFFLINE" | null;
+            promo_code?: string | null;
         };
     };
     responses: never;
@@ -8735,7 +13588,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ForgotPasswordRequest"];
+                "application/json": components["schemas"]["app__schemas__auth__ForgotPasswordRequest"];
             };
         };
         responses: {
@@ -8813,7 +13666,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ResetPasswordRequest"];
+                "application/json": components["schemas"]["app__schemas__auth__ResetPasswordRequest"];
             };
         };
         responses: {
@@ -8874,6 +13727,6569 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    register_api_v1_mobile_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "mona@example.com",
+                 *       "full_name": "Mona Hassan",
+                 *       "language": "en",
+                 *       "password": "MousaCafe1",
+                 *       "phone": "+201001234567",
+                 *       "remember_me": true,
+                 *       "terms_accepted": true
+                 *     }
+                 */
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example",
+                     *       "customer": {
+                     *         "created_at": "2026-09-30T18:00:00Z",
+                     *         "email": "mona@example.com",
+                     *         "full_name": "Mona Hassan",
+                     *         "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                     *         "language": "en",
+                     *         "phone": "+201001234567",
+                     *         "terms_accepted_at": "2026-09-30T18:00:00Z",
+                     *         "terms_version": "2026-10"
+                     *       },
+                     *       "expires_in": 900,
+                     *       "refresh_expires_at": "2026-10-30T18:00:00Z",
+                     *       "refresh_token": "opaque-refresh-token",
+                     *       "token_type": "bearer"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+            /** @description Conflict: EMAIL_ALREADY_REGISTERED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "EMAIL_ALREADY_REGISTERED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: TERMS_NOT_ACCEPTED, INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TERMS_NOT_ACCEPTED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    login_api_v1_mobile_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "mona@example.com",
+                 *       "password": "MousaCafe1",
+                 *       "remember_me": false
+                 *     }
+                 */
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example",
+                     *       "customer": {
+                     *         "created_at": "2026-09-30T18:00:00Z",
+                     *         "email": "mona@example.com",
+                     *         "full_name": "Mona Hassan",
+                     *         "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                     *         "language": "en",
+                     *         "phone": "+201001234567",
+                     *         "terms_accepted_at": "2026-09-30T18:00:00Z",
+                     *         "terms_version": "2026-10"
+                     *       },
+                     *       "expires_in": 900,
+                     *       "refresh_expires_at": "2026-10-30T18:00:00Z",
+                     *       "refresh_token": "opaque-refresh-token",
+                     *       "token_type": "bearer"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+            /** @description Unauthorized: INVALID_CREDENTIALS */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INVALID_CREDENTIALS",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: ACCOUNT_TEMPORARILY_LOCKED, RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_TEMPORARILY_LOCKED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    refresh_api_v1_mobile_auth_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "refresh_token": "opaque-refresh-token"
+                 *     }
+                 */
+                "application/json": components["schemas"]["RefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example",
+                     *       "customer": {
+                     *         "created_at": "2026-09-30T18:00:00Z",
+                     *         "email": "mona@example.com",
+                     *         "full_name": "Mona Hassan",
+                     *         "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                     *         "language": "en",
+                     *         "phone": "+201001234567",
+                     *         "terms_accepted_at": "2026-09-30T18:00:00Z",
+                     *         "terms_version": "2026-10"
+                     *       },
+                     *       "expires_in": 900,
+                     *       "refresh_expires_at": "2026-10-30T18:00:00Z",
+                     *       "refresh_token": "opaque-refresh-token",
+                     *       "token_type": "bearer"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+            /** @description Unauthorized: REFRESH_TOKEN_INVALID, REFRESH_TOKEN_EXPIRED, REFRESH_TOKEN_ALREADY_ROTATED, REFRESH_TOKEN_REUSED, SESSION_REVOKED, TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "REFRESH_TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    logout_api_v1_mobile_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                /** @example {} */
+                "application/json": components["schemas"]["LogoutRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    forgot_password_api_v1_mobile_auth_forgot_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "mona@example.com"
+                 *     }
+                 */
+                "application/json": components["schemas"]["app__schemas__mobile_auth__ForgotPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "If an account exists for that email, a password reset link has been sent."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_reset_password_api_v1_mobile_auth_reset_password_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "token": "reset-token"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ResetPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "email_masked": "m***@example.com",
+                     *       "expires_at": "2026-09-30T18:30:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ResetPreviewResponse"];
+                };
+            };
+            /** @description Not found: RESET_TOKEN_INVALID */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RESET_TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gone: RESET_TOKEN_EXPIRED */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RESET_TOKEN_EXPIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reset_password_api_v1_mobile_auth_reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "new_password": "MousaCafe2",
+                 *       "token": "reset-token"
+                 *     }
+                 */
+                "application/json": components["schemas"]["app__schemas__mobile_auth__ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "If an account exists for that email, a password reset link has been sent."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Not found: RESET_TOKEN_INVALID */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RESET_TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gone: RESET_TOKEN_EXPIRED */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RESET_TOKEN_EXPIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    change_password_api_v1_mobile_auth_change_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "current_password": "MousaCafe1",
+                 *       "new_password": "MousaCafe2"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED, INVALID_CREDENTIALS */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_branches_api_v1_mobile_branches_get: {
+        parameters: {
+            query?: {
+                /** @description Latitude. Send with lng. */
+                lat?: number | null;
+                /** @description Longitude. Send with lat. */
+                lng?: number | null;
+                /** @description Keep branches that offer this channel. */
+                fulfillment?: ("drive_thru" | "curbside") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "address": "15 Brazil Street, Zamalek, Cairo",
+                     *           "cover_image_url": "https://cdn.example.com/mousa/zamalek-cover.jpg",
+                     *           "currency": "EGP",
+                     *           "distance_km": 1.4,
+                     *           "estimated_prep_minutes": 12,
+                     *           "fulfillment_options": [
+                     *             "drive_thru",
+                     *             "curbside"
+                     *           ],
+                     *           "id": "11111111-1111-1111-1111-111111111111",
+                     *           "is_open_now": true,
+                     *           "latitude": "30.0609000",
+                     *           "logo_url": "https://cdn.example.com/mousa/zamalek-logo.png",
+                     *           "longitude": "31.2197000",
+                     *           "name": "Zamalek",
+                     *           "next_change_at": "2026-10-01T21:00:00Z",
+                     *           "opening_hours": {
+                     *             "fri": [
+                     *               {
+                     *                 "close": "00:30",
+                     *                 "open": "07:00"
+                     *               }
+                     *             ],
+                     *             "mon": [
+                     *               {
+                     *                 "close": "23:00",
+                     *                 "open": "07:00"
+                     *               }
+                     *             ],
+                     *             "sat": [
+                     *               {
+                     *                 "close": "00:30",
+                     *                 "open": "08:00"
+                     *               }
+                     *             ],
+                     *             "sun": [
+                     *               {
+                     *                 "close": "23:00",
+                     *                 "open": "08:00"
+                     *               }
+                     *             ],
+                     *             "thu": [
+                     *               {
+                     *                 "close": "23:00",
+                     *                 "open": "07:00"
+                     *               }
+                     *             ],
+                     *             "tue": [
+                     *               {
+                     *                 "close": "23:00",
+                     *                 "open": "07:00"
+                     *               }
+                     *             ],
+                     *             "wed": [
+                     *               {
+                     *                 "close": "23:00",
+                     *                 "open": "07:00"
+                     *               }
+                     *             ]
+                     *           },
+                     *           "phone": "+20227351234",
+                     *           "timezone": "Africa/Cairo"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileBranchList"];
+                };
+            };
+            /** @description Validation failed: COORDINATES_PAIR_REQUIRED, INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "COORDINATES_PAIR_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_branch_api_v1_mobile_branches__branch_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "address": "15 Brazil Street, Zamalek, Cairo",
+                     *       "cover_image_url": "https://cdn.example.com/mousa/zamalek-cover.jpg",
+                     *       "currency": "EGP",
+                     *       "distance_km": 1.4,
+                     *       "estimated_prep_minutes": 12,
+                     *       "fulfillment_options": [
+                     *         "drive_thru",
+                     *         "curbside"
+                     *       ],
+                     *       "id": "11111111-1111-1111-1111-111111111111",
+                     *       "is_open_now": true,
+                     *       "latitude": "30.0609000",
+                     *       "logo_url": "https://cdn.example.com/mousa/zamalek-logo.png",
+                     *       "longitude": "31.2197000",
+                     *       "name": "Zamalek",
+                     *       "next_change_at": "2026-10-01T21:00:00Z",
+                     *       "opening_hours": {
+                     *         "fri": [
+                     *           {
+                     *             "close": "00:30",
+                     *             "open": "07:00"
+                     *           }
+                     *         ],
+                     *         "mon": [
+                     *           {
+                     *             "close": "23:00",
+                     *             "open": "07:00"
+                     *           }
+                     *         ],
+                     *         "sat": [
+                     *           {
+                     *             "close": "00:30",
+                     *             "open": "08:00"
+                     *           }
+                     *         ],
+                     *         "sun": [
+                     *           {
+                     *             "close": "23:00",
+                     *             "open": "08:00"
+                     *           }
+                     *         ],
+                     *         "thu": [
+                     *           {
+                     *             "close": "23:00",
+                     *             "open": "07:00"
+                     *           }
+                     *         ],
+                     *         "tue": [
+                     *           {
+                     *             "close": "23:00",
+                     *             "open": "07:00"
+                     *           }
+                     *         ],
+                     *         "wed": [
+                     *           {
+                     *             "close": "23:00",
+                     *             "open": "07:00"
+                     *           }
+                     *         ]
+                     *       },
+                     *       "phone": "+20227351234",
+                     *       "timezone": "Africa/Cairo"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileBranchSummary"];
+                };
+            };
+            /** @description Not found: BRANCH_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BRANCH_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_catalog_api_v1_mobile_branches__branch_id__catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "branch_id": "11111111-1111-1111-1111-111111111111",
+                     *       "categories": [
+                     *         {
+                     *           "display_order": 0,
+                     *           "id": "22222222-2222-2222-2222-222222222222",
+                     *           "items": [
+                     *             {
+                     *               "allergens": [
+                     *                 "milk"
+                     *               ],
+                     *               "description": "Espresso with steamed milk.",
+                     *               "dietary_badges": [
+                     *                 "vegetarian"
+                     *               ],
+                     *               "id": "33333333-3333-3333-3333-333333333333",
+                     *               "image_url": "https://cdn.example.com/mousa/latte.jpg",
+                     *               "is_available": true,
+                     *               "item_type": "prepared",
+                     *               "modifier_groups": [
+                     *                 {
+                     *                   "id": "44444444-4444-4444-4444-444444444444",
+                     *                   "is_required": true,
+                     *                   "max_choices": 1,
+                     *                   "min_choices": 1,
+                     *                   "name": "Size",
+                     *                   "options": [
+                     *                     {
+                     *                       "id": "55555555-5555-5555-5555-555555555551",
+                     *                       "is_available": true,
+                     *                       "name": "Regular",
+                     *                       "price_delta": "0.00"
+                     *                     },
+                     *                     {
+                     *                       "id": "55555555-5555-5555-5555-555555555552",
+                     *                       "is_available": true,
+                     *                       "name": "Large",
+                     *                       "price_delta": "10.00"
+                     *                     }
+                     *                   ]
+                     *                 },
+                     *                 {
+                     *                   "id": "66666666-6666-6666-6666-666666666666",
+                     *                   "is_required": false,
+                     *                   "max_choices": 1,
+                     *                   "min_choices": 0,
+                     *                   "name": "Milk",
+                     *                   "options": [
+                     *                     {
+                     *                       "id": "66666666-6666-6666-6666-666666666661",
+                     *                       "is_available": true,
+                     *                       "name": "Whole milk",
+                     *                       "price_delta": "0.00"
+                     *                     },
+                     *                     {
+                     *                       "id": "66666666-6666-6666-6666-666666666662",
+                     *                       "is_available": true,
+                     *                       "name": "Oat",
+                     *                       "price_delta": "8.00"
+                     *                     }
+                     *                   ]
+                     *                 },
+                     *                 {
+                     *                   "id": "77777777-7777-7777-7777-777777777777",
+                     *                   "is_required": false,
+                     *                   "max_choices": 1,
+                     *                   "min_choices": 0,
+                     *                   "name": "Sweetness",
+                     *                   "options": [
+                     *                     {
+                     *                       "id": "77777777-7777-7777-7777-777777777771",
+                     *                       "is_available": true,
+                     *                       "name": "Regular",
+                     *                       "price_delta": "0.00"
+                     *                     },
+                     *                     {
+                     *                       "id": "77777777-7777-7777-7777-777777777772",
+                     *                       "is_available": true,
+                     *                       "name": "Extra sweet",
+                     *                       "price_delta": "2.00"
+                     *                     }
+                     *                   ]
+                     *                 }
+                     *               ],
+                     *               "name": "Latte",
+                     *               "prep_time_minutes": 5,
+                     *               "price": "40.00",
+                     *               "tags": [
+                     *                 "hot"
+                     *               ]
+                     *             }
+                     *           ],
+                     *           "name": "Coffee"
+                     *         }
+                     *       ],
+                     *       "currency": "EGP"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileCatalog"];
+                };
+            };
+            /** @description Not found: BRANCH_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BRANCH_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    register_fcm_token_api_v1_mobile_notifications_fcm_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "app_version": "1.4.0",
+                 *       "device_os": "ios",
+                 *       "fcm_token": "fcm-token-abc123",
+                 *       "locale": "ar"
+                 *     }
+                 */
+                "application/json": components["schemas"]["RegisterFcmTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description The token is registered for this customer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "registered": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RegisterFcmTokenResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revoke_fcm_token_api_v1_mobile_notifications_fcm_token_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "fcm_token": "fcm-token-abc123"
+                 *     }
+                 */
+                "application/json": components["schemas"]["RevokeFcmTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    quote_api_v1_mobile_orders_quote_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "branch_id": "11111111-1111-1111-1111-111111111111",
+                 *       "customer_notes": "I'll be in a white car.",
+                 *       "fulfillment_type": "drive_thru",
+                 *       "items": [
+                 *         {
+                 *           "item_id": "33333333-3333-3333-3333-333333333333",
+                 *           "quantity": 1,
+                 *           "selected_groups": [
+                 *             {
+                 *               "group_id": "44444444-4444-4444-4444-444444444444",
+                 *               "option_ids": [
+                 *                 "55555555-5555-5555-5555-555555555552"
+                 *               ]
+                 *             },
+                 *             {
+                 *               "group_id": "66666666-6666-6666-6666-666666666666",
+                 *               "option_ids": [
+                 *                 "66666666-6666-6666-6666-666666666662"
+                 *               ]
+                 *             }
+                 *           ],
+                 *           "special_instructions": "Extra hot, please."
+                 *         }
+                 *       ],
+                 *       "payment_method": "cash",
+                 *       "source": "cart",
+                 *       "vehicle_id": "88888888-8888-8888-8888-888888888888"
+                 *     }
+                 */
+                "application/json": components["schemas"]["app__schemas__mobile_orders__CheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Totals for this cart. Nothing was saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "pricing": {
+                     *         "currency": "EGP",
+                     *         "subtotal": "45.00",
+                     *         "discount_total": "0.00",
+                     *         "service_fee_total": "0.00",
+                     *         "tax_total": "6.30",
+                     *         "total": "51.30"
+                     *       },
+                     *       "items": [
+                     *         {
+                     *           "item_id": "33333333-3333-3333-3333-333333333333",
+                     *           "name": "Latte",
+                     *           "quantity": 1,
+                     *           "unit_price": "45.00",
+                     *           "subtotal": "45.00",
+                     *           "modifiers": [
+                     *             {
+                     *               "group_name": "Size",
+                     *               "name": "Large",
+                     *               "price_delta": "3.00"
+                     *             },
+                     *             {
+                     *               "group_name": "Milk",
+                     *               "name": "Oat milk",
+                     *               "price_delta": "2.00"
+                     *             }
+                     *           ],
+                     *           "special_instructions": "Extra hot, please."
+                     *         }
+                     *       ],
+                     *       "estimated_prep_minutes": 12,
+                     *       "payment_options": [
+                     *         {
+                     *           "method": "cash",
+                     *           "available": true
+                     *         },
+                     *         {
+                     *           "method": "demo_wallet",
+                     *           "available": false,
+                     *           "unavailable_reason": "PAYMENT_METHOD_UNAVAILABLE"
+                     *         }
+                     *       ],
+                     *       "warnings": []
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileQuoteResponse"];
+                };
+            };
+            /** @description Bad request: MODIFIER_GROUP_REQUIRED, MODIFIER_SELECTION_OUT_OF_BOUNDS, MODIFIER_OPTION_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MODIFIER_GROUP_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: BRANCH_NOT_FOUND, VEHICLE_NOT_FOUND, ITEM_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BRANCH_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: FULFILLMENT_NOT_AVAILABLE, BRANCH_CLOSED, TOO_MANY_ACTIVE_ORDERS, MY_USUAL_NOT_AVAILABLE, ITEM_UNAVAILABLE, PAYMENT_METHOD_UNAVAILABLE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FULFILLMENT_NOT_AVAILABLE",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_my_orders_api_v1_mobile_orders_get: {
+        parameters: {
+            query?: {
+                /** @description active, past, or all. */
+                scope?: "active" | "past" | "all";
+                /** @description Page size. Default 20, maximum 50. */
+                limit?: number;
+                /** @description Opaque cursor from the previous page. */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of orders, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "99999999-9999-9999-9999-999999999999",
+                     *           "display_number": "104",
+                     *           "status": "placed",
+                     *           "status_label": "Order placed",
+                     *           "branch_name": "Zamalek",
+                     *           "total": "51.30",
+                     *           "currency": "EGP",
+                     *           "item_count": 1,
+                     *           "created_at": "2026-10-01T12:00:00Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileOrderList"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INVALID_CURSOR, INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INVALID_CURSOR",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    checkout_api_v1_mobile_orders_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional retry key, at most 64 characters. Same key and body returns the original order. */
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "branch_id": "11111111-1111-1111-1111-111111111111",
+                 *       "customer_notes": "I'll be in a white car.",
+                 *       "fulfillment_type": "drive_thru",
+                 *       "items": [
+                 *         {
+                 *           "item_id": "33333333-3333-3333-3333-333333333333",
+                 *           "quantity": 1,
+                 *           "selected_groups": [
+                 *             {
+                 *               "group_id": "44444444-4444-4444-4444-444444444444",
+                 *               "option_ids": [
+                 *                 "55555555-5555-5555-5555-555555555552"
+                 *               ]
+                 *             },
+                 *             {
+                 *               "group_id": "66666666-6666-6666-6666-666666666666",
+                 *               "option_ids": [
+                 *                 "66666666-6666-6666-6666-666666666662"
+                 *               ]
+                 *             }
+                 *           ],
+                 *           "special_instructions": "Extra hot, please."
+                 *         }
+                 *       ],
+                 *       "payment_method": "cash",
+                 *       "source": "cart",
+                 *       "vehicle_id": "88888888-8888-8888-8888-888888888888"
+                 *     }
+                 */
+                "application/json": components["schemas"]["app__schemas__mobile_orders__CheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description This Idempotency-Key already placed this same order. Nothing new was created. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "99999999-9999-9999-9999-999999999999",
+                     *       "display_number": "104",
+                     *       "status": "placed",
+                     *       "status_label": "Order placed",
+                     *       "can_cancel": true,
+                     *       "branch": {
+                     *         "id": "11111111-1111-1111-1111-111111111111",
+                     *         "name": "Zamalek",
+                     *         "address": "15 Brazil Street, Zamalek, Cairo",
+                     *         "latitude": "30.0609000",
+                     *         "longitude": "31.2197000",
+                     *         "phone": "+20227351234"
+                     *       },
+                     *       "fulfillment_type": "drive_thru",
+                     *       "vehicle": {
+                     *         "id": "88888888-8888-8888-8888-888888888888",
+                     *         "make": "Toyota",
+                     *         "model": "Corolla",
+                     *         "color": "White",
+                     *         "plate_number": "ABC 123",
+                     *         "verification_status": "unverified"
+                     *       },
+                     *       "items": [
+                     *         {
+                     *           "item_id": "33333333-3333-3333-3333-333333333333",
+                     *           "name": "Latte",
+                     *           "quantity": 1,
+                     *           "unit_price": "45.00",
+                     *           "subtotal": "45.00",
+                     *           "modifiers": [
+                     *             {
+                     *               "group_name": "Size",
+                     *               "name": "Large",
+                     *               "price_delta": "3.00"
+                     *             },
+                     *             {
+                     *               "group_name": "Milk",
+                     *               "name": "Oat milk",
+                     *               "price_delta": "2.00"
+                     *             }
+                     *           ],
+                     *           "special_instructions": "Extra hot, please."
+                     *         }
+                     *       ],
+                     *       "pricing": {
+                     *         "currency": "EGP",
+                     *         "subtotal": "45.00",
+                     *         "discount_total": "0.00",
+                     *         "service_fee_total": "0.00",
+                     *         "tax_total": "6.30",
+                     *         "total": "51.30"
+                     *       },
+                     *       "payment": {
+                     *         "method": "cash",
+                     *         "status": "due_at_pickup",
+                     *         "status_label": "Pay when you arrive",
+                     *         "amount_due": "51.30"
+                     *       },
+                     *       "estimated_prep_minutes": 12,
+                     *       "estimated_ready_at": "2026-10-01T12:12:00Z",
+                     *       "pickup_pass": {
+                     *         "token": "HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *         "qr_payload": "order:99999999-9999-9999-9999-999999999999:token:HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *         "expires_at": "2026-10-01T23:00:00Z"
+                     *       },
+                     *       "timeline": {
+                     *         "placed_at": "2026-10-01T12:00:00Z"
+                     *       },
+                     *       "customer_notes": "I'll be in a white car.",
+                     *       "created_at": "2026-10-01T12:00:00Z",
+                     *       "updated_at": "2026-10-01T12:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileOrderResponse"];
+                };
+            };
+            /** @description The order that was placed, including the pickup QR. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "99999999-9999-9999-9999-999999999999",
+                     *       "display_number": "104",
+                     *       "status": "placed",
+                     *       "status_label": "Order placed",
+                     *       "can_cancel": true,
+                     *       "branch": {
+                     *         "id": "11111111-1111-1111-1111-111111111111",
+                     *         "name": "Zamalek",
+                     *         "address": "15 Brazil Street, Zamalek, Cairo",
+                     *         "latitude": "30.0609000",
+                     *         "longitude": "31.2197000",
+                     *         "phone": "+20227351234"
+                     *       },
+                     *       "fulfillment_type": "drive_thru",
+                     *       "vehicle": {
+                     *         "id": "88888888-8888-8888-8888-888888888888",
+                     *         "make": "Toyota",
+                     *         "model": "Corolla",
+                     *         "color": "White",
+                     *         "plate_number": "ABC 123",
+                     *         "verification_status": "unverified"
+                     *       },
+                     *       "items": [
+                     *         {
+                     *           "item_id": "33333333-3333-3333-3333-333333333333",
+                     *           "name": "Latte",
+                     *           "quantity": 1,
+                     *           "unit_price": "45.00",
+                     *           "subtotal": "45.00",
+                     *           "modifiers": [
+                     *             {
+                     *               "group_name": "Size",
+                     *               "name": "Large",
+                     *               "price_delta": "3.00"
+                     *             },
+                     *             {
+                     *               "group_name": "Milk",
+                     *               "name": "Oat milk",
+                     *               "price_delta": "2.00"
+                     *             }
+                     *           ],
+                     *           "special_instructions": "Extra hot, please."
+                     *         }
+                     *       ],
+                     *       "pricing": {
+                     *         "currency": "EGP",
+                     *         "subtotal": "45.00",
+                     *         "discount_total": "0.00",
+                     *         "service_fee_total": "0.00",
+                     *         "tax_total": "6.30",
+                     *         "total": "51.30"
+                     *       },
+                     *       "payment": {
+                     *         "method": "cash",
+                     *         "status": "due_at_pickup",
+                     *         "status_label": "Pay when you arrive",
+                     *         "amount_due": "51.30"
+                     *       },
+                     *       "estimated_prep_minutes": 12,
+                     *       "estimated_ready_at": "2026-10-01T12:12:00Z",
+                     *       "pickup_pass": {
+                     *         "token": "HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *         "qr_payload": "order:99999999-9999-9999-9999-999999999999:token:HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *         "expires_at": "2026-10-01T23:00:00Z"
+                     *       },
+                     *       "timeline": {
+                     *         "placed_at": "2026-10-01T12:00:00Z"
+                     *       },
+                     *       "customer_notes": "I'll be in a white car.",
+                     *       "created_at": "2026-10-01T12:00:00Z",
+                     *       "updated_at": "2026-10-01T12:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileOrderResponse"];
+                };
+            };
+            /** @description Bad request: MODIFIER_GROUP_REQUIRED, MODIFIER_SELECTION_OUT_OF_BOUNDS, MODIFIER_OPTION_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MODIFIER_GROUP_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: BRANCH_NOT_FOUND, VEHICLE_NOT_FOUND, ITEM_NOT_FOUND, PROMO_CODE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BRANCH_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: FULFILLMENT_NOT_AVAILABLE, BRANCH_CLOSED, TOO_MANY_ACTIVE_ORDERS, MY_USUAL_NOT_AVAILABLE, ITEM_UNAVAILABLE, IDEMPOTENCY_KEY_REUSED, PROMO_CODE_NOT_STARTED, PROMO_CODE_EXPIRED, PROMO_CODE_USAGE_LIMIT_REACHED, PROMO_CODE_ALREADY_USED, PROMO_CODE_MIN_ORDER_NOT_MET, PAYMENT_METHOD_UNAVAILABLE, INSUFFICIENT_WALLET_BALANCE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FULFILLMENT_NOT_AVAILABLE",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_active_api_v1_mobile_orders_active_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description In-progress orders, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "99999999-9999-9999-9999-999999999999",
+                     *           "display_number": "104",
+                     *           "status": "placed",
+                     *           "status_label": "Order placed",
+                     *           "can_cancel": true,
+                     *           "branch": {
+                     *             "id": "11111111-1111-1111-1111-111111111111",
+                     *             "name": "Zamalek",
+                     *             "address": "15 Brazil Street, Zamalek, Cairo",
+                     *             "latitude": "30.0609000",
+                     *             "longitude": "31.2197000",
+                     *             "phone": "+20227351234"
+                     *           },
+                     *           "fulfillment_type": "drive_thru",
+                     *           "vehicle": {
+                     *             "id": "88888888-8888-8888-8888-888888888888",
+                     *             "make": "Toyota",
+                     *             "model": "Corolla",
+                     *             "color": "White",
+                     *             "plate_number": "ABC 123",
+                     *             "verification_status": "unverified"
+                     *           },
+                     *           "items": [
+                     *             {
+                     *               "item_id": "33333333-3333-3333-3333-333333333333",
+                     *               "name": "Latte",
+                     *               "quantity": 1,
+                     *               "unit_price": "45.00",
+                     *               "subtotal": "45.00",
+                     *               "modifiers": [
+                     *                 {
+                     *                   "group_name": "Size",
+                     *                   "name": "Large",
+                     *                   "price_delta": "3.00"
+                     *                 },
+                     *                 {
+                     *                   "group_name": "Milk",
+                     *                   "name": "Oat milk",
+                     *                   "price_delta": "2.00"
+                     *                 }
+                     *               ],
+                     *               "special_instructions": "Extra hot, please."
+                     *             }
+                     *           ],
+                     *           "pricing": {
+                     *             "currency": "EGP",
+                     *             "subtotal": "45.00",
+                     *             "discount_total": "0.00",
+                     *             "service_fee_total": "0.00",
+                     *             "tax_total": "6.30",
+                     *             "total": "51.30"
+                     *           },
+                     *           "payment": {
+                     *             "method": "cash",
+                     *             "status": "due_at_pickup",
+                     *             "status_label": "Pay when you arrive",
+                     *             "amount_due": "51.30"
+                     *           },
+                     *           "estimated_prep_minutes": 12,
+                     *           "estimated_ready_at": "2026-10-01T12:12:00Z",
+                     *           "pickup_pass": {
+                     *             "token": "HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *             "qr_payload": "order:99999999-9999-9999-9999-999999999999:token:HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *             "expires_at": "2026-10-01T23:00:00Z"
+                     *           },
+                     *           "timeline": {
+                     *             "placed_at": "2026-10-01T12:00:00Z"
+                     *           },
+                     *           "customer_notes": "I'll be in a white car.",
+                     *           "created_at": "2026-10-01T12:00:00Z",
+                     *           "updated_at": "2026-10-01T12:00:00Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileActiveOrders"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_order_api_v1_mobile_orders__order_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The order. Cache-Control: no-store. The ETag is in the headers. */
+            200: {
+                headers: {
+                    /** @description Opaque validator for If-None-Match. */
+                    ETag?: string;
+                    /** @description Always no-store. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "99999999-9999-9999-9999-999999999999",
+                     *       "display_number": "104",
+                     *       "status": "placed",
+                     *       "status_label": "Order placed",
+                     *       "can_cancel": true,
+                     *       "branch": {
+                     *         "id": "11111111-1111-1111-1111-111111111111",
+                     *         "name": "Zamalek",
+                     *         "address": "15 Brazil Street, Zamalek, Cairo",
+                     *         "latitude": "30.0609000",
+                     *         "longitude": "31.2197000",
+                     *         "phone": "+20227351234"
+                     *       },
+                     *       "fulfillment_type": "drive_thru",
+                     *       "vehicle": {
+                     *         "id": "88888888-8888-8888-8888-888888888888",
+                     *         "make": "Toyota",
+                     *         "model": "Corolla",
+                     *         "color": "White",
+                     *         "plate_number": "ABC 123",
+                     *         "verification_status": "unverified"
+                     *       },
+                     *       "items": [
+                     *         {
+                     *           "item_id": "33333333-3333-3333-3333-333333333333",
+                     *           "name": "Latte",
+                     *           "quantity": 1,
+                     *           "unit_price": "45.00",
+                     *           "subtotal": "45.00",
+                     *           "modifiers": [
+                     *             {
+                     *               "group_name": "Size",
+                     *               "name": "Large",
+                     *               "price_delta": "3.00"
+                     *             },
+                     *             {
+                     *               "group_name": "Milk",
+                     *               "name": "Oat milk",
+                     *               "price_delta": "2.00"
+                     *             }
+                     *           ],
+                     *           "special_instructions": "Extra hot, please."
+                     *         }
+                     *       ],
+                     *       "pricing": {
+                     *         "currency": "EGP",
+                     *         "subtotal": "45.00",
+                     *         "discount_total": "0.00",
+                     *         "service_fee_total": "0.00",
+                     *         "tax_total": "6.30",
+                     *         "total": "51.30"
+                     *       },
+                     *       "payment": {
+                     *         "method": "cash",
+                     *         "status": "due_at_pickup",
+                     *         "status_label": "Pay when you arrive",
+                     *         "amount_due": "51.30"
+                     *       },
+                     *       "estimated_prep_minutes": 12,
+                     *       "estimated_ready_at": "2026-10-01T12:12:00Z",
+                     *       "pickup_pass": {
+                     *         "token": "HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *         "qr_payload": "order:99999999-9999-9999-9999-999999999999:token:HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *         "expires_at": "2026-10-01T23:00:00Z"
+                     *       },
+                     *       "timeline": {
+                     *         "placed_at": "2026-10-01T12:00:00Z"
+                     *       },
+                     *       "customer_notes": "I'll be in a white car.",
+                     *       "created_at": "2026-10-01T12:00:00Z",
+                     *       "updated_at": "2026-10-01T12:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileOrderResponse"];
+                };
+            };
+            /** @description Not modified. If-None-Match matched the current ETag. The body is empty. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: ORDER_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ORDER_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_pickup_pass_api_v1_mobile_orders__order_id__pickup_pass_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current pickup QR. Cache-Control: no-store. */
+            200: {
+                headers: {
+                    /** @description Always no-store. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "order_id": "99999999-9999-9999-9999-999999999999",
+                     *       "display_number": "104",
+                     *       "token": "HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *       "qr_payload": "order:99999999-9999-9999-9999-999999999999:token:HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *       "expires_at": "2026-10-01T23:00:00Z",
+                     *       "status": "placed",
+                     *       "status_label": "Order placed"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobilePickupPassResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: ORDER_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ORDER_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gone: ORDER_ALREADY_COLLECTED, ORDER_CANCELLED */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ORDER_ALREADY_COLLECTED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    arrived_api_v1_mobile_orders__order_id__arrived_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                /**
+                 * @example {
+                 *       "note": "Grey car near the door"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ArrivedRequest"];
+            };
+        };
+        responses: {
+            /** @description The order, with arrived_at set. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "99999999-9999-9999-9999-999999999999",
+                     *       "display_number": "104",
+                     *       "status": "placed",
+                     *       "status_label": "Order placed",
+                     *       "can_cancel": true,
+                     *       "branch": {
+                     *         "id": "11111111-1111-1111-1111-111111111111",
+                     *         "name": "Zamalek",
+                     *         "address": "15 Brazil Street, Zamalek, Cairo",
+                     *         "latitude": "30.0609000",
+                     *         "longitude": "31.2197000",
+                     *         "phone": "+20227351234"
+                     *       },
+                     *       "fulfillment_type": "drive_thru",
+                     *       "vehicle": {
+                     *         "id": "88888888-8888-8888-8888-888888888888",
+                     *         "make": "Toyota",
+                     *         "model": "Corolla",
+                     *         "color": "White",
+                     *         "plate_number": "ABC 123",
+                     *         "verification_status": "unverified"
+                     *       },
+                     *       "items": [
+                     *         {
+                     *           "item_id": "33333333-3333-3333-3333-333333333333",
+                     *           "name": "Latte",
+                     *           "quantity": 1,
+                     *           "unit_price": "45.00",
+                     *           "subtotal": "45.00",
+                     *           "modifiers": [
+                     *             {
+                     *               "group_name": "Size",
+                     *               "name": "Large",
+                     *               "price_delta": "3.00"
+                     *             },
+                     *             {
+                     *               "group_name": "Milk",
+                     *               "name": "Oat milk",
+                     *               "price_delta": "2.00"
+                     *             }
+                     *           ],
+                     *           "special_instructions": "Extra hot, please."
+                     *         }
+                     *       ],
+                     *       "pricing": {
+                     *         "currency": "EGP",
+                     *         "subtotal": "45.00",
+                     *         "discount_total": "0.00",
+                     *         "service_fee_total": "0.00",
+                     *         "tax_total": "6.30",
+                     *         "total": "51.30"
+                     *       },
+                     *       "payment": {
+                     *         "method": "cash",
+                     *         "status": "due_at_pickup",
+                     *         "status_label": "Pay when you arrive",
+                     *         "amount_due": "51.30"
+                     *       },
+                     *       "estimated_prep_minutes": 12,
+                     *       "estimated_ready_at": "2026-10-01T12:12:00Z",
+                     *       "pickup_pass": {
+                     *         "token": "HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *         "qr_payload": "order:99999999-9999-9999-9999-999999999999:token:HT-A1B2C3D4E5F67890A1B2C3D4",
+                     *         "expires_at": "2026-10-01T23:00:00Z"
+                     *       },
+                     *       "timeline": {
+                     *         "placed_at": "2026-10-01T12:00:00Z"
+                     *       },
+                     *       "customer_notes": "I'll be in a white car.",
+                     *       "arrived_at": "2026-10-01T12:20:00Z",
+                     *       "arrival_note": "Grey car near the door",
+                     *       "created_at": "2026-10-01T12:00:00Z",
+                     *       "updated_at": "2026-10-01T12:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileOrderResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: ORDER_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ORDER_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: ORDER_NOT_ACTIVE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ORDER_NOT_ACTIVE",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_api_v1_mobile_orders__order_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                /**
+                 * @example {
+                 *       "reason": "I ordered the wrong drink."
+                 *     }
+                 */
+                "application/json": components["schemas"]["CancelOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description The order after it was cancelled. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "99999999-9999-9999-9999-999999999999",
+                     *       "display_number": "104",
+                     *       "status": "cancelled",
+                     *       "status_label": "Cancelled",
+                     *       "can_cancel": false,
+                     *       "branch": {
+                     *         "id": "11111111-1111-1111-1111-111111111111",
+                     *         "name": "Zamalek",
+                     *         "address": "15 Brazil Street, Zamalek, Cairo",
+                     *         "latitude": "30.0609000",
+                     *         "longitude": "31.2197000",
+                     *         "phone": "+20227351234"
+                     *       },
+                     *       "fulfillment_type": "drive_thru",
+                     *       "vehicle": {
+                     *         "id": "88888888-8888-8888-8888-888888888888",
+                     *         "make": "Toyota",
+                     *         "model": "Corolla",
+                     *         "color": "White",
+                     *         "plate_number": "ABC 123",
+                     *         "verification_status": "unverified"
+                     *       },
+                     *       "items": [
+                     *         {
+                     *           "item_id": "33333333-3333-3333-3333-333333333333",
+                     *           "name": "Latte",
+                     *           "quantity": 1,
+                     *           "unit_price": "45.00",
+                     *           "subtotal": "45.00",
+                     *           "modifiers": [
+                     *             {
+                     *               "group_name": "Size",
+                     *               "name": "Large",
+                     *               "price_delta": "3.00"
+                     *             },
+                     *             {
+                     *               "group_name": "Milk",
+                     *               "name": "Oat milk",
+                     *               "price_delta": "2.00"
+                     *             }
+                     *           ],
+                     *           "special_instructions": "Extra hot, please."
+                     *         }
+                     *       ],
+                     *       "pricing": {
+                     *         "currency": "EGP",
+                     *         "subtotal": "45.00",
+                     *         "discount_total": "0.00",
+                     *         "service_fee_total": "0.00",
+                     *         "tax_total": "6.30",
+                     *         "total": "51.30"
+                     *       },
+                     *       "payment": {
+                     *         "method": "cash",
+                     *         "status": "due_at_pickup",
+                     *         "status_label": "Pay when you arrive",
+                     *         "amount_due": "51.30"
+                     *       },
+                     *       "estimated_prep_minutes": 12,
+                     *       "estimated_ready_at": "2026-10-01T12:12:00Z",
+                     *       "timeline": {
+                     *         "placed_at": "2026-10-01T12:00:00Z"
+                     *       },
+                     *       "customer_notes": "I'll be in a white car.",
+                     *       "created_at": "2026-10-01T12:00:00Z",
+                     *       "updated_at": "2026-10-01T12:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MobileOrderResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: ORDER_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ORDER_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: ORDER_CANNOT_BE_CANCELLED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ORDER_CANNOT_BE_CANCELLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_me_api_v1_mobile_profile_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2026-09-30T18:00:00Z",
+                     *       "email": "mona@example.com",
+                     *       "full_name": "Mona Hassan",
+                     *       "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                     *       "language": "en",
+                     *       "phone": "+201001234567",
+                     *       "preferred_branch": {
+                     *         "id": "11111111-1111-1111-1111-111111111111",
+                     *         "name": "Downtown"
+                     *       },
+                     *       "terms_accepted_at": "2026-09-30T18:00:00Z",
+                     *       "terms_version": "2026-10"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CustomerProfileResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_me_api_v1_mobile_profile_me_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "full_name": "Mona Hassan",
+                 *       "language": "ar",
+                 *       "phone": "+201001234567",
+                 *       "preferred_branch_id": "11111111-1111-1111-1111-111111111111"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProfileUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2026-09-30T18:00:00Z",
+                     *       "email": "mona@example.com",
+                     *       "full_name": "Mona Hassan",
+                     *       "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                     *       "language": "en",
+                     *       "phone": "+201001234567",
+                     *       "preferred_branch": {
+                     *         "id": "11111111-1111-1111-1111-111111111111",
+                     *         "name": "Downtown"
+                     *       },
+                     *       "terms_accepted_at": "2026-09-30T18:00:00Z",
+                     *       "terms_version": "2026-10"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CustomerProfileResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: BRANCH_NOT_AVAILABLE, INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BRANCH_NOT_AVAILABLE",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_me_api_v1_mobile_profile_me_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "password": "MousaCafe1"
+                 *     }
+                 */
+                "application/json": components["schemas"]["DeleteAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED, INVALID_CREDENTIALS */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patch_me_api_v1_mobile_profile_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "full_name": "Mona Hassan",
+                 *       "language": "ar",
+                 *       "phone": "+201001234567",
+                 *       "preferred_branch_id": "11111111-1111-1111-1111-111111111111"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProfileUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2026-09-30T18:00:00Z",
+                     *       "email": "mona@example.com",
+                     *       "full_name": "Mona Hassan",
+                     *       "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                     *       "language": "en",
+                     *       "phone": "+201001234567",
+                     *       "preferred_branch": {
+                     *         "id": "11111111-1111-1111-1111-111111111111",
+                     *         "name": "Downtown"
+                     *       },
+                     *       "terms_accepted_at": "2026-09-30T18:00:00Z",
+                     *       "terms_version": "2026-10"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CustomerProfileResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: BRANCH_NOT_AVAILABLE, INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BRANCH_NOT_AVAILABLE",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_my_usual_api_v1_mobile_profile_my_usual_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {} */
+                    "application/json": components["schemas"]["MyUsualView"] | null;
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_my_usual_api_v1_mobile_profile_my_usual_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "branch_id": "11111111-1111-1111-1111-111111111111",
+                 *       "item_id": "33333333-3333-3333-3333-333333333333",
+                 *       "quantity": 1,
+                 *       "selected_groups": [
+                 *         {
+                 *           "group_id": "44444444-4444-4444-4444-444444444444",
+                 *           "option_ids": [
+                 *             "55555555-5555-5555-5555-555555555552"
+                 *           ]
+                 *         },
+                 *         {
+                 *           "group_id": "66666666-6666-6666-6666-666666666666",
+                 *           "option_ids": [
+                 *             "66666666-6666-6666-6666-666666666662"
+                 *           ]
+                 *         },
+                 *         {
+                 *           "group_id": "77777777-7777-7777-7777-777777777777",
+                 *           "option_ids": [
+                 *             "77777777-7777-7777-7777-777777777771"
+                 *           ]
+                 *         }
+                 *       ],
+                 *       "special_instructions": "Extra hot, please."
+                 *     }
+                 */
+                "application/json": components["schemas"]["MyUsualUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "branch_id": "11111111-1111-1111-1111-111111111111",
+                     *       "branch_name": "Zamalek",
+                     *       "currency": "EGP",
+                     *       "is_orderable": true,
+                     *       "item_id": "33333333-3333-3333-3333-333333333333",
+                     *       "item_name": "Latte",
+                     *       "quantity": 1,
+                     *       "selected_groups": [
+                     *         {
+                     *           "group_id": "44444444-4444-4444-4444-444444444444",
+                     *           "option_ids": [
+                     *             "55555555-5555-5555-5555-555555555552"
+                     *           ]
+                     *         },
+                     *         {
+                     *           "group_id": "66666666-6666-6666-6666-666666666666",
+                     *           "option_ids": [
+                     *             "66666666-6666-6666-6666-666666666662"
+                     *           ]
+                     *         }
+                     *       ],
+                     *       "selected_modifiers": [
+                     *         {
+                     *           "group_id": "44444444-4444-4444-4444-444444444444",
+                     *           "group_name": "Size",
+                     *           "name": "Large",
+                     *           "option_id": "55555555-5555-5555-5555-555555555552",
+                     *           "price_delta": "10.00"
+                     *         },
+                     *         {
+                     *           "group_id": "66666666-6666-6666-6666-666666666666",
+                     *           "group_name": "Milk",
+                     *           "name": "Oat",
+                     *           "option_id": "66666666-6666-6666-6666-666666666662",
+                     *           "price_delta": "8.00"
+                     *         }
+                     *       ],
+                     *       "special_instructions": "Extra hot, please.",
+                     *       "subtotal": "58.00",
+                     *       "unit_price": "58.00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MyUsualView"];
+                };
+            };
+            /** @description Bad request: MODIFIER_GROUP_REQUIRED, MODIFIER_SELECTION_OUT_OF_BOUNDS, MODIFIER_OPTION_INVALID, MODIFIER_OPTION_UNAVAILABLE, DUPLICATE_MODIFIER_GROUP, DUPLICATE_MODIFIER_OPTION */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MODIFIER_GROUP_REQUIRED",
+                     *       "detail": "Please choose an option. This modifier group is required."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: BRANCH_NOT_FOUND, ITEM_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BRANCH_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: ITEM_UNAVAILABLE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ITEM_UNAVAILABLE",
+                     *       "detail": "Sorry, Latte is sold out right now."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: BRANCH_REQUIRED, INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BRANCH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_my_usual_api_v1_mobile_profile_my_usual_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_avatar_api_v1_mobile_profile_avatar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "file": "(binary)"
+                 *     }
+                 */
+                "multipart/form-data": components["schemas"]["Body_post_avatar_api_v1_mobile_profile_avatar_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "avatar_url": "https://cdn.example.com/avatars/2f1c0b7e-1c3a-4b55-9d0e-6a1b2c3d4e5f.jpg"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AvatarResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Payload too large: FILE_TOO_LARGE */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FILE_TOO_LARGE",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unsupported media type: UNSUPPORTED_MEDIA_TYPE */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    remove_avatar_api_v1_mobile_profile_avatar_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    validate_promo_api_v1_mobile_promotions_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "branch_id": "11111111-1111-1111-1111-111111111111",
+                 *       "code": "WELCOME10",
+                 *       "items": [
+                 *         {
+                 *           "item_id": "33333333-3333-3333-3333-333333333333",
+                 *           "quantity": 1,
+                 *           "selected_groups": []
+                 *         }
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["PromoValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description The code applies. message is localized, for example You saved 10.00 EGP. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "WELCOME10",
+                     *       "discount_type": "percent",
+                     *       "discount_amount": "10.00",
+                     *       "subtotal": "100.00",
+                     *       "discounted_subtotal": "90.00",
+                     *       "tax_total": "12.60",
+                     *       "total": "102.60",
+                     *       "currency": "EGP",
+                     *       "message": "You saved 10.00 EGP"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PromoValidateResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: PROMO_CODE_NOT_FOUND, BRANCH_NOT_FOUND, ITEM_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: PROMO_CODE_NOT_STARTED, PROMO_CODE_EXPIRED, PROMO_CODE_USAGE_LIMIT_REACHED, PROMO_CODE_ALREADY_USED, PROMO_CODE_MIN_ORDER_NOT_MET, ITEM_UNAVAILABLE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_NOT_STARTED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: PROMO_CODE_INVALID, INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_INVALID",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_my_vehicles_api_v1_mobile_vehicles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The customer's vehicles, default first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *         "make": "Toyota",
+                     *         "model": "Corolla",
+                     *         "color": "White",
+                     *         "plate_number": "ABC 123",
+                     *         "nickname": "Work car",
+                     *         "is_default": true,
+                     *         "verification_status": "pending",
+                     *         "verification_status_label": "Waiting for review",
+                     *         "documents": [
+                     *           {
+                     *             "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *             "doc_type": "license",
+                     *             "content_type": "application/pdf",
+                     *             "size_bytes": 12000,
+                     *             "uploaded_at": "2026-10-01T09:00:00Z",
+                     *             "download_url": "/api/v1/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc"
+                     *           }
+                     *         ],
+                     *         "created_at": "2026-10-01T08:00:00Z",
+                     *         "updated_at": "2026-10-01T09:00:00Z"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["VehicleResponse"][];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_my_vehicle_api_v1_mobile_vehicles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "color": "White",
+                 *       "make": "Toyota",
+                 *       "model": "Corolla",
+                 *       "nickname": "Work car",
+                 *       "plate_number": "ABC 123",
+                 *       "set_default": false
+                 *     }
+                 */
+                "application/json": components["schemas"]["VehicleCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description The vehicle that was saved. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *       "make": "Toyota",
+                     *       "model": "Corolla",
+                     *       "color": "White",
+                     *       "plate_number": "ABC 123",
+                     *       "nickname": "Work car",
+                     *       "is_default": true,
+                     *       "verification_status": "pending",
+                     *       "verification_status_label": "Waiting for review",
+                     *       "documents": [
+                     *         {
+                     *           "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *           "doc_type": "license",
+                     *           "content_type": "application/pdf",
+                     *           "size_bytes": 12000,
+                     *           "uploaded_at": "2026-10-01T09:00:00Z",
+                     *           "download_url": "/api/v1/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc"
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-10-01T08:00:00Z",
+                     *       "updated_at": "2026-10-01T09:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VehicleResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: VEHICLE_ALREADY_ADDED, VEHICLE_LIMIT_REACHED, VEHICLE_DEFAULT_CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_ALREADY_ADDED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_my_vehicle_api_v1_mobile_vehicles__vehicle_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: VEHICLE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_my_vehicle_api_v1_mobile_vehicles__vehicle_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "color": "Silver",
+                 *       "nickname": "Weekend car"
+                 *     }
+                 */
+                "application/json": components["schemas"]["VehicleUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated vehicle. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *       "make": "Toyota",
+                     *       "model": "Corolla",
+                     *       "color": "White",
+                     *       "plate_number": "ABC 123",
+                     *       "nickname": "Work car",
+                     *       "is_default": true,
+                     *       "verification_status": "pending",
+                     *       "verification_status_label": "Waiting for review",
+                     *       "documents": [
+                     *         {
+                     *           "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *           "doc_type": "license",
+                     *           "content_type": "application/pdf",
+                     *           "size_bytes": 12000,
+                     *           "uploaded_at": "2026-10-01T09:00:00Z",
+                     *           "download_url": "/api/v1/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc"
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-10-01T08:00:00Z",
+                     *       "updated_at": "2026-10-01T09:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VehicleResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: VEHICLE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: VEHICLE_ALREADY_ADDED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_ALREADY_ADDED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_my_default_vehicle_api_v1_mobile_vehicles__vehicle_id__set_default_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The vehicle that is now the default. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *       "make": "Toyota",
+                     *       "model": "Corolla",
+                     *       "color": "White",
+                     *       "plate_number": "ABC 123",
+                     *       "nickname": "Work car",
+                     *       "is_default": true,
+                     *       "verification_status": "pending",
+                     *       "verification_status_label": "Waiting for review",
+                     *       "documents": [
+                     *         {
+                     *           "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *           "doc_type": "license",
+                     *           "content_type": "application/pdf",
+                     *           "size_bytes": 12000,
+                     *           "uploaded_at": "2026-10-01T09:00:00Z",
+                     *           "download_url": "/api/v1/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc"
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-10-01T08:00:00Z",
+                     *       "updated_at": "2026-10-01T09:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VehicleResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: VEHICLE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: VEHICLE_DEFAULT_CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_DEFAULT_CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upload_my_document_api_v1_mobile_vehicles__vehicle_id__documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "file": "(binary)",
+                 *       "doc_type": "license"
+                 *     }
+                 */
+                "multipart/form-data": components["schemas"]["Body_upload_my_document_api_v1_mobile_vehicles__vehicle_id__documents_post"];
+            };
+        };
+        responses: {
+            /** @description The document that was stored. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *       "doc_type": "license",
+                     *       "content_type": "application/pdf",
+                     *       "size_bytes": 12000,
+                     *       "uploaded_at": "2026-10-01T09:00:00Z",
+                     *       "download_url": "/api/v1/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VehicleDocumentResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: VEHICLE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: DOCUMENT_LIMIT_REACHED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "DOCUMENT_LIMIT_REACHED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Payload too large: FILE_TOO_LARGE */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FILE_TOO_LARGE",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unsupported media type: UNSUPPORTED_MEDIA_TYPE */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    download_my_document_api_v1_mobile_vehicles__vehicle_id__documents__document_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document bytes when files are stored locally. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {} */
+                    "application/json": unknown;
+                    /** @example (binary file) */
+                    "application/pdf": string;
+                    /** @example (binary file) */
+                    "image/jpeg": string;
+                    /** @example (binary file) */
+                    "image/png": string;
+                    /** @example (binary file) */
+                    "image/webp": string;
+                };
+            };
+            /** @description Redirect to a 5-minute presigned URL when files are stored in S3. */
+            307: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: VEHICLE_NOT_FOUND, DOCUMENT_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_my_document_api_v1_mobile_vehicles__vehicle_id__documents__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: VEHICLE_NOT_FOUND, DOCUMENT_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_wallet_api_v1_mobile_wallet_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description DEMO wallet. Not real money. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "is_demo": true,
+                     *       "balance": "100.00",
+                     *       "currency": "EGP",
+                     *       "entries": [
+                     *         {
+                     *           "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
+                     *           "type": "demo_topup",
+                     *           "type_label": "Demo top-up",
+                     *           "amount": "100.00",
+                     *           "balance_after": "100.00",
+                     *           "created_at": "2026-10-01T12:00:00Z"
+                     *         }
+                     *       ],
+                     *       "disclaimer": "Demo credit for testing only. Not real money."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WalletResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: FEATURE_DISABLED */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FEATURE_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INVALID_CURSOR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INVALID_CURSOR",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_demo_topup_api_v1_mobile_wallet_demo_topup_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required retry key. The same key does not add DEMO credit twice. */
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "amount": "100.00"
+                 *     }
+                 */
+                "application/json": components["schemas"]["DemoTopupRequest"];
+            };
+        };
+        responses: {
+            /** @description DEMO wallet after the practice credit. Not real money. A replay returns the same wallet. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "is_demo": true,
+                     *       "balance": "100.00",
+                     *       "currency": "EGP",
+                     *       "entries": [
+                     *         {
+                     *           "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
+                     *           "type": "demo_topup",
+                     *           "type_label": "Demo top-up",
+                     *           "amount": "100.00",
+                     *           "balance_after": "100.00",
+                     *           "created_at": "2026-10-01T12:00:00Z"
+                     *         }
+                     *       ],
+                     *       "disclaimer": "Demo credit for testing only. Not real money."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WalletResponse"];
+                };
+            };
+            /** @description Unauthorized: CUSTOMER_AUTH_REQUIRED, TOKEN_INVALID, TOKEN_EXPIRED, SESSION_REVOKED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_AUTH_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ACCOUNT_DISABLED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ACCOUNT_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: FEATURE_DISABLED */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FEATURE_DISABLED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: IDEMPOTENCY_KEY_REUSED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "IDEMPOTENCY_KEY_REUSED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: IDEMPOTENCY_KEY_REQUIRED, DEMO_TOPUP_LIMIT, INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "IDEMPOTENCY_KEY_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests: RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable: MOBILE_APP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "MOBILE_APP_NOT_CONFIGURED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_vehicles_for_review_api_v1_admin_mobile_vehicles_get: {
+        parameters: {
+            query?: {
+                /** @description Limit the queue to one review state. */
+                status?: string | null;
+                /** @description Match a plate, customer name, or email. */
+                q?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of vehicles. Pending ones are oldest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *           "make": "Toyota",
+                     *           "model": "Corolla",
+                     *           "color": "White",
+                     *           "plate_number": "ABC 123",
+                     *           "nickname": "Work car",
+                     *           "is_default": true,
+                     *           "verification_status": "pending",
+                     *           "verification_status_label": "Waiting for review",
+                     *           "documents": [
+                     *             {
+                     *               "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *               "doc_type": "license",
+                     *               "content_type": "application/pdf",
+                     *               "size_bytes": 12000,
+                     *               "uploaded_at": "2026-10-01T09:00:00Z",
+                     *               "download_url": "/api/v1/admin/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc"
+                     *             }
+                     *           ],
+                     *           "created_at": "2026-10-01T08:00:00Z",
+                     *           "updated_at": "2026-10-01T09:00:00Z",
+                     *           "customer": {
+                     *             "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                     *             "full_name": "Mona Hassan",
+                     *             "email": "mona@example.com",
+                     *             "phone": "+201001234567"
+                     *           }
+                     *         }
+                     *       ],
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StaffVehicleListResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ERROR, CUSTOMER_TOKEN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ERROR",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    get_vehicle_for_review_api_v1_admin_mobile_vehicles__vehicle_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The vehicle, its customer, and its documents. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *       "make": "Toyota",
+                     *       "model": "Corolla",
+                     *       "color": "White",
+                     *       "plate_number": "ABC 123",
+                     *       "nickname": "Work car",
+                     *       "is_default": true,
+                     *       "verification_status": "pending",
+                     *       "verification_status_label": "Waiting for review",
+                     *       "documents": [
+                     *         {
+                     *           "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *           "doc_type": "license",
+                     *           "content_type": "application/pdf",
+                     *           "size_bytes": 12000,
+                     *           "uploaded_at": "2026-10-01T09:00:00Z",
+                     *           "download_url": "/api/v1/admin/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc"
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-10-01T08:00:00Z",
+                     *       "updated_at": "2026-10-01T09:00:00Z",
+                     *       "customer": {
+                     *         "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                     *         "full_name": "Mona Hassan",
+                     *         "email": "mona@example.com",
+                     *         "phone": "+201001234567"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StaffVehicleResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ERROR, CUSTOMER_TOKEN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ERROR",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: VEHICLE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    download_vehicle_document_api_v1_admin_mobile_vehicles__vehicle_id__documents__document_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document bytes when files are stored locally. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {} */
+                    "application/json": unknown;
+                    /** @example (binary file) */
+                    "application/pdf": string;
+                    /** @example (binary file) */
+                    "image/jpeg": string;
+                    /** @example (binary file) */
+                    "image/png": string;
+                    /** @example (binary file) */
+                    "image/webp": string;
+                };
+            };
+            /** @description Redirect to a 5-minute presigned URL when files are stored in S3. */
+            307: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ERROR, CUSTOMER_TOKEN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ERROR",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: VEHICLE_NOT_FOUND, DOCUMENT_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    decide_vehicle_verification_api_v1_admin_mobile_vehicles__vehicle_id__verification_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "decision": "verified"
+                 *     }
+                 */
+                "application/json": components["schemas"]["VerificationDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description The vehicle after the decision. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *       "make": "Toyota",
+                     *       "model": "Corolla",
+                     *       "color": "White",
+                     *       "plate_number": "ABC 123",
+                     *       "nickname": "Work car",
+                     *       "is_default": true,
+                     *       "verification_status": "pending",
+                     *       "verification_status_label": "Waiting for review",
+                     *       "documents": [
+                     *         {
+                     *           "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *           "doc_type": "license",
+                     *           "content_type": "application/pdf",
+                     *           "size_bytes": 12000,
+                     *           "uploaded_at": "2026-10-01T09:00:00Z",
+                     *           "download_url": "/api/v1/admin/mobile/vehicles/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/documents/cccccccc-cccc-cccc-cccc-cccccccccccc"
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-10-01T08:00:00Z",
+                     *       "updated_at": "2026-10-01T09:00:00Z",
+                     *       "customer": {
+                     *         "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                     *         "full_name": "Mona Hassan",
+                     *         "email": "mona@example.com",
+                     *         "phone": "+201001234567"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StaffVehicleResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ERROR, CUSTOMER_TOKEN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ERROR",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: VEHICLE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VEHICLE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: VERIFICATION_NOTE_REQUIRED, INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERIFICATION_NOTE_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    list_codes_api_v1_admin_promo_codes_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                active?: boolean | null;
+                q?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Promo codes for the restaurant, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *           "brand_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *           "code": "WELCOME10",
+                     *           "description": {
+                     *             "en": "10% off your first order",
+                     *             "ar": "خصم ١٠٪ على طلبك الأول"
+                     *           },
+                     *           "discount_type": "percent",
+                     *           "value": "10.00",
+                     *           "max_discount_amount": "50.00",
+                     *           "min_order_amount": "30.00",
+                     *           "starts_at": "2026-10-01T00:00:00Z",
+                     *           "ends_at": "2026-12-31T23:59:00Z",
+                     *           "max_total_uses": 100,
+                     *           "max_uses_per_customer": 1,
+                     *           "uses_count": 4,
+                     *           "is_active": true,
+                     *           "created_at": "2026-10-01T12:00:00Z",
+                     *           "updated_at": "2026-10-01T12:00:00Z"
+                     *         }
+                     *       ],
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PromoCodeListResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ERROR */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ERROR",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: PROMO_CODE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: PROMO_BRAND_REQUIRED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_BRAND_REQUIRED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    create_code_api_v1_admin_promo_codes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "code": "WELCOME10",
+                 *       "description": {
+                 *         "ar": "خصم ١٠٪ على طلبك الأول",
+                 *         "en": "10% off your first order"
+                 *       },
+                 *       "discount_type": "percent",
+                 *       "max_discount_amount": "50.00",
+                 *       "max_uses_per_customer": 1,
+                 *       "min_order_amount": "30.00",
+                 *       "value": "10.00"
+                 *     }
+                 */
+                "application/json": components["schemas"]["PromoCodeWrite"];
+            };
+        };
+        responses: {
+            /** @description The code that was created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *       "brand_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *       "code": "WELCOME10",
+                     *       "description": {
+                     *         "en": "10% off your first order",
+                     *         "ar": "خصم ١٠٪ على طلبك الأول"
+                     *       },
+                     *       "discount_type": "percent",
+                     *       "value": "10.00",
+                     *       "max_discount_amount": "50.00",
+                     *       "min_order_amount": "30.00",
+                     *       "starts_at": "2026-10-01T00:00:00Z",
+                     *       "ends_at": "2026-12-31T23:59:00Z",
+                     *       "max_total_uses": 100,
+                     *       "max_uses_per_customer": 1,
+                     *       "uses_count": 4,
+                     *       "is_active": true,
+                     *       "created_at": "2026-10-01T12:00:00Z",
+                     *       "updated_at": "2026-10-01T12:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PromoCodeResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ERROR */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ERROR",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: PROMO_CODE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: PROMO_CODE_EXISTS */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_EXISTS",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: PROMO_CODE_INVALID, PROMO_PERCENT_OUT_OF_RANGE, PROMO_VALUE_INVALID, PROMO_DATES_INVALID, PROMO_BRAND_REQUIRED, INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_INVALID",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    get_code_api_v1_admin_promo_codes__promo_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                promo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The promo code, including uses_count. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *       "brand_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *       "code": "WELCOME10",
+                     *       "description": {
+                     *         "en": "10% off your first order",
+                     *         "ar": "خصم ١٠٪ على طلبك الأول"
+                     *       },
+                     *       "discount_type": "percent",
+                     *       "value": "10.00",
+                     *       "max_discount_amount": "50.00",
+                     *       "min_order_amount": "30.00",
+                     *       "starts_at": "2026-10-01T00:00:00Z",
+                     *       "ends_at": "2026-12-31T23:59:00Z",
+                     *       "max_total_uses": 100,
+                     *       "max_uses_per_customer": 1,
+                     *       "uses_count": 4,
+                     *       "is_active": true,
+                     *       "created_at": "2026-10-01T12:00:00Z",
+                     *       "updated_at": "2026-10-01T12:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PromoCodeResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ERROR */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ERROR",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: PROMO_CODE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_code_api_v1_admin_promo_codes__promo_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                promo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The code is no longer active. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ERROR */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ERROR",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: PROMO_CODE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    patch_code_api_v1_admin_promo_codes__promo_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                promo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "is_active": false
+                 *     }
+                 */
+                "application/json": components["schemas"]["PromoCodePatch"];
+            };
+        };
+        responses: {
+            /** @description The code after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                     *       "brand_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                     *       "code": "WELCOME10",
+                     *       "description": {
+                     *         "en": "10% off your first order",
+                     *         "ar": "خصم ١٠٪ على طلبك الأول"
+                     *       },
+                     *       "discount_type": "percent",
+                     *       "value": "10.00",
+                     *       "max_discount_amount": "50.00",
+                     *       "min_order_amount": "30.00",
+                     *       "starts_at": "2026-10-01T00:00:00Z",
+                     *       "ends_at": "2026-12-31T23:59:00Z",
+                     *       "max_total_uses": 100,
+                     *       "max_uses_per_customer": 1,
+                     *       "uses_count": 4,
+                     *       "is_active": true,
+                     *       "created_at": "2026-10-01T12:00:00Z",
+                     *       "updated_at": "2026-10-01T12:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PromoCodeResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: ERROR */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ERROR",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: PROMO_CODE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: PROMO_CODE_IN_USE, PROMO_CODE_EXISTS */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_IN_USE",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: PROMO_CODE_INVALID, PROMO_PERCENT_OUT_OF_RANGE, PROMO_VALUE_INVALID, PROMO_DATES_INVALID */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PROMO_CODE_INVALID",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
                 };
             };
         };
@@ -9607,6 +21023,103 @@ export interface operations {
             };
         };
     };
+    branch_heartbeat_api_v1_branches__branch_id__heartbeat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchHeartbeat"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_branch_offline_config_api_v1_branches__branch_id__offline_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchOfflineConfig"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_branch_offline_config_api_v1_branches__branch_id__offline_config_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BranchOfflineConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchOfflineConfig"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_brands_api_v1_brands_get: {
         parameters: {
             query?: {
@@ -10175,6 +21688,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    get_ordering_status_api_v1_sessions_ordering_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchOrderingStatus"];
                 };
             };
         };
@@ -11324,6 +22857,41 @@ export interface operations {
             };
         };
     };
+    update_modifier_group_api_v1_staff_menu_modifier_groups__group_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffModifierGroupUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffModifierGroupResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_modifier_option_api_v1_staff_menu_modifier_groups__group_id__options_post: {
         parameters: {
             query?: never;
@@ -12013,6 +23581,325 @@ export interface operations {
             };
         };
     };
+    preview_handover_api_v1_orders_handover_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "token": "HT-A1B2C3D4E5F67890A1B2C3D4"
+                 *     }
+                 */
+                "application/json": components["schemas"]["HandoverPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The order behind the code. The code was not consumed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "order_id": "99999999-9999-9999-9999-999999999999",
+                     *       "display_number": "104",
+                     *       "status": "READY",
+                     *       "customer_status": "ready",
+                     *       "fulfillment_type": "DRIVE_THRU",
+                     *       "customer": {
+                     *         "full_name": "Mona Hassan",
+                     *         "phone_last4": "4567"
+                     *       },
+                     *       "vehicle": {
+                     *         "make": "Toyota",
+                     *         "model": "Corolla",
+                     *         "color": "White",
+                     *         "plate_number": "ABC 123"
+                     *       },
+                     *       "items": [
+                     *         {
+                     *           "name": "Latte",
+                     *           "quantity": 1,
+                     *           "modifiers": [
+                     *             {
+                     *               "name": "Large",
+                     *               "price_delta": 3
+                     *             }
+                     *           ],
+                     *           "notes": "Extra hot, please."
+                     *         }
+                     *       ],
+                     *       "customer_notes": "White car.",
+                     *       "totals": {
+                     *         "total": "51.35",
+                     *         "currency": "EGP"
+                     *       },
+                     *       "is_paid": false,
+                     *       "amount_due": "51.35",
+                     *       "pending_cash_payment_id": "33333333-3333-3333-3333-333333333333",
+                     *       "arrived_at": "2026-10-01T12:20:00Z",
+                     *       "arrival_note": "Grey car near the door",
+                     *       "ready_at": "2026-10-01T12:18:00Z",
+                     *       "token": {
+                     *         "expires_at": "2026-10-01T23:00:00Z",
+                     *         "is_used": false
+                     *       },
+                     *       "can_handover": false,
+                     *       "blocking_reason": "PAYMENT_REQUIRED",
+                     *       "blocking_message": "Please take payment before handing this order over."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HandoverPreviewResponse"];
+                };
+            };
+            /** @description Bad request: HANDOVER_BRANCH_MISMATCH */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "HANDOVER_BRANCH_MISMATCH",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: CUSTOMER_TOKEN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CUSTOMER_TOKEN_NOT_ALLOWED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: INVALID_HANDOVER_TOKEN */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INVALID_HANDOVER_TOKEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    verify_handover_api_v1_orders_handover_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "collect_cash": false,
+                 *       "token": "HT-A1B2C3D4E5F67890A1B2C3D4"
+                 *     }
+                 */
+                "application/json": components["schemas"]["VerifyHandoverRequest"];
+            };
+        };
+        responses: {
+            /** @description The order was handed over. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": true,
+                     *       "order_id": "99999999-9999-9999-9999-999999999999",
+                     *       "fulfillment_type": "DRIVE_THRU",
+                     *       "vehicle_info": {
+                     *         "color": "White",
+                     *         "model": "Corolla",
+                     *         "plate_number": "ABC 123"
+                     *       },
+                     *       "completed_at": "2026-10-01T12:30:00Z",
+                     *       "message": "Order handover successfully verified and completed.",
+                     *       "is_paid": true,
+                     *       "pickup_number": 104,
+                     *       "display_number": "104",
+                     *       "customer_first_name": "Mona"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VerifyHandoverResponse"];
+                };
+            };
+            /** @description Bad request: HANDOVER_BRANCH_MISMATCH, HANDOVER_TOKEN_EXPIRED, CANNOT_HANDOVER_CANCELLED_ORDER, ORDER_NOT_ELIGIBLE_FOR_HANDOVER */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "HANDOVER_BRANCH_MISMATCH",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: CASH_COLLECTION_NOT_ALLOWED, CUSTOMER_TOKEN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CASH_COLLECTION_NOT_ALLOWED",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: INVALID_HANDOVER_TOKEN */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INVALID_HANDOVER_TOKEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: PAYMENT_REQUIRED, HANDOVER_TOKEN_ALREADY_USED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "PAYMENT_REQUIRED",
+                     *       "detail": {
+                     *         "code": "PAYMENT_REQUIRED",
+                     *         "detail": "Please take payment of 23.00 before handing this order over.",
+                     *         "amount_due": "23.00",
+                     *         "currency": "SAR",
+                     *         "payment_id": "33333333-3333-3333-3333-333333333333",
+                     *         "pickup_number": 104
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
     create_drive_thru_order_api_v1_orders_drive_thru_post: {
         parameters: {
             query?: never;
@@ -12113,7 +24000,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            /** @description Validation failed: ITEM_NOT_AT_BRANCH, CATEGORY_NOT_AT_BRANCH, MODIFIER_OPTION_NOT_AT_BRANCH, BRANCH_DRIVE_THRU_DISABLED, BRANCH_CURBSIDE_DISABLED, MODIFIER_GROUP_REQUIRED, MODIFIER_OPTION_UNAVAILABLE */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12121,7 +24008,7 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "code": "ITEM_NOT_AT_BRANCH",
                      *       "detail": "A short explanation of what went wrong.",
                      *       "errors": [
                      *         {
@@ -12155,7 +24042,7 @@ export interface operations {
             };
         };
     };
-    verify_handover_api_v1_orders_handover_verify_post: {
+    quote_guest_order_api_v1_orders_quote_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -12164,7 +24051,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VerifyHandoverRequest"];
+                "application/json": components["schemas"]["app__schemas__order__CheckoutRequest"];
             };
         };
         responses: {
@@ -12174,108 +24061,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VerifyHandoverResponse"];
-                };
-            };
-            /** @description Bad request: BAD_REQUEST */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "BAD_REQUEST",
-                     *       "detail": "A short explanation of what went wrong."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not found: NOT_FOUND */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "detail": "A short explanation of what went wrong."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Conflict: PAYMENT_REQUIRED_BEFORE_HANDOVER, HANDOVER_TOKEN_ALREADY_USED */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "PAYMENT_REQUIRED_BEFORE_HANDOVER",
-                     *       "detail": {
-                     *         "code": "PAYMENT_REQUIRED_BEFORE_HANDOVER",
-                     *         "detail": "Please take payment of 23.00 before handing this order over.",
-                     *         "amount_due": "23.00",
-                     *         "currency": "SAR",
-                     *         "payment_id": "33333333-3333-3333-3333-333333333333",
-                     *         "pickup_number": 104
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["PaymentRequiredErrorResponse"];
-                };
-            };
-            /** @description Validation failed: INPUT_VALIDATION_FAILED */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "INPUT_VALIDATION_FAILED",
-                     *       "detail": "A short explanation of what went wrong.",
-                     *       "errors": [
-                     *         {
-                     *           "type": "missing",
-                     *           "loc": [
-                     *             "body",
-                     *             "field"
-                     *           ],
-                     *           "msg": "Field required"
-                     *         }
-                     *       ]
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ValidationErrorResponse"];
-                };
-            };
-        };
-    };
-    checkout_order_api_v1_orders_checkout_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CheckoutRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrderResponse"];
+                    "application/json": components["schemas"]["GuestQuoteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -12289,7 +24075,7 @@ export interface operations {
             };
         };
     };
-    quote_guest_order_api_v1_orders_quote_post: {
+    checkout_order_api_v1_orders_checkout_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -12298,17 +24084,17 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CheckoutRequest"];
+                "application/json": components["schemas"]["app__schemas__order__CheckoutRequest"];
             };
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GuestQuoteResponse"];
+                    "application/json": components["schemas"]["OrderResponse"];
                 };
             };
             /** @description Validation Error */
@@ -12537,10 +24323,49 @@ export interface operations {
             };
         };
     };
+    guest_mark_arrived_api_v1_orders__order_id__arrived_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Order access secret returned once by POST /orders/drive-thru. Guests must send it to read the pickup code. Staff of the order's branch may omit it. A wrong, expired, or missing secret is a 404 with the same body as an unknown order. */
+                "X-Order-Access-Token"?: string | null;
+            };
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     checkout_pos_order_api_v1_pos_orders_checkout_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional device-generated retry key (UUID). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -12592,6 +24417,141 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["POSCancelOrderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_offline_actions_api_v1_pos_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_offline_review_api_v1_pos_offline_review_get: {
+        parameters: {
+            query?: {
+                state?: "pending" | "reviewed" | "all";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfflineReviewList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_offline_order_api_v1_pos_offline_review__order_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveOfflineOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfflineReviewOrder"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    adjust_offline_order_api_v1_pos_offline_review__order_id__adjust_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustOfflineOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfflineReviewOrder"];
                 };
             };
             /** @description Validation Error */
@@ -12974,6 +24934,92 @@ export interface operations {
             };
         };
     };
+    get_public_key_api_v1_staff_push_public_key_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffPushPublicKeyResponse"];
+                };
+            };
+        };
+    };
+    subscribe_api_v1_staff_push_subscriptions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Branch-ID"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffPushSubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffPushSubscriptionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsubscribe_api_v1_staff_push_subscriptions_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffPushUnsubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_live_floor_state_api_v1_floor_tables_live_get: {
         parameters: {
             query?: never;
@@ -13083,6 +25129,37 @@ export interface operations {
                 "application/json": components["schemas"]["TableUpdateRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    force_close_table_session_api_v1_tables__table_id__close_session_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -13419,6 +25496,8 @@ export interface operations {
             query?: never;
             header?: {
                 "accept-language"?: string | null;
+                /** @description Optional device-generated retry key (UUID). */
+                "Idempotency-Key"?: string | null;
             };
             path: {
                 payment_id: string;
@@ -13822,7 +25901,9 @@ export interface operations {
     check_in_api_v1_attendance_check_in_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Branch-ID"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -13855,7 +25936,9 @@ export interface operations {
     check_out_api_v1_attendance_check_out_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Branch-ID"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -13888,7 +25971,9 @@ export interface operations {
     get_my_attendance_status_api_v1_attendance_my_status_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Branch-ID"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -13901,6 +25986,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AttendanceStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -14079,6 +26173,37 @@ export interface operations {
             };
         };
     };
+    read_public_media_media__file_path__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                file_path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_check_health_get: {
         parameters: {
             query?: never;
@@ -14119,344 +26244,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
-                };
-            };
-        };
-    };
-    get_public_key_api_v1_staff_push_public_key_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StaffPushPublicKeyResponse"];
-                };
-            };
-        };
-    };
-    subscribe_api_v1_staff_push_subscriptions_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Branch-ID"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["StaffPushSubscribeRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StaffPushSubscriptionResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    unsubscribe_api_v1_staff_push_subscriptions_delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["StaffPushUnsubscribeRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    adjust_offline_order_api_v1_pos_offline_review__order_id__adjust_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                order_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdjustOfflineOrderRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OfflineReviewOrder"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    approve_offline_order_api_v1_pos_offline_review__order_id__approve_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                order_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApproveOfflineOrderRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OfflineReviewOrder"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_branch_offline_config_api_v1_branches__branch_id__offline_config_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                branch_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BranchOfflineConfig"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_offline_review_api_v1_pos_offline_review_get: {
-        parameters: {
-            query?: {
-                state?: "pending" | "reviewed" | "all";
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OfflineReviewList"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    sync_offline_actions_api_v1_pos_sync_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SyncRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SyncResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_branch_offline_config_api_v1_branches__branch_id__offline_config_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                branch_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BranchOfflineConfigUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BranchOfflineConfig"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    branch_heartbeat_api_v1_branches__branch_id__heartbeat_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                branch_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BranchHeartbeat"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_ordering_status_api_v1_sessions_ordering_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BranchOrderingStatus"];
                 };
             };
         };

@@ -258,7 +258,7 @@ export function AttendanceScreen() {
   const watchedBranchIds = branches.length > 0 ? branches.map((branch) => branch.id) : branchId ? [branchId] : [];
   const isAdmin = me?.role === "BRANCH_ADMIN";
   const canReviewStaff =
-    me?.role === "REGIONAL_MANAGER" || me?.role === "BRANCH_ADMIN" || me?.role === "CASHIER";
+    me?.role === "SUPER_ADMIN" || me?.role === "BRAND_ADMIN" || me?.role === "BRANCH_ADMIN";
   const canOverride = me?.role === "SUPER_ADMIN" || me?.role === "BRAND_ADMIN";
   const [reason, setReason] = useState("");
   const [logId, setLogId] = useState<string | null>(null);

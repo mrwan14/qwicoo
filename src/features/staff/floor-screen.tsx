@@ -24,12 +24,9 @@ import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { getStaffOrder } from "@/lib/api/staff-order";
 import { occupancyLabel, orderStatusLabel } from "@/lib/status-labels";
-import type { components } from "@/lib/api/schema";
+import { floorStatusOptions, showAmountDue, type OrderStatus } from "@/features/staff/order-moves";
 import { useScope } from "@/stores/scope";
 
-type OrderStatus = components["schemas"]["OrderStatus"];
-
-const NEXT: OrderStatus[] = ["PREPARING", "READY", "SERVED", "DELIVERED", "CLOSED"];
 const hint = "text-sm leading-6 text-muted-foreground";
 const control = "h-12 w-full rounded-xl border bg-background px-3 text-sm";
 
@@ -73,6 +70,16 @@ export function FloorScreen() {
 
   const selected = floor.data?.tables.find((table) => table.table_id === selectedId) ?? null;
   const canConfirm = Boolean(me && CONFIRM_ROLES.has(me.role));
+  const orderDetail = useQuery({
+    queryKey: ["staff-order", selected?.active_order_id],
+    enabled: Boolean(selected?.active_order_id) && !needsConfirmation(selected ?? { order_status: null }),
+    queryFn: () => getStaffOrder(selected?.active_order_id ?? ""),
+  });
+  const isPaid = orderDetail.data?.is_paid === true || selected?.order_status === "PAID" || selected?.order_status === "CLOSED";
+  const moves = floorStatusOptions(me?.role, selected?.order_status, isPaid);
+  const due = showAmountDue(selected?.order_status, isPaid);
+  const amount = orderDetail.data?.total_amount ?? (selected?.order_total != null ? String(selected.order_total) : null);
+  const moveTo = moves.includes(status) ? status : moves[0];
 
   function closeDrawer() {
     setSelectedId(null);
@@ -146,7 +153,8 @@ export function FloorScreen() {
                   setRejecting(false);
                   setReason("");
                   const current = table.order_status;
-                  setStatus(current && NEXT.includes(current) ? current : "PREPARING");
+                  const options = floorStatusOptions(me?.role, current, current === "PAID" || current === "CLOSED");
+                  if (options[0]) setStatus(options[0]);
                 }}
               >
                 <span className="block text-2xl font-semibold">Table {table.table_number}</span>
@@ -206,29 +214,38 @@ export function FloorScreen() {
                   className="grid gap-3"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    if (selected.active_order_id) transition.mutate({ orderId: selected.active_order_id, target: status });
+                    if (selected.active_order_id && moveTo) transition.mutate({ orderId: selected.active_order_id, target: moveTo });
                   }}
                 >
                   <p className="text-sm">The order is <span className="font-medium">{orderStatusLabel(selected.order_status)}</span>.</p>
-                  {selected.order_total ? (
+                  {due && amount ? (
+                    <p className="text-sm">Amount due <Money amount={amount} /></p>
+                  ) : selected.order_total ? (
                     <p className="text-sm">Total <Money amount={String(selected.order_total)} /></p>
                   ) : null}
-                  <label className="grid gap-1 text-sm">
-                    Move the order to
-                    <span className={hint}>Choose the next step, then update. The kitchen and the floor both follow this.</span>
-                    <select className={control} value={status} onChange={(event) => setStatus(event.target.value as OrderStatus)}>
-                      {NEXT.map((value) => (
-                        <option key={value} value={value}>{orderStatusLabel(value)}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    type="submit"
-                    className="min-h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-                    disabled={transition.isPending || status === selected.order_status}
-                  >
-                    {transition.isPending ? "Updating…" : "Update order"}
-                  </button>
+                  {due ? (
+                    <p className={hint}>This order is not paid yet, so it cannot be handed over or closed. Take the amount due at the counter.</p>
+                  ) : null}
+                  {moves.length > 0 && moveTo ? (
+                    <>
+                      <label className="grid gap-1 text-sm">
+                        Move the order to
+                        <span className={hint}>Choose the next step, then update. The kitchen and the floor both follow this.</span>
+                        <select className={control} value={moveTo} onChange={(event) => setStatus(event.target.value as OrderStatus)}>
+                          {moves.map((value) => (
+                            <option key={value} value={value}>{orderStatusLabel(value)}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="submit"
+                        className="min-h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                        disabled={transition.isPending || moveTo === selected.order_status}
+                      >
+                        {transition.isPending ? "Updating…" : "Update order"}
+                      </button>
+                    </>
+                  ) : null}
                 </form>
               ) : (
                 <p className={hint}>No open order on this table. Guests can still sit here and order from the table QR.</p>

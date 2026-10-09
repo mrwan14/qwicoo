@@ -10,6 +10,11 @@ type Entry = { title: string; body: string };
 type Chip = { label: string; detail: string };
 type Ticket = { heading: string; badge: string; item: string };
 type Dish = { name: string; detail: string; price: string };
+type StoryFrame = { tab: string; kicker: string; title: string; body: string; stat: string; statNote: string };
+type Fact = { title: string; body: string };
+type StartStep = { title: string; body: string; lines: string[] };
+type Priced = { name: string; price: string };
+type KitchenTicket = { code: string; item: string };
 
 export const SWAP_KEYS = ["tables", "kitchen", "drive", "branches"] as const;
 export const FLOW_KEYS = ["guest", "kitchen", "expo", "owner", "floor", "pay", "pos", "drive"] as const;
@@ -86,6 +91,60 @@ type LandingCopy = {
     meta: string;
     nodes: Record<FlowKey, Chip>;
   };
+  story: {
+    guest: StoryFrame;
+    cashier: StoryFrame;
+    kitchen: StoryFrame;
+    owner: StoryFrame;
+    cashierItems: Priced[];
+    cashierTotal: string;
+    cashierMethods: string;
+    kitchenNew: string;
+    kitchenCook: string;
+    kitchenReady: string;
+    kitchenTickets: KitchenTicket[];
+    ownerSample: string;
+    ownerSalesLabel: string;
+    ownerSales: string;
+    ownerOrdersLabel: string;
+    ownerOrders: string;
+  };
+  facts: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    menu: Fact;
+    languages: Fact;
+    states: Fact;
+    screens: Fact;
+    pay: Fact;
+  };
+  start: {
+    ghost: string;
+    eyebrow: string;
+    title: string;
+    body: string;
+    talk: StartStep;
+    setup: StartStep;
+    print: StartStep;
+    live: StartStep;
+  };
+  cta: {
+    title: string;
+    placeholder: string;
+    button: string;
+    branch: string;
+    menu: string;
+    languages: string;
+  };
+  partner: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    askEyebrow: string;
+    askTitle: string;
+    askBody: string;
+  };
   surfaces: { eyebrow: string; items: Record<SurfaceKey, Entry> };
   problems: { eyebrow: string; title: string; fixLabel: string; items: (Entry & { fix: string })[] };
   features: { eyebrow: string; title: string; items: Record<FeatureKey, Entry> };
@@ -110,7 +169,21 @@ type LandingCopy = {
     thanksBody: string;
     failed: string;
   };
-  footer: { rights: string; dashboard: string; signInLabel: string };
+  footer: {
+    rights: string;
+    dashboard: string;
+    signInLabel: string;
+    blurb: string;
+    made: string;
+    product: string;
+    company: string;
+    language: string;
+    qr: string;
+    pos: string;
+    kitchen: string;
+    drive: string;
+    contact: string;
+  };
 };
 
 const landingEn = {
@@ -380,6 +453,120 @@ const landingEn = {
         drive: { label: "Drive-thru", detail: "Same flow for lanes" },
       },
     },
+    story: {
+      guest: {
+        tab: "Guest",
+        kicker: "01 Guest",
+        title: "Order from the table.",
+        body: "The table QR opens the menu in Arabic or English. Guests order, call a waiter or ask for the bill.",
+        stat: "0 apps",
+        statNote: "to install for guests",
+      },
+      cashier: {
+        tab: "Cashier",
+        kicker: "02 Cashier",
+        title: "A till that keeps up.",
+        body: "Quick tickets, split payments in EGP, and a drawer that balances at every hand-over.",
+        stat: "Offline",
+        statNote: "keeps taking orders, syncs later",
+      },
+      kitchen: {
+        tab: "Kitchen",
+        kicker: "03 Kitchen",
+        title: "Every ticket on the line.",
+        body: "QR, POS and drive-thru tickets arrive on the station screen with timers. Expo bumps them out.",
+        stat: "3 states",
+        statNote: "new · cooking · ready",
+      },
+      owner: {
+        tab: "Owner",
+        kicker: "04 Owner",
+        title: "Every branch, live.",
+        body: "Sales, orders and drawers for each branch — and Ask Qwicoo for the figure you need.",
+        stat: "1 view",
+        statNote: "for every branch",
+      },
+      cashierItems: [
+        { name: "Feteer", price: "EGP 45" },
+        { name: "Shawarma", price: "EGP 70" },
+        { name: "Koshary", price: "EGP 55" },
+      ],
+      cashierTotal: "EGP 170",
+      cashierMethods: "Cash · Card · Wallet",
+      kitchenNew: "New",
+      kitchenCook: "Cooking",
+      kitchenReady: "Ready",
+      kitchenTickets: [
+        { code: "#140 · Table 4", item: "1× Grill mix" },
+        { code: "#128 · Table 12", item: "2× Molokhia" },
+        { code: "#133 · Pickup", item: "1× Om Ali" },
+      ],
+      ownerSample: "Sample figures",
+      ownerSalesLabel: "Sales",
+      ownerSales: "EGP 18,420",
+      ownerOrdersLabel: "Orders",
+      ownerOrders: "86",
+    },
+    facts: {
+      eyebrow: "Qwicoo in numbers",
+      title: "Product facts, step by step.",
+      body: "No made-up customer numbers — just what's inside the product.",
+      menu: { title: "One menu per brand", body: "with branch prices" },
+      languages: { title: "English and Arabic", body: "including RTL" },
+      states: { title: "Order states", body: "new · cooking · ready" },
+      screens: { title: "One order, four screens", body: "guest · cashier · kitchen · owner" },
+      pay: { title: "Cash, card and wallets", body: "drawer sessions and Z reports" },
+    },
+    start: {
+      ghost: "Start",
+      eyebrow: "How to start",
+      title: "Four steps to your first ticket.",
+      body: "We onboard one branch at a time. You keep your menu, your prices and your team.",
+      talk: {
+        title: "Talk to us",
+        body: "Tell us about your brand: branches, tables, service types and the menu you use today. Ask Qwicoo can answer the first questions right away.",
+        lines: [
+          "We have 3 branches and a drive-thru in Tagamoa.",
+          "Great — send us your current menu and table counts, and we'll prepare a demo branch.",
+        ],
+      },
+      setup: {
+        title: "We set up your menu & branches",
+        body: "We build your menu in Arabic and English, set branch prices, kitchen stations, drawers and staff roles.",
+        lines: [
+          "Menu · 64 items · AR/EN · Done",
+          "Branch prices · 3 branches · Done",
+          "Stations · Grill · Cold · Bar · Done",
+          "Staff roles · 18 accounts · In progress",
+        ],
+      },
+      print: {
+        title: "Print table QRs",
+        body: "Every table gets its own QR. Guests scan, order, and call a waiter. You print the sheet we prepare.",
+        lines: ["Table 1", "Table 2", "Table 3"],
+      },
+      live: {
+        title: "Go live",
+        body: "Start in one branch with a short session per role — cashier, kitchen, runners — then roll out the rest.",
+        lines: ["Live", "First ticket", "#001 · Table 4", "Ready", "2× Turkish coffee"],
+      },
+    },
+    cta: {
+      title: "Bring your restaurant onto Qwicoo.",
+      placeholder: "Restaurant name",
+      button: "Start",
+      branch: "One branch at a time",
+      menu: "Your menu, your prices",
+      languages: "English and Arabic",
+    },
+    partner: {
+      eyebrow: "Become a partner",
+      title: "Tell us about your restaurant.",
+      body: "We reply within one working day and set up a demo branch with your own menu.",
+      askEyebrow: "Not ready yet?",
+      askTitle: "Ask Qwicoo.",
+      askBody: "Features, onboarding, Arabic menus — answered now, only about Qwicoo.",
+    },
     steps: {
       eyebrow: "Become a partner",
       title: "Bring your restaurant onto Qwicoo",
@@ -429,6 +616,16 @@ const landingEn = {
       rights: "All rights reserved",
       dashboard: "Sign in",
       signInLabel: "Sign in",
+      blurb: "The restaurant operating system for the table, the kitchen and the back office.",
+      made: "Made in Cairo.",
+      product: "Product",
+      company: "Company",
+      language: "Language",
+      qr: "Table QR",
+      pos: "POS & offline till",
+      kitchen: "Kitchen & expo",
+      drive: "Drive-thru",
+      contact: "Contact",
     },
 } satisfies LandingCopy;
 
@@ -699,6 +896,120 @@ const landingAr = {
         drive: { label: "الدرايف ثرو", detail: "نفس المسار للسيارات" },
       },
     },
+    story: {
+      guest: {
+        tab: "الضيف",
+        kicker: "01 الضيف",
+        title: "اطلب من الطاولة.",
+        body: "رمز الطاولة يفتح المنيو بالعربية أو الإنجليزية. يطلب الضيف، أو ينادي النادل، أو يطلب الحساب.",
+        stat: "0 تطبيقات",
+        statNote: "للتثبيت على هاتف الضيف",
+      },
+      cashier: {
+        tab: "الكاشير",
+        kicker: "02 الكاشير",
+        title: "نقطة بيع تواكب الخدمة.",
+        body: "تذاكر سريعة، وتقسيم المدفوعات بالجنيه، ودُرج يتوازن عند كل تسليم.",
+        stat: "دون اتصال",
+        statNote: "يستمر استقبال الطلبات، ثم تتزامن لاحقاً",
+      },
+      kitchen: {
+        tab: "المطبخ",
+        kicker: "03 المطبخ",
+        title: "كل تذكرة على خط التحضير.",
+        body: "طلبات الرمز ونقطة البيع والدرايف ثرو تصل إلى شاشة المحطة مع المؤقتات. التجميع يُخرجها.",
+        stat: "3 حالات",
+        statNote: "جديد · قيد التحضير · جاهز",
+      },
+      owner: {
+        tab: "المالك",
+        kicker: "04 المالك",
+        title: "كل الفروع، مباشرة.",
+        body: "المبيعات والطلبات والأدراج لكل فرع — واسأل كويكو عن الرقم الذي تحتاجه.",
+        stat: "عرض واحد",
+        statNote: "لكل الفروع",
+      },
+      cashierItems: [
+        { name: "فطير", price: "EGP 45" },
+        { name: "شاورما", price: "EGP 70" },
+        { name: "كشري", price: "EGP 55" },
+      ],
+      cashierTotal: "EGP 170",
+      cashierMethods: "نقد · بطاقة · محفظة",
+      kitchenNew: "جديد",
+      kitchenCook: "قيد التحضير",
+      kitchenReady: "جاهز",
+      kitchenTickets: [
+        { code: "#140 · طاولة 4", item: "١× مشويات مشكلة" },
+        { code: "#128 · طاولة 12", item: "٢× ملوخية" },
+        { code: "#133 · استلام", item: "١× أم علي" },
+      ],
+      ownerSample: "أرقام تجريبية",
+      ownerSalesLabel: "المبيعات",
+      ownerSales: "EGP 18,420",
+      ownerOrdersLabel: "الطلبات",
+      ownerOrders: "86",
+    },
+    facts: {
+      eyebrow: "كويكو بالأرقام",
+      title: "حقائق المنتج، خطوة بخطوة.",
+      body: "لا أرقام عملاء مختلقة — فقط ما هو داخل المنتج.",
+      menu: { title: "منيو واحد للعلامة", body: "مع أسعار الفروع" },
+      languages: { title: "الإنجليزية والعربية", body: "مع الاتجاه من اليمين" },
+      states: { title: "حالات الطلب", body: "جديد · قيد التحضير · جاهز" },
+      screens: { title: "طلب واحد، أربع شاشات", body: "ضيف · كاشير · مطبخ · مالك" },
+      pay: { title: "نقد وبطاقة ومحافظ", body: "جلسات الدُرج وتقارير الإغلاق" },
+    },
+    start: {
+      ghost: "ابدأ",
+      eyebrow: "كيف تبدأ",
+      title: "أربع خطوات حتى أول تذكرة.",
+      body: "نضم فرعاً واحداً في كل مرة. تبقى لك قائمتك وأسعارك وفريقك.",
+      talk: {
+        title: "تحدث إلينا",
+        body: "أخبرنا عن علامتك: الفروع، والطاولات، وأنواع الخدمة، والمنيو الذي تستخدمه اليوم. اسأل كويكو يستطيع الإجابة عن الأسئلة الأولى فوراً.",
+        lines: [
+          "لدينا 3 فروع ودرايف ثرو في التجمع.",
+          "ممتاز — أرسلوا المنيو الحالي وعدد الطاولات، ونجهّز فرعاً تجريبياً.",
+        ],
+      },
+      setup: {
+        title: "نجهّز المنيو والفروع",
+        body: "نبني المنيو بالعربية والإنجليزية، ونضبط أسعار الفروع ومحطات المطبخ والأدراج وأدوار الفريق.",
+        lines: [
+          "المنيو · 64 صنفاً · عربي/إنجليزي · تم",
+          "أسعار الفروع · 3 فروع · تم",
+          "المحطات · شواية · بارد · بار · تم",
+          "أدوار الفريق · 18 حساباً · قيد التجهيز",
+        ],
+      },
+      print: {
+        title: "اطبع رموز الطاولات",
+        body: "كل طاولة لها رمزها. يمسح الضيف، ويطلب، وينادي النادل. تطبع الورقة التي نجهّزها.",
+        lines: ["طاولة 1", "طاولة 2", "طاولة 3"],
+      },
+      live: {
+        title: "ابدأ التشغيل",
+        body: "ابدأ في فرع واحد بجلسة قصيرة لكل دور — الكاشير، والمطبخ، والرانرز — ثم وسّع الباقي.",
+        lines: ["مباشر", "أول تذكرة", "#001 · طاولة 4", "جاهز", "٢× قهوة تركي"],
+      },
+    },
+    cta: {
+      title: "انقل مطعمك إلى كويكو.",
+      placeholder: "اسم المطعم",
+      button: "ابدأ",
+      branch: "فرع واحد في كل مرة",
+      menu: "منيوك وأسعارك",
+      languages: "الإنجليزية والعربية",
+    },
+    partner: {
+      eyebrow: "انضم كشريك",
+      title: "أخبرنا عن مطعمك.",
+      body: "نرد خلال يوم عمل واحد ونجهّز فرعاً تجريبياً بمنيوكم.",
+      askEyebrow: "لست مستعداً بعد؟",
+      askTitle: "اسأل كويكو.",
+      askBody: "المزايا، والانضمام، والمنيو بالعربية — إجابة الآن، وعن كويكو فقط.",
+    },
     steps: {
       eyebrow: "انضم كشريك",
       title: "اجعل مطعمك على Qwicoo",
@@ -742,6 +1053,16 @@ const landingAr = {
       rights: "جميع الحقوق محفوظة",
       dashboard: "تسجيل الدخول",
       signInLabel: "تسجيل الدخول",
+      blurb: "نظام تشغيل المطعم للطاولة والمطبخ والمكتب الخلفي.",
+      made: "صُنع في القاهرة.",
+      product: "المنتج",
+      company: "الشركة",
+      language: "اللغة",
+      qr: "رمز الطاولة",
+      pos: "نقطة البيع والدُرج دون اتصال",
+      kitchen: "المطبخ والتجميع",
+      drive: "الدرايف ثرو",
+      contact: "تواصل",
     },
 } satisfies LandingCopy;
 

@@ -87,6 +87,32 @@ export function publicLeadUrl(): string {
   return PUBLIC_LEAD;
 }
 
+export type Box = { top: number; left: number; right: number; bottom: number };
+
+const LAUNCHER_TAB = 56;
+const LAUNCHER_INSET = 16;
+
+export function boxesOverlap(a: Box, b: Box): boolean {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+/** Park the square tab so it misses the hero and the lead form. Hide it when every slot overlaps. */
+export function placeLauncher(
+  viewport: { width: number; height: number },
+  obstacles: Box[],
+): { hidden: true } | { hidden: false; top: number; inset: number } {
+  const inset = LAUNCHER_INSET;
+  const left = viewport.width - inset - LAUNCHER_TAB;
+  const right = viewport.width - inset;
+  for (let gap = inset; gap <= viewport.height - LAUNCHER_TAB; gap += 8) {
+    const bottom = viewport.height - gap;
+    const top = bottom - LAUNCHER_TAB;
+    const box = { top, left, right, bottom };
+    if (!obstacles.some((obstacle) => boxesOverlap(box, obstacle))) return { hidden: false, top, inset };
+  }
+  return { hidden: true };
+}
+
 export function publicRequestHasNoAuth(init: RequestInit): boolean {
   const headers = new Headers(init.headers);
   return init.credentials === "omit" && !headers.has("authorization") && !headers.has("x-brand-id") && !headers.has("x-branch-id");

@@ -32,7 +32,7 @@ export function Hero({ locale }: { locale: LocaleCode }) {
   const tickets = reduced ? TICKET_KEYS : [...TICKET_KEYS, ...TICKET_KEYS];
 
   return (
-    <section className="relative grid min-h-[calc(100dvh-68px)] grid-rows-[1fr_auto] overflow-hidden border-b border-qw-line bg-canvas">
+    <section data-hero className="relative grid min-h-[calc(100dvh-68px)] grid-rows-[1fr_auto] overflow-hidden border-b border-qw-line bg-canvas">
       <div aria-hidden className="qw-grid pointer-events-none absolute inset-0 opacity-35" />
       <div className="relative grid place-items-center px-5 py-14 text-center sm:py-16">
         <Chip

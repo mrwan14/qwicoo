@@ -26,6 +26,26 @@ type LandingCopy = {
   problems: { eyebrow: string; title: string; fixLabel: string; items: (Entry & { fix: string })[] };
   features: { eyebrow: string; title: string; items: Record<FeatureKey, Entry> };
   steps: { eyebrow: string; title: string; body: string; stepLabel: string; items: Entry[]; cta: string; note: string };
+  assistant: {
+    launcher: string;
+    disclaimer: string;
+    becomePartner: string;
+    close: string;
+    starters: { capabilities: string; qr: string; arabic: string; start: string; partner: string };
+  };
+  lead: {
+    name: string;
+    restaurant: string;
+    contact: string;
+    city: string;
+    branches: string;
+    message: string;
+    submit: string;
+    sending: string;
+    thanksTitle: string;
+    thanksBody: string;
+    failed: string;
+  };
   footer: { rights: string; dashboard: string; signInLabel: string };
 };
 
@@ -149,6 +169,32 @@ const landingEn = {
       cta: "Talk to us",
       note: "Already a partner? Sign in below.",
     },
+    assistant: {
+      launcher: "Questions about Qwicoo?",
+      disclaimer: "Answers are about Qwicoo only. Please don't share personal details here.",
+      becomePartner: "Become a partner",
+      close: "Close",
+      starters: {
+        capabilities: "What can Qwicoo do for my restaurant?",
+        qr: "How does QR ordering work?",
+        arabic: "Does it work in Arabic?",
+        start: "What do I need to get started?",
+        partner: "How do I become a partner?",
+      },
+    },
+    lead: {
+      name: "Name",
+      restaurant: "Restaurant name",
+      contact: "Phone or email",
+      city: "City",
+      branches: "Number of branches",
+      message: "Message",
+      submit: "Send",
+      sending: "Sending…",
+      thanksTitle: "Thank you",
+      thanksBody: "We received your note and will be in touch about bringing your restaurant onto Qwicoo.",
+      failed: "We couldn't send that. Try again.",
+    },
     footer: {
       rights: "All rights reserved",
       dashboard: "Sign in",
@@ -269,6 +315,32 @@ const landingAr = {
       ],
       cta: "تحدث إلينا",
       note: "شريك بالفعل؟ سجّل الدخول من الأسفل.",
+    },
+    assistant: {
+      launcher: "أسئلة عن كويكو؟",
+      disclaimer: "الإجابات عن كويكو فقط. يرجى عدم مشاركة بيانات شخصية هنا.",
+      becomePartner: "كن شريكاً",
+      close: "إغلاق",
+      starters: {
+        capabilities: "ماذا يمكن أن يقدمه كويكو لمطعمي؟",
+        qr: "كيف يعمل الطلب برمز QR؟",
+        arabic: "هل يعمل بالعربية؟",
+        start: "ماذا أحتاج للبدء؟",
+        partner: "كيف أصبح شريكاً؟",
+      },
+    },
+    lead: {
+      name: "الاسم",
+      restaurant: "اسم المطعم",
+      contact: "هاتف أو بريد",
+      city: "المدينة",
+      branches: "عدد الفروع",
+      message: "الرسالة",
+      submit: "إرسال",
+      sending: "جارٍ الإرسال…",
+      thanksTitle: "شكراً لك",
+      thanksBody: "وصلَتنا رسالتك، وسنتواصل معك بشأن انضمام مطعمك إلى كويكو.",
+      failed: "تعذّر الإرسال. حاول مرة أخرى.",
     },
     footer: {
       rights: "جميع الحقوق محفوظة",

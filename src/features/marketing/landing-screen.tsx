@@ -19,6 +19,8 @@ import {
 import { AnimatedLogo } from "@/components/brand/animated-logo";
 import { LOGO_ASPECT, LOGO_VIDEO } from "@/components/brand/logo-assets";
 import { FEATURE_KEYS, SURFACE_KEYS, landingCopy, type FeatureKey, type SurfaceKey } from "@/features/marketing/copy";
+import { PartnerForm } from "@/features/marketing/partner-form";
+import { PublicAssistantLauncher } from "@/features/marketing/public-assistant-launcher";
 import { formatCount, formatMoney } from "@/lib/i18n/format";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
@@ -234,12 +236,12 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
             ))}
           </ol>
 
-          <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-6 shadow-elev-1">
-            <a href="mailto:partners@qwicoo.com?subject=Partner%20with%20Qwicoo" className={CTA_PRIMARY}>
-              {t.steps.cta}
-              <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
-            </a>
-            <p className="text-sm text-muted-foreground">{t.steps.note}</p>
+          <div className="grid gap-4">
+            <div className="grid gap-1">
+              <h3 className="text-lg font-semibold">{t.steps.cta}</h3>
+              <p className="text-sm text-muted-foreground">{t.steps.note}</p>
+            </div>
+            <PartnerForm locale={locale} />
           </div>
         </div>
       </section>
@@ -272,6 +274,7 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
           </nav>
         </div>
       </footer>
+      <PublicAssistantLauncher locale={locale} />
     </div>
   );
 }

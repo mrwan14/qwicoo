@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requestLocale } from "@/lib/api/server-client";
+import { isPublicAssistantPath, staffAuthorization } from "@/lib/api/public-proxy";
 import { STAFF_TOKEN_COOKIE } from "@/lib/auth/cookies";
 import { getApiV1Base } from "@/lib/env";
 
@@ -10,12 +11,13 @@ async function proxy(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> },
 ) {
+  const { path } = await context.params;
   const token = request.cookies.get(STAFF_TOKEN_COOKIE)?.value;
-  if (!token) {
+  const publicAssistant = isPublicAssistantPath(path);
+  if (!token && !publicAssistant) {
     return NextResponse.json({ detail: "Not signed in." }, { status: 401 });
   }
 
-  const { path } = await context.params;
   const target = new URL(
     `${getApiV1Base()}/${path.map((segment) => encodeURIComponent(segment)).join("/")}${request.nextUrl.search}`,
   );
@@ -24,13 +26,16 @@ async function proxy(
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
   headers.set("accept", request.headers.get("accept") ?? "application/json");
-  headers.set("authorization", `Bearer ${token}`);
+  const authorization = staffAuthorization(path, token);
+  if (authorization) headers.set("authorization", authorization);
   headers.set("accept-language", requestLocale(request));
 
-  const brandId = request.headers.get("x-brand-id");
-  const branchId = request.headers.get("x-branch-id");
-  if (brandId) headers.set("x-brand-id", brandId);
-  if (branchId) headers.set("x-branch-id", branchId);
+  if (!publicAssistant) {
+    const brandId = request.headers.get("x-brand-id");
+    const branchId = request.headers.get("x-branch-id");
+    if (brandId) headers.set("x-brand-id", brandId);
+    if (branchId) headers.set("x-branch-id", branchId);
+  }
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
 

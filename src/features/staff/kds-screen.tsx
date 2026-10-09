@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { latestTimestamp, LiveCount } from "@/components/ops/live-fact";
+import { formatCairoDateTime } from "@/lib/format/time";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { asApiError } from "@/lib/api/error";
@@ -113,19 +115,25 @@ export function KdsScreen() {
 
   const marking = bumpStation.isPending ? bumpStation.variables : null;
   const markingItem = bumpItem.isPending ? bumpItem.variables : null;
+  const ticketCount = (tickets.data ?? []).length;
+  const lastTicket = latestTimestamp((tickets.data ?? []).map((ticket) => ticket.created_at));
 
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
           <h1 className="text-[length:var(--text-28)] font-semibold">Kitchen</h1>
+          <p className="text-sm text-muted-foreground">
+            <LiveCount value={ticketCount} /> {ticketCount === 1 ? "ticket" : "tickets"}
+            {lastTicket ? <> · last order {formatCairoDateTime(lastTicket)}</> : null}
+          </p>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
             Tickets waiting to be cooked. Tap a dish when it is ready. Mark ready sends every dish on that ticket on.
           </p>
         </div>
         <button
           type="button"
-          className="min-h-11 rounded-xl border bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="min-h-11 rounded-xl bg-card px-3 text-sm shadow-elev-1 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           aria-pressed={sound}
           onClick={() => {
             const next = !sound;
@@ -146,7 +154,7 @@ export function KdsScreen() {
             <button
               key={station}
               type="button"
-              className={`min-h-11 shrink-0 rounded-full px-3 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "border bg-card"}`}
+              className={`min-h-11 shrink-0 rounded-full px-3 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-card shadow-elev-1"}`}
               onClick={() => setStationFilter(station)}
             >
               {station === "ALL" ? "All" : stationLabel(station)} · {count}
@@ -227,7 +235,7 @@ function TicketColumn({
           const markingThis = marking?.orderId === ticket.order_id && marking.station === ticket.station;
           const canMark = Boolean(asStation(ticket.station));
           return (
-            <article key={ticket.sub_ticket_id} onPointerDown={() => acknowledgeOrder(ticket.order_id)} className="grid content-start gap-3 rounded-2xl border bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+            <article key={ticket.sub_ticket_id} onPointerDown={() => acknowledgeOrder(ticket.order_id)} className="grid content-start gap-3 rounded-2xl bg-card p-4 shadow-elev-1">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-[length:var(--text-20)] font-semibold">{ticketTitle(ticket)}</p>

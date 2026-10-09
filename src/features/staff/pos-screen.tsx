@@ -1,10 +1,17 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { MoreHorizontal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Money } from "@/components/ops/money";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { StatusChip } from "@/components/ops/status-chip";
@@ -71,7 +78,7 @@ function OrderConfirmation({
   const number = queued ? displayNumber(queued) : confirmation.pickup != null ? `#${confirmation.pickup}` : null;
   const realNumber = queued ? queued.pickupNumber != null || Boolean(queued.serverId && queued.tableNumber) : true;
   return (
-    <section role="status" aria-live="polite" className="grid gap-3 rounded-xl border bg-background p-4">
+    <section role="status" aria-live="polite" className="grid gap-3 rounded-xl bg-muted/70 p-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">{offline ? (waiting ? "Saved on this till" : "Order synced") : "Order sent"}</p>
         <StatusChip tone={confirmation.paid ? "available" : "ordered"}>{paymentLabel(confirmation)}</StatusChip>
@@ -94,14 +101,24 @@ function OrderConfirmation({
           <Money amount={confirmation.total} />
         </span>
       </p>
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <button type="button" className="min-h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onClick={onDismiss}>
           New order
         </button>
         {queued?.status === "CANCELLED" ? null : (
-          <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm" onClick={onCancel}>
-            Cancel order
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="Order actions"
+              className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <MoreHorizontal aria-hidden className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem variant="destructive" className="min-h-11" onClick={onCancel}>
+                Cancel order
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </section>
@@ -372,7 +389,7 @@ export function PosScreen() {
   const sendDisabled = lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim());
 
   const ticket = (
-    <aside className="grid gap-3 rounded-xl border bg-card p-4">
+    <aside className="grid gap-3 rounded-xl bg-card p-4 shadow-elev-1">
       {confirmation ? (
         <OrderConfirmation
           confirmation={confirmation}
@@ -484,7 +501,7 @@ export function PosScreen() {
             const name = pickLocale(item.name, "en");
             const image = mediaUrl(item.image_url);
             return (
-              <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 ring-1 ring-foreground/5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
+              <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
                 {image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={image} alt="" className="h-24 w-full bg-secondary object-contain" />

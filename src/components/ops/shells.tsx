@@ -120,12 +120,12 @@ function NavLinks({
   const labelClass =
     layout === "compact" ? "sr-only" : layout === "auto" ? "sr-only lg:not-sr-only" : "truncate";
   return (
-    <nav aria-label="Staff" className="grid gap-4">
+    <nav aria-label="Staff" className="grid gap-3">
       {groups.map((group) => {
         const groupItems = items.filter((item) => item.group === group);
         if (groupItems.length === 0) return null;
         return (
-          <div key={group} className="grid gap-1">
+          <div key={group} className="grid gap-0.5">
             <p className={`px-2 text-xs font-medium text-muted-foreground ${groupClass}`}>{group}</p>
             {groupItems.map((item) => {
               const Icon = itemIcon(item);
@@ -138,12 +138,12 @@ function NavLinks({
                   aria-label={item.label}
                   title={item.label}
                   onClick={onNavigate}
-                  className={`flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm ${
+                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
                     active ? "bg-secondary font-medium" : "hover:bg-muted"
                   } ${linkClass}`}
                 >
                   <span className="relative shrink-0">
-                    <Icon aria-hidden className="size-4" />
+                    <Icon aria-hidden className="size-3.5" />
                     {layout !== "full" ? (
                       <NavBadge
                         count={badges[navKey(item)]}
@@ -208,8 +208,8 @@ function AdminSidebar({ items, pathname, badges }: { items: readonly NavItem[]; 
 
   return (
     <aside
-      className={`sticky top-0 flex h-dvh shrink-0 flex-col overflow-x-hidden border-e bg-card print:hidden transition-[width,padding,gap] duration-200 ease-out ${
-        collapsed ? "w-16 gap-3 p-2" : expanded ? "w-60 gap-4 p-3" : "w-16 gap-3 p-2 lg:w-60 lg:gap-4 lg:p-3"
+      className={`sticky top-0 flex h-dvh shrink-0 flex-col overflow-x-hidden bg-card shadow-elev-1 print:hidden transition-[width,padding,gap] duration-200 ease-out ${
+        collapsed ? "w-16 gap-2 p-2" : expanded ? "w-60 gap-3 p-3" : "w-16 gap-2 p-2 lg:w-60 lg:gap-3 lg:p-3"
       }`}
     >
       <div
@@ -309,7 +309,7 @@ function ShellFrame({
       <div className="flex min-h-dvh">
         {variant === "admin" ? <AdminSidebar items={items} pathname={pathname} badges={badges} /> : null}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex min-h-12 items-center justify-between gap-3 border-b px-3 py-2 print:hidden">
+          <header className="flex min-h-12 items-center justify-between gap-3 px-3 py-2 shadow-elev-1 print:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               {variant === "ops" ? (
                 <>
@@ -331,8 +331,8 @@ function ShellFrame({
                         key={navKey(item)}
                         href={item.href}
                         aria-current={active ? "page" : undefined}
-                        className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm ${
-                          active ? "bg-secondary font-semibold" : "hover:bg-muted"
+                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-sm ${
+                          active ? "bg-secondary font-medium" : "hover:bg-muted"
                         }`}
                       >
                         {item.label}
@@ -359,7 +359,7 @@ function ShellFrame({
       </div>
       <nav
         aria-label="Primary"
-        className={`fixed inset-x-0 bottom-0 z-40 border-t bg-card pb-[env(safe-area-inset-bottom)] print:hidden sm:hidden ${variant === "admin" ? "hidden" : "flex"}`}
+        className={`fixed inset-x-0 bottom-0 z-40 bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(28_22_18/0.06)] print:hidden sm:hidden ${variant === "admin" ? "hidden" : "flex"}`}
       >
         {primary.map((item) => {
           const Icon = itemIcon(item);

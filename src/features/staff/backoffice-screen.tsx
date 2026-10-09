@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { BranchesBarChart, CategoryDonut, ItemsBarChart } from "@/features/staff/analytics-charts";
+import { LiveCount } from "@/components/ops/live-fact";
 import { Money } from "@/components/ops/money";
 import { StatusChip } from "@/components/ops/status-chip";
 import { ErrorState, LoadingState, QueryErrorState, RoleUnavailableState } from "@/components/ops/states";
@@ -491,6 +492,14 @@ const KPI_LABELS: Record<string, string> = {
 
 const MONEY_KPIS = new Set(["gmv", "net_revenue", "total_tax", "total_service_fees", "total_discounts", "total_refunds", "aov"]);
 
+function dashboardOrderCount(data: unknown): number | null {
+  if (!data || typeof data !== "object" || !("kpis" in data)) return null;
+  const kpis = (data as { kpis?: unknown }).kpis;
+  if (!kpis || typeof kpis !== "object" || !("total_orders" in kpis)) return null;
+  const count = (kpis as { total_orders?: unknown }).total_orders;
+  return typeof count === "number" ? count : null;
+}
+
 function chartAmount(amount: string): number {
   const value = Number(amount);
   return Number.isFinite(value) && value > 0 ? value : 0;
@@ -523,8 +532,15 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
     { id: "branches", href: "/app/analytics/branches", label: "Branches" },
   ] as const;
 
+  const orders = view === "dashboard" ? dashboardOrderCount(data.data) : null;
+
   return (
     <div className="grid gap-4">
+      {embedded && orders != null ? (
+        <p className="text-sm text-muted-foreground">
+          <LiveCount value={orders} /> {orders === 1 ? "order" : "orders"}
+        </p>
+      ) : null}
       {embedded ? null : (
         <>
           <div className="grid gap-1">
@@ -547,9 +563,9 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
       {data.isLoading ? <LoadingState label="Loading analytics" /> : null}
       {data.isError ? <ErrorState body={data.error.message} onRetry={() => void data.refetch()} /> : null}
       {data.data && "kpis" in data.data && data.data.kpis && typeof data.data.kpis === "object" ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid justify-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(10rem,12rem))]">
           {Object.entries(data.data.kpis as Record<string, unknown>).map(([key, value]) => (
-            <article key={key} className="rounded-2xl border bg-card p-4">
+            <article key={key} className="rounded-2xl bg-card p-4 shadow-elev-1">
               <p className="text-sm text-muted-foreground">{KPI_LABELS[key] ?? key.replaceAll("_", " ")}</p>
               <p className="text-lg font-semibold tabular-nums">{typeof value === "string" && MONEY_KPIS.has(key) ? formatMoney(value) : String(value ?? "")}</p>
             </article>

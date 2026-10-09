@@ -23,7 +23,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-dashed bg-card p-6 shadow-elev-1">
+    <div className="rounded-xl bg-card p-6 shadow-elev-1">
       <h2 className="text-[length:var(--text-20)] font-semibold">{title}</h2>
       <p className="mt-2 max-w-prose text-sm text-muted-foreground">{body}</p>
       {action ? <div className="mt-4">{action}</div> : null}

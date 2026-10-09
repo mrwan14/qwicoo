@@ -5,13 +5,24 @@ import { toast } from "sonner";
 
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
 
+import { latestTimestamp, LiveCount } from "@/components/ops/live-fact";
 import { Money } from "@/components/ops/money";
+import { StatusChip } from "@/components/ops/status-chip";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { formatCairoDateTime } from "@/lib/format/time";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
 import { useScope } from "@/stores/scope";
+
+function paymentTone(status: string): "available" | "browsing" | "ordered" | "soldout" | "neutral" {
+  if (status === "COMPLETED") return "available";
+  if (status === "FAILED" || status === "REFUNDED") return "soldout";
+  if (status === "PENDING_CASHIER_VERIFICATION") return "browsing";
+  if (status === "PENDING") return "ordered";
+  return "neutral";
+}
 
 export function PaymentsScreen() {
   const interval = usePollingInterval(7000);
@@ -49,15 +60,22 @@ export function PaymentsScreen() {
   if (pending.isError) return <QueryErrorState error={pending.error} screen="Payments" onRetry={() => void pending.refetch()} />;
 
   const rows = pending.data ?? [];
+  const lastPayment = latestTimestamp(rows.map((payment) => payment.created_at));
 
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
         <h1 className="text-[length:var(--text-28)] font-semibold">Payments</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Cash and card-terminal payments waiting for you to confirm the money was taken.</p>
+        {rows.length > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            <LiveCount value={rows.length} /> waiting
+            {lastPayment ? <> · last {formatCairoDateTime(lastPayment)}</> : null}
+          </p>
+        ) : null}
       </div>
       {rows.length === 0 ? <p className="text-sm text-muted-foreground">No payments are waiting.</p> : (
-        <div className="overflow-x-auto rounded-2xl border bg-card">
+        <div className="overflow-x-auto rounded-2xl bg-card shadow-elev-1">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <caption className="px-4 py-3 text-start text-sm text-muted-foreground">Confirm a row after you have taken the money.</caption>
             <thead>
@@ -78,7 +96,9 @@ export function PaymentsScreen() {
                       {payment.pickup_number != null ? `Pickup ${payment.pickup_number}` : "Table"}
                     </th>
                     <td className="px-4 py-4">{paymentMethodLabel(payment.payment_method)}</td>
-                    <td className="px-4 py-4">{paymentStatusLabel(payment.status)}</td>
+                    <td className="px-4 py-4">
+                      <StatusChip tone={paymentTone(payment.status)}>{paymentStatusLabel(payment.status)}</StatusChip>
+                    </td>
                     <td className="px-4 py-4 font-medium"><Money amount={payment.amount} currency={payment.currency} /></td>
                     <td className="px-4 py-4">
                       <button

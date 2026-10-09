@@ -18,7 +18,7 @@ function useChartReady(): boolean {
 
 function ChartFrame({ title, caption, children }: { title: string; caption: string; children: ReactNode }) {
   return (
-    <section className="grid gap-3 rounded-2xl border bg-card p-4" aria-label={title}>
+    <section className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1" aria-label={title}>
       <div>
         <h2 className="font-medium">{title}</h2>
         <p className="text-sm leading-6 text-muted-foreground">{caption}</p>
@@ -37,7 +37,7 @@ function axisTick(value: string): string {
 }
 
 function Tip({ children }: { children: ReactNode }) {
-  return <div className="grid gap-0.5 rounded-lg border bg-card px-3 py-2 text-sm text-card-foreground shadow-elev-1">{children}</div>;
+  return <div className="grid gap-0.5 rounded-lg bg-card px-3 py-2 text-sm text-card-foreground shadow-elev-1">{children}</div>;
 }
 
 export type ItemChartRow = {

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
 
 import { Money } from "@/components/ops/money";
+import { LiveCount } from "@/components/ops/live-fact";
 import { PageHeader } from "@/components/ops/page-header";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { occupancyTone, StatusChip, toneSurface } from "@/components/ops/status-chip";
@@ -110,17 +111,22 @@ export function FloorScreen() {
 
   return (
     <div className="grid gap-4">
-      <PageHeader title="Floor" />
+      <PageHeader
+        title="Floor"
+        detail={
+          <>
+            <LiveCount value={data.occupied_tables} /> occupied
+            {pendingCount > 0 ? (
+              <>
+                {" · "}
+                <LiveCount value={pendingCount} /> to confirm
+              </>
+            ) : null}
+          </>
+        }
+      />
       <p className={`max-w-2xl ${hint}`}>Each block is a table. The colour shows where it is in service. Open a table to move its order on.</p>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        {pendingCount > 0 ? (
-          <span className="rounded-full bg-foreground px-3 py-1 font-semibold text-background">
-            {pendingCount} to confirm
-          </span>
-        ) : null}
-        <span className="rounded-full bg-card px-3 py-1 shadow-elev-1">{data.occupied_tables} occupied</span>
-        <span className="rounded-full bg-card px-3 py-1 shadow-elev-1">{data.available_tables} available</span>
-        <span className="rounded-full bg-card px-3 py-1 shadow-elev-1">{data.tables_with_pending_requests} requests</span>
         <StatusChip tone="available">Available</StatusChip>
         <StatusChip tone="browsing">Seated</StatusChip>
         <StatusChip tone="ordered">Waiting for food</StatusChip>
@@ -297,7 +303,7 @@ function PendingOrder({
             const modifiers = modifierNames(item.selected_modifiers);
             const note = item.special_instructions?.trim();
             return (
-              <li key={item.id} className="rounded-lg border p-3 text-sm">
+              <li key={item.id} className="rounded-lg bg-muted/70 p-3 text-sm">
                 <p className="font-medium">
                   {item.quantity} × {item.item_name}
                 </p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ImagePlus, MapPin } from "lucide-react";
+import { ArrowLeft, ImagePlus, MapPin, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -10,8 +10,15 @@ import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { EntityCard } from "@/components/ops/entity-card";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
+import { LiveCount } from "@/components/ops/live-fact";
 import { PageHeader } from "@/components/ops/page-header";
 import { StatusChip } from "@/components/ops/status-chip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AnalyticsScreen } from "@/features/staff/backoffice-screen";
@@ -23,6 +30,55 @@ import { useDenyWhenMissing } from "@/lib/auth/session-client";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
+const cardGrid = "grid justify-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,18rem))]";
+
+function BrandMeta({ brand }: { brand: components["schemas"]["BrandResponse"] }) {
+  return (
+    <>
+      {brand.slug}
+      {Array.isArray(brand.branches) ? (
+        <>
+          {" · "}
+          <LiveCount value={brand.branches.length} /> {brand.branches.length === 1 ? "branch" : "branches"}
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function BrandMenu({
+  active,
+  pending,
+  onDeactivate,
+  onActivate,
+}: {
+  active: boolean;
+  pending: boolean;
+  onDeactivate: () => void;
+  onActivate: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Brand actions"
+        className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <MoreHorizontal aria-hidden className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {active ? (
+          <DropdownMenuItem variant="destructive" className="min-h-11" onClick={onDeactivate}>
+            Deactivate
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem className="min-h-11" disabled={pending} onClick={onActivate}>
+            {pending ? "Activating…" : "Activate"}
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function BrandsScreen() {
   const queryClient = useQueryClient();
@@ -90,6 +146,13 @@ export function BrandsScreen() {
     <div className="grid gap-4">
       <PageHeader
         title="Brands"
+        detail={
+          list.length > 0 ? (
+            <>
+              <LiveCount value={list.length} /> {list.length === 1 ? "brand" : "brands"}
+            </>
+          ) : undefined
+        }
         action={
           <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>
             Create brand
@@ -99,32 +162,28 @@ export function BrandsScreen() {
       {list.length === 0 ? (
         <EmptyState title="Create your first brand" body="A brand is the home for branches, menus, and staff." action={<button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>Create brand</button>} />
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className={cardGrid}>
           {list.map((brand) => (
-            <li key={brand.id} className="grid gap-2">
+            <li key={brand.id}>
               <EntityCard
                 href={`/app/brands/${brand.id}`}
                 title={brand.name}
-                meta={brand.slug}
+                meta={<BrandMeta brand={brand} />}
                 badge={<StatusChip tone={brand.is_active ? "available" : "soldout"}>{brand.is_active ? "Active" : "Inactive"}</StatusChip>}
+                menu={
+                  <BrandMenu
+                    active={brand.is_active}
+                    pending={activate.isPending && activate.variables === brand.id}
+                    onDeactivate={() => setRemoveId(brand.id)}
+                    onActivate={() => activate.mutate(brand.id)}
+                  />
+                }
                 onClick={() => {
                   if (useScope.getState().homeScope === "platform") {
                     useScope.getState().focusPlatform({ brandId: brand.id, branchId: null });
                   }
                 }}
               />
-              {brand.is_active ? (
-                <button type="button" className="min-h-11 text-sm text-destructive" onClick={() => setRemoveId(brand.id)}>Deactivate</button>
-              ) : (
-                <button
-                  type="button"
-                  className="min-h-11 text-sm font-medium text-primary disabled:opacity-50"
-                  disabled={activate.isPending && activate.variables === brand.id}
-                  onClick={() => activate.mutate(brand.id)}
-                >
-                  {activate.isPending && activate.variables === brand.id ? "Activating…" : "Activate"}
-                </button>
-              )}
             </li>
           ))}
         </ul>
@@ -173,7 +232,7 @@ function BrandOwnerDashboard({ brandId }: { brandId: string }) {
       <PageHeader
         title={brand.data.name}
         action={
-          <Link href={`/app/brands/${brandId}/settings`} className="inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium hover:bg-muted">
+          <Link href={`/app/brands/${brandId}/settings`} className="inline-flex min-h-11 items-center rounded-xl bg-card px-4 text-sm font-medium shadow-elev-1 hover:bg-muted">
             Settings
           </Link>
         }
@@ -254,7 +313,7 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
         title={brand.data.name}
         action={
           isPlatform ? (
-            <Link href="/app/invitations" className="inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium hover:bg-muted">
+            <Link href="/app/invitations" className="inline-flex min-h-11 items-center rounded-xl bg-card px-4 text-sm font-medium shadow-elev-1 hover:bg-muted">
               Invite Brand Admin
             </Link>
           ) : undefined
@@ -274,13 +333,20 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
         }}
       />
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Branches</h2>
+        <div className="grid gap-0.5">
+          <h2 className="text-lg font-semibold">Branches</h2>
+          {branches.isSuccess ? (
+            <p className="text-sm text-muted-foreground">
+              <LiveCount value={branches.data.length} /> {branches.data.length === 1 ? "branch" : "branches"}
+            </p>
+          ) : null}
+        </div>
         <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setBranchOpen(true)}>
           Add branch
         </button>
       </div>
       <CreateBranchDialog brandId={brandId} open={branchOpen} onOpenChange={setBranchOpen} />
-      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <ul className={cardGrid}>
         {(branches.data ?? []).map((branch) => (
           <li key={branch.id}>
             <EntityCard
@@ -313,7 +379,7 @@ function BrandLogo({
   const mark = name.trim().charAt(0).toUpperCase() || "B";
   const shown = mediaUrl(logoUrl?.trim() ? logoUrl : null);
   return (
-    <section className="flex max-w-lg flex-col gap-4 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5 sm:flex-row sm:items-center">
+    <section className="flex max-w-lg flex-col gap-4 rounded-2xl bg-card p-4 shadow-elev-1 sm:flex-row sm:items-center">
       <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
         {shown ? (
           // Logo files are stored on the upload host, which next/image is not set up to optimise.

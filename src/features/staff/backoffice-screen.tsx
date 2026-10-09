@@ -549,7 +549,7 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
           </div>
           <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
-              <Link key={tab.id} className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm ${tab.id === view ? "bg-primary font-medium text-primary-foreground" : "border bg-card"}`} href={tab.href}>{tab.label}</Link>
+              <Link key={tab.id} className={`inline-flex min-h-11 items-center px-3 text-sm ${tab.id === view ? "bg-primary font-medium text-primary-foreground" : "bg-secondary"}`} href={tab.href}>{tab.label}</Link>
             ))}
           </div>
         </>
@@ -563,9 +563,9 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
       {data.isLoading ? <LoadingState label="Loading analytics" /> : null}
       {data.isError ? <ErrorState body={data.error.message} onRetry={() => void data.refetch()} /> : null}
       {data.data && "kpis" in data.data && data.data.kpis && typeof data.data.kpis === "object" ? (
-        <div className="grid justify-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(10rem,12rem))]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {Object.entries(data.data.kpis as Record<string, unknown>).map(([key, value]) => (
-            <article key={key} className="rounded-2xl bg-card p-4 shadow-elev-1">
+            <article key={key} className="bg-card p-4">
               <p className="text-sm text-muted-foreground">{KPI_LABELS[key] ?? key.replaceAll("_", " ")}</p>
               <p className="text-lg font-semibold tabular-nums">{typeof value === "string" && MONEY_KPIS.has(key) ? formatMoney(value) : String(value ?? "")}</p>
             </article>

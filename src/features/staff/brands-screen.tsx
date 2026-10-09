@@ -30,7 +30,7 @@ import { useDenyWhenMissing } from "@/lib/auth/session-client";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
-const cardGrid = "grid justify-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,18rem))]";
+const cardGrid = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3";
 
 function BrandMeta({ brand }: { brand: components["schemas"]["BrandResponse"] }) {
   return (
@@ -232,7 +232,7 @@ function BrandOwnerDashboard({ brandId }: { brandId: string }) {
       <PageHeader
         title={brand.data.name}
         action={
-          <Link href={`/app/brands/${brandId}/settings`} className="inline-flex min-h-11 items-center rounded-xl bg-card px-4 text-sm font-medium shadow-elev-1 hover:bg-muted">
+          <Link href={`/app/brands/${brandId}/settings`} className="inline-flex min-h-11 items-center bg-secondary px-4 text-sm font-medium hover:bg-muted">
             Settings
           </Link>
         }
@@ -313,7 +313,7 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
         title={brand.data.name}
         action={
           isPlatform ? (
-            <Link href="/app/invitations" className="inline-flex min-h-11 items-center rounded-xl bg-card px-4 text-sm font-medium shadow-elev-1 hover:bg-muted">
+            <Link href="/app/invitations" className="inline-flex min-h-11 items-center bg-secondary px-4 text-sm font-medium hover:bg-muted">
               Invite Brand Admin
             </Link>
           ) : undefined
@@ -379,7 +379,7 @@ function BrandLogo({
   const mark = name.trim().charAt(0).toUpperCase() || "B";
   const shown = mediaUrl(logoUrl?.trim() ? logoUrl : null);
   return (
-    <section className="flex max-w-lg flex-col gap-4 rounded-2xl bg-card p-4 shadow-elev-1 sm:flex-row sm:items-center">
+    <section className="flex flex-col gap-4 bg-card p-4 sm:flex-row sm:items-center">
       <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
         {shown ? (
           // Logo files are stored on the upload host, which next/image is not set up to optimise.

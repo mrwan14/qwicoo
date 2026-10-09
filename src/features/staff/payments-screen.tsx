@@ -75,7 +75,7 @@ export function PaymentsScreen() {
         ) : null}
       </div>
       {rows.length === 0 ? <p className="text-sm text-muted-foreground">No payments are waiting.</p> : (
-        <div className="overflow-x-auto rounded-2xl bg-card shadow-elev-1">
+        <div className="overflow-x-auto bg-card">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <caption className="px-4 py-3 text-start text-sm text-muted-foreground">Confirm a row after you have taken the money.</caption>
             <thead>

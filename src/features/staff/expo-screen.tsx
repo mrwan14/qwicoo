@@ -192,7 +192,7 @@ export function ExpoScreen() {
       </div>
       <OfflineTickets stage="handover" />
       <form
-        className="grid gap-2 rounded-2xl bg-card p-4 shadow-elev-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+        className="grid gap-2 bg-card p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
         onSubmit={(event) => {
           event.preventDefault();
           if (token.trim()) verify.mutate();
@@ -208,7 +208,7 @@ export function ExpoScreen() {
         </button>
       </form>
       {cards.length === 0 ? <EmptyState title="Nothing to hand over" body="Orders appear here while the kitchen is making them." /> : (
-      <div className="overflow-x-auto rounded-2xl bg-card shadow-elev-1">
+      <div className="overflow-x-auto bg-card">
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <caption className="px-4 py-3 text-start text-sm text-muted-foreground">Press Guest has the food after you give the order to the guest.</caption>
           <thead>

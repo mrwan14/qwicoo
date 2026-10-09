@@ -24,7 +24,7 @@ export function EntityCard({
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const src = imageUrl && failedUrl !== imageUrl ? imageUrl : null;
   return (
-    <div className="relative rounded-2xl bg-card shadow-elev-1">
+    <div className="relative bg-card">
       <Link
         href={href}
         onClick={onClick}

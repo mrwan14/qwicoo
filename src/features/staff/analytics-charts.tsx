@@ -18,7 +18,7 @@ function useChartReady(): boolean {
 
 function ChartFrame({ title, caption, children }: { title: string; caption: string; children: ReactNode }) {
   return (
-    <section className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1" aria-label={title}>
+    <section className="grid gap-3 bg-card p-4" aria-label={title}>
       <div>
         <h2 className="font-medium">{title}</h2>
         <p className="text-sm leading-6 text-muted-foreground">{caption}</p>

@@ -208,7 +208,7 @@ function AdminSidebar({ items, pathname, badges }: { items: readonly NavItem[]; 
 
   return (
     <aside
-      className={`sticky top-0 flex h-dvh shrink-0 flex-col overflow-x-hidden bg-card shadow-elev-1 print:hidden transition-[width,padding,gap] duration-200 ease-out ${
+      className={`sticky top-0 flex h-dvh shrink-0 flex-col overflow-x-hidden border-e bg-card print:hidden transition-[width,padding,gap] duration-200 ease-out ${
         collapsed ? "w-16 gap-2 p-2" : expanded ? "w-60 gap-3 p-3" : "w-16 gap-2 p-2 lg:w-60 lg:gap-3 lg:p-3"
       }`}
     >
@@ -309,7 +309,7 @@ function ShellFrame({
       <div className="flex min-h-dvh">
         {variant === "admin" ? <AdminSidebar items={items} pathname={pathname} badges={badges} /> : null}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex min-h-12 items-center justify-between gap-3 px-3 py-2 shadow-elev-1 print:hidden">
+          <header className="flex min-h-12 items-center justify-between gap-3 border-b px-3 py-2 print:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               {variant === "ops" ? (
                 <>
@@ -359,7 +359,7 @@ function ShellFrame({
       </div>
       <nav
         aria-label="Primary"
-        className={`fixed inset-x-0 bottom-0 z-40 bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(28_22_18/0.06)] print:hidden sm:hidden ${variant === "admin" ? "hidden" : "flex"}`}
+        className={`fixed inset-x-0 bottom-0 z-40 border-t bg-card pb-[env(safe-area-inset-bottom)] print:hidden sm:hidden ${variant === "admin" ? "hidden" : "flex"}`}
       >
         {primary.map((item) => {
           const Icon = itemIcon(item);

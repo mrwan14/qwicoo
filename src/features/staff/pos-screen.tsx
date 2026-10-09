@@ -389,7 +389,7 @@ export function PosScreen() {
   const sendDisabled = lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim());
 
   const ticket = (
-    <aside className="grid gap-3 rounded-xl bg-card p-4 shadow-elev-1">
+    <aside className="grid gap-3 bg-card p-4">
       {confirmation ? (
         <OrderConfirmation
           confirmation={confirmation}
@@ -471,7 +471,7 @@ export function PosScreen() {
             <button
               key={category.id}
               type="button"
-              className={`flex min-h-14 shrink-0 items-center gap-2 rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-card shadow-elev-1"}`}
+              className={`flex min-h-14 shrink-0 items-center gap-2 px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-secondary"}`}
               onClick={() => {
                 setCategoryId(category.id);
                 setQuery("");
@@ -501,7 +501,7 @@ export function PosScreen() {
             const name = pickLocale(item.name, "en");
             const image = mediaUrl(item.image_url);
             return (
-              <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
+              <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden bg-card text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
                 {image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={image} alt="" className="h-24 w-full bg-secondary object-contain" />

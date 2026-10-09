@@ -50,7 +50,7 @@ function modifierNames(modifiers: { [key: string]: unknown }[] | null | undefine
 
 function NeedsConfirmationBadge() {
   return (
-    <span className="inline-flex items-center rounded-full bg-foreground px-2 py-0.5 text-xs font-semibold text-background">
+    <span className="inline-flex items-center bg-foreground px-2 py-0.5 text-xs font-semibold text-background">
       Needs confirmation
     </span>
   );
@@ -146,7 +146,7 @@ export function FloorScreen() {
                 key={table.table_id}
                 type="button"
                 aria-pressed={open}
-                className={`grid min-h-36 content-between rounded-2xl p-4 text-start shadow-elev-1 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${toneSurface(tone)} ${pending || open ? "ring-2 ring-foreground" : ""}`}
+                className={`grid min-h-36 content-between p-4 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${toneSurface(tone)} ${pending || open ? "ring-2 ring-foreground" : ""}`}
                 onClick={() => {
                   setSelectedId(table.table_id);
                   setRejecting(false);

@@ -133,7 +133,7 @@ export function KdsScreen() {
         </div>
         <button
           type="button"
-          className="min-h-11 rounded-xl bg-card px-3 text-sm shadow-elev-1 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="min-h-11 bg-secondary px-3 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           aria-pressed={sound}
           onClick={() => {
             const next = !sound;
@@ -154,7 +154,7 @@ export function KdsScreen() {
             <button
               key={station}
               type="button"
-              className={`min-h-11 shrink-0 rounded-full px-3 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-card shadow-elev-1"}`}
+              className={`min-h-11 shrink-0 px-3 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-secondary"}`}
               onClick={() => setStationFilter(station)}
             >
               {station === "ALL" ? "All" : stationLabel(station)} · {count}
@@ -235,7 +235,7 @@ function TicketColumn({
           const markingThis = marking?.orderId === ticket.order_id && marking.station === ticket.station;
           const canMark = Boolean(asStation(ticket.station));
           return (
-            <article key={ticket.sub_ticket_id} onPointerDown={() => acknowledgeOrder(ticket.order_id)} className="grid content-start gap-3 rounded-2xl bg-card p-4 shadow-elev-1">
+            <article key={ticket.sub_ticket_id} onPointerDown={() => acknowledgeOrder(ticket.order_id)} className="grid content-start gap-3 bg-card p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-[length:var(--text-20)] font-semibold">{ticketTitle(ticket)}</p>

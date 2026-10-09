@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Geist, Geist_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
+import { Archivo_Black, Fraunces, Geist, Geist_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
 
 import { AppProviders } from "@/components/ops/app-providers";
 
@@ -18,6 +18,12 @@ const geistMono = Geist_Mono({
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
+});
+
+const archivo = Archivo_Black({
+  variable: "--font-archivo",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 const plexArabic = IBM_Plex_Sans_Arabic({
@@ -44,7 +50,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${plexArabic.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${archivo.variable} ${plexArabic.variable}`}
     >
       <body className="min-h-dvh antialiased">
         <script

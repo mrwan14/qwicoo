@@ -7,20 +7,34 @@ export type SurfaceKey = (typeof SURFACE_KEYS)[number];
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
 type Entry = { title: string; body: string };
+type Chip = { label: string; detail: string };
+type Ticket = { heading: string; badge: string; item: string };
 
 type LandingCopy = {
   meta: { title: string; description: string };
-  nav: { features: string; partner: string; signIn: string; language: string; languageLabel: string };
-  hero: { badge: string; title: string; body: string; primary: string; secondary: string };
-  demo: {
-    table: string;
-    status: string;
-    items: string[];
-    station: string;
-    elapsed: string;
-    bump: string;
-    paid: string;
-    total: string;
+  nav: {
+    offer: string;
+    flow: string;
+    start: string;
+    partners: string;
+    features: string;
+    partner: string;
+    signIn: string;
+    language: string;
+    languageLabel: string;
+  };
+  hero: {
+    titleLead: string;
+    titleNew: string;
+    titleTo: string;
+    titleCooking: string;
+    titleReady: string;
+    titleTail: string;
+    primary: string;
+    ask: string;
+    signals: { new: string; cooking: string; ready: string; languages: string; prices: string };
+    chips: { newOrder: Chip; ready: Chip; paid: Chip; grill: Chip };
+    tickets: { drive: Ticket; table7: Ticket; table12: Ticket; qr: Ticket; pos: Ticket; pickup: Ticket; table9: Ticket };
   };
   surfaces: { eyebrow: string; items: Record<SurfaceKey, Entry> };
   problems: { eyebrow: string; title: string; fixLabel: string; items: (Entry & { fix: string })[] };
@@ -51,33 +65,51 @@ type LandingCopy = {
 
 const landingEn = {
     meta: {
-      title: "Qwicoo · Run your restaurant from the table to the kitchen",
-      description:
-        "Qwicoo gives restaurants QR table ordering, POS, kitchen displays, floor management, payments, and analytics in one system.",
+      title: "Qwicoo",
+      description: "The restaurant system where every order moves from new to cooking to ready — on one screen for every role.",
     },
     nav: {
+      offer: "What we offer",
+      flow: "How orders flow",
+      start: "How to start",
+      partners: "Partners",
       features: "Features",
       partner: "Become a partner",
-      signIn: "Restaurant sign in",
+      signIn: "Sign in",
       language: "العربية",
       languageLabel: "Switch to Arabic",
     },
     hero: {
-      badge: "One system for the table, the kitchen, and the back office",
-      title: "Orders for the floor, the kitchen, and the table.",
-      body: "Qwicoo is an operating system for restaurants. Guests order from a QR at the table, the kitchen sees every ticket on a screen, cashiers close out a clean drawer, and owners see every branch from one dashboard.",
+      titleLead: "The restaurant system where every order moves from",
+      titleNew: "new",
+      titleTo: "to",
+      titleCooking: "cooking",
+      titleReady: "ready",
+      titleTail: "— on one screen for every role.",
       primary: "Become a partner",
-      secondary: "See how it works",
-    },
-    demo: {
-      table: "Table 12",
-      status: "Ordered",
-      items: ["2× Mixed grill", "1× Lentil soup", "1× Mint lemonade"],
-      station: "Grill station",
-      elapsed: "02:14",
-      bump: "Bump",
-      paid: "Paid · cash",
-      total: "Total",
+      ask: "Ask Qwicoo a question",
+      signals: {
+        new: "New",
+        cooking: "Cooking",
+        ready: "Ready",
+        languages: "English · العربية",
+        prices: "Prices in EGP",
+      },
+      chips: {
+        newOrder: { label: "New QR order", detail: "Table 7" },
+        ready: { label: "#128 · Table 12", detail: "ready" },
+        paid: { label: "EGP 455.00", detail: "paid · card" },
+        grill: { label: "Grill station", detail: "cooking · 4:12" },
+      },
+      tickets: {
+        drive: { heading: "#131 · Drive-thru", badge: "New", item: "2× Shawarma wrap" },
+        table7: { heading: "#130 · Table 7", badge: "4:12", item: "1× Mixed grill" },
+        table12: { heading: "#128 · Table 12", badge: "Ready", item: "2× Mint lemonade" },
+        qr: { heading: "#132 · QR Table 3", badge: "New", item: "1× Koshary large" },
+        pos: { heading: "#127 · POS", badge: "7:40", item: "2× Feteer" },
+        pickup: { heading: "#126 · Pickup", badge: "Ready", item: "3× Turkish coffee" },
+        table9: { heading: "#133 · Table 9", badge: "New", item: "1× Om Ali" },
+      },
     },
     surfaces: {
       eyebrow: "Four screens, one system",
@@ -204,33 +236,51 @@ const landingEn = {
 
 const landingAr = {
     meta: {
-      title: "Qwicoo · شغّل مطعمك من الطاولة إلى المطبخ",
-      description:
-        "يمنح Qwicoo المطاعم الطلب من الطاولة برمز QR، ونقطة بيع، وشاشات مطبخ، وإدارة صالة، ومدفوعات، وتحليلات في نظام واحد.",
+      title: "كويكو",
+      description: "نظام المطاعم الذي ينتقل فيه كل طلب من جديد إلى قيد التحضير إلى جاهز — على شاشة واحدة لكل دور.",
     },
     nav: {
+      offer: "ما نقدمه",
+      flow: "رحلة الطلب",
+      start: "كيف تبدأ",
+      partners: "الشركاء",
       features: "المزايا",
       partner: "انضم كشريك",
-      signIn: "دخول المطاعم",
+      signIn: "تسجيل الدخول",
       language: "English",
       languageLabel: "التبديل إلى الإنجليزية",
     },
     hero: {
-      badge: "نظام واحد للطاولة والمطبخ والإدارة",
-      title: "الطلبات من الطاولة إلى المطبخ إلى الكاشير.",
-      body: "Qwicoo نظام تشغيل للمطاعم. يطلب الضيف من رمز QR على الطاولة، ويرى المطبخ كل تذكرة على شاشته، ويغلق الكاشير دُرجاً نظيفاً، ويتابع المالك كل فرع من لوحة واحدة.",
+      titleLead: "نظام المطاعم الذي ينتقل فيه كل طلب من",
+      titleNew: "جديد",
+      titleTo: "إلى",
+      titleCooking: "قيد التحضير",
+      titleReady: "جاهز",
+      titleTail: "— على شاشة واحدة لكل دور.",
       primary: "انضم كشريك",
-      secondary: "شاهد كيف يعمل",
-    },
-    demo: {
-      table: "طاولة ١٢",
-      status: "تم الطلب",
-      items: ["٢× مشاوي مشكلة", "١× شوربة عدس", "١× ليمون بالنعنع"],
-      station: "قسم المشاوي",
-      elapsed: "٠٢:١٤",
-      bump: "تم التجهيز",
-      paid: "مدفوع · نقداً",
-      total: "المجموع",
+      ask: "اسأل كويكو",
+      signals: {
+        new: "جديد",
+        cooking: "قيد التحضير",
+        ready: "جاهز",
+        languages: "العربية · English",
+        prices: "الأسعار بالجنيه",
+      },
+      chips: {
+        newOrder: { label: "طلب QR جديد", detail: "طاولة 7" },
+        ready: { label: "#128 · طاولة 12", detail: "جاهز" },
+        paid: { label: "EGP 455.00", detail: "دُفع بالبطاقة" },
+        grill: { label: "محطة الشواية", detail: "قيد التحضير · 4:12" },
+      },
+      tickets: {
+        drive: { heading: "#131 · سيارة", badge: "جديد", item: "٢× ساندويتش شاورما" },
+        table7: { heading: "#130 · طاولة 7", badge: "4:12", item: "١× مشويات مشكلة" },
+        table12: { heading: "#128 · طاولة 12", badge: "جاهز", item: "٢× ليمون بالنعناع" },
+        qr: { heading: "#132 · QR طاولة 3", badge: "جديد", item: "١× كشري كبير" },
+        pos: { heading: "#127 · كاشير", badge: "7:40", item: "٢× فطير" },
+        pickup: { heading: "#126 · استلام", badge: "جاهز", item: "٣× قهوة تركي" },
+        table9: { heading: "#133 · طاولة 9", badge: "جديد", item: "١× أم علي" },
+      },
     },
     surfaces: {
       eyebrow: "أربع شاشات، نظام واحد",

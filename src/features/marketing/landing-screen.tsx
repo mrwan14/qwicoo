@@ -1,11 +1,8 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   BarChart3,
   Check,
-  ChefHat,
   ClipboardList,
-  Clock,
   LayoutGrid,
   Monitor,
   QrCode,
@@ -16,13 +13,15 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { AnimatedLogo } from "@/components/brand/animated-logo";
 import { LOGO_ASPECT, LOGO_VIDEO } from "@/components/brand/logo-assets";
 import { FEATURE_KEYS, SURFACE_KEYS, landingCopy, type FeatureKey, type SurfaceKey } from "@/features/marketing/copy";
+import { Hero } from "@/features/marketing/hero";
 import { PartnerForm } from "@/features/marketing/partner-form";
 import { PublicAssistantLauncher } from "@/features/marketing/public-assistant-launcher";
-import { formatCount, formatMoney } from "@/lib/i18n/format";
+import { formatCount } from "@/lib/i18n/format";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
+
+import "./landing.css";
 
 const SURFACE_ICONS: Record<SurfaceKey, LucideIcon> = {
   guest: Smartphone,
@@ -43,86 +42,56 @@ const FEATURE_ICONS: Record<FeatureKey, LucideIcon> = {
 };
 
 const SECTION = "scroll-mt-20";
-const EYEBROW = "text-sm font-medium text-muted-foreground";
+const EYEBROW = "text-sm font-medium text-quiet";
 const HEADING_2 = "text-[length:var(--text-28)] font-semibold sm:text-4xl";
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-const CTA_PRIMARY = `inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground shadow-elev-1 transition-colors hover:bg-primary/90 ${FOCUS}`;
-const CTA_SECONDARY = `inline-flex min-h-12 items-center rounded-xl border bg-background px-5 text-sm font-medium transition-colors hover:bg-muted ${FOCUS}`;
 
 export function LandingScreen({ locale }: { locale: LocaleCode }) {
   const t = landingCopy[locale];
   const isArabic = locale === "ar";
   const dir = isArabic ? "rtl" : "ltr";
-  const display = isArabic ? "font-arabic" : "font-display";
   const otherLocale: LocaleCode = isArabic ? "en" : "ar";
-  // Arabic ascenders and diacritics need more room than the Latin display face.
-  const heading1 = `${display} ${isArabic ? "leading-[1.35]" : "leading-[1.1]"}`;
   const heading2 = `${HEADING_2} ${isArabic ? "leading-snug" : "leading-tight"}`;
 
   return (
-    <div dir={dir} lang={locale} className={`bg-background text-foreground ${isArabic ? "font-arabic" : ""}`}>
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-[#f2efe9]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-1 sm:px-6">
-          {/* Solid LOGO_SURFACE header so the logo canvas blends away (see logo-assets). */}
-          <Link href={pathFor(locale)} aria-label="Qwicoo" className={`-ms-2 block w-40 shrink-0 rounded-lg sm:w-52 ${FOCUS}`}>
-            <AnimatedLogo />
+    <div dir={dir} lang={locale} className={`qw-landing bg-white text-ink ${isArabic ? "font-arabic" : ""}`}>
+      <header className="sticky top-0 z-40 flex h-[68px] items-center justify-between gap-4 border-b border-qw-line bg-canvas px-[clamp(20px,5vw,72px)]">
+        <Link href={pathFor(locale)} aria-label="Qwicoo" className={`block shrink-0 ${FOCUS}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={LOGO_VIDEO.poster} alt="" className="block h-8 w-auto mix-blend-darken" style={{ aspectRatio: LOGO_ASPECT }} />
+        </Link>
+        <nav aria-label="Site" className="hidden items-center gap-7 text-sm text-quiet min-[901px]:flex">
+          <a href="#offer" className={FOCUS}>
+            {t.nav.offer}
+          </a>
+          <a href="#flow" className={FOCUS}>
+            {t.nav.flow}
+          </a>
+          <a href="#start" className={FOCUS}>
+            {t.nav.start}
+          </a>
+          <a href="#partner" className={FOCUS}>
+            {t.nav.partners}
+          </a>
+        </nav>
+        <div className="flex items-center gap-3.5 text-sm">
+          <Link
+            href={pathFor(otherLocale)}
+            hrefLang={otherLocale}
+            aria-label={t.nav.languageLabel}
+            className={`font-semibold ${isArabic ? "font-sans" : "font-arabic"} ${FOCUS}`}
+          >
+            {t.nav.language}
           </Link>
-
-          <nav aria-label="Site" className="flex items-center gap-1 text-sm sm:gap-2">
-            <a href="#features" className={`hidden rounded-lg px-3 py-2 hover:bg-muted sm:inline-flex ${FOCUS}`}>
-              {t.nav.features}
-            </a>
-            <a href="#partner" className={`hidden rounded-lg px-3 py-2 hover:bg-muted sm:inline-flex ${FOCUS}`}>
-              {t.nav.partner}
-            </a>
-            <Link
-              href={pathFor(otherLocale)}
-              hrefLang={otherLocale}
-              aria-label={t.nav.languageLabel}
-              className={`inline-flex min-h-11 items-center rounded-lg border px-3 font-medium transition-colors hover:bg-muted ${FOCUS}`}
-            >
-              {t.nav.language}
-            </Link>
-            <Link
-              href="/login"
-              className={`inline-flex min-h-11 items-center rounded-lg bg-primary px-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:px-4 ${FOCUS}`}
-            >
-              <span className="sm:hidden">{t.footer.signInLabel}</span>
-              <span className="hidden sm:inline">{t.nav.signIn}</span>
-            </Link>
-          </nav>
+          <Link href="/login" className={`hidden min-[901px]:inline-flex ${FOCUS}`}>
+            {t.nav.signIn}
+          </Link>
+          <a href="#partner" className={`inline-flex min-h-10 items-center bg-ink px-4 text-sm font-semibold text-canvas ${FOCUS}`}>
+            {t.nav.partner}
+          </a>
         </div>
       </header>
-
-      <section className="relative isolate overflow-hidden">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 -top-40 -z-10 h-80 bg-[radial-gradient(60%_100%_at_50%_100%,var(--primary)_0%,transparent_70%)] opacity-15"
-        />
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.1fr_1fr]">
-          <div className="grid gap-6">
-            <p className="inline-flex w-fit items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-elev-1">
-              <span aria-hidden className="size-1.5 rounded-full bg-primary" />
-              {t.hero.badge}
-            </p>
-            <h1 className={`${heading1} max-w-3xl text-[length:var(--text-40)] font-semibold sm:text-6xl`}>
-              {t.hero.title}
-            </h1>
-            <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">{t.hero.body}</p>
-            <div className="flex flex-wrap gap-3">
-              <a href="#partner" className={CTA_PRIMARY}>
-                {t.hero.primary}
-                <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
-              </a>
-              <a href="#problems" className={CTA_SECONDARY}>
-                {t.hero.secondary}
-              </a>
-            </div>
-          </div>
-
-          <HeroPreview locale={locale} />
-        </div>
-      </section>
+      <Hero locale={locale} />
 
       <section aria-label={t.surfaces.eyebrow} className="border-y bg-card">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -135,7 +104,7 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
                 <li key={key} className="flex items-center gap-3">
                   <span
                     aria-hidden
-                    className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    className="flex size-10 shrink-0 items-center justify-center bg-primary/10 text-primary"
                   >
                     <Icon className="size-5" />
                   </span>
@@ -160,7 +129,7 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
             {t.problems.items.map((item) => (
               <article
                 key={item.title}
-                className="grid gap-4 rounded-2xl border bg-card p-6 shadow-elev-1 transition-shadow hover:shadow-elev-2"
+                className="grid gap-4 border bg-card p-6 shadow-elev-1 transition-shadow hover:shadow-elev-2"
               >
                 <div className="grid gap-2">
                   <h3 className="text-lg leading-snug font-semibold">{item.title}</h3>
@@ -169,7 +138,7 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
                 <div className="flex gap-3 border-t pt-4">
                   <span
                     aria-hidden
-                    className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+                    className="mt-0.5 flex size-5 shrink-0 items-center justify-center bg-primary/10 text-primary"
                   >
                     <Check className="size-3" />
                   </span>
@@ -197,11 +166,11 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
               return (
                 <article
                   key={key}
-                  className="grid content-start gap-3 rounded-2xl border bg-background p-5 transition-colors hover:border-primary/40"
+                  className="grid content-start gap-3 border bg-background p-5 transition-colors hover:border-primary/40"
                 >
                   <span
                     aria-hidden
-                    className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    className="flex size-10 items-center justify-center bg-primary/10 text-primary"
                   >
                     <Icon className="size-5" />
                   </span>
@@ -226,7 +195,7 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
             <span aria-hidden className="absolute inset-x-0 top-5 hidden h-px bg-border md:block" />
             {t.steps.items.map((step, index) => (
               <li key={step.title} className="relative grid content-start gap-3">
-                <span className="flex size-10 items-center justify-center rounded-full border bg-background text-sm font-semibold shadow-elev-1">
+                <span className="flex size-10 items-center justify-center border bg-background text-sm font-semibold shadow-elev-1">
                   <span className="sr-only">{t.steps.stepLabel} </span>
                   {localeDigits(index + 1, locale)}
                 </span>
@@ -267,7 +236,7 @@ export function LandingScreen({ locale }: { locale: LocaleCode }) {
           <nav aria-label={t.footer.signInLabel} className="flex flex-wrap gap-2">
             <Link
               href="/login"
-              className={`inline-flex min-h-11 items-center rounded-lg border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted ${FOCUS}`}
+              className={`inline-flex min-h-11 items-center border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted ${FOCUS}`}
             >
               {t.footer.dashboard}
             </Link>
@@ -285,72 +254,4 @@ function pathFor(locale: LocaleCode): string {
 
 function localeDigits(value: number, locale: LocaleCode): string {
   return formatCount(value, locale);
-}
-
-/** Decorative composition of the three screens an order passes through. */
-function HeroPreview({ locale }: { locale: LocaleCode }) {
-  const t = landingCopy[locale].demo;
-
-  return (
-    <div aria-hidden className="relative isolate mx-auto w-full max-w-md lg:max-w-none">
-      <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[3rem] bg-primary/10 blur-2xl" />
-
-      <div className="grid gap-4">
-        <article className="rounded-2xl border bg-card p-5 shadow-elev-2">
-          <div className="flex items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-sm font-semibold">
-              <QrCode className="size-4 text-muted-foreground" />
-              {t.table}
-            </p>
-            <span className="rounded-full bg-[var(--status-ordered-bg)] px-2.5 py-1 text-xs font-medium text-[var(--status-ordered)]">
-              {t.status}
-            </span>
-          </div>
-          <ul className="mt-4 grid gap-2 text-sm text-muted-foreground">
-            {t.items.map((item) => (
-              <li key={item} className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-border" />
-                {item}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4 flex items-center justify-between border-t pt-3 text-sm font-semibold">
-            <span>{t.total}</span>
-            <span>{formatMoney("124.50", "EGP", locale)}</span>
-          </div>
-        </article>
-
-        <article className="me-auto w-[92%] rounded-2xl border bg-foreground p-5 text-background shadow-elev-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-sm font-semibold">
-              <ChefHat className="size-4" />
-              {t.station}
-            </p>
-            <span className="flex items-center gap-1 rounded-full bg-background/15 px-2.5 py-1 text-xs font-medium">
-              <Clock className="size-3" />
-              {t.elapsed}
-            </span>
-          </div>
-          <ul className="mt-4 grid gap-2 text-sm">
-            {t.items.slice(0, 2).map((item) => (
-              <li key={item} className="flex items-center gap-2 opacity-90">
-                <span className="size-1.5 rounded-full bg-background/60" />
-                {item}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 flex min-h-11 items-center justify-center rounded-xl bg-background/15 text-sm font-semibold">
-            {t.bump}
-          </p>
-        </article>
-
-        <p className="ms-auto flex w-fit items-center gap-2 rounded-full border bg-card px-4 py-2.5 text-sm font-medium shadow-elev-1">
-          <span className="flex size-5 items-center justify-center rounded-full bg-[var(--status-available-bg)] text-[var(--status-available)]">
-            <Check className="size-3" />
-          </span>
-          {t.paid}
-        </p>
-      </div>
-    </div>
-  );
 }

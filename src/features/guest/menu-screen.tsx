@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { addGuestCartItem, isCartConflict } from "@/features/guest/cart-client";
 import { resumeIfSessionGone } from "@/features/guest/session";
 import { GuestQueryError, PresenceNote, guestField, guestPrimaryButton, guestSecondaryButton, useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
 import { Money } from "@/components/ops/money";
@@ -13,6 +14,7 @@ import { LoadingState } from "@/components/ops/states";
 import { GuestQuoteSummary } from "@/features/guest/guest-quote-summary";
 import { branchUnitPrice, quotedOrderTotal } from "@/features/guest/guest-prices";
 import { useGuestOrderQuote, type QuoteItemInput } from "@/features/guest/use-guest-quote";
+import { useSharedCart } from "@/features/guest/use-shared-cart";
 import { asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -72,19 +74,7 @@ export function MenuScreen() {
     }
   }, [branchMenu.data]);
 
-  const cart = useQuery({
-    queryKey: ["guest-cart", session?.sessionId],
-    enabled: Boolean(session?.sessionId),
-    queryFn: async () => {
-      const result = await guestApi.GET("/api/v1/sessions/{session_id}/cart", {
-        params: { path: { session_id: session?.sessionId ?? "" } },
-      });
-      if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.oops, locale);
-      }
-      return result.data;
-    },
-  });
+  const { cart, remoteNote } = useSharedCart();
 
   const branchPrices = useMemo(() => {
     const prices = new Map<string, string>();
@@ -130,6 +120,11 @@ export function MenuScreen() {
   return (
     <div className="grid gap-4">
       <PresenceNote />
+      {remoteNote ? (
+        <p role="status" className="bg-secondary px-4 py-3 text-sm">
+          {t.cartUpdated}
+        </p>
+      ) : null}
       <label className="grid gap-1 text-sm font-medium">
         {t.yourName}
         <input
@@ -224,6 +219,7 @@ export function MenuScreen() {
               item={active}
               currency={currency}
               branchPrice={branchPrices.get(active.id) ?? null}
+              cartVersion={cart.data?.version ?? 1}
               onDone={() => {
                 setActiveId(null);
                 void queryClient.invalidateQueries({ queryKey: ["guest-cart"] });
@@ -260,22 +256,26 @@ function ItemConfigurator({
   item,
   currency,
   branchPrice,
+  cartVersion,
   onDone,
 }: {
   item: MenuItem;
   currency: string;
   branchPrice: string | null;
+  cartVersion: number;
   onDone: () => void;
 }) {
   const { t, locale } = useGuestCopy();
   const session = useGuest((state) => state.session);
   const guestName = useGuest((state) => state.guestName);
   const setGuestName = useGuest((state) => state.setGuestName);
+  const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(1);
   const paused = useOrderingPaused();
   const [notes, setNotes] = useState("");
   const [selected, setSelected] = useState<Record<string, string[]>>({});
   const [choiceError, setChoiceError] = useState("");
+  const [nameNeeded, setNameNeeded] = useState(false);
 
   const groups = (item.modifier_groups ?? []) as ModifierGroup[];
 
@@ -342,8 +342,10 @@ function ItemConfigurator({
 
   const add = useMutation({
     mutationFn: async (validated: Validated) => {
+      const name = guestName.trim();
       const body: components["schemas"]["AddCartItemRequest"] = {
-        guest_name: guestName || "Guest",
+        guest_name: name,
+        nickname: name,
         item_id: validated.item_id,
         item_name: validated.item_name,
         unit_price: branchPrice ?? validated.base_price,
@@ -355,21 +357,24 @@ function ItemConfigurator({
           price: modifier.price_delta,
         })),
       };
-      const result = await guestApi.POST("/api/v1/sessions/{session_id}/cart/items", {
-        params: { path: { session_id: session?.sessionId ?? "" } },
-        body,
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
-      return result.data;
+      const latest =
+        queryClient.getQueryData<{ version?: number }>(["guest-cart", session?.sessionId])?.version ?? cartVersion;
+      return addGuestCartItem(session?.sessionId ?? "", latest, body, locale, t.oops);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueryData(["guest-cart", session?.sessionId], data);
       toast.success(t.added);
       onDone();
     },
     onError: (error: Error, validated) => {
-      void resumeIfSessionGone(error).then((gone) => {
+      void resumeIfSessionGone(error).then(async (gone) => {
         if (gone) {
           if (useGuest.getState().session) add.mutate(validated);
+          return;
+        }
+        if (isCartConflict(error)) {
+          await queryClient.invalidateQueries({ queryKey: ["guest-cart"] });
+          toast.message(t.cartUpdated);
           return;
         }
         toast.error(error.message);
@@ -436,7 +441,16 @@ function ItemConfigurator({
       </div>
       <label className="grid gap-1 text-sm font-medium">
         {t.yourName}
-        <input className={guestField} autoComplete="name" value={guestName} onChange={(event) => setGuestName(event.target.value)} />
+        <input
+          className={guestField}
+          autoComplete="name"
+          value={guestName}
+          onChange={(event) => {
+            setNameNeeded(false);
+            setGuestName(event.target.value);
+          }}
+        />
+        {nameNeeded ? <span className="font-normal text-destructive">{t.nameHint}</span> : null}
       </label>
       <label className="grid gap-1 text-sm font-medium">
         {t.notes}
@@ -474,6 +488,10 @@ function ItemConfigurator({
         className={`${guestPrimaryButton} gap-2`}
         disabled={add.isPending || !guestName.trim() || paused}
         onClick={() => {
+          if (!guestName.trim()) {
+            setNameNeeded(true);
+            return;
+          }
           const needed = missingGroup();
           if (needed) {
             setChoiceError(t.chooseRequired.replace("{name}", needed));

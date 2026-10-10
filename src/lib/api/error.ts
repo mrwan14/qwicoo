@@ -252,6 +252,29 @@ const CATALOG: Record<string, Catalog> = {
     en: "You already have an order with us. Here it is.",
     ar: "لديك طلب مفتوح معنا بالفعل. ها هو.",
   },
+  CART_VERSION_CONFLICT: {
+    en: "Cart updated by someone at your table",
+    ar: "حدّث أحد على طاولتك السلة",
+    aliases: ["The cart was updated elsewhere. Retry with the current version"],
+  },
+  CART_SUBMIT_CONFLICT: {
+    en: "Cart updated by someone at your table",
+    ar: "حدّث أحد على طاولتك السلة",
+  },
+  IF_MATCH_REQUIRED: {
+    en: "Please try that again.",
+    ar: "يرجى المحاولة مجدداً.",
+    aliases: ["If-Match header is required", "رأس If-Match مطلوب"],
+  },
+  IDEMPOTENCY_KEY_REQUIRED: {
+    en: "Please try that again.",
+    ar: "يرجى المحاولة مجدداً.",
+    aliases: ["Idempotency-Key header is required", "رأس Idempotency-Key مطلوب"],
+  },
+  EMPTY_CART: {
+    en: "Your cart is empty. Take a look at the menu!",
+    ar: "سلتك فارغة. ألقِ نظرة على القائمة!",
+  },
   CROSS_TENANT_ACCESS_FORBIDDEN: { en: "That brand is outside your workspace." },
   BRANCH_ACCESS_FORBIDDEN: { en: "That branch is outside your workspace." },
   BRANCH_NOT_FOUND: { en: "We couldn't find that branch." },
@@ -296,7 +319,7 @@ function rawDetail(error: unknown): string | null {
   if (!("detail" in error)) return null;
   const detail = error.detail;
   if (typeof detail === "string" && detail.trim()) return detail.trim();
-  if (detail && typeof detail === "object" && "code" in detail && typeof detail.code === "string" && detail.code in CATALOG) {
+  if (detail && typeof detail === "object" && "code" in detail && typeof detail.code === "string") {
     return detail.code;
   }
   if (detail && typeof detail === "object" && "detail" in detail) {

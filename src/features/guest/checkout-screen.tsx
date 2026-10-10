@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -8,14 +8,19 @@ import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
 import { LoadingState } from "@/components/ops/states";
+import {
+  clearGuestCart,
+  groupCartLinesByGuest,
+  removeGuestCartItem,
+  submitGuestCart,
+} from "@/features/guest/cart-client";
 import { GuestQuoteSummary } from "@/features/guest/guest-quote-summary";
 import { quotedLineSubtotal } from "@/features/guest/guest-prices";
 import { resumeIfSessionGone } from "@/features/guest/session";
 import { GuestQueryError, LineDetails, guestField, guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
 import { useGuestOrderQuote, type QuoteItemInput } from "@/features/guest/use-guest-quote";
-import { ApiError, asApiError } from "@/lib/api/error";
-import { guestApi } from "@/lib/api/guest";
-import type { components } from "@/lib/api/schema";
+import { useSharedCart } from "@/features/guest/use-shared-cart";
+import { ApiError } from "@/lib/api/error";
 import { useGuest } from "@/stores/guest";
 import { useOrderingPaused } from "@/features/guest/ordering-status";
 
@@ -25,42 +30,15 @@ export function CheckoutScreen() {
   const session = useGuest((state) => state.session);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [notes, setNotes] = useState("");
   const [promoDraft, setPromoDraft] = useState("");
   const [promoCode, setPromoCode] = useState<string | null>(null);
-
-  const cart = useQuery({
-    queryKey: ["guest-cart", session?.sessionId],
-    enabled: Boolean(session?.sessionId),
-    queryFn: async () => {
-      const result = await guestApi.GET("/api/v1/sessions/{session_id}/cart", {
-        params: { path: { session_id: session?.sessionId ?? "" } },
-      });
-      if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.oops, locale);
-      }
-      return result.data;
-    },
-  });
+  const [confirming, setConfirming] = useState(false);
+  const { cart, remoteNote, noteConflict } = useSharedCart();
 
   const place = useMutation({
     mutationFn: async () => {
-      const lines = cart.data?.items ?? [];
-      const body: components["schemas"]["app__schemas__order__CheckoutRequest"] = {
-        customer_notes: notes || null,
-        promo_code: promoCode,
-        items: lines.map((line) => ({
-          item_id: line.item_id,
-          quantity: line.quantity,
-          selected_option_ids: (line.modifiers ?? []).map((modifier) => modifier.option_id),
-          special_instructions: line.notes,
-        })),
-      };
-      const result = await guestApi.POST("/api/v1/orders/checkout", { body });
-      if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.oops, locale);
-      }
-      return result.data;
+      const version = cart.data?.version ?? 1;
+      return submitGuestCart(session?.sessionId ?? "", version, locale, t.oops);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["guest-cart"] });
@@ -73,9 +51,14 @@ export function CheckoutScreen() {
         router.push("/order/track");
         return;
       }
-      void resumeIfSessionGone(error).then((gone) => {
+      void resumeIfSessionGone(error).then(async (gone) => {
         if (gone) {
           if (useGuest.getState().session) place.mutate();
+          return;
+        }
+        if (await noteConflict(error)) {
+          setConfirming(false);
+          toast.message(t.cartUpdated);
           return;
         }
         toast.error(error.message);
@@ -85,25 +68,38 @@ export function CheckoutScreen() {
 
   const clear = useMutation({
     mutationFn: async () => {
-      const result = await guestApi.DELETE("/api/v1/sessions/{session_id}/cart", {
-        params: { path: { session_id: session?.sessionId ?? "" } },
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
+      const version = cart.data?.version ?? 1;
+      return clearGuestCart(session?.sessionId ?? "", version, locale, t.oops);
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["guest-cart"] }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["guest-cart", session?.sessionId], data);
+    },
+    onError: (error: Error) => {
+      void noteConflict(error).then((conflict) => {
+        if (conflict) toast.message(t.cartUpdated);
+        else toast.error(error.message);
+      });
+    },
   });
 
   const remove = useMutation({
     mutationFn: async (cartItemId: string) => {
-      const result = await guestApi.DELETE("/api/v1/sessions/{session_id}/cart/items/{cart_item_id}", {
-        params: { path: { session_id: session?.sessionId ?? "", cart_item_id: cartItemId } },
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
+      const version = cart.data?.version ?? 1;
+      return removeGuestCartItem(session?.sessionId ?? "", cartItemId, version, locale, t.oops);
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["guest-cart"] }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["guest-cart", session?.sessionId], data);
+    },
+    onError: (error: Error) => {
+      void noteConflict(error).then((conflict) => {
+        if (conflict) toast.message(t.cartUpdated);
+        else toast.error(error.message);
+      });
+    },
   });
 
   const lines = useMemo(() => cart.data?.items ?? [], [cart.data]);
+  const groups = useMemo(() => groupCartLinesByGuest(lines), [lines]);
   const quoteItems = useMemo<QuoteItemInput[] | null>(() => {
     if (lines.length === 0) return null;
     return lines.map((line) => ({
@@ -123,9 +119,67 @@ export function CheckoutScreen() {
     return <GuestQueryError error={cart.error} onRetry={() => void cart.refetch()} />;
   }
 
+  if (confirming && lines.length > 0) {
+    return (
+      <div className="grid gap-4">
+        <h1 className="text-[length:var(--text-28)] font-semibold">{t.confirmOrder}</h1>
+        <p className="text-sm text-muted-foreground">{t.confirmOrderHint}</p>
+        {remoteNote ? (
+          <p role="status" className="bg-secondary px-4 py-3 text-sm">
+            {t.cartUpdated}
+          </p>
+        ) : null}
+        <ul className="grid gap-4">
+          {groups.map((group) => (
+            <li key={group.guestName} className="grid gap-2">
+              <h2 className="font-medium">{group.guestName}</h2>
+              <ul className="grid gap-2">
+                {group.lines.map((line) => (
+                  <li key={line.id} className="rounded-xl border p-3">
+                    <p className="font-medium">
+                      <span className="tabular-nums" dir="ltr">
+                        {line.quantity} ×
+                      </span>{" "}
+                      {line.item_name}
+                    </p>
+                    <LineDetails modifiers={(line.modifiers ?? []).map((modifier) => modifier.name)} note={line.notes} />
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+        {quote.data ? (
+          <GuestQuoteSummary
+            pricing={quote.data}
+            labels={{ subtotal: t.subtotal, discount: t.discount, serviceFee: t.serviceFee, tax: t.tax, total: t.total }}
+            locale={locale}
+            currency={quote.data.currency || "EGP"}
+          />
+        ) : null}
+        <button
+          type="button"
+          className={guestPrimaryButton}
+          disabled={place.isPending || !quoteReady || paused}
+          onClick={() => place.mutate()}
+        >
+          {place.isPending ? t.paying : t.sendTableOrder}
+        </button>
+        <button type="button" className={guestSecondaryButton} onClick={() => setConfirming(false)}>
+          {t.backToEdit}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4">
       <h1 className="text-[length:var(--text-28)] font-semibold">{t.checkout}</h1>
+      {remoteNote ? (
+        <p role="status" className="bg-secondary px-4 py-3 text-sm">
+          {t.cartUpdated}
+        </p>
+      ) : null}
       {lines.length === 0 ? (
         <div className="grid gap-3">
           <p className="text-sm text-muted-foreground">{t.emptyCart}</p>
@@ -140,7 +194,7 @@ export function CheckoutScreen() {
               <div className="min-w-0">
                 <p className="font-medium">{line.item_name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {line.quantity} · {line.guest_name}
+                  {line.quantity} · {line.nickname || line.guest_name}
                 </p>
                 <LineDetails modifiers={(line.modifiers ?? []).map((modifier) => modifier.name)} note={line.notes} />
               </div>
@@ -209,17 +263,13 @@ export function CheckoutScreen() {
       ) : null}
       {lines.length > 0 ? (
         <>
-          <label className="grid gap-1 text-sm font-medium">
-            {t.notes}
-            <textarea className="min-h-20 rounded-xl border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" value={notes} onChange={(event) => setNotes(event.target.value)} />
-          </label>
           <button
             type="button"
             className={guestPrimaryButton}
-            disabled={place.isPending || !quoteReady || paused}
-            onClick={() => place.mutate()}
+            disabled={!quoteReady || paused}
+            onClick={() => setConfirming(true)}
           >
-            {place.isPending ? t.paying : t.placeOrder}
+            {t.confirmOrder}
           </button>
           <div className="grid gap-2 sm:grid-cols-2">
             <Link href="/order" className={guestSecondaryButton}>{t.backMenu}</Link>

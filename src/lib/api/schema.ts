@@ -1649,7 +1649,7 @@ export interface paths {
         };
         /**
          * Get Shared Table Cart
-         * @description Retrieve all current items, quantities, modifiers, and calculated subtotal for a dining session.
+         * @description Retrieve the shared table cart. Guests must present a session JWT whose session_id matches the path. Floor staff (FOH) may read with a staff token scoped to the table's branch.
          */
         get: operations["get_session_cart_api_v1_sessions__session_id__cart_get"];
         put?: never;
@@ -1675,7 +1675,7 @@ export interface paths {
         put?: never;
         /**
          * Add Item to Shared Table Cart
-         * @description Add a diner's chosen item and modifiers to the shared table cart, refreshing the 8-hour TTL. unit_price and modifier prices sent by the client are ignored. The stored unit price is the branch price (the branch override when one is set, otherwise the catalogue price) plus the catalog modifier deltas. The line total is that unit price times quantity, and modifier prices are not added again.
+         * @description Add a diner's chosen item and modifiers to the shared table cart. Requires guest JWT, If-Match (cart version), and Idempotency-Key. unit_price and modifier prices sent by the client are ignored.
          */
         post: operations["add_item_to_cart_api_v1_sessions__session_id__cart_items_post"];
         delete?: never;
@@ -1699,6 +1699,27 @@ export interface paths {
          * @description Remove a specific line item from the shared table cart.
          */
         delete: operations["remove_item_from_cart_api_v1_sessions__session_id__cart_items__cart_item_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Shared Cart Item Quantity */
+        patch: operations["patch_cart_item_api_v1_sessions__session_id__cart_items__cart_item_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/cart/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Shared Cart as Order
+         * @description Atomically snapshot the cart at If-Match version, create a guest order, clear the cart, and bump version. A concurrent second submit returns 409.
+         */
+        post: operations["submit_session_cart_api_v1_sessions__session_id__cart_submit_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -10245,6 +10266,14 @@ export interface components {
              * @default true
              */
             received: boolean;
+        };
+        /**
+         * PatchCartItemRequest
+         * @description Change quantity on an existing cart line.
+         */
+        PatchCartItemRequest: {
+            /** Quantity */
+            quantity: number;
         };
         /** PayCashAction */
         PayCashAction: {
@@ -22108,7 +22137,10 @@ export interface operations {
     clear_session_cart_api_v1_sessions__session_id__cart_delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 session_id: string;
             };
@@ -22139,7 +22171,10 @@ export interface operations {
     add_item_to_cart_api_v1_sessions__session_id__cart_items_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 session_id: string;
             };
@@ -22174,7 +22209,10 @@ export interface operations {
     remove_item_from_cart_api_v1_sessions__session_id__cart_items__cart_item_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 session_id: string;
                 cart_item_id: string;
@@ -22190,6 +22228,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_cart_item_api_v1_sessions__session_id__cart_items__cart_item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                session_id: string;
+                cart_item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchCartItemRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_session_cart_api_v1_sessions__session_id__cart_submit_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderResponse"];
                 };
             };
             /** @description Validation Error */

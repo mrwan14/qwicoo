@@ -36,13 +36,13 @@ export function useAbsorbBranding(payload: unknown) {
   }, [payload]);
 }
 
-/** Shown when the guest joined without a confirmed location, so staff confirm their orders. */
+/** Quiet note when presence was not verified for this diner (rare after harden join). */
 export function PresenceNote() {
   const { t } = useGuestCopy();
   const unverified = useGuest((state) => state.session?.presenceVerified === false);
   if (!unverified) return null;
   return (
-    <p role="status" className="rounded-xl bg-secondary px-4 py-3 text-sm">
+    <p role="status" className="bg-secondary px-4 py-3 text-sm">
       {t.locationNote}
     </p>
   );
@@ -92,15 +92,18 @@ export function RejoinTable({ message }: { message?: string }) {
   const { t } = useGuestCopy();
   const token = useGuest((state) => state.tableToken) ?? (typeof window === "undefined" ? null : guestTableToken());
   const [pending, setPending] = useState(false);
-  const [failed, setFailed] = useState(false);
 
   async function rejoin() {
     if (!token) return;
     setPending(true);
-    setFailed(false);
     const ok = await recoverGuestSession();
     setPending(false);
-    if (!ok) setFailed(true);
+    if (ok) {
+      window.location.assign("/order");
+      return;
+    }
+    // Soft-join is gone — send the guest through location or PIN again.
+    window.location.assign(`/t/${encodeURIComponent(token)}`);
   }
 
   return (
@@ -118,7 +121,6 @@ export function RejoinTable({ message }: { message?: string }) {
       ) : (
         <p className="text-sm text-muted-foreground">{t.scanAgain}</p>
       )}
-      {failed ? <p className="text-sm text-muted-foreground">{t.tableCodeFailed}</p> : null}
     </div>
   );
 }
@@ -135,19 +137,9 @@ export function GuestResume({ children }: { children: ReactNode }) {
     let cancelled = false;
     void Promise.resolve(useGuest.persist.rehydrate()).then(async () => {
       if (cancelled) return;
-      const current = useGuest.getState();
-      if (current.session) {
-        setReady(true);
-        return;
-      }
-      const token = current.tableToken ?? guestTableToken();
-      if (!token) {
-        setReady(true);
-        return;
-      }
       const ok = await recoverGuestSession();
       if (cancelled) return;
-      if (!ok) setFailed(true);
+      if (!ok && (useGuest.getState().tableToken ?? guestTableToken())) setFailed(true);
       setReady(true);
     });
     return () => {

@@ -6,12 +6,14 @@ import type { LocaleCode } from "@/lib/i18n/locale-text";
 
 export type GuestSession = {
   sessionId: string;
+  /** Per-diner id from the guest JWT (shared table cart attribution). */
+  guestId: string | null;
   branchId: string;
   brandId: string | null;
   tableId: string | null;
   tableNumber: string | null;
   branchName: string | null;
-  /** False when the guest joined without a location or PIN match; staff confirm their orders. */
+  /** True when this guest proved presence (geofence or PIN). */
   presenceVerified?: boolean;
 };
 

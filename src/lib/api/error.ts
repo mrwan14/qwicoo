@@ -24,6 +24,21 @@ const CATALOG: Record<string, Catalog> = {
     ar: "أنت خارج النطاق الجغرافي المسموح به للفرع",
     aliases: ["You are outside the permitted branch geofence radius"],
   },
+  LOCATION_OR_PIN_REQUIRED: {
+    en: "Allow location access, or enter the table PIN, to join this table.",
+    ar: "اسمح بالموقع أو أدخل رمز الطاولة للانضمام.",
+    aliases: ["LOCATION_OR_PIN_REQUIRED"],
+  },
+  LOCATION_TOO_INACCURATE: {
+    en: "Your location isn't precise enough. Move closer, or enter the table PIN.",
+    ar: "موقعك غير دقيق بما يكفي. اقترب أكثر، أو أدخل رمز الطاولة.",
+    aliases: ["LOCATION_TOO_INACCURATE"],
+  },
+  PIN_LOCKED: {
+    en: "Too many PIN attempts. Wait a moment, then try again or ask staff for help.",
+    ar: "محاولات كثيرة لرمز الطاولة. انتظر قليلاً ثم حاول مجدداً أو اطلب المساعدة من الفريق.",
+    aliases: ["PIN_LOCKED"],
+  },
   INVALID_OR_EXPIRED_PIN: {
     en: "That PIN isn't valid or has expired. Ask a staff member for the current PIN.",
     ar: "الرمز غير صالح أو منتهي الصلاحية. اطلب الرمز الحالي من أحد الموظفين.",

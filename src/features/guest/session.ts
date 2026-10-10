@@ -1,7 +1,6 @@
-import { ApiError, asApiError } from "@/lib/api/error";
+import { ApiError } from "@/lib/api/error";
 import type { components } from "@/lib/api/schema";
 import { mergeGuestBranding } from "@/lib/guest/branding";
-import type { LocaleCode } from "@/lib/i18n/locale-text";
 import { useGuest, type GuestSession } from "@/stores/guest";
 
 type PresenceResponse = Omit<components["schemas"]["TableSessionResponse"], "session_token">;
@@ -33,6 +32,7 @@ export function toGuestSession(data: PresenceResponse): GuestSession {
   const brandId = (data as { brand_id?: unknown }).brand_id;
   return {
     sessionId: data.session_id,
+    guestId: typeof data.guest_id === "string" ? data.guest_id : null,
     branchId: data.branch_id,
     brandId: typeof brandId === "string" ? brandId : null,
     tableId: data.table_id,
@@ -42,20 +42,12 @@ export function toGuestSession(data: PresenceResponse): GuestSession {
   };
 }
 
-export async function joinTable(token: string, locale: LocaleCode): Promise<GuestSession> {
-  const response = await fetch("/api/guest/session/join", {
-    method: "POST",
-    headers: { "content-type": "application/json", "accept-language": locale },
-    body: JSON.stringify({ qr_token: token }),
-  });
-  const payload = (await response.json().catch(() => ({}))) as PresenceResponse;
-  if (!response.ok) {
-    throw asApiError(payload, response, "Could not rejoin this table.", locale);
-  }
-  const session = toGuestSession(payload);
+/** Apply a successful presence response into the guest store. */
+export function applyPresenceSession(token: string, data: PresenceResponse): GuestSession {
+  const session = toGuestSession(data);
   useGuest.getState().setSession(session);
   useGuest.getState().setTableToken(token);
-  useGuest.getState().setBranding(mergeGuestBranding(null, payload));
+  useGuest.getState().setBranding(mergeGuestBranding(null, data));
   return session;
 }
 
@@ -64,23 +56,33 @@ function dropEndedSession() {
   useGuest.getState().setCashRequestedOrderId(null);
 }
 
-/** Rejoin with the stored or URL table token. Drops a stale session if join fails. */
-export async function recoverGuestSession(): Promise<boolean> {
-  const token = guestTableToken();
-  if (!token) {
-    dropEndedSession();
-    return false;
-  }
+/** True when the httpOnly guest cookie + stored session still talk to the API. */
+export async function sessionStillValid(): Promise<boolean> {
+  const session = useGuest.getState().session;
+  if (!session?.sessionId) return false;
   try {
-    await joinTable(token, useGuest.getState().locale);
-    return true;
+    const response = await fetch("/api/guest/api/v1/sessions/ordering-status", {
+      method: "GET",
+      headers: { "accept-language": useGuest.getState().locale },
+      credentials: "include",
+    });
+    return response.ok;
   } catch {
-    dropEndedSession();
     return false;
   }
 }
 
-/** Clear a dead session and rejoin. Returns true when the error was a session-gone case (recovered or not). */
+/**
+ * Keep a still-valid guest session. Soft-join without location/PIN is no longer allowed,
+ * so a dead session is dropped and the guest must pass presence again.
+ */
+export async function recoverGuestSession(): Promise<boolean> {
+  if (await sessionStillValid()) return true;
+  dropEndedSession();
+  return false;
+}
+
+/** Clear a dead session and try to keep a still-valid one. Returns true when the error was a session-gone case. */
 export async function resumeIfSessionGone(error: unknown): Promise<boolean> {
   if (!isGuestSessionGone(error)) return false;
   await recoverGuestSession();

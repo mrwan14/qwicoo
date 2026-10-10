@@ -100,7 +100,7 @@ export function WaiterSheet({
       <label className="mt-4 grid gap-1 text-sm font-medium">
         {t.serviceNote}
         <textarea
-          className="min-h-20 border border-[var(--guest-line)] bg-white px-3 py-2"
+          className="min-h-20 guest-card px-3 py-2"
           value={note}
           disabled={sent}
           onChange={(event) => setNote(event.target.value)}

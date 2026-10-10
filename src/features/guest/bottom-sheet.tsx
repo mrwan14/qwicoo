@@ -26,8 +26,9 @@ type BottomSheetProps = {
 };
 
 /**
- * Guest bottom sheet: dimmed backdrop, drag handle, swipe / Escape / close /
- * backdrop dismiss, focus trap via Base UI Sheet, full-height on small phones.
+ * Soft guest bottom sheet: rounded top, drag handle, blurred dimmed backdrop
+ * (via guest.css), swipe / Escape / close / backdrop dismiss, focus trap via
+ * Base UI Sheet. Full height on small phones, ~85% otherwise.
  */
 export function BottomSheet({
   open,

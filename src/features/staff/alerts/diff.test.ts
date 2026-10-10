@@ -66,7 +66,7 @@ test("ignore list is keyed by status too", () => {
 
 test("cap of three toasts plus and N more", () => {
   const service = Array.from({ length: 5 }, (_, i) => ({ id: `s${i}`, table_number: `${i}`, request_type: "CALL_WAITER" }));
-  const events = diffSnapshots({ service: [] }, { service }, all("RUNNER"));
+  const events = diffSnapshots({ service: [] }, { service }, all("WAITER"));
   const grouped = groupForToasts(events);
   assert.equal(grouped.shown.length, 3);
   assert.equal(grouped.more, 2);
@@ -79,13 +79,14 @@ test("role filtering", () => {
   assert.deepEqual(kindsOf(all("CASHIER")), ["confirmation", "payment"]);
   assert.deepEqual(kindsOf(all("WAITER")), ["confirmation", "service-request"]);
   assert.deepEqual(kindsOf(all("KITCHEN_STAFF")), ["kitchen-ticket"]);
-  assert.deepEqual(kindsOf(all("RUNNER")), ["handover-ready", "service-request"]);
+  assert.deepEqual(kindsOf(all("RUNNER")), ["handover-ready"]);
   for (const role of ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"] as const) {
     assert.deepEqual(kindsOf(all(role)), []);
     assert.equal(kindsOf(all(role, { adminOptIn: true })).length, 5);
   }
   assert.deepEqual(sourcesFor(all("KITCHEN_STAFF")), ["kitchen"]);
   assert.deepEqual(sourcesFor(all("BRANCH_ADMIN")), []);
+  assert.deepEqual(sourcesFor(all("RUNNER")), ["expo"]);
 });
 
 test("kitchen hears a new ticket only for the selected branch", () => {

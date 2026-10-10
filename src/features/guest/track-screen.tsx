@@ -272,7 +272,7 @@ export function TrackScreen() {
       </div>
 
       <div
-        className="border border-[var(--guest-line)] bg-white px-4 py-4"
+        className="guest-card px-4 py-4"
         style={{ borderInlineStartWidth: 6, borderInlineStartColor: statusTone(status) }}
       >
         {rejected ? (
@@ -312,7 +312,7 @@ export function TrackScreen() {
             const reached = index <= current;
             const tone = statusTone(step);
             return (
-              <li key={step} className="flex items-center gap-3 border border-[var(--guest-line)] bg-white px-3 py-3">
+              <li key={step} className="flex items-center gap-3 guest-card px-3 py-3">
                 <span
                   className="flex size-8 shrink-0 items-center justify-center text-sm font-medium text-white"
                   style={{ background: reached ? tone : "var(--guest-line)" }}
@@ -359,21 +359,21 @@ export function TrackScreen() {
       </p>
 
       {handover.data ? (
-        <p className="border border-[var(--guest-line)] bg-white p-4 text-lg">
+        <p className="guest-card p-4 text-lg">
           {t.handover}: {handover.data.token}
         </p>
       ) : null}
 
       {rejected || finished || payAtCounter ? null : paid ? (
-        <p role="status" className="border border-[var(--guest-line)] bg-white px-4 py-3 text-sm font-medium">
+        <p role="status" className="guest-card px-4 py-3 text-sm font-medium">
           {t.paid}
         </p>
       ) : cashRequested || notice === t.paymentRequested ? (
-        <p role="status" className="border border-[var(--guest-line)] bg-white px-4 py-3 text-sm">
+        <p role="status" className="guest-card px-4 py-3 text-sm">
           {t.paymentRequested}
         </p>
       ) : notice ? (
-        <p role="status" className="border border-[var(--guest-line)] bg-white px-4 py-3 text-sm">
+        <p role="status" className="guest-card px-4 py-3 text-sm">
           {notice}
         </p>
       ) : null}

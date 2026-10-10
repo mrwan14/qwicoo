@@ -61,7 +61,7 @@ export function ServiceScreen() {
             <span className="font-medium text-[var(--guest-ink)]">
               {guestServiceType[locale][request.request_type]}
             </span>
-            <span className="border border-[var(--guest-line)] bg-white px-3 py-1 text-[var(--guest-quiet)]">
+            <span className="guest-card px-3 py-1 text-[var(--guest-quiet)]">
               {guestServiceStatus[locale][request.status]}
             </span>
           </li>

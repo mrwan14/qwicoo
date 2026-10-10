@@ -44,17 +44,28 @@ export function OrderingPausedNotice({ onRetry, retryLabel }: { onRetry?: () => 
   const locale = useGuest((state) => state.locale);
   const t = guestCopy[locale];
   return (
-    <section role="alert" className="grid gap-2 rounded-2xl bg-secondary px-4 py-4">
-      <p className="flex items-center gap-2 text-base font-semibold">
-        <PauseCircle aria-hidden className="size-5 shrink-0 text-primary" />
+    <section role="alert" className="grid gap-2 guest-card px-4 py-4">
+      <p className="flex items-center gap-2 text-base font-semibold text-[var(--guest-ink)]">
+        <PauseCircle aria-hidden className="size-5 shrink-0 text-[var(--guest-amber)]" />
         {t.orderingPaused}
       </p>
-      <p className="text-sm leading-6 text-muted-foreground">{t.orderingPausedBody}</p>
+      <p className="text-sm leading-6 text-[var(--guest-quiet)]">{t.orderingPausedBody}</p>
       {onRetry ? (
         <button type="button" className="min-h-11 justify-self-start text-sm font-medium underline underline-offset-4" onClick={onRetry}>
           {retryLabel ?? t.retry}
         </button>
       ) : null}
     </section>
+  );
+}
+
+export function GuestSkeleton({ label }: { label?: string }) {
+  return (
+    <div role="status" className="grid gap-3" aria-live="polite">
+      <div className="h-8 w-40 animate-pulse bg-[var(--guest-line)]" />
+      <div className="h-24 w-full animate-pulse bg-[var(--guest-line)]" />
+      <div className="h-14 w-full animate-pulse bg-[var(--guest-line)]" />
+      {label ? <span className="sr-only">{label}</span> : null}
+    </div>
   );
 }

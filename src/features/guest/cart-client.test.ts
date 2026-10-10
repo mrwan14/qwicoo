@@ -53,3 +53,22 @@ test("isCartConflict detects version and submit conflicts", () => {
   assert.equal(isCartConflict(new ApiError(409, "other", "ACTIVE_ORDER_EXISTS")), false);
   assert.equal(isCartConflict(new ApiError(400, "bad", "EMPTY_CART")), false);
 });
+
+test("anonymous lines group under Guest when nickname and guest_name are blank", () => {
+  const groups = groupCartLinesByGuest([
+    {
+      id: "9",
+      guest_name: "  ",
+      nickname: null,
+      item_id: "z",
+      item_name: "Water",
+      unit_price: "5.00",
+      quantity: 2,
+      line_total: "10.00",
+      added_at: "2026-01-01T00:00:00Z",
+    },
+  ]);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0]?.guestName, "Guest");
+  assert.equal(groups[0]?.lines[0]?.quantity, 2);
+});

@@ -98,6 +98,29 @@ export async function removeGuestCartItem(
   return result.data;
 }
 
+/** Change quantity on an existing cart line (shared-cart PATCH). */
+export async function patchGuestCartItem(
+  sessionId: string,
+  cartItemId: string,
+  version: number,
+  quantity: number,
+  locale: LocaleCode,
+  fallback: string,
+): Promise<GuestCart> {
+  const headers = cartMutationHeaders(version);
+  const result = await guestApi.PATCH("/api/v1/sessions/{session_id}/cart/items/{cart_item_id}", {
+    params: {
+      path: { session_id: sessionId, cart_item_id: cartItemId },
+      header: headers,
+    },
+    body: { quantity },
+  });
+  if (!result.response.ok || !result.data) {
+    throw asApiError(result.error, result.response, fallback, locale);
+  }
+  return result.data;
+}
+
 export async function clearGuestCart(
   sessionId: string,
   version: number,

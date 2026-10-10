@@ -7,10 +7,18 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Money } from "@/components/ops/money";
-import { LoadingState } from "@/components/ops/states";
 import { guestStatus, PAYABLE_STATUSES } from "@/features/guest/copy";
+import { GuestSkeleton } from "@/features/guest/ordering-status";
 import { isGuestSessionGone, resumeIfSessionGone } from "@/features/guest/session";
-import { GuestQueryError, LineDetails, PresenceNote, guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
+import { BillSheet, WaiterSheet } from "@/features/guest/service-sheets";
+import {
+  GuestQueryError,
+  LineDetails,
+  PresenceNote,
+  guestPrimaryButton,
+  guestSecondaryButton,
+  useGuestCopy,
+} from "@/features/guest/shell";
 import { usePollingInterval } from "@/hooks/use-page-visible";
 import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
@@ -58,6 +66,16 @@ export function TrackScreen() {
   const interval = usePollingInterval(7000);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [waiterOpen, setWaiterOpen] = useState(false);
+  const [billOpen, setBillOpen] = useState(false);
+
+  function statusTone(value: OrderStatus): string {
+    if (value === "PREPARING") return "var(--guest-amber)";
+    if (value === "READY" || value === "SERVED" || value === "DELIVERED" || value === "PAID" || value === "CLOSED") {
+      return "var(--guest-sage)";
+    }
+    return "var(--guest-orange)";
+  }
 
   const order = useQuery({
     queryKey: ["guest-active", session?.sessionId],
@@ -209,16 +227,18 @@ export function TrackScreen() {
   });
 
   if (!session) return null;
-  if (order.isLoading) return <LoadingState label={t.loading} />;
+  if (order.isLoading) return <GuestSkeleton label={t.loading} />;
   if (order.isError) {
     return <GuestQueryError error={order.error} onRetry={() => void order.refetch()} />;
   }
   if (!order.data) {
     return (
-      <div className="grid gap-3">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.track}</h1>
-        <p className="text-sm text-muted-foreground">{t.noOrder}</p>
-        <Link href="/order" className={guestPrimaryButton}>{t.menu}</Link>
+      <div className="grid gap-4">
+        <h1 className="guest-display text-3xl">{t.myTableOrders}</h1>
+        <p className="text-sm text-[var(--guest-quiet)]">{t.noOrder}</p>
+        <Link href="/order" className={guestPrimaryButton}>
+          {t.menu}
+        </Link>
       </div>
     );
   }
@@ -243,91 +263,127 @@ export function TrackScreen() {
   return (
     <div className="grid gap-4">
       <div>
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.track}</h1>
+        <h1 className="guest-display text-3xl">{t.myTableOrders}</h1>
         {reference ? (
-          <p className="text-sm text-muted-foreground">
-            {t.orderRef} · <span className="font-medium text-foreground">{reference}</span>
+          <p className="text-sm text-[var(--guest-quiet)]">
+            {t.orderRef} · <span className="font-medium text-[var(--guest-ink)]">{reference}</span>
           </p>
         ) : null}
       </div>
-      {rejected ? (
-        <div className="grid gap-3 rounded-xl bg-secondary px-4 py-4">
-          <p className="text-[length:var(--text-20)] font-medium">{t.orderRejected}</p>
-          {activeOrder.cancellation_reason ? (
-            <p className="text-sm text-muted-foreground">{activeOrder.cancellation_reason}</p>
-          ) : null}
-          <Link href="/order" className={guestPrimaryButton}>
-            {t.startNewOrder}
-          </Link>
-        </div>
-      ) : finished ? (
-        <p className="text-[length:var(--text-20)] font-medium">{t.enjoyMeal}</p>
-      ) : payAtCounter ? (
-        <div className="grid gap-2">
-          <p className="text-[length:var(--text-20)] font-medium">
-            {t.amountDue} <Money amount={activeOrder.total_amount} locale={locale} />
+
+      <div
+        className="border border-[var(--guest-line)] bg-white px-4 py-4"
+        style={{ borderInlineStartWidth: 6, borderInlineStartColor: statusTone(status) }}
+      >
+        {rejected ? (
+          <div className="grid gap-2">
+            <p className="guest-display text-2xl">{t.orderRejected}</p>
+            {activeOrder.cancellation_reason ? (
+              <p className="text-sm text-[var(--guest-quiet)]">{activeOrder.cancellation_reason}</p>
+            ) : null}
+          </div>
+        ) : finished ? (
+          <p className="guest-display text-2xl">{t.enjoyMeal}</p>
+        ) : payAtCounter ? (
+          <div className="grid gap-2">
+            <p className="guest-display text-2xl">
+              {t.amountDue}{" "}
+              <span className="guest-price" dir="ltr">
+                <Money amount={activeOrder.total_amount} locale={locale} />
+              </span>
+            </p>
+            <p className="text-sm text-[var(--guest-quiet)]">{t.payAtCounter}</p>
+          </div>
+        ) : (
+          <p className="guest-display text-2xl">
+            {guestStatus[locale][status === "PAID" ? "DELIVERED" : status]}
           </p>
-          <p className="text-sm text-muted-foreground">{t.payAtCounter}</p>
-        </div>
-      ) : (
-        <p className="text-[length:var(--text-20)] font-medium">{guestStatus[locale][status === "PAID" ? "DELIVERED" : status]}</p>
-      )}
+        )}
+        <p className="mt-2 text-sm font-medium" style={{ color: statusTone(status) }}>
+          {paid ? t.paid : t.amountDue}
+        </p>
+      </div>
+
       {pending ? <PresenceNote /> : null}
+
       {showKitchen ? (
         <ol className="grid gap-2">
           {STEPS.map((step, index) => {
             const reached = index <= current;
+            const tone = statusTone(step);
             return (
-              <li key={step} className="flex items-center gap-3">
-                <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-medium ${reached ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{index + 1}</span>
-                <span className={reached ? "font-medium" : "text-muted-foreground"}>{guestStatus[locale][step]}</span>
+              <li key={step} className="flex items-center gap-3 border border-[var(--guest-line)] bg-white px-3 py-3">
+                <span
+                  className="flex size-8 shrink-0 items-center justify-center text-sm font-medium text-white"
+                  style={{ background: reached ? tone : "var(--guest-line)" }}
+                >
+                  {index + 1}
+                </span>
+                <span className={reached ? "font-medium text-[var(--guest-ink)]" : "text-[var(--guest-quiet)]"}>
+                  {guestStatus[locale][step]}
+                </span>
               </li>
             );
           })}
         </ol>
       ) : null}
+
       {(activeOrder.items ?? []).length > 0 ? (
-        <ul className="grid gap-2">
+        <ul className="grid gap-0 divide-y divide-[var(--guest-line)] border-y border-[var(--guest-line)]">
           {(activeOrder.items ?? []).map((item) => (
-            <li key={item.id} className="flex items-start justify-between gap-3 rounded-xl border p-3">
+            <li key={item.id} className="flex items-start justify-between gap-3 py-3">
               <div className="min-w-0">
                 <p className="font-medium">
-                  {item.quantity} × {item.item_name}
+                  <span className="tabular-nums" dir="ltr">
+                    {item.quantity} ×
+                  </span>{" "}
+                  {item.item_name}
                 </p>
                 <LineDetails modifiers={modifierNames(item)} note={item.special_instructions} />
               </div>
-              <Money amount={item.subtotal} locale={locale} />
+              <span className="guest-price shrink-0" dir="ltr">
+                <Money amount={item.subtotal} locale={locale} />
+              </span>
             </li>
           ))}
         </ul>
       ) : null}
+
       {activeOrder.customer_notes ? <LineDetails modifiers={[]} note={activeOrder.customer_notes} /> : null}
-      <p className="text-lg font-semibold">
-        {t.total} <Money amount={activeOrder.total_amount} locale={locale} />
+
+      <p className="guest-display text-2xl">
+        {t.total}{" "}
+        <span className="guest-price" dir="ltr">
+          <Money amount={activeOrder.total_amount} locale={locale} />
+        </span>
       </p>
+
       {handover.data ? (
-        <p className="rounded-xl border p-4 text-lg">
+        <p className="border border-[var(--guest-line)] bg-white p-4 text-lg">
           {t.handover}: {handover.data.token}
         </p>
       ) : null}
+
       {rejected || finished || payAtCounter ? null : paid ? (
-        <p role="status" className="rounded-xl bg-secondary px-4 py-3 text-sm font-medium">
+        <p role="status" className="border border-[var(--guest-line)] bg-white px-4 py-3 text-sm font-medium">
           {t.paid}
         </p>
       ) : cashRequested || notice === t.paymentRequested ? (
-        <p role="status" className="rounded-xl bg-secondary px-4 py-3 text-sm">
+        <p role="status" className="border border-[var(--guest-line)] bg-white px-4 py-3 text-sm">
           {t.paymentRequested}
         </p>
       ) : notice ? (
-        <p role="status" className="rounded-xl bg-secondary px-4 py-3 text-sm">
+        <p role="status" className="border border-[var(--guest-line)] bg-white px-4 py-3 text-sm">
           {notice}
         </p>
       ) : null}
-      {finished ? (
+
+      {finished || rejected ? (
         <Link href="/order" className={guestPrimaryButton}>
-          {t.orderElse}
+          {rejected ? t.startNewOrder : t.orderElse}
         </Link>
       ) : null}
+
       {rejected || finished || payAtCounter ? null : (
         <div className="grid gap-2">
           {canPay ? (
@@ -350,9 +406,12 @@ export function TrackScreen() {
               </button>
             </>
           ) : null}
-          <Link href="/order/service" className={guestSecondaryButton}>
-            {t.call}
-          </Link>
+          <button type="button" className={guestSecondaryButton} onClick={() => setWaiterOpen(true)}>
+            {t.callWaiterTitle}
+          </button>
+          <button type="button" className={guestSecondaryButton} onClick={() => setBillOpen(true)}>
+            {t.askBill}
+          </button>
           <button
             type="button"
             className={guestSecondaryButton}
@@ -363,14 +422,21 @@ export function TrackScreen() {
           </button>
         </div>
       )}
-      {pending ? <p className="text-sm text-muted-foreground">{t.payAfterConfirm}</p> : null}
+
+      {pending ? <p className="text-sm text-[var(--guest-quiet)]">{t.payAfterConfirm}</p> : null}
+
       {GUEST_CANCELLABLE.has(status) ? (
-        <div className="mt-4 border-t pt-4">
-          <button type="button" className="min-h-12 rounded-xl px-3 text-sm text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" onClick={() => setConfirmCancel(true)}>
+        <div className="mt-2 border-t border-[var(--guest-line)] pt-4">
+          <button
+            type="button"
+            className="min-h-12 px-3 text-sm text-[var(--guest-quiet)] underline-offset-2 hover:underline"
+            onClick={() => setConfirmCancel(true)}
+          >
             {t.cancelOrder}
           </button>
         </div>
       ) : null}
+
       <ConfirmDialog
         open={confirmCancel}
         onOpenChange={setConfirmCancel}
@@ -383,6 +449,8 @@ export function TrackScreen() {
         pending={cancel.isPending}
         onConfirm={() => cancel.mutate(activeOrder.id)}
       />
+      <WaiterSheet open={waiterOpen} onOpenChange={setWaiterOpen} />
+      <BillSheet open={billOpen} onOpenChange={setBillOpen} />
     </div>
   );
 }

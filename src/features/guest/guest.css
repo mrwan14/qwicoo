@@ -1,0 +1,169 @@
+/* Guest ordering chrome — rounded/soft; scoped so staff + landing stay square. */
+.guest-theme {
+  --guest-ink: #252525;
+  --guest-canvas: #f5f1ec;
+  --guest-orange: #f76c33;
+  --guest-amber: #f2ac3f;
+  --guest-sage: #6da290;
+  --guest-sage-deep: #4f8574;
+  --guest-line: #e8dfd4;
+  --guest-quiet: #6b6259;
+  --guest-surface: #ffffff;
+  --guest-radius-pill: 9999px;
+  --guest-radius-card: 16px;
+  --guest-radius-sheet: 24px;
+  --guest-radius-thumb: 14px;
+  --guest-shadow: 0 8px 28px rgb(37 37 37 / 10%);
+  --guest-shadow-soft: 0 4px 16px rgb(37 37 37 / 8%);
+  --background: var(--guest-canvas);
+  --foreground: var(--guest-ink);
+  --card: var(--guest-surface);
+  --primary: var(--guest-orange);
+  --primary-foreground: #ffffff;
+  --secondary: #f0e8df;
+  --muted: #f0e8df;
+  --muted-foreground: var(--guest-quiet);
+  --border: var(--guest-line);
+  --input: var(--guest-line);
+  --ring: var(--guest-orange);
+  --radius: var(--guest-radius-card);
+  color: var(--guest-ink);
+  background: var(--guest-canvas);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+[lang="ar"].guest-theme,
+.guest-theme[lang="ar"] {
+  font-family: var(--font-guest-arabic), var(--font-plex-arabic), sans-serif;
+}
+
+.guest-theme .guest-display {
+  font-family: var(--font-guest-display), var(--font-geist-sans), sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+[lang="ar"].guest-theme .guest-display,
+.guest-theme[lang="ar"] .guest-display {
+  font-family: var(--font-guest-arabic), var(--font-plex-arabic), sans-serif;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.guest-theme .guest-price {
+  font-family: var(--font-guest-display), var(--font-geist-sans), sans-serif;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--guest-ink);
+  unicode-bidi: isolate;
+}
+
+[lang="ar"].guest-theme .guest-price,
+.guest-theme[lang="ar"] .guest-price {
+  font-family: var(--font-guest-arabic), var(--font-plex-arabic), sans-serif;
+  font-weight: 700;
+}
+
+.guest-theme .guest-motion {
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guest-theme .guest-motion,
+  .guest-theme .guest-motion * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+.guest-theme .guest-pill {
+  border-radius: var(--guest-radius-pill);
+}
+
+.guest-theme .guest-card {
+  border-radius: var(--guest-radius-card);
+  background: var(--guest-surface);
+  box-shadow: var(--guest-shadow-soft);
+}
+
+.guest-theme .guest-thumb {
+  border-radius: var(--guest-radius-thumb);
+}
+
+.guest-theme .guest-cat-strip {
+  mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+}
+
+[dir="rtl"] .guest-theme .guest-cat-strip {
+  mask-image: linear-gradient(270deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+}
+
+.guest-theme .guest-cat-tab[data-active="true"] {
+  background: var(--guest-orange);
+  color: #ffffff;
+  box-shadow: var(--guest-shadow-soft);
+}
+
+.guest-theme .guest-cat-tab[data-active="false"] {
+  background: var(--guest-surface);
+  color: var(--guest-ink);
+  box-shadow: none;
+  border: 1px solid var(--guest-line);
+}
+
+.guest-theme .guest-option-tile {
+  border-radius: var(--guest-radius-card);
+  position: relative;
+}
+
+.guest-theme .guest-option-tile[data-selected="true"] {
+  border-color: var(--guest-orange);
+  background: color-mix(in srgb, var(--guest-orange) 12%, #ffffff);
+}
+
+.guest-theme .guest-option-tile[data-selected="true"]::after {
+  content: "✓";
+  position: absolute;
+  top: 0.4rem;
+  inset-inline-end: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--guest-orange);
+}
+
+.guest-theme .guest-required-band {
+  border-radius: var(--guest-radius-card);
+  background: color-mix(in srgb, var(--guest-orange) 10%, #ffffff);
+  padding: 0.75rem;
+}
+
+/* Soft dim + blur behind guest sheets only */
+body:has(.guest-theme) [data-slot="sheet-overlay"] {
+  background: rgb(37 37 37 / 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.guest-theme .guest-cart-bar-flash {
+  animation: guest-bar-bounce 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guest-theme .guest-cart-bar-flash {
+    animation: none;
+  }
+}
+
+@keyframes guest-bar-bounce {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-3px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}

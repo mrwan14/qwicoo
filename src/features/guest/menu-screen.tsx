@@ -476,12 +476,15 @@ export function MenuScreen() {
 
       {cartCount > 0 ? (
         <div
-          className={`fixed inset-x-0 bottom-0 z-30 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
+          className={`fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 ${
             flash ? "guest-cart-bar-flash" : ""
           }`}
         >
           <div className="mx-auto max-w-md">
-            <Link href="/order/checkout" className={`${guestPrimaryButton} gap-3 shadow-[var(--guest-shadow)]`}>
+            <Link
+              href="/order/checkout"
+              className={`${guestPrimaryButton} gap-3 shadow-[var(--guest-shadow)] ring-1 ring-black/5`}
+            >
               <span className="guest-pill inline-flex size-8 items-center justify-center bg-white text-sm font-bold text-[var(--guest-orange)]">
                 {cartCount}
               </span>

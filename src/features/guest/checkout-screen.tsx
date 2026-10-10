@@ -161,7 +161,7 @@ export function CheckoutScreen() {
     return (
       <div className="grid gap-6 py-8 text-center">
         <div
-          className="mx-auto flex size-28 items-center justify-center border border-[var(--guest-line)] bg-white"
+          className="mx-auto flex size-28 items-center justify-center guest-card"
           aria-hidden
         >
           <span className="guest-display text-5xl text-[var(--guest-sage)]">✓</span>
@@ -186,13 +186,13 @@ export function CheckoutScreen() {
         <h1 className="guest-display text-3xl">{t.confirmOrder}</h1>
         <p className="text-sm text-[var(--guest-quiet)]">{t.confirmOrderHint}</p>
         {remoteNote ? (
-          <p role="status" className="border border-[var(--guest-line)] bg-white px-4 py-3 text-sm">
+          <p role="status" className="guest-card px-4 py-3 text-sm">
             {t.cartUpdated}
           </p>
         ) : null}
         <ul className="grid gap-4">
           {groups.map((group) => (
-            <li key={group.guestName} className="grid gap-2 border border-[var(--guest-line)] bg-white p-3">
+            <li key={group.guestName} className="grid gap-2 guest-card p-3">
               <h2 className="guest-display text-xl">{group.guestName}</h2>
               <ul className="grid gap-2">
                 {group.lines.map((line) => (
@@ -250,7 +250,7 @@ export function CheckoutScreen() {
     return (
       <div className="grid gap-6 py-10 text-center">
         <div
-          className="mx-auto grid size-36 place-items-center border border-[var(--guest-line)] bg-white"
+          className="mx-auto grid size-36 place-items-center guest-card"
           aria-hidden
         >
           <div className="grid gap-1">
@@ -287,7 +287,7 @@ export function CheckoutScreen() {
       </div>
 
       {remoteNote ? (
-        <p role="status" className="border border-[var(--guest-line)] bg-white px-4 py-3 text-sm">
+        <p role="status" className="guest-card px-4 py-3 text-sm">
           {t.cartUpdated}
         </p>
       ) : null}
@@ -331,7 +331,7 @@ export function CheckoutScreen() {
                     </div>
                     {mine ? (
                       <div className="flex items-center justify-between gap-3">
-                        <div className="inline-flex items-stretch border border-[var(--guest-line)] bg-white">
+                        <div className="inline-flex items-stretch guest-card">
                           <button
                             type="button"
                             className="inline-flex size-11 items-center justify-center text-lg"
@@ -356,7 +356,7 @@ export function CheckoutScreen() {
                         </div>
                         <button
                           type="button"
-                          className="min-h-11 border border-[var(--guest-line)] bg-white px-3 text-sm font-medium"
+                          className="min-h-11 guest-card px-3 text-sm font-medium"
                           disabled={remove.isPending}
                           onClick={() => remove.mutate(line.id)}
                         >
@@ -397,7 +397,7 @@ export function CheckoutScreen() {
           />
           <button
             type="button"
-            className="inline-flex min-h-12 shrink-0 items-center justify-center bg-[var(--guest-ink)] px-4 text-sm font-medium text-white"
+            className="inline-flex min-h-12 shrink-0 items-center justify-center bg-[var(--guest-orange)] px-4 text-sm font-medium text-white"
             onClick={() => setPromoCode(promoDraft.trim() || null)}
           >
             {t.applyPromo}
@@ -409,7 +409,7 @@ export function CheckoutScreen() {
       {quote.isError ? (
         <p className="text-sm text-destructive">{quote.error instanceof Error ? quote.error.message : t.oops}</p>
       ) : quote.data ? (
-        <div className="border border-[var(--guest-line)] bg-white p-4">
+        <div className="guest-card p-4">
           <h2 className="guest-display text-xl">{t.total}</h2>
           <div className="mt-3">
             <GuestQuoteSummary

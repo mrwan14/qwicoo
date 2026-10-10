@@ -11,6 +11,7 @@ import { kdsCopy } from "@/lib/i18n/staff/kds";
 import { menuCopy } from "@/lib/i18n/staff/menu";
 import { navCopy } from "@/lib/i18n/staff/nav";
 import { offlineCopy } from "@/lib/i18n/staff/offline";
+import { ordersCopy } from "@/lib/i18n/staff/orders";
 import { paymentsCopy } from "@/lib/i18n/staff/payments";
 import { peopleCopy } from "@/lib/i18n/staff/people";
 import { posCopy } from "@/lib/i18n/staff/pos";
@@ -33,6 +34,7 @@ export const staffCopy = {
     menu: menuCopy.en,
     nav: navCopy.en,
     offline: offlineCopy.en,
+    orders: ordersCopy.en,
     payments: paymentsCopy.en,
     people: peopleCopy.en,
     pos: posCopy.en,
@@ -54,6 +56,7 @@ export const staffCopy = {
     menu: menuCopy.ar,
     nav: navCopy.ar,
     offline: offlineCopy.ar,
+    orders: ordersCopy.ar,
     payments: paymentsCopy.ar,
     people: peopleCopy.ar,
     pos: posCopy.ar,

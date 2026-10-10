@@ -70,10 +70,8 @@ export function canToggleAvailability(role: UserRole | null | undefined): boolea
   return role === "SUPER_ADMIN" || role === "BRAND_ADMIN" || role === "BRANCH_ADMIN";
 }
 
-export function canEditBranchPrice(role: UserRole | null | undefined, flags?: MenuItemFlags | null): boolean {
-  if (role === "SUPER_ADMIN" || role === "BRAND_ADMIN") return true;
-  if (role === "BRANCH_ADMIN") return true; // override or staff price path
-  return false;
+export function canEditBranchPrice(role: UserRole | null | undefined, _flags?: MenuItemFlags | null): boolean {
+  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN" || role === "BRANCH_ADMIN";
 }
 
 /** Show the Stations tab at all. */

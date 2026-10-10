@@ -42,7 +42,7 @@ export function GuestDrawer({
       <SheetContent
         side={side}
         showCloseButton={false}
-        className="guest-theme flex w-[min(100%,20rem)] flex-col gap-0 border-0 bg-[var(--guest-canvas)] p-0 shadow-[var(--guest-shadow)] sm:max-w-sm"
+        className="guest-theme flex w-[min(100%,20rem)] flex-col gap-0 border-0 border-e border-[var(--guest-line)] bg-[var(--guest-canvas)] p-0 shadow-[var(--guest-shadow)] sm:max-w-sm"
       >
         <div className="flex items-start justify-between gap-3 px-4 py-4">
           <div className="min-w-0">
@@ -62,17 +62,17 @@ export function GuestDrawer({
             )}
           </div>
           <SheetClose
-            className="guest-pill inline-flex size-11 shrink-0 items-center justify-center bg-white text-[var(--guest-ink)] shadow-[var(--guest-shadow-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]"
+            className="guest-btn guest-btn-secondary guest-motion !h-11 !w-11 !min-h-11 shrink-0 !p-0 text-xl leading-none"
             aria-label={t.close}
           >
             ×
           </SheetClose>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3 py-2" aria-label={t.openMenu}>
+        <nav className="flex flex-1 flex-col gap-1.5 px-3 py-2" aria-label={t.openMenu}>
           {links.map((link) => {
             const className =
-              "guest-pill guest-motion flex min-h-12 items-center px-4 text-base font-medium text-[var(--guest-ink)] hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]";
+              "guest-btn guest-btn-secondary guest-motion !justify-start !px-4 text-start !font-semibold";
             if (link.href) {
               return (
                 <Link
@@ -92,7 +92,7 @@ export function GuestDrawer({
               <button
                 key={link.action}
                 type="button"
-                className={`${className} w-full text-start`}
+                className={className}
                 onClick={() => {
                   onAction(link.action);
                   onOpenChange(false);
@@ -119,8 +119,8 @@ export function GuestAboutPanel({ placeLabel }: { placeLabel: string }) {
   const branchName = useGuest((state) => state.session?.branchName);
   return (
     <div className="grid gap-3 p-4">
-      <h2 className="guest-display text-2xl">{t.about}</h2>
-      <p className="text-sm text-[var(--guest-quiet)]">{t.aboutBody}</p>
+      <h2 className="guest-display guest-display-lg">{t.about}</h2>
+      <p className="guest-body">{t.aboutBody}</p>
       {branding?.name || branchName ? (
         <p className="text-base font-medium">{branding?.name ?? branchName}</p>
       ) : null}

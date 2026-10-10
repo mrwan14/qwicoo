@@ -246,19 +246,17 @@ export function ItemSheet({
       returnFocusRef={triggerRef}
       footer={
         <div className="flex items-center gap-3">
-          <div className="inline-flex items-stretch guest-card">
+          <div className="guest-stepper shrink-0">
             <button
               type="button"
-              className="inline-flex size-12 items-center justify-center text-lg"
               aria-label={t.fewer}
               onClick={() => setQuantity((current) => Math.max(1, current - 1))}
             >
               −
             </button>
-            <span className="inline-flex min-w-10 items-center justify-center tabular-nums">{quantity}</span>
+            <span>{quantity}</span>
             <button
               type="button"
-              className="inline-flex size-12 items-center justify-center text-lg"
               aria-label={t.more}
               onClick={() => setQuantity((current) => current + 1)}
             >
@@ -267,7 +265,7 @@ export function ItemSheet({
           </div>
           <button
             type="button"
-            className={`${guestPrimaryButton} flex-1`}
+            className={`${guestPrimaryButton} !w-auto flex-1`}
             disabled={add.isPending || paused || !guestName.trim()}
             onClick={tryAdd}
           >
@@ -282,18 +280,18 @@ export function ItemSheet({
           <img
             src={mediaUrl(item.image_url) ?? ""}
             alt=""
-            className="max-h-40 w-full guest-card object-contain"
+            className="guest-thumb max-h-44 w-full object-cover"
           />
         ) : (
-          <div className="flex h-28 items-center justify-center guest-card guest-display text-4xl text-[var(--guest-orange)]">
+          <div className="guest-thumb flex h-32 items-center justify-center text-4xl font-extrabold text-[var(--guest-quiet)]">
             {title.trim().charAt(0).toUpperCase()}
           </div>
         )}
         {description && description !== title ? (
-          <p className="text-sm text-[var(--guest-quiet)]">{description}</p>
+          <p className="guest-body">{description}</p>
         ) : null}
         {branchPrice ? (
-          <p className="guest-price text-lg" dir="ltr">
+          <p className="guest-price text-base" dir="ltr">
             <Money amount={branchPrice} currency={currency} locale={locale} />
           </p>
         ) : null}
@@ -304,7 +302,7 @@ export function ItemSheet({
               <button
                 type="button"
                 data-active={mode === "same" ? "true" : "false"}
-                className="guest-cat-tab guest-pill min-h-11 flex-1 px-3 text-sm font-medium"
+                className="guest-cat-tab guest-motion flex-1"
                 onClick={() => setMode("same")}
               >
                 {t.sameForAll}
@@ -312,14 +310,14 @@ export function ItemSheet({
               <button
                 type="button"
                 data-active={mode === "per" ? "true" : "false"}
-                className="guest-cat-tab guest-pill min-h-11 flex-1 px-3 text-sm font-medium"
+                className="guest-cat-tab guest-motion flex-1"
                 onClick={() => setMode("per")}
               >
                 {t.customiseEach}
               </button>
             </div>
             {mode === "per" ? (
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="guest-cat-strip flex gap-2 overflow-x-auto">
                 {Array.from({ length: quantity }, (_, index) => {
                   const complete = unitIsComplete(groups, units[index] ?? emptySelection());
                   return (
@@ -327,12 +325,12 @@ export function ItemSheet({
                       key={index}
                       type="button"
                       data-active={activeUnit === index ? "true" : "false"}
-                      className="guest-cat-tab guest-pill relative inline-flex min-h-11 shrink-0 items-center px-3 text-sm font-medium"
+                      className="guest-cat-tab guest-motion relative shrink-0"
                       onClick={() => setActiveUnit(index)}
                     >
                       {t.itemUnit.replace("{n}", String(index + 1))}
                       {!complete ? (
-                        <span className="ms-2 size-2 bg-[var(--guest-orange)]" aria-hidden />
+                        <span className="ms-2 size-2 rounded-full bg-[var(--guest-orange)]" aria-hidden />
                       ) : null}
                     </button>
                   );
@@ -361,18 +359,18 @@ export function ItemSheet({
               }}
               className={`grid gap-2 ${needsBand ? "guest-required-band" : ""} ${highlighted ? "outline outline-2 outline-[var(--guest-orange)] outline-offset-2" : ""}`}
             >
-              <legend className="text-sm font-medium">
+              <legend className="guest-title">
                 {optionName(group.name, locale)}
                 {group.is_required ? (
                   <span className="guest-pill ms-2 inline-flex bg-[var(--guest-orange)] px-2 py-0.5 text-xs font-semibold text-white">
                     {t.required}
                   </span>
                 ) : hint ? (
-                  <span className="ms-2 text-[var(--guest-quiet)]">{hint}</span>
+                  <span className="guest-body ms-2 font-normal">{hint}</span>
                 ) : null}
               </legend>
               {hint && !group.is_required ? (
-                <p className="text-xs text-[var(--guest-quiet)]">{hint}</p>
+                <p className="guest-body">{hint}</p>
               ) : null}
               <div className="grid grid-cols-2 gap-2">
                 {(group.options ?? []).map((option) => {
@@ -383,9 +381,9 @@ export function ItemSheet({
                     <label
                       key={option.id}
                       data-selected={chosen ? "true" : "false"}
-                      className={`guest-option-tile guest-card flex min-h-14 flex-col justify-center gap-1 border px-3 py-2 text-sm ${
-                        chosen ? "" : "border-[var(--guest-line)] bg-white"
-                      } ${soldOut ? "opacity-50" : ""}`}
+                      className={`guest-option-tile guest-motion flex flex-col justify-center gap-1 text-sm ${
+                        soldOut ? "opacity-50" : ""
+                      }`}
                     >
                       <input
                         type={group.max_choices === 1 ? "radio" : "checkbox"}
@@ -417,10 +415,10 @@ export function ItemSheet({
           );
         })}
 
-        <label className="grid gap-1 text-sm font-medium">
+        <label className="grid gap-1.5 guest-title">
           {t.notes}
           <textarea
-            className="min-h-20 guest-card px-3 py-2"
+            className="min-h-20 w-full rounded-[var(--guest-radius-card)] border border-[var(--guest-line)] bg-white px-3 py-2.5 text-base font-normal shadow-[var(--guest-shadow-soft)] outline-none focus:border-[var(--guest-orange)]"
             placeholder={t.notes}
             value={mode === "same" ? (notes[0] ?? "") : (notes[activeUnit] ?? "")}
             onChange={(event) => {
@@ -483,7 +481,7 @@ export function NicknameSheet({
         </button>
       }
     >
-      <p className="text-sm text-[var(--guest-quiet)]">{t.nicknameBody}</p>
+      <p className="guest-body">{t.nicknameBody}</p>
       <input
         className={`${guestField} mt-3`}
         autoComplete="nickname"

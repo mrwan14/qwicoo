@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Money } from "@/components/ops/money";
 import { guestStatus, PAYABLE_STATUSES } from "@/features/guest/copy";
+import { GuestReveal, GuestTrackSteps, OrderWaitingScene } from "@/features/guest/guest-motion";
 import { GuestSkeleton } from "@/features/guest/ordering-status";
 import { isGuestSessionGone, resumeIfSessionGone } from "@/features/guest/session";
 import { BillSheet, WaiterSheet } from "@/features/guest/service-sheets";
@@ -260,76 +261,90 @@ export function TrackScreen() {
     (activeOrder.pickup_number != null ? `#${activeOrder.pickup_number}` : null) ||
     (session.tableNumber ? `${t.table} ${session.tableNumber}` : null);
 
+  const waitingMode =
+    status === "READY" || status === "SERVED" || status === "DELIVERED"
+      ? "ready"
+      : status === "PREPARING" || status === "SUBMITTED"
+        ? "preparing"
+        : null;
+
   return (
-    <div className="grid gap-4">
-      <div>
-        <h1 className="guest-display text-3xl">{t.myTableOrders}</h1>
+    <GuestReveal className="grid gap-4">
+      <div data-guest-reveal>
+        <h1 className="guest-display guest-display-lg">{t.myTableOrders}</h1>
         {reference ? (
-          <p className="text-sm text-[var(--guest-quiet)]">
+          <p className="guest-body">
             {t.orderRef} · <span className="font-medium text-[var(--guest-ink)]">{reference}</span>
           </p>
         ) : null}
       </div>
 
-      <div
-        className="guest-card px-4 py-4"
-        style={{ borderInlineStartWidth: 6, borderInlineStartColor: statusTone(status) }}
-      >
-        {rejected ? (
-          <div className="grid gap-2">
-            <p className="guest-display text-2xl">{t.orderRejected}</p>
-            {activeOrder.cancellation_reason ? (
-              <p className="text-sm text-[var(--guest-quiet)]">{activeOrder.cancellation_reason}</p>
-            ) : null}
-          </div>
-        ) : finished ? (
-          <p className="guest-display text-2xl">{t.enjoyMeal}</p>
-        ) : payAtCounter ? (
-          <div className="grid gap-2">
+      {showKitchen && waitingMode ? (
+        <div data-guest-reveal>
+          <OrderWaitingScene
+            mode={waitingMode}
+            title={guestStatus[locale][status === "PAID" ? "DELIVERED" : status]}
+            body={waitingMode === "preparing" ? t.preparing : undefined}
+          />
+        </div>
+      ) : (
+        <div
+          data-guest-reveal
+          className="guest-card px-4 py-4"
+          style={{ borderInlineStartWidth: 6, borderInlineStartColor: statusTone(status) }}
+        >
+          {rejected ? (
+            <div className="grid gap-2">
+              <p className="guest-display text-2xl">{t.orderRejected}</p>
+              {activeOrder.cancellation_reason ? (
+                <p className="guest-body">{activeOrder.cancellation_reason}</p>
+              ) : null}
+            </div>
+          ) : finished ? (
+            <p className="guest-display text-2xl">{t.enjoyMeal}</p>
+          ) : payAtCounter ? (
+            <div className="grid gap-2">
+              <p className="guest-display text-2xl">
+                {t.amountDue}{" "}
+                <span className="guest-price" dir="ltr">
+                  <Money amount={activeOrder.total_amount} locale={locale} />
+                </span>
+              </p>
+              <p className="guest-body">{t.payAtCounter}</p>
+            </div>
+          ) : (
             <p className="guest-display text-2xl">
-              {t.amountDue}{" "}
-              <span className="guest-price" dir="ltr">
-                <Money amount={activeOrder.total_amount} locale={locale} />
-              </span>
+              {guestStatus[locale][status === "PAID" ? "DELIVERED" : status]}
             </p>
-            <p className="text-sm text-[var(--guest-quiet)]">{t.payAtCounter}</p>
-          </div>
-        ) : (
-          <p className="guest-display text-2xl">
-            {guestStatus[locale][status === "PAID" ? "DELIVERED" : status]}
+          )}
+          <p className="mt-2 text-sm font-medium" style={{ color: statusTone(status) }}>
+            {paid ? t.paid : t.amountDue}
           </p>
-        )}
-        <p className="mt-2 text-sm font-medium" style={{ color: statusTone(status) }}>
-          {paid ? t.paid : t.amountDue}
-        </p>
-      </div>
+        </div>
+      )}
 
-      {pending ? <PresenceNote /> : null}
+      {pending ? (
+        <div data-guest-reveal>
+          <PresenceNote />
+        </div>
+      ) : null}
 
       {showKitchen ? (
-        <ol className="grid gap-2">
-          {STEPS.map((step, index) => {
-            const reached = index <= current;
-            const tone = statusTone(step);
-            return (
-              <li key={step} className="flex items-center gap-3 guest-card px-3 py-3">
-                <span
-                  className="flex size-8 shrink-0 items-center justify-center text-sm font-medium text-white"
-                  style={{ background: reached ? tone : "var(--guest-line)" }}
-                >
-                  {index + 1}
-                </span>
-                <span className={reached ? "font-medium text-[var(--guest-ink)]" : "text-[var(--guest-quiet)]"}>
-                  {guestStatus[locale][step]}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
+        <div data-guest-reveal>
+          <GuestTrackSteps
+            steps={STEPS}
+            current={current}
+            labelFor={(step) => guestStatus[locale][step as OrderStatus]}
+            toneFor={(step) => statusTone(step as OrderStatus)}
+          />
+        </div>
       ) : null}
 
       {(activeOrder.items ?? []).length > 0 ? (
-        <ul className="grid gap-0 divide-y divide-[var(--guest-line)] border-y border-[var(--guest-line)]">
+        <ul
+          data-guest-reveal
+          className="grid gap-0 divide-y divide-[var(--guest-line)] border-y border-[var(--guest-line)]"
+        >
           {(activeOrder.items ?? []).map((item) => (
             <li key={item.id} className="flex items-start justify-between gap-3 py-3">
               <div className="min-w-0">
@@ -349,9 +364,13 @@ export function TrackScreen() {
         </ul>
       ) : null}
 
-      {activeOrder.customer_notes ? <LineDetails modifiers={[]} note={activeOrder.customer_notes} /> : null}
+      {activeOrder.customer_notes ? (
+        <div data-guest-reveal>
+          <LineDetails modifiers={[]} note={activeOrder.customer_notes} />
+        </div>
+      ) : null}
 
-      <p className="guest-display text-2xl">
+      <p data-guest-reveal className="guest-display text-2xl">
         {t.total}{" "}
         <span className="guest-price" dir="ltr">
           <Money amount={activeOrder.total_amount} locale={locale} />
@@ -359,33 +378,33 @@ export function TrackScreen() {
       </p>
 
       {handover.data ? (
-        <p className="guest-card p-4 text-lg">
+        <p data-guest-reveal className="guest-card p-4 text-lg">
           {t.handover}: {handover.data.token}
         </p>
       ) : null}
 
       {rejected || finished || payAtCounter ? null : paid ? (
-        <p role="status" className="guest-card px-4 py-3 text-sm font-medium">
+        <p role="status" data-guest-reveal className="guest-card px-4 py-3 text-sm font-medium">
           {t.paid}
         </p>
       ) : cashRequested || notice === t.paymentRequested ? (
-        <p role="status" className="guest-card px-4 py-3 text-sm">
+        <p role="status" data-guest-reveal className="guest-card px-4 py-3 text-sm">
           {t.paymentRequested}
         </p>
       ) : notice ? (
-        <p role="status" className="guest-card px-4 py-3 text-sm">
+        <p role="status" data-guest-reveal className="guest-card px-4 py-3 text-sm">
           {notice}
         </p>
       ) : null}
 
       {finished || rejected ? (
-        <Link href="/order" className={guestPrimaryButton}>
+        <Link data-guest-reveal href="/order" className={guestPrimaryButton}>
           {rejected ? t.startNewOrder : t.orderElse}
         </Link>
       ) : null}
 
       {rejected || finished || payAtCounter ? null : (
-        <div className="grid gap-2">
+        <div data-guest-reveal className="grid gap-2">
           {canPay ? (
             <>
               <button
@@ -423,13 +442,17 @@ export function TrackScreen() {
         </div>
       )}
 
-      {pending ? <p className="text-sm text-[var(--guest-quiet)]">{t.payAfterConfirm}</p> : null}
+      {pending ? (
+        <p data-guest-reveal className="guest-body">
+          {t.payAfterConfirm}
+        </p>
+      ) : null}
 
       {GUEST_CANCELLABLE.has(status) ? (
-        <div className="mt-2 border-t border-[var(--guest-line)] pt-4">
+        <div data-guest-reveal className="mt-2 border-t border-[var(--guest-line)] pt-4">
           <button
             type="button"
-            className="min-h-12 px-3 text-sm text-[var(--guest-quiet)] underline-offset-2 hover:underline"
+            className="guest-btn guest-btn-ghost guest-motion !text-[var(--guest-quiet)]"
             onClick={() => setConfirmCancel(true)}
           >
             {t.cancelOrder}
@@ -451,6 +474,6 @@ export function TrackScreen() {
       />
       <WaiterSheet open={waiterOpen} onOpenChange={setWaiterOpen} />
       <BillSheet open={billOpen} onOpenChange={setBillOpen} />
-    </div>
+    </GuestReveal>
   );
 }

@@ -14,6 +14,7 @@ import {
   type JoinAction,
 } from "@/features/guest/presence-join";
 import { sessionStillValid, toGuestSession } from "@/features/guest/session";
+import { GuestReveal } from "@/features/guest/guest-motion";
 import { guestField, guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
 import type { components } from "@/lib/api/schema";
 import { mergeGuestBranding } from "@/lib/guest/branding";
@@ -176,19 +177,19 @@ export function PresenceForm({ token }: { token: string }) {
 
   if (checkingReturn) {
     return (
-      <div className="mx-auto grid max-w-md gap-4 bg-card p-5 shadow-elev-1">
-        <p className="text-sm text-muted-foreground">{t.verifying}</p>
+      <div className="mx-auto grid w-full gap-4 py-6">
+        <p className="guest-body">{t.verifying}</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto grid max-w-md gap-4 bg-card p-5 shadow-elev-1">
-      <div>
-        <h1 className="font-display text-[length:var(--text-28)]">{t.presenceTitle}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{t.presenceBody}</p>
+    <GuestReveal className="mx-auto grid w-full gap-5 py-2">
+      <div data-guest-reveal>
+        <h1 className="guest-display guest-display-lg">{t.presenceTitle}</h1>
+        <p className="guest-body mt-2">{t.presenceBody}</p>
       </div>
-      <label className="grid gap-1 text-sm font-medium">
+      <label data-guest-reveal className="grid gap-1.5 guest-title">
         {t.yourName}
         <input
           className={guestField}
@@ -196,17 +197,18 @@ export function PresenceForm({ token }: { token: string }) {
           value={guestName}
           onChange={(event) => setGuestName(event.target.value)}
         />
-        <span className="font-normal text-muted-foreground">{t.nameHint}</span>
+        <span className="guest-body font-normal">{t.nameHint}</span>
       </label>
       <button
         type="button"
-        className="min-h-11 justify-self-start text-sm font-medium underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        data-guest-reveal
+        className="guest-body min-h-11 justify-self-start font-semibold text-[var(--guest-orange)] underline-offset-2 hover:underline"
         onClick={() => setShowPin((current) => !current)}
       >
         {showPin ? t.hidePin : t.havePin}
       </button>
       {showPin ? (
-        <label className="grid gap-1 text-sm font-medium">
+        <label data-guest-reveal className="grid gap-1.5 guest-title">
           {t.pin}
           <input
             inputMode="numeric"
@@ -215,13 +217,17 @@ export function PresenceForm({ token }: { token: string }) {
             value={pin}
             onChange={(event) => setPin(event.target.value)}
           />
-          <span className="font-normal text-muted-foreground">{t.pinHint}</span>
+          <span className="guest-body font-normal">{t.pinHint}</span>
         </label>
       ) : null}
       {error ? (
-        <div role="alert" className="grid gap-2 border border-destructive/40 p-3">
+        <div
+          role="alert"
+          data-guest-reveal
+          className="grid gap-3 rounded-[var(--guest-radius-card)] border border-destructive/40 bg-white p-3"
+        >
           <p className="text-sm text-destructive">{error}</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid gap-2">
             <button
               type="button"
               className={guestSecondaryButton}
@@ -241,7 +247,7 @@ export function PresenceForm({ token }: { token: string }) {
           </div>
         </div>
       ) : null}
-      <div className="grid gap-1">
+      <div data-guest-reveal className="grid gap-1.5">
         <button
           type="button"
           className={guestPrimaryButton}
@@ -250,9 +256,9 @@ export function PresenceForm({ token }: { token: string }) {
         >
           {pending && lastAction === "verify" ? t.verifying : t.useLocation}
         </button>
-        <p className="text-sm text-muted-foreground">{t.locationHint}</p>
+        <p className="guest-body">{t.locationHint}</p>
       </div>
-      <div className="grid gap-1">
+      <div data-guest-reveal className="grid gap-1.5">
         <button
           type="button"
           className={guestSecondaryButton}
@@ -261,8 +267,8 @@ export function PresenceForm({ token }: { token: string }) {
         >
           {pending && lastAction === "join" ? t.verifying : t.join}
         </button>
-        <p className="text-sm text-muted-foreground">{t.joinHint}</p>
+        <p className="guest-body">{t.joinHint}</p>
       </div>
-    </div>
+    </GuestReveal>
   );
 }

@@ -16,13 +16,13 @@ import {
 import { branchUnitPrice, quotedOrderTotal } from "@/features/guest/guest-prices";
 import { itemNeedsOptions } from "@/features/guest/item-options";
 import { ItemSheet, NicknameSheet } from "@/features/guest/item-sheet";
+import { GuestReveal } from "@/features/guest/guest-motion";
 import { GuestSkeleton, useOrderingPaused } from "@/features/guest/ordering-status";
 import { resumeIfSessionGone } from "@/features/guest/session";
 import {
   GuestQueryError,
   PresenceNote,
   guestField,
-  guestPrimaryButton,
   guestSecondaryButton,
   useAbsorbBranding,
   useGuestCopy,
@@ -278,11 +278,11 @@ export function MenuScreen() {
         </p>
       ) : null}
 
-      <div className="sticky top-0 z-20 -mx-4 bg-[var(--guest-canvas)]/95 px-4 pb-3 pt-1 backdrop-blur-sm">
-        <label className="relative block">
+      <div className="sticky top-0 z-20 -mx-4 border-b border-[var(--guest-line)] bg-[var(--guest-canvas)]/96 px-4 pb-2.5 pt-1 backdrop-blur-md">
+        <label className="guest-search">
           <span className="sr-only">{t.searchMenu}</span>
           <input
-            className={`${guestField} pe-20`}
+            className={guestField}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t.searchMenu}
@@ -291,14 +291,19 @@ export function MenuScreen() {
           {search ? (
             <button
               type="button"
-              className="absolute end-2 top-1/2 -translate-y-1/2 px-2 text-sm font-medium text-[var(--guest-quiet)]"
+              className="absolute end-2 top-1/2 z-10 -translate-y-1/2 px-2 text-xs font-semibold text-[var(--guest-quiet)]"
               onClick={() => setSearch("")}
             >
               {t.clearSearch}
             </button>
-          ) : null}
+          ) : (
+            <svg className="guest-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" />
+              <path d="M16.2 16.2 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          )}
         </label>
-        <div className="guest-cat-strip mt-3 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label={t.menu}>
+        <div className="guest-cat-strip mt-2.5 flex gap-2 overflow-x-auto pb-0.5" role="tablist" aria-label={t.menu}>
           {filteredCategories.map((category) => {
             const active = activeCategoryId === category.id;
             return (
@@ -309,7 +314,7 @@ export function MenuScreen() {
                 aria-selected={active}
                 ref={(node) => registerTab(category.id, node)}
                 data-active={active ? "true" : "false"}
-                className="guest-cat-tab guest-pill guest-motion inline-flex min-h-11 shrink-0 items-center px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]"
+                className="guest-cat-tab guest-motion shrink-0"
                 onClick={() => scrollToCategory(category.id)}
               >
                 {optionName(category.name, locale)}
@@ -321,20 +326,26 @@ export function MenuScreen() {
 
       {filteredCategories.length === 0 ? (
         <div className="grid gap-3 py-16 text-center">
-          <p className="guest-display text-2xl">{t.searchEmpty}</p>
+          <p className="guest-display guest-display-lg">{t.searchEmpty}</p>
           <button type="button" className={guestSecondaryButton} onClick={() => setSearch("")}>
             {t.clearSearch}
           </button>
         </div>
       ) : (
-        <div className="mt-4 grid gap-8">
+        <GuestReveal className="mt-2 grid gap-6" stagger={0.05} y={12}>
           {filteredCategories.map((category) => (
-            <section key={category.id} id={`cat-${category.id}`} className="scroll-mt-36 grid gap-3">
-              <div>
-                <h2 className="guest-display text-2xl text-[var(--guest-ink)]">{optionName(category.name, locale)}</h2>
-                
+            <section
+              key={category.id}
+              id={`cat-${category.id}`}
+              data-guest-reveal
+              className="scroll-mt-36 grid gap-0"
+            >
+              <div className="guest-section-head">
+                <h2 className="guest-display shrink-0 text-[var(--guest-ink)]">
+                  {optionName(category.name, locale)}
+                </h2>
               </div>
-              <ul className="grid gap-3">
+              <ul className="grid">
                 {(category.items ?? []).map((item) => {
                   const image = mediaUrl(item.image_url);
                   const title = optionName(item.name, locale);
@@ -349,95 +360,94 @@ export function MenuScreen() {
                   const qty = ownLine?.quantity ?? 0;
                   const soldOut = !item.is_available;
                   return (
-                    <li key={item.id} className={`guest-card flex gap-3 p-3 ${soldOut ? "opacity-55" : ""}`}>
-                      <div className="guest-thumb relative size-20 shrink-0 overflow-hidden bg-[var(--secondary)]">
+                    <li
+                      key={item.id}
+                      className="guest-menu-row"
+                      data-soldout={soldOut ? "true" : "false"}
+                    >
+                      <div className="guest-thumb relative size-[4.5rem] shrink-0">
                         {image ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={image} alt="" className="size-full object-cover" />
                         ) : (
-                          <div className="flex size-full items-center justify-center guest-display text-2xl text-[var(--guest-orange)]">
+                          <div className="flex size-full items-center justify-center text-xl font-extrabold text-[var(--guest-quiet)]">
                             {title.trim().charAt(0).toUpperCase()}
                           </div>
                         )}
                         {qty > 0 ? (
-                          <span className="guest-pill absolute -end-1 -top-1 flex size-6 items-center justify-center bg-[var(--guest-orange)] text-xs font-bold text-white shadow-[var(--guest-shadow-soft)]">
+                          <span className="guest-pill absolute -end-1.5 -top-1.5 flex size-5 items-center justify-center bg-[var(--guest-orange)] text-[10px] font-bold text-white">
                             {qty}
                           </span>
                         ) : null}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="font-medium text-[var(--guest-ink)]">{title}</p>
-                            {description && description !== title ? (
-                              <p className="mt-0.5 line-clamp-2 text-sm text-[var(--guest-quiet)]">{description}</p>
-                            ) : null}
-                            {needsOptions && !soldOut ? (
-                              <p className="mt-1 text-sm font-medium text-[var(--guest-orange)]">* {t.required}</p>
-                            ) : null}
-                          </div>
-                          <div className="shrink-0 text-end">
-                            {soldOut ? (
-                              <span className="guest-pill inline-flex bg-[var(--status-soldout-bg)] px-2 py-0.5 text-xs font-medium text-[var(--status-soldout)]">{t.unavailable}</span>
-                            ) : branchPrices.get(item.id) ? (
-                              <span className="guest-price text-base" dir="ltr">
-                                <Money amount={branchPrices.get(item.id) ?? ""} currency={currency} locale={locale} />
-                              </span>
-                            ) : (
-                              <span className="text-sm text-[var(--guest-quiet)]">{t.validate}</span>
-                            )}
-                          </div>
-                        </div>
+                      <div className="min-w-0 flex-1 pe-1">
+                        <p className="guest-title">{title}</p>
+                        {description && description !== title ? (
+                          <p className="guest-body mt-0.5 line-clamp-2">{description}</p>
+                        ) : null}
+                      </div>
+                      <div className="flex min-w-[4.75rem] shrink-0 flex-col items-end gap-1.5">
+                        {soldOut ? (
+                          <span className="guest-pill inline-flex bg-[var(--status-soldout-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--status-soldout)]">
+                            {t.unavailable}
+                          </span>
+                        ) : branchPrices.get(item.id) ? (
+                          <span className="guest-price text-end leading-none" dir="ltr">
+                            <Money amount={branchPrices.get(item.id) ?? ""} currency={currency} locale={locale} />
+                          </span>
+                        ) : (
+                          <span className="guest-body text-end">{t.validate}</span>
+                        )}
+                        {needsOptions && !soldOut ? (
+                          <p className="max-w-[5.5rem] text-end text-[10px] font-semibold leading-tight text-[var(--guest-orange)]">
+                            * {t.requiredOptions}
+                          </p>
+                        ) : null}
                         {!soldOut ? (
-                          <div className="mt-2 flex justify-end">
-                            {needsOptions ? (
+                          needsOptions ? (
+                            <button
+                              type="button"
+                              className="guest-btn guest-btn-icon guest-motion"
+                              aria-label={t.chooseOptions}
+                              disabled={paused}
+                              ref={(node) => {
+                                optionsTriggerRef.current = node;
+                              }}
+                              onClick={() => requireNameThen({ mode: "options", itemId: item.id })}
+                            >
+                              +
+                            </button>
+                          ) : qty > 0 && ownLine ? (
+                            <div className="guest-stepper">
                               <button
                                 type="button"
-                                className="guest-pill min-h-11 bg-[var(--secondary)] px-4 text-sm font-semibold text-[var(--guest-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]"
-                                disabled={paused}
-                                ref={(node) => {
-                                  optionsTriggerRef.current = node;
-                                }}
-                                onClick={() => requireNameThen({ mode: "options", itemId: item.id })}
+                                aria-label={t.fewer}
+                                disabled={adjustQty.isPending || paused}
+                                onClick={() => adjustQty.mutate({ line: ownLine, next: qty - 1 })}
                               >
-                                {t.chooseOptions}
+                                −
                               </button>
-                            ) : qty > 0 && ownLine ? (
-                              <div className="guest-pill inline-flex items-stretch bg-[var(--secondary)]">
-                                <button
-                                  type="button"
-                                  className="inline-flex size-11 items-center justify-center text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]"
-                                  aria-label={t.fewer}
-                                  disabled={adjustQty.isPending || paused}
-                                  onClick={() => adjustQty.mutate({ line: ownLine, next: qty - 1 })}
-                                >
-                                  −
-                                </button>
-                                <span className="inline-flex min-w-10 items-center justify-center tabular-nums text-sm font-medium">
-                                  {qty}
-                                </span>
-                                <button
-                                  type="button"
-                                  className="inline-flex size-11 items-center justify-center text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]"
-                                  aria-label={t.more}
-                                  disabled={adjustQty.isPending || paused || quickAdd.isPending}
-                                  onClick={() => adjustQty.mutate({ line: ownLine, next: qty + 1 })}
-                                >
-                                  +
-                                </button>
-                              </div>
-                            ) : (
+                              <span>{qty}</span>
                               <button
                                 type="button"
-                                className="guest-pill inline-flex size-11 items-center justify-center bg-[var(--guest-orange)] text-xl font-bold text-white shadow-[var(--guest-shadow-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]"
-                                aria-label={t.add}
-                                disabled={paused || quickAdd.isPending}
-                                onClick={() => requireNameThen({ mode: "quick", itemId: item.id })}
+                                aria-label={t.more}
+                                disabled={adjustQty.isPending || paused || quickAdd.isPending}
+                                onClick={() => adjustQty.mutate({ line: ownLine, next: qty + 1 })}
                               >
                                 +
                               </button>
-                            )}
-                          </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="guest-btn guest-btn-icon guest-motion"
+                              aria-label={t.add}
+                              disabled={paused || quickAdd.isPending}
+                              onClick={() => requireNameThen({ mode: "quick", itemId: item.id })}
+                            >
+                              +
+                            </button>
+                          )
                         ) : null}
                       </div>
                     </li>
@@ -446,7 +456,7 @@ export function MenuScreen() {
               </ul>
             </section>
           ))}
-        </div>
+        </GuestReveal>
       )}
 
       <ItemSheet
@@ -480,17 +490,17 @@ export function MenuScreen() {
             flash ? "guest-cart-bar-flash" : ""
           }`}
         >
-          <div className="mx-auto max-w-md">
+          <div className="guest-phone">
             <Link
               href="/order/checkout"
-              className={`${guestPrimaryButton} gap-3 shadow-[var(--guest-shadow)] ring-1 ring-black/5`}
+              className="guest-cart-bar guest-btn guest-motion gap-3 px-4 text-white"
             >
-              <span className="guest-pill inline-flex size-8 items-center justify-center bg-white text-sm font-bold text-[var(--guest-orange)]">
+              <span className="guest-pill inline-flex size-7 items-center justify-center bg-white text-xs font-extrabold text-[var(--guest-orange)]">
                 {cartCount}
               </span>
-              <span className="flex-1 text-start">{t.viewTableOrder}</span>
+              <span className="flex-1 text-start text-sm font-bold">{t.viewTableOrder}</span>
               {cartQuote.data ? (
-                <span className="guest-price text-base text-white" dir="ltr">
+                <span className="text-sm font-extrabold tabular-nums" dir="ltr">
                   <Money amount={quotedOrderTotal(cartQuote.data)} currency={currency} locale={locale} />
                 </span>
               ) : null}

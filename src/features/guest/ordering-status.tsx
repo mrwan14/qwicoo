@@ -49,9 +49,9 @@ export function OrderingPausedNotice({ onRetry, retryLabel }: { onRetry?: () => 
         <PauseCircle aria-hidden className="size-5 shrink-0 text-[var(--guest-amber)]" />
         {t.orderingPaused}
       </p>
-      <p className="text-sm leading-6 text-[var(--guest-quiet)]">{t.orderingPausedBody}</p>
+      <p className="guest-body leading-6">{t.orderingPausedBody}</p>
       {onRetry ? (
-        <button type="button" className="min-h-11 justify-self-start text-sm font-medium underline underline-offset-4" onClick={onRetry}>
+        <button type="button" className="guest-btn guest-btn-ghost guest-motion justify-self-start" onClick={onRetry}>
           {retryLabel ?? t.retry}
         </button>
       ) : null}
@@ -59,13 +59,4 @@ export function OrderingPausedNotice({ onRetry, retryLabel }: { onRetry?: () => 
   );
 }
 
-export function GuestSkeleton({ label }: { label?: string }) {
-  return (
-    <div role="status" className="grid gap-3" aria-live="polite">
-      <div className="h-8 w-40 animate-pulse bg-[var(--guest-line)]" />
-      <div className="h-24 w-full animate-pulse bg-[var(--guest-line)]" />
-      <div className="h-14 w-full animate-pulse bg-[var(--guest-line)]" />
-      {label ? <span className="sr-only">{label}</span> : null}
-    </div>
-  );
-}
+export { GuestMotionSkeleton as GuestSkeleton } from "@/features/guest/guest-motion";

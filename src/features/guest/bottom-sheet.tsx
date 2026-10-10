@@ -11,24 +11,24 @@ import {
 } from "react";
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { guestEase, guestPrefersReducedMotion, gsap, useGSAP } from "@/features/guest/motion";
 import { useGuestCopy } from "@/features/guest/shell";
 
 type BottomSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  children: ReactNode;
   /** Visually hide the title (still announced). */
   titleHidden?: boolean;
+  children: ReactNode;
   footer?: ReactNode;
   /** Restore focus to this element when the sheet closes. */
   returnFocusRef?: React.RefObject<HTMLElement | null>;
 };
 
 /**
- * Soft guest bottom sheet: rounded top, drag handle, blurred dimmed backdrop
- * (via guest.css), swipe / Escape / close / backdrop dismiss, focus trap via
- * Base UI Sheet. Full height on small phones, ~85% otherwise.
+ * Mobile guest bottom sheet — sticky CTA footer, drag handle, blurred dim,
+ * swipe / Escape / backdrop / close. Focus trapped by Base UI Sheet.
  */
 export function BottomSheet({
   open,
@@ -41,11 +41,24 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const { t } = useGuestCopy();
   const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
   const wasOpen = useRef(false);
   const [dragY, setDragY] = useState(0);
   const dragStart = useRef<number | null>(null);
   const reducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  useGSAP(
+    () => {
+      if (!open || guestPrefersReducedMotion()) return;
+      gsap.fromTo(
+        panelRef.current,
+        { y: 28, opacity: 0.85 },
+        { y: 0, opacity: 1, duration: 0.38, ease: guestEase },
+      );
+    },
+    { dependencies: [open] },
+  );
 
   useEffect(() => {
     if (open) {
@@ -56,6 +69,7 @@ export function BottomSheet({
       returnFocusRef.current.focus();
     }
     wasOpen.current = false;
+    setDragY(0);
   }, [open, returnFocusRef]);
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
@@ -67,13 +81,12 @@ export function BottomSheet({
 
   function onPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
     if (dragStart.current == null) return;
-    const delta = Math.max(0, event.clientY - dragStart.current);
-    setDragY(delta);
+    setDragY(Math.max(0, event.clientY - dragStart.current));
   }
 
   function onPointerUp() {
     if (dragStart.current == null) return;
-    const shouldClose = dragY > 96;
+    const shouldClose = dragY > 80;
     dragStart.current = null;
     setDragY(0);
     if (shouldClose) close();
@@ -85,7 +98,7 @@ export function BottomSheet({
         side="bottom"
         showCloseButton={false}
         aria-labelledby={titleId}
-        className="guest-theme mx-auto flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col gap-0 overflow-hidden rounded-t-[var(--guest-radius-sheet)] border-0 bg-[var(--guest-canvas)] p-0 shadow-[var(--guest-shadow)] sm:h-auto sm:max-h-[85dvh]"
+        className="guest-theme guest-sheet guest-phone mx-auto flex h-[min(92dvh,100%)] max-h-[92dvh] w-full flex-col gap-0 overflow-hidden border-0 p-0 data-[side=bottom]:inset-x-0"
         style={
           dragY
             ? {
@@ -95,37 +108,37 @@ export function BottomSheet({
             : undefined
         }
       >
-        <div
-          className="flex shrink-0 cursor-grab touch-none flex-col items-center px-4 pb-2 pt-3 active:cursor-grabbing"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-        >
-          <div className="mb-3 h-1.5 w-12 rounded-full bg-[var(--guest-line)]" aria-hidden />
-          <div className="flex w-full items-start justify-between gap-3">
-            <SheetTitle
-              id={titleId}
-              className={titleHidden ? "sr-only" : "guest-display text-xl text-[var(--guest-ink)]"}
-            >
-              {title}
-            </SheetTitle>
-            <button
-              type="button"
-              className="guest-pill inline-flex size-11 shrink-0 items-center justify-center bg-white text-lg text-[var(--guest-ink)] shadow-[var(--guest-shadow-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]"
-              aria-label={t.close}
-              onClick={close}
-            >
-              ×
-            </button>
+        <div ref={panelRef} className="flex min-h-0 flex-1 flex-col">
+          <div
+            className="flex shrink-0 cursor-grab touch-none flex-col items-center px-4 pb-2 pt-2.5 active:cursor-grabbing"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          >
+            <div className="guest-sheet-handle mb-3" aria-hidden />
+            <div className="flex w-full items-center justify-between gap-3">
+              <SheetTitle
+                id={titleId}
+                className={titleHidden ? "sr-only" : "guest-display min-w-0 flex-1 truncate text-[var(--guest-ink)]"}
+              >
+                {title}
+              </SheetTitle>
+              <button
+                type="button"
+                className="guest-btn guest-btn-secondary guest-motion !h-11 !w-11 !min-h-11 shrink-0 !p-0 text-xl leading-none"
+                aria-label={t.close}
+                onClick={close}
+              >
+                ×
+              </button>
+            </div>
           </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3 [-webkit-overflow-scrolling:touch]">
+            {children}
+          </div>
+          {footer ? <div className="guest-sheet-footer shrink-0">{footer}</div> : null}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{children}</div>
-        {footer ? (
-          <div className="shrink-0 border-t border-[var(--guest-line)] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            {footer}
-          </div>
-        ) : null}
       </SheetContent>
     </Sheet>
   );

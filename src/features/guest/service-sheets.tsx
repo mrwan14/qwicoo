@@ -87,9 +87,7 @@ export function WaiterSheet({
             type="button"
             aria-pressed={reason === item}
             data-selected={reason === item ? "true" : "false"}
-            className={`guest-option-tile min-h-14 border px-3 text-sm font-medium ${
-              reason === item ? "" : "border-[var(--guest-line)] bg-white"
-            }`}
+            className="guest-option-tile guest-motion text-sm font-semibold"
             onClick={() => setReason(item)}
             disabled={sent}
           >
@@ -97,10 +95,10 @@ export function WaiterSheet({
           </button>
         ))}
       </div>
-      <label className="mt-4 grid gap-1 text-sm font-medium">
+      <label className="mt-4 grid gap-1.5 guest-title">
         {t.serviceNote}
         <textarea
-          className="min-h-20 guest-card px-3 py-2"
+          className="min-h-20 w-full rounded-[var(--guest-radius-card)] border border-[var(--guest-line)] bg-white px-3 py-2.5 text-base font-normal shadow-[var(--guest-shadow-soft)] outline-none focus:border-[var(--guest-orange)]"
           value={note}
           disabled={sent}
           onChange={(event) => setNote(event.target.value)}
@@ -182,9 +180,7 @@ export function BillSheet({
         <button
           type="button"
           data-selected={method === "cash" ? "true" : "false"}
-          className={`guest-option-tile min-h-14 border px-3 text-sm font-medium ${
-            method === "cash" ? "" : "border-[var(--guest-line)] bg-white"
-          }`}
+          className="guest-option-tile guest-motion text-sm font-semibold"
           onClick={() => setMethod("cash")}
           disabled={sent}
         >
@@ -193,9 +189,7 @@ export function BillSheet({
         <button
           type="button"
           data-selected={method === "card" ? "true" : "false"}
-          className={`guest-option-tile min-h-14 border px-3 text-sm font-medium ${
-            method === "card" ? "" : "border-[var(--guest-line)] bg-white"
-          }`}
+          className="guest-option-tile guest-motion text-sm font-semibold"
           onClick={() => setMethod("card")}
           disabled={sent}
         >

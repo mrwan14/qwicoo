@@ -16,12 +16,11 @@ import { useGuest } from "@/stores/guest";
 
 import "./guest.css";
 
-export const guestField =
-  "guest-pill h-12 w-full border border-[var(--guest-line)] bg-white px-4 text-base text-[var(--guest-ink)] shadow-[var(--guest-shadow-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]";
-export const guestPrimaryButton =
-  "guest-pill guest-motion inline-flex min-h-14 w-full items-center justify-center bg-[var(--guest-orange)] px-5 text-base font-semibold text-white shadow-[var(--guest-shadow-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)] disabled:opacity-50";
-export const guestSecondaryButton =
-  "guest-pill guest-motion inline-flex min-h-14 w-full items-center justify-center border border-[var(--guest-line)] bg-white px-5 text-base font-medium text-[var(--guest-ink)] shadow-[var(--guest-shadow-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)] disabled:opacity-50";
+export const guestField = "guest-field guest-motion";
+export const guestPrimaryButton = "guest-btn guest-btn-primary guest-motion";
+export const guestSecondaryButton = "guest-btn guest-btn-secondary guest-motion";
+export const guestGhostButton = "guest-btn guest-btn-ghost guest-motion";
+export const guestIconButton = "guest-btn guest-btn-icon guest-motion";
 
 export function useGuestCopy() {
   const locale = useGuest((state) => state.locale);
@@ -95,18 +94,18 @@ function BrandHeader() {
 
   const logo = branding?.logoUrl && !logoFailed ? mediaUrl(branding.logoUrl) : null;
   return (
-    <span className="inline-flex min-w-0 items-center gap-3">
-      <span className="guest-thumb flex size-11 shrink-0 items-center justify-center overflow-hidden bg-white text-sm font-semibold text-[var(--guest-ink)] shadow-[var(--guest-shadow-soft)]">
+    <span className="inline-flex min-w-0 items-center gap-2.5">
+      <span className="guest-thumb flex size-9 shrink-0 items-center justify-center overflow-hidden bg-[var(--guest-muted)] text-xs font-bold text-[var(--guest-ink)]">
         {logo ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt={name} className="size-full object-contain p-1" onError={() => setLogoFailed(true)} />
+          <img src={logo} alt={name} className="size-full object-contain p-0.5" onError={() => setLogoFailed(true)} />
         ) : (
           <span aria-hidden>{initials(name)}</span>
         )}
       </span>
       <span className="min-w-0">
-        <span className="guest-display block truncate text-xl text-[var(--guest-ink)]">{name}</span>
-        <span className="block truncate text-sm text-[var(--guest-quiet)]">
+        <span className="block truncate text-[15px] font-extrabold leading-tight text-[var(--guest-ink)]">{name}</span>
+        <span className="block truncate text-[11px] font-medium text-[var(--guest-quiet)]">
           {[branchName && branding?.name ? branchName : null, placeLabel].filter(Boolean).join(" · ")}
         </span>
       </span>
@@ -268,35 +267,37 @@ export function GuestShell({
 
   return (
     <div dir={dir} lang={locale} style={style} className="guest-theme min-h-dvh overflow-x-hidden">
-      <header className="mx-auto flex w-full max-w-md items-start justify-between gap-3 px-4 py-4">
-        <div className="flex min-w-0 flex-1 items-start gap-2">
-          {!neutral ? (
-            <button
-              type="button"
-              className="guest-pill guest-motion inline-flex size-11 shrink-0 items-center justify-center bg-white text-[var(--guest-ink)] shadow-[var(--guest-shadow-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]"
-              aria-label={t.openMenu}
-              onClick={() => setDrawerOpen(true)}
-            >
-              <span aria-hidden className="flex flex-col gap-1.5">
-                <span className="block h-0.5 w-5 rounded-full bg-current" />
-                <span className="block h-0.5 w-5 rounded-full bg-current" />
-                <span className="block h-0.5 w-5 rounded-full bg-current" />
-              </span>
-            </button>
-          ) : null}
-          {neutral ? <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-2xl" /> : <BrandHeader />}
+      <div className="guest-phone">
+        <header className="flex items-center justify-between gap-2.5 px-4 pb-1.5 pt-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            {!neutral ? (
+              <button
+                type="button"
+                className="guest-btn guest-motion !h-10 !w-10 !min-h-10 shrink-0 !rounded-[10px] !border-0 !bg-[var(--guest-orange-soft)] !p-0 !text-[var(--guest-orange)] !shadow-none"
+                aria-label={t.openMenu}
+                onClick={() => setDrawerOpen(true)}
+              >
+                <span aria-hidden className="flex flex-col gap-[5px]">
+                  <span className="block h-[2px] w-4 rounded-full bg-current" />
+                  <span className="block h-[2px] w-4 rounded-full bg-current" />
+                  <span className="block h-[2px] w-4 rounded-full bg-current" />
+                </span>
+              </button>
+            ) : null}
+            {neutral ? <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-xl" /> : <BrandHeader />}
+          </div>
+          <button
+            type="button"
+            className="guest-btn guest-motion !h-9 !min-h-9 !w-auto shrink-0 !rounded-full !border-0 !bg-[var(--guest-muted)] !px-3.5 !text-xs !font-bold !shadow-none"
+            onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
+          >
+            {t.language}
+          </button>
+        </header>
+        <div className="grid gap-3 px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1">
+          {paused ? <OrderingPausedNotice /> : null}
+          <div>{resume ? <GuestResume>{children}</GuestResume> : children}</div>
         </div>
-        <button
-          type="button"
-          className="guest-pill min-h-11 shrink-0 bg-white px-4 text-sm font-medium shadow-[var(--guest-shadow-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--guest-orange)]"
-          onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
-        >
-          {t.language}
-        </button>
-      </header>
-      <div className="mx-auto grid w-full max-w-md gap-4 px-4 py-4 pb-32">
-        {paused ? <OrderingPausedNotice /> : null}
-        <div>{resume ? <GuestResume>{children}</GuestResume> : children}</div>
       </div>
       {!neutral ? (
         <>
@@ -310,11 +311,14 @@ export function GuestShell({
             <SheetContent
               side="bottom"
               showCloseButton={false}
-              className="guest-theme mx-auto max-h-[85dvh] w-full max-w-md rounded-t-[var(--guest-radius-sheet)] border-0 bg-[var(--guest-canvas)] p-0 shadow-[var(--guest-shadow)]"
+              className="guest-theme guest-sheet guest-phone mx-auto max-h-[90dvh] w-full border-0 p-0"
             >
+              <div className="flex justify-center pt-3">
+                <div className="guest-sheet-handle" aria-hidden />
+              </div>
               <SheetTitle className="sr-only">{t.about}</SheetTitle>
               <GuestAboutPanel placeLabel={placeLabel} />
-              <div className="p-4">
+              <div className="guest-sheet-footer">
                 <button type="button" className={guestSecondaryButton} onClick={() => setAboutOpen(false)}>
                   {t.close}
                 </button>

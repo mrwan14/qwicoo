@@ -17,6 +17,7 @@ import {
 } from "@/features/guest/cart-client";
 import { quotedLineSubtotal } from "@/features/guest/guest-prices";
 import { GuestQuoteSummary } from "@/features/guest/guest-quote-summary";
+import { OrderWaitingScene } from "@/features/guest/guest-motion";
 import { GuestSkeleton, useOrderingPaused } from "@/features/guest/ordering-status";
 import { resumeIfSessionGone } from "@/features/guest/session";
 import {
@@ -159,32 +160,22 @@ export function CheckoutScreen() {
 
   if (sent) {
     return (
-      <div className="grid gap-6 py-8 text-center">
-        <div
-          className="mx-auto flex size-28 items-center justify-center guest-card"
-          aria-hidden
-        >
-          <span className="guest-display text-5xl text-[var(--guest-sage)]">✓</span>
-        </div>
-        <div className="grid gap-2">
-          <h1 className="guest-display text-3xl text-[var(--guest-ink)]">{t.sentToKitchen}</h1>
-          <p className="text-sm text-[var(--guest-quiet)]">{t.orderSent}</p>
-        </div>
-        <Link href="/order" className={guestPrimaryButton}>
-          {t.addMore}
-        </Link>
-        <Link href="/order/track" className={guestSecondaryButton}>
+      <OrderWaitingScene mode="sent" title={t.sentToKitchen} body={t.orderSent}>
+        <Link href="/order/track" className={guestPrimaryButton}>
           {t.myTableOrders}
         </Link>
-      </div>
+        <Link href="/order" className={guestSecondaryButton}>
+          {t.addMore}
+        </Link>
+      </OrderWaitingScene>
     );
   }
 
   if (confirming && lines.length > 0) {
     return (
       <div className="grid gap-4 pb-28">
-        <h1 className="guest-display text-3xl">{t.confirmOrder}</h1>
-        <p className="text-sm text-[var(--guest-quiet)]">{t.confirmOrderHint}</p>
+        <h1 className="guest-display guest-display-lg">{t.confirmOrder}</h1>
+        <p className="guest-body">{t.confirmOrderHint}</p>
         {remoteNote ? (
           <p role="status" className="guest-card px-4 py-3 text-sm">
             {t.cartUpdated}
@@ -227,8 +218,8 @@ export function CheckoutScreen() {
             currency={currency}
           />
         ) : null}
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--guest-line)] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="mx-auto grid max-w-md gap-2">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--guest-line)] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-6px_20px_rgb(37_37_37/6%)]">
+          <div className="guest-phone grid gap-2">
             <button
               type="button"
               className={guestPrimaryButton}
@@ -331,22 +322,18 @@ export function CheckoutScreen() {
                     </div>
                     {mine ? (
                       <div className="flex items-center justify-between gap-3">
-                        <div className="inline-flex items-stretch guest-card">
+                        <div className="guest-stepper">
                           <button
                             type="button"
-                            className="inline-flex size-11 items-center justify-center text-lg"
                             aria-label={t.fewer}
                             disabled={adjust.isPending || paused}
                             onClick={() => adjust.mutate({ line, next: line.quantity - 1 })}
                           >
                             −
                           </button>
-                          <span className="inline-flex min-w-10 items-center justify-center tabular-nums text-sm">
-                            {line.quantity}
-                          </span>
+                          <span>{line.quantity}</span>
                           <button
                             type="button"
-                            className="inline-flex size-11 items-center justify-center text-lg"
                             aria-label={t.more}
                             disabled={adjust.isPending || paused}
                             onClick={() => adjust.mutate({ line, next: line.quantity + 1 })}
@@ -356,7 +343,7 @@ export function CheckoutScreen() {
                         </div>
                         <button
                           type="button"
-                          className="min-h-11 guest-card px-3 text-sm font-medium"
+                          className="guest-btn guest-btn-ghost guest-motion"
                           disabled={remove.isPending}
                           onClick={() => remove.mutate(line.id)}
                         >
@@ -378,11 +365,11 @@ export function CheckoutScreen() {
         ))}
       </ul>
 
-      <label className="grid gap-2 text-sm font-medium">
+      <label className="grid gap-2 guest-title">
         {t.promo}
         <span className="flex gap-2">
           <input
-            className={guestField}
+            className={`${guestField} min-w-0 flex-1`}
             value={promoDraft}
             maxLength={32}
             autoComplete="off"
@@ -397,13 +384,13 @@ export function CheckoutScreen() {
           />
           <button
             type="button"
-            className="inline-flex min-h-12 shrink-0 items-center justify-center bg-[var(--guest-orange)] px-4 text-sm font-medium text-white"
+            className="guest-btn guest-btn-primary guest-motion !w-auto shrink-0 !px-4"
             onClick={() => setPromoCode(promoDraft.trim() || null)}
           >
             {t.applyPromo}
           </button>
         </span>
-        <span className="font-normal text-[var(--guest-quiet)]">{t.promoHint}</span>
+        <span className="guest-body font-normal">{t.promoHint}</span>
       </label>
 
       {quote.isError ? (
@@ -430,8 +417,8 @@ export function CheckoutScreen() {
         <p className="text-sm">{t.validate}</p>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--guest-line)] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto grid max-w-md gap-2">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--guest-line)] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-6px_20px_rgb(37_37_37/6%)]">
+        <div className="guest-phone grid gap-2">
           <button
             type="button"
             className={guestPrimaryButton}

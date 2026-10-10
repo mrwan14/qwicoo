@@ -2584,6 +2584,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff Order History
+         * @description Branch order history for cashiers and admins. Defaults to today in Africa/Cairo. Filters: date range, status, source (POS/QR/drive-thru/pickup), payment method, paid/unpaid, and search. Cursor pagination with filter totals.
+         */
+        get: operations["list_staff_orders_api_v1_orders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{order_id}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff Order Receipt
+         * @description Receipt payload for reprint: branch/brand identity, cashier, table, tax/service/discount lines, payments. Audited as RECEIPT_REPRINT.
+         */
+        get: operations["get_staff_order_receipt_api_v1_orders__order_id__receipt_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orders/{order_id}": {
         parameters: {
             query?: never;
@@ -3897,6 +3937,11 @@ export interface components {
              * @description Diner's display name
              */
             guest_name: string;
+            /**
+             * Nickname
+             * @description Optional diner nickname
+             */
+            nickname?: string | null;
             /**
              * Item Id
              * Format: uuid
@@ -5346,6 +5391,10 @@ export interface components {
             id: string;
             /** Guest Name */
             guest_name: string;
+            /** Guest Id */
+            guest_id?: string | null;
+            /** Nickname */
+            nickname?: string | null;
             /**
              * Item Id
              * Format: uuid
@@ -5376,6 +5425,11 @@ export interface components {
              * Format: uuid
              */
             session_id: string;
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
             /** Items */
             items: components["schemas"]["CartItemResponse"][];
             /** Total Items */
@@ -12540,6 +12594,11 @@ export interface components {
              */
             client_longitude?: number | null;
             /**
+             * Accuracy M
+             * @description Optional GPS accuracy radius in meters from the device
+             */
+            accuracy_m?: number | null;
+            /**
              * Access Pin
              * @description Optional 6-digit rotating branch access PIN to bypass geofence
              */
@@ -12556,6 +12615,12 @@ export interface components {
              * @description Unique dining session identifier
              */
             session_id: string;
+            /**
+             * Guest Id
+             * Format: uuid
+             * @description Per-diner identifier bound to this token
+             */
+            guest_id: string;
             /**
              * Session Token
              * @description Cryptographically signed Guest Session JWT
@@ -12614,7 +12679,7 @@ export interface components {
             table_status: components["schemas"]["TableStatus"];
             /**
              * Is Presence Verified
-             * @description True if client presence was verified within branch geofence boundary
+             * @description True if this guest proved presence (geofence or PIN)
              */
             is_presence_verified: boolean;
             /**
@@ -24421,6 +24486,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderResponse"];
+                };
+            };
+        };
+    };
+    list_staff_orders_api_v1_orders_get: {
+        parameters: {
+            query?: {
+                date_from?: string | null;
+                date_to?: string | null;
+                status_filter?: components["schemas"]["OrderStatus"] | null;
+                source?: string | null;
+                payment_method?: string | null;
+                is_paid?: boolean | null;
+                search?: string | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_staff_order_receipt_api_v1_orders__order_id__receipt_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -8,11 +8,25 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { LocaleText } from "@/components/ops/locale-text";
 import { PageHeader } from "@/components/ops/page-header";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  canAddCategory,
+  canAddItem,
+  canChooseItemScope,
+  canDeleteCategory,
+  canDeleteItem,
+  canEditItemStructure,
+  canEditModifiers,
+  canSeeStationsTab,
+  canToggleAvailability,
+  type MenuItemFlags,
+} from "@/features/staff/menu-permissions";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import type { UserRole } from "@/lib/auth/roles";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -29,8 +43,39 @@ const quietButton = "inline-flex min-h-11 items-center rounded-xl border px-4 te
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
 const STATIONS = ["HOT_KITCHEN", "COLD_KITCHEN", "BEVERAGE", "DESSERT"] as const;
 
-type Item = components["schemas"]["MenuItemResponse"];
+type Item = components["schemas"]["MenuItemResponse"] & {
+  scope?: components["schemas"]["MenuItemScope"] | null;
+  brand_id?: string | null;
+};
 type MenuText = (typeof menuCopy)["en"];
+
+const BRAND_CATALOG_KEY = "qwicoo-brand-catalog-items";
+
+function readKnownBrandCatalogIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.sessionStorage.getItem(BRAND_CATALOG_KEY);
+    const list = raw ? (JSON.parse(raw) as unknown) : [];
+    return new Set(Array.isArray(list) ? list.filter((id): id is string => typeof id === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function rememberBrandCatalogId(id: string) {
+  if (typeof window === "undefined") return;
+  const next = readKnownBrandCatalogIds();
+  next.add(id);
+  window.sessionStorage.setItem(BRAND_CATALOG_KEY, JSON.stringify([...next]));
+}
+
+function flagsForItem(item: Item, knownBrandIds: Set<string>): MenuItemFlags {
+  const brandCatalog =
+    knownBrandIds.has(item.id) ||
+    (typeof item.brand_id === "string" && item.brand_id.length > 0) ||
+    item.scope === "ALL_BRANCHES";
+  return { scope: item.scope, brandCatalog };
+}
 
 function names(en: string, ar: string) {
   return { en, ar };
@@ -63,6 +108,8 @@ function stationCode(name: string): string | null {
 export function MenuAdmin() {
   const t = useStaffSection(menuCopy);
   const { locale } = useLocale();
+  const me = useStaffSession();
+  const role = me?.role;
   const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
   const [en, setEn] = useState("");
@@ -72,6 +119,7 @@ export function MenuAdmin() {
   const [price, setPrice] = useState("10.00");
   const [itemEn, setItemEn] = useState("");
   const [itemAr, setItemAr] = useState("");
+  const [itemScope, setItemScope] = useState<"ALL_BRANCHES" | "THIS_BRANCH">("THIS_BRANCH");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [tab, setTab] = useState<"items" | "stations">("items");
@@ -80,6 +128,10 @@ export function MenuAdmin() {
   const [itemQuery, setItemQuery] = useState("");
   const [categoryImage, setCategoryImage] = useState<File | null>(null);
   const [itemImage, setItemImage] = useState<File | null>(null);
+  const showStations = canSeeStationsTab(role);
+  const showAddCategory = canAddCategory(role);
+  const showAddItem = canAddItem(role);
+  const chooseScope = canChooseItemScope(role);
 
   const menu = useQuery({
     queryKey: ["menu-tree", branchId],
@@ -93,13 +145,19 @@ export function MenuAdmin() {
 
   const stations = useQuery({
     queryKey: ["stations", branchId],
-    enabled: Boolean(branchId),
+    enabled: Boolean(branchId) && showStations,
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/staff/kitchen-stations");
       if (!result.response.ok || !result.data) return [];
       return result.data;
     },
   });
+
+  const knownBrandIds = readKnownBrandCatalogIds();
+
+  function itemFlags(item: Item): MenuItemFlags {
+    return flagsForItem(item, knownBrandIds);
+  }
 
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ["menu-tree"] });
@@ -132,6 +190,39 @@ export function MenuAdmin() {
   const createItem = useMutation({
     mutationFn: async () => {
       const imageUrl = itemImage ? await uploadMenuImage(itemImage, "items", t) : null;
+      const useCatalog = chooseScope && itemScope === "ALL_BRANCHES";
+      if (useCatalog) {
+        const body: components["schemas"]["ScopedItemCreateRequest"] = {
+          name: names(itemEn || "Item", itemAr || "صنف"),
+          base_price: price,
+          category_id: categoryId,
+          scope: "ALL_BRANCHES",
+          ...(imageUrl ? { image_url: imageUrl } : {}),
+        };
+        const result = await browserApi.POST("/api/v1/menu/catalog-items", { body });
+        if (result.response.status === 500) throw new Error(t.catalogUnavailable);
+        if (!result.response.ok) throw asApiError(result.error, result.response, t.catalogCreateFailed);
+        const createdId = (result.data as { id?: string } | undefined)?.id;
+        if (createdId) rememberBrandCatalogId(createdId);
+        return;
+      }
+      if (chooseScope && itemScope === "THIS_BRANCH") {
+        const body: components["schemas"]["ScopedItemCreateRequest"] = {
+          name: names(itemEn || "Item", itemAr || "صنف"),
+          base_price: price,
+          category_id: categoryId,
+          scope: "SPECIFIC_BRANCHES",
+          target_branch_ids: branchId ? [branchId] : [],
+          ...(imageUrl ? { image_url: imageUrl } : {}),
+        };
+        const result = await browserApi.POST("/api/v1/menu/catalog-items", { body });
+        if (result.response.ok) {
+          const createdId = (result.data as { id?: string } | undefined)?.id;
+          if (createdId) rememberBrandCatalogId(createdId);
+          return;
+        }
+        // Fall back to staff branch item when catalog scope path is unavailable.
+      }
       const body: components["schemas"]["StaffItemCreate"] = {
         category_id: categoryId,
         name: names(itemEn, itemAr),
@@ -149,6 +240,7 @@ export function MenuAdmin() {
       setItemEn("");
       setItemAr("");
       setItemImage(null);
+      setItemScope(chooseScope ? "ALL_BRANCHES" : "THIS_BRANCH");
       setItemOpen(false);
       refresh();
     },
@@ -166,30 +258,6 @@ export function MenuAdmin() {
       toast.success(t.categoryDeleted);
       setCategoryToDelete(null);
       setCategoryId("");
-      refresh();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
-  const catalog = useMutation({
-    mutationFn: async () => {
-      const imageUrl = itemImage ? await uploadMenuImage(itemImage, "items", t) : null;
-      const body: components["schemas"]["ScopedItemCreateRequest"] = {
-        name: names(itemEn || "Item", itemAr || "صنف"),
-        base_price: price,
-        category_id: categoryId,
-        scope: "ALL_BRANCHES",
-        ...(imageUrl ? { image_url: imageUrl } : {}),
-      };
-      const result = await browserApi.POST("/api/v1/menu/catalog-items", { body });
-      if (result.response.status === 500) {
-        throw new Error(t.catalogUnavailable);
-      }
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.catalogCreateFailed);
-    },
-    onSuccess: () => {
-      toast.success(t.catalogItemCreated);
-      setItemImage(null);
       refresh();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -215,28 +283,35 @@ export function MenuAdmin() {
       <PageHeader
         title={t.title}
         action={
-          tab === "items" ? (
+          tab === "items" && (showAddCategory || showAddItem) ? (
             <div className="flex gap-2">
-              <button type="button" className="min-h-11 rounded-xl border bg-card px-4 text-sm" onClick={() => setCategoryOpen(true)}>{t.addCategory}</button>
-              <button
-                type="button"
-                className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
-                onClick={() => {
-                  if (!categoryId && active) setCategoryId(active.id);
-                  setItemOpen(true);
-                }}
-              >
-                {t.addItem}
-              </button>
+              {showAddCategory ? (
+                <button type="button" className="min-h-11 rounded-xl border bg-card px-4 text-sm" onClick={() => setCategoryOpen(true)}>{t.addCategory}</button>
+              ) : null}
+              {showAddItem ? (
+                <button
+                  type="button"
+                  className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
+                  onClick={() => {
+                    if (!categoryId && active) setCategoryId(active.id);
+                    setItemScope(chooseScope ? "ALL_BRANCHES" : "THIS_BRANCH");
+                    setItemOpen(true);
+                  }}
+                >
+                  {t.addItem}
+                </button>
+              ) : null}
             </div>
           ) : null
         }
       />
       <div className="flex gap-2">
         <button type="button" className={`min-h-11 rounded-xl px-4 text-sm ${tab === "items" ? "bg-primary text-primary-foreground" : "bg-card"}`} onClick={() => setTab("items")}>{t.items}</button>
-        <button type="button" className={`min-h-11 rounded-xl px-4 text-sm ${tab === "stations" ? "bg-primary text-primary-foreground" : "bg-card"}`} onClick={() => setTab("stations")}>{t.stationsTab}</button>
+        {showStations ? (
+          <button type="button" className={`min-h-11 rounded-xl px-4 text-sm ${tab === "stations" ? "bg-primary text-primary-foreground" : "bg-card"}`} onClick={() => setTab("stations")}>{t.stationsTab}</button>
+        ) : null}
       </div>
-      {tab === "stations" ? (
+      {tab === "stations" && showStations ? (
         <section className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1">
           <p className="text-sm leading-6 text-muted-foreground">{t.stationIntro}</p>
           <StationForm onDone={() => void stations.refetch()} />
@@ -308,7 +383,15 @@ export function MenuAdmin() {
               ) : (
                 <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {searchedItems.map(({ item, categoryName }) => (
-                    <MenuItemBlock key={item.id} item={item} categoryName={categoryName} onOptions={() => setSelectedId(item.id)} onDone={refresh} />
+                    <MenuItemBlock
+                      key={item.id}
+                      item={item}
+                      categoryName={categoryName}
+                      flags={itemFlags(item)}
+                      role={role}
+                      onOptions={() => setSelectedId(item.id)}
+                      onDone={refresh}
+                    />
                   ))}
                 </ul>
               )}
@@ -329,20 +412,29 @@ export function MenuAdmin() {
                     })}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="min-h-11 rounded-xl border border-destructive/30 px-4 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                  onClick={() => setCategoryToDelete(active.id)}
-                >
-                  {t.deleteCategory}
-                </button>
+                {canDeleteCategory(role) ? (
+                  <button
+                    type="button"
+                    className="min-h-11 rounded-xl border border-destructive/30 px-4 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                    onClick={() => setCategoryToDelete(active.id)}
+                  >
+                    {t.deleteCategory}
+                  </button>
+                ) : null}
               </div>
               {(active.items ?? []).length === 0 ? (
                 <EmptyState title={t.emptyCategoryTitle} body={t.emptyCategoryBody} />
               ) : (
                 <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {(active.items ?? []).map((item) => (
-                    <MenuItemBlock key={item.id} item={item} onOptions={() => setSelectedId(item.id)} onDone={refresh} />
+                    <MenuItemBlock
+                      key={item.id}
+                      item={item}
+                      flags={itemFlags(item)}
+                      role={role}
+                      onOptions={() => setSelectedId(item.id)}
+                      onDone={refresh}
+                    />
                   ))}
                 </ul>
               )}
@@ -414,20 +506,41 @@ export function MenuAdmin() {
               </select>
             </label>
             <OptionalImageField file={itemImage} onChange={setItemImage} />
+            {chooseScope ? (
+              <fieldset className="grid gap-2">
+                <legend className="text-sm font-medium">{t.itemScope}</legend>
+                <p className={hint}>{t.itemScopeHint}</p>
+                <label className="flex min-h-11 items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="item-scope"
+                    checked={itemScope === "ALL_BRANCHES"}
+                    onChange={() => setItemScope("ALL_BRANCHES")}
+                  />
+                  {t.scopeAllBranches}
+                </label>
+                <label className="flex min-h-11 items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="item-scope"
+                    checked={itemScope === "THIS_BRANCH"}
+                    onChange={() => setItemScope("THIS_BRANCH")}
+                  />
+                  {t.scopeThisBranch}
+                </label>
+              </fieldset>
+            ) : null}
             <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={!categoryId || createItem.isPending}>
               {createItem.isPending ? t.saving : t.saveItem}
             </button>
-            <p className={hint}>{t.saveItemHint}</p>
-            <button className="min-h-11 rounded-xl border text-sm disabled:opacity-50" type="button" onClick={() => catalog.mutate()} disabled={!categoryId || !itemEn.trim() || !itemAr.trim() || catalog.isPending}>
-              {catalog.isPending ? t.creating : t.addEveryBranch}
-            </button>
-            <p className={hint}>{t.addEveryBranchHint}</p>
+            <p className={hint}>{chooseScope && itemScope === "ALL_BRANCHES" ? t.addEveryBranchHint : t.saveItemHint}</p>
           </form>
         </SheetContent>
       </Sheet>
       {(() => {
         const selected = categories.flatMap((category) => category.items ?? []).find((item) => item.id === selectedId) ?? null;
-        return selected ? <ModifierEditor item={selected} onClose={() => setSelectedId(null)} onDone={refresh} /> : null;
+        if (!selected || !canEditModifiers(role, itemFlags(selected))) return null;
+        return <ModifierEditor item={selected} onClose={() => setSelectedId(null)} onDone={refresh} />;
       })()}
       <ConfirmDialog
         open={categoryToDelete !== null}
@@ -582,16 +695,24 @@ function ModifierEditor({ item, onClose, onDone }: { item: Item; onClose: () => 
 function MenuItemBlock({
   item,
   categoryName,
+  flags,
+  role,
   onOptions,
   onDone,
 }: {
   item: Item;
   categoryName?: string;
+  flags: MenuItemFlags;
+  role: UserRole | null | undefined;
   onOptions: () => void;
   onDone: () => void;
 }) {
   const t = useStaffSection(menuCopy);
   const image = mediaUrl(item.image_url);
+  const structure = canEditItemStructure(role, flags);
+  const modifiers = canEditModifiers(role, flags);
+  const availability = canToggleAvailability(role);
+  const canDelete = canDeleteItem(role, flags);
   return (
     <li className="grid content-start gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
       {image ? (
@@ -603,17 +724,25 @@ function MenuItemBlock({
         <div className="grid gap-1">
           <p className="font-semibold"><LocaleText value={item.name} /></p>
           {categoryName ? <p className="text-sm text-muted-foreground">{categoryName}</p> : null}
+          {!structure ? <p className="text-sm text-muted-foreground">{t.brandCatalogReadOnly}</p> : null}
         </div>
         <StatusChip tone={item.is_available ? "available" : "soldout"}>{item.is_available ? t.available : t.soldOut}</StatusChip>
       </div>
-      <PriceField item={item} onDone={onDone} />
+      {structure ? <PriceField item={item} onDone={onDone} /> : (
+        <p className="text-sm font-medium"><MoneyOrPlain price={item.base_price} /></p>
+      )}
       <div className="flex flex-wrap gap-2">
-        <AvailabilityToggle item={item} onDone={onDone} />
-        <button type="button" className={quietButton} onClick={onOptions}>{t.options}</button>
-        <DeleteItemButton item={item} onDone={onDone} />
+        {availability ? <AvailabilityToggle item={item} onDone={onDone} /> : null}
+        {modifiers ? <button type="button" className={quietButton} onClick={onOptions}>{t.options}</button> : null}
+        {canDelete ? <DeleteItemButton item={item} onDone={onDone} /> : null}
       </div>
     </li>
   );
+}
+
+function MoneyOrPlain({ price }: { price: string }) {
+  const { locale } = useLocale();
+  return <>{formatMoney(price, undefined, locale)}</>;
 }
 
 function priceEdited(next: string, saved: string): boolean {

@@ -91,7 +91,7 @@ const ROLE_KINDS: Record<AlertRole, readonly AlertKind[]> = {
   CASHIER: ["confirmation", "floor-status", "payment"],
   WAITER: ["confirmation", "floor-status", "service-request"],
   KITCHEN_STAFF: ["kitchen-ticket"],
-  RUNNER: ["handover-ready", "service-request"],
+  RUNNER: ["handover-ready"],
   REGIONAL_MANAGER: [],
   SUPER_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready"],
   BRAND_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready"],

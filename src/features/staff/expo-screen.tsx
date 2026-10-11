@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
 
 import { StatusChip, toneSurface } from "@/components/ops/status-chip";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -89,6 +90,8 @@ function cardLines(order: ExpoOrder, locale: LocaleCode): CardLine[] {
 export function ExpoScreen() {
   const t = useStaffSection(handoverCopy);
   const { locale } = useLocale();
+  const me = useStaffSession();
+  const runnerOnly = me?.role === "RUNNER";
   const interval = usePollingInterval(7000);
   const branchId = useScope((state) => state.branchId);
   const [token, setToken] = useState("");
@@ -103,7 +106,8 @@ export function ExpoScreen() {
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/kds/expo/orders");
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data as ExpoOrder[];
+      const rows = result.data as ExpoOrder[];
+      return runnerOnly ? rows.filter((order) => order.status === "READY") : rows;
     },
   });
 
@@ -193,10 +197,11 @@ export function ExpoScreen() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.hint}</p>
+        <h1 className="text-[length:var(--text-28)] font-semibold">{runnerOnly ? t.runnerTitle : t.title}</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{runnerOnly ? t.runnerHint : t.hint}</p>
       </div>
       <OfflineTickets stage="handover" />
+      {runnerOnly ? null : (
       <form
         className="grid gap-2 bg-card p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
         onSubmit={(event) => {
@@ -213,6 +218,7 @@ export function ExpoScreen() {
           {verify.isPending ? t.checking : t.checkCode}
         </button>
       </form>
+      )}
       {cards.length === 0 ? <EmptyState title={t.emptyTitle} body={t.emptyBody} /> : (
       <div className="overflow-x-auto bg-card">
         <table className="w-full min-w-[760px] border-collapse text-sm">
@@ -267,7 +273,7 @@ export function ExpoScreen() {
                     );
                     return (
                       <li key={line.key}>
-                        {line.ticketItemId ? (
+                        {line.ticketItemId && !runnerOnly ? (
                           <button
                             type="button"
                             className="grid min-h-14 w-full gap-0.5 rounded-xl border px-3 py-2 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
@@ -295,7 +301,9 @@ export function ExpoScreen() {
                 ) : null}
               </td>
               <td className="px-4 py-4">
-              {editingNote ? (
+              {runnerOnly ? (
+                savedNote ? <p className="text-sm">{savedNote}</p> : <span className="text-sm text-muted-foreground">—</span>
+              ) : editingNote ? (
                 <label className="grid gap-1 text-sm">
                   {t.noteForHandover}
                   <textarea
@@ -342,7 +350,7 @@ export function ExpoScreen() {
                   >
                     {handingOver ? t.handingOver : t.guestHasFood}
                   </button>
-              ) : (
+              ) : runnerOnly ? null : (
                 <button
                   type="button"
                   className="min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"

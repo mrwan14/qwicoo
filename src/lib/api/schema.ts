@@ -1649,7 +1649,7 @@ export interface paths {
         };
         /**
          * Get Shared Table Cart
-         * @description Retrieve all current items, quantities, modifiers, and calculated subtotal for a dining session.
+         * @description Retrieve the shared table cart. Guests must present a session JWT whose session_id matches the path. Floor staff (FOH) may read with a staff token scoped to the table's branch.
          */
         get: operations["get_session_cart_api_v1_sessions__session_id__cart_get"];
         put?: never;
@@ -1675,7 +1675,7 @@ export interface paths {
         put?: never;
         /**
          * Add Item to Shared Table Cart
-         * @description Add a diner's chosen item and modifiers to the shared table cart, refreshing the 8-hour TTL. unit_price and modifier prices sent by the client are ignored. The stored unit price is the branch price (the branch override when one is set, otherwise the catalogue price) plus the catalog modifier deltas. The line total is that unit price times quantity, and modifier prices are not added again.
+         * @description Add a diner's chosen item and modifiers to the shared table cart. Requires guest JWT, If-Match (cart version), and Idempotency-Key. unit_price and modifier prices sent by the client are ignored.
          */
         post: operations["add_item_to_cart_api_v1_sessions__session_id__cart_items_post"];
         delete?: never;
@@ -1699,6 +1699,27 @@ export interface paths {
          * @description Remove a specific line item from the shared table cart.
          */
         delete: operations["remove_item_from_cart_api_v1_sessions__session_id__cart_items__cart_item_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Shared Cart Item Quantity */
+        patch: operations["patch_cart_item_api_v1_sessions__session_id__cart_items__cart_item_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/cart/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Shared Cart as Order
+         * @description Atomically snapshot the cart at If-Match version, create a guest order, clear the cart, and bump version. A concurrent second submit returns 409.
+         */
+        post: operations["submit_session_cart_api_v1_sessions__session_id__cart_submit_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2576,6 +2597,46 @@ export interface paths {
          * @description Retrieves the active, open order and item fulfillment progress for the table bound to the verified guest session.
          */
         get: operations["get_active_order_api_v1_orders_active_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff Order History
+         * @description Branch order history for cashiers and admins. Defaults to today in Africa/Cairo. Filters: date range, status, source (POS/QR/drive-thru/pickup), payment method, paid/unpaid, and search. Cursor pagination with filter totals.
+         */
+        get: operations["list_staff_orders_api_v1_orders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{order_id}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff Order Receipt
+         * @description Receipt payload for reprint: branch/brand identity, cashier, table, tax/service/discount lines, payments. Audited as RECEIPT_REPRINT.
+         */
+        get: operations["get_staff_order_receipt_api_v1_orders__order_id__receipt_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3897,6 +3958,11 @@ export interface components {
              * @description Diner's display name
              */
             guest_name: string;
+            /**
+             * Nickname
+             * @description Optional diner nickname
+             */
+            nickname?: string | null;
             /**
              * Item Id
              * Format: uuid
@@ -5346,6 +5412,10 @@ export interface components {
             id: string;
             /** Guest Name */
             guest_name: string;
+            /** Guest Id */
+            guest_id?: string | null;
+            /** Nickname */
+            nickname?: string | null;
             /**
              * Item Id
              * Format: uuid
@@ -5376,6 +5446,11 @@ export interface components {
              * Format: uuid
              */
             session_id: string;
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
             /** Items */
             items: components["schemas"]["CartItemResponse"][];
             /** Total Items */
@@ -10192,6 +10267,14 @@ export interface components {
              */
             received: boolean;
         };
+        /**
+         * PatchCartItemRequest
+         * @description Change quantity on an existing cart line.
+         */
+        PatchCartItemRequest: {
+            /** Quantity */
+            quantity: number;
+        };
         /** PayCashAction */
         PayCashAction: {
             /**
@@ -12540,6 +12623,11 @@ export interface components {
              */
             client_longitude?: number | null;
             /**
+             * Accuracy M
+             * @description Optional GPS accuracy radius in meters from the device
+             */
+            accuracy_m?: number | null;
+            /**
              * Access Pin
              * @description Optional 6-digit rotating branch access PIN to bypass geofence
              */
@@ -12556,6 +12644,12 @@ export interface components {
              * @description Unique dining session identifier
              */
             session_id: string;
+            /**
+             * Guest Id
+             * Format: uuid
+             * @description Per-diner identifier bound to this token
+             */
+            guest_id: string;
             /**
              * Session Token
              * @description Cryptographically signed Guest Session JWT
@@ -12614,7 +12708,7 @@ export interface components {
             table_status: components["schemas"]["TableStatus"];
             /**
              * Is Presence Verified
-             * @description True if client presence was verified within branch geofence boundary
+             * @description True if this guest proved presence (geofence or PIN)
              */
             is_presence_verified: boolean;
             /**
@@ -22043,7 +22137,10 @@ export interface operations {
     clear_session_cart_api_v1_sessions__session_id__cart_delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 session_id: string;
             };
@@ -22074,7 +22171,10 @@ export interface operations {
     add_item_to_cart_api_v1_sessions__session_id__cart_items_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 session_id: string;
             };
@@ -22109,7 +22209,10 @@ export interface operations {
     remove_item_from_cart_api_v1_sessions__session_id__cart_items__cart_item_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 session_id: string;
                 cart_item_id: string;
@@ -22125,6 +22228,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_cart_item_api_v1_sessions__session_id__cart_items__cart_item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                session_id: string;
+                cart_item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchCartItemRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_session_cart_api_v1_sessions__session_id__cart_submit_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderResponse"];
                 };
             };
             /** @description Validation Error */
@@ -24421,6 +24597,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderResponse"];
+                };
+            };
+        };
+    };
+    list_staff_orders_api_v1_orders_get: {
+        parameters: {
+            query?: {
+                date_from?: string | null;
+                date_to?: string | null;
+                status_filter?: components["schemas"]["OrderStatus"] | null;
+                source?: string | null;
+                payment_method?: string | null;
+                is_paid?: boolean | null;
+                search?: string | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_staff_order_receipt_api_v1_orders__order_id__receipt_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

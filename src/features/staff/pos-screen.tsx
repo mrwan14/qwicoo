@@ -16,11 +16,14 @@ import { Money } from "@/components/ops/money";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { StatusChip } from "@/components/ops/status-chip";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { printReceipt } from "@/features/staff/orders/receipt";
+import type { StaffOrderReceipt } from "@/features/staff/orders/types";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
+import { ordersCopy } from "@/lib/i18n/staff/orders";
 import { posCopy } from "@/lib/i18n/staff/pos";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { paymentMethodLabel } from "@/lib/status-labels";
@@ -28,6 +31,36 @@ import { mediaUrl } from "@/lib/media";
 import type { components } from "@/lib/api/schema";
 import { useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
+
+const AUTO_PRINT_KEY = "qwicoo-pos-auto-print";
+
+function readAutoPrint(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(AUTO_PRINT_KEY) === "1";
+}
+
+async function fetchAndPrintReceipt(orderId: string, locale: "en" | "ar", failed: string): Promise<void> {
+  const result = await browserApi.GET("/api/v1/orders/{order_id}/receipt", {
+    params: { path: { order_id: orderId } },
+  });
+  if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, failed, locale);
+  const receipt = result.data as StaffOrderReceipt;
+  const labels = ordersCopy[locale];
+  await printReceipt(receipt, locale, {
+    receipt: labels.receipt,
+    date: labels.date,
+    table: labels.table,
+    cashier: labels.cashier,
+    subtotal: labels.subtotal,
+    discount: labels.discount,
+    serviceFee: labels.serviceFee,
+    tax: labels.tax,
+    total: labels.total,
+    paid: labels.paid,
+    unpaid: labels.unpaid,
+    thanks: labels.thanks,
+  });
+}
 
 import { fetchMenu, fetchTables, offlineQueryKeys, useOfflineConfig } from "./offline/offline-data";
 import { displayNumber, isWaiting, type OfflineLine } from "./offline/queue-core";
@@ -72,11 +105,28 @@ function OrderConfirmation({
   onDismiss: () => void;
 }) {
   const t = useStaffSection(posCopy);
+  const { locale } = useLocale();
+  const [autoPrint, setAutoPrint] = useState(readAutoPrint);
+  const [printing, setPrinting] = useState(false);
   const queued = useOfflineQueue((state) => (confirmation.offlineId ? state.orders.find((order) => order.id === confirmation.offlineId) : undefined));
   const offline = Boolean(confirmation.offlineId);
   const waiting = queued ? isWaiting(queued) : false;
   const number = queued ? displayNumber(queued) : confirmation.pickup != null ? `#${confirmation.pickup}` : null;
   const realNumber = queued ? queued.pickupNumber != null || Boolean(queued.serverId && queued.tableNumber) : true;
+  const canPrint = !offline;
+
+  async function handlePrint() {
+    if (!canPrint) return;
+    setPrinting(true);
+    try {
+      await fetchAndPrintReceipt(confirmation.id, locale, t.receiptFailed);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t.receiptFailed);
+    } finally {
+      setPrinting(false);
+    }
+  }
+
   return (
     <section role="status" aria-live="polite" className="grid gap-3 rounded-xl bg-muted/70 p-4">
       <div className="flex items-center justify-between gap-2">
@@ -99,7 +149,29 @@ function OrderConfirmation({
           <Money amount={confirmation.total} />
         </span>
       </p>
-      <div className="flex items-center gap-2">
+      {canPrint ? (
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={autoPrint}
+            onChange={(event) => {
+              const on = event.target.checked;
+              setAutoPrint(on);
+              window.localStorage.setItem(AUTO_PRINT_KEY, on ? "1" : "0");
+            }}
+          />
+          <span>
+            {t.autoPrint}
+            <span className="ms-1 text-muted-foreground">{t.autoPrintHint}</span>
+          </span>
+        </label>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        {canPrint ? (
+          <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm font-medium disabled:opacity-50" disabled={printing} onClick={() => void handlePrint()}>
+            {printing ? t.printingReceipt : t.printReceipt}
+          </button>
+        ) : null}
         <button type="button" className="min-h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onClick={onDismiss}>
           {t.newOrder}
         </button>
@@ -338,6 +410,12 @@ export function PosScreen() {
       if (result.response.status === 502 && effectiveTender === "CASH") return saveOffline();
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.checkoutFailed, locale);
       const order = result.data;
+      // Fire-and-forget so checkout UI is not blocked while the print dialog is open.
+      if (order.is_paid && readAutoPrint()) {
+        void fetchAndPrintReceipt(order.id, locale, t.receiptFailed).catch((error: unknown) => {
+          toast.error(error instanceof Error ? error.message : t.receiptFailed);
+        });
+      }
       return {
         id: order.id,
         pickup: order.pickup_number ?? null,

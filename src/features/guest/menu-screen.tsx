@@ -2,40 +2,89 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { resumeIfSessionGone } from "@/features/guest/session";
-import { GuestQueryError, PresenceNote, guestField, guestPrimaryButton, guestSecondaryButton, useAbsorbBranding, useGuestCopy } from "@/features/guest/shell";
 import { Money } from "@/components/ops/money";
-import { LoadingState } from "@/components/ops/states";
-import { GuestQuoteSummary } from "@/features/guest/guest-quote-summary";
+import {
+  addGuestCartItem,
+  isCartConflict,
+  patchGuestCartItem,
+  removeGuestCartItem,
+  type GuestCartItem,
+} from "@/features/guest/cart-client";
 import { branchUnitPrice, quotedOrderTotal } from "@/features/guest/guest-prices";
+import { itemNeedsOptions } from "@/features/guest/item-options";
+import { ItemSheet, NicknameSheet } from "@/features/guest/item-sheet";
+import { GuestReveal } from "@/features/guest/guest-motion";
+import { GuestSkeleton, useOrderingPaused } from "@/features/guest/ordering-status";
+import { resumeIfSessionGone } from "@/features/guest/session";
+import {
+  GuestQueryError,
+  PresenceNote,
+  guestField,
+  guestSecondaryButton,
+  useAbsorbBranding,
+  useGuestCopy,
+} from "@/features/guest/shell";
+import { useCartActivity } from "@/features/guest/use-cart-activity";
+import { useCategoryScrollSpy } from "@/features/guest/use-category-scrollspy";
 import { useGuestOrderQuote, type QuoteItemInput } from "@/features/guest/use-guest-quote";
+import { useSharedCart } from "@/features/guest/use-shared-cart";
 import { asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
+import type { components } from "@/lib/api/schema";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { mediaUrl } from "@/lib/media";
-import type { components } from "@/lib/api/schema";
 import { useGuest } from "@/stores/guest";
-import { useOrderingPaused } from "@/features/guest/ordering-status";
 
 type MenuItem = components["schemas"]["MenuItemResponse"];
-type ModifierGroup = components["schemas"]["ModifierGroupResponse"];
-type Validated = components["schemas"]["ValidatedItemSelectionResponse"];
 
 function optionName(value: unknown, locale: "en" | "ar") {
   return pickLocale(value, locale);
+}
+
+function lineBelongsToGuest(line: GuestCartItem, guestId: string | null, guestName: string) {
+  if (guestId && line.guest_id && line.guest_id === guestId) return true;
+  const name = guestName.trim().toLowerCase();
+  if (!name) return false;
+  return (line.nickname || line.guest_name || "").trim().toLowerCase() === name;
+}
+
+function simpleLineForItem(
+  items: readonly GuestCartItem[],
+  itemId: string,
+  guestId: string | null,
+  guestName: string,
+) {
+  return items.find(
+    (line) =>
+      line.item_id === itemId &&
+      lineBelongsToGuest(line, guestId, guestName) &&
+      (line.modifiers?.length ?? 0) === 0,
+  );
+}
+
+function matchesSearch(item: MenuItem, query: string, locale: "en" | "ar") {
+  if (!query) return true;
+  const name = optionName(item.name, locale).toLowerCase();
+  const description = item.description ? optionName(item.description, locale).toLowerCase() : "";
+  return name.includes(query) || description.includes(query);
 }
 
 export function MenuScreen() {
   const { t, locale } = useGuestCopy();
   const session = useGuest((state) => state.session);
   const guestName = useGuest((state) => state.guestName);
-  const setGuestName = useGuest((state) => state.setGuestName);
   const queryClient = useQueryClient();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [pendingAfterName, setPendingAfterName] = useState<
+    { mode: "quick"; itemId: string } | { mode: "options"; itemId: string } | null
+  >(null);
+  const [nameOpen, setNameOpen] = useState(false);
+  const optionsTriggerRef = useRef<HTMLElement | null>(null);
+  const paused = useOrderingPaused();
 
   const menu = useQuery({
     queryKey: ["guest-menu", session?.branchId],
@@ -72,19 +121,8 @@ export function MenuScreen() {
     }
   }, [branchMenu.data]);
 
-  const cart = useQuery({
-    queryKey: ["guest-cart", session?.sessionId],
-    enabled: Boolean(session?.sessionId),
-    queryFn: async () => {
-      const result = await guestApi.GET("/api/v1/sessions/{session_id}/cart", {
-        params: { path: { session_id: session?.sessionId ?? "" } },
-      });
-      if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.oops, locale);
-      }
-      return result.data;
-    },
-  });
+  const { cart, remoteNote } = useSharedCart();
+  const { flash } = useCartActivity(cart.data);
 
   const branchPrices = useMemo(() => {
     const prices = new Map<string, string>();
@@ -104,6 +142,19 @@ export function MenuScreen() {
     return list;
   }, [menu.data]);
 
+  const query = search.trim().toLowerCase();
+  const filteredCategories = useMemo(() => {
+    return (menu.data?.categories ?? [])
+      .map((category) => ({
+        ...category,
+        items: (category.items ?? []).filter((item) => matchesSearch(item, query, locale)),
+      }))
+      .filter((category) => (category.items?.length ?? 0) > 0);
+  }, [locale, menu.data?.categories, query]);
+
+  const categoryIds = useMemo(() => filteredCategories.map((category) => category.id), [filteredCategories]);
+  const { activeId: activeCategoryId, registerTab, scrollToCategory } = useCategoryScrollSpy(categoryIds);
+
   const active = items.find((item) => item.id === activeId) ?? null;
   const currency = branchMenu.data?.currency || "EGP";
   const cartQuoteItems = useMemo<QuoteItemInput[] | null>(() => {
@@ -117,9 +168,100 @@ export function MenuScreen() {
     }));
   }, [cart.data]);
   const cartQuote = useGuestOrderQuote(cartQuoteItems, t.oops);
+  const cartCount = cart.data?.total_items ?? 0;
+
+  const quickAdd = useMutation({
+    mutationFn: async (item: MenuItem) => {
+      const name = useGuest.getState().guestName.trim();
+      const price = branchPrices.get(item.id);
+      if (!price) throw new Error(t.validate);
+      const body: components["schemas"]["AddCartItemRequest"] = {
+        guest_name: name,
+        nickname: name,
+        item_id: item.id,
+        item_name: optionName(item.name, locale),
+        unit_price: price,
+        quantity: 1,
+        notes: null,
+        modifiers: [],
+      };
+      const latest =
+        queryClient.getQueryData<{ version?: number }>(["guest-cart", session?.sessionId])?.version ??
+        cart.data?.version ??
+        1;
+      return addGuestCartItem(session?.sessionId ?? "", latest, body, locale, t.oops);
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["guest-cart", session?.sessionId], data);
+      toast.success(t.added);
+    },
+    onError: (error: Error) => {
+      void resumeIfSessionGone(error).then(async (gone) => {
+        if (gone) return;
+        if (isCartConflict(error)) {
+          await queryClient.invalidateQueries({ queryKey: ["guest-cart"] });
+          toast.message(t.cartUpdated);
+          return;
+        }
+        toast.error(error.message);
+      });
+    },
+  });
+
+  const adjustQty = useMutation({
+    mutationFn: async ({ line, next }: { line: GuestCartItem; next: number }) => {
+      const version =
+        queryClient.getQueryData<{ version?: number }>(["guest-cart", session?.sessionId])?.version ??
+        cart.data?.version ??
+        1;
+      if (next <= 0) {
+        return removeGuestCartItem(session?.sessionId ?? "", line.id, version, locale, t.oops);
+      }
+      return patchGuestCartItem(session?.sessionId ?? "", line.id, version, next, locale, t.oops);
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["guest-cart", session?.sessionId], data);
+    },
+    onError: (error: Error) => {
+      void resumeIfSessionGone(error).then(async (gone) => {
+        if (gone) return;
+        if (isCartConflict(error)) {
+          await queryClient.invalidateQueries({ queryKey: ["guest-cart"] });
+          toast.message(t.cartUpdated);
+          return;
+        }
+        toast.error(error.message);
+      });
+    },
+  });
+
+  function requireNameThen(next: { mode: "quick"; itemId: string } | { mode: "options"; itemId: string }) {
+    if (guestName.trim()) {
+      if (next.mode === "options") setActiveId(next.itemId);
+      else {
+        const item = items.find((entry) => entry.id === next.itemId);
+        if (item) quickAdd.mutate(item);
+      }
+      return;
+    }
+    setPendingAfterName(next);
+    setNameOpen(true);
+  }
+
+  function onNicknameSaved() {
+    const pending = pendingAfterName;
+    setPendingAfterName(null);
+    if (!pending) return;
+    if (pending.mode === "options") {
+      setActiveId(pending.itemId);
+      return;
+    }
+    const item = items.find((entry) => entry.id === pending.itemId);
+    if (item) quickAdd.mutate(item);
+  }
 
   if (!session) return null;
-  if (menu.isLoading || branchMenu.isLoading) return <LoadingState label={t.loading} />;
+  if (menu.isLoading || branchMenu.isLoading) return <GuestSkeleton label={t.loading} />;
   if (menu.isError) {
     return <GuestQueryError error={menu.error} onRetry={() => void menu.refetch()} />;
   }
@@ -128,365 +270,244 @@ export function MenuScreen() {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-0">
       <PresenceNote />
-      <label className="grid gap-1 text-sm font-medium">
-        {t.yourName}
-        <input
-          className={guestField}
-          autoComplete="name"
-          value={guestName}
-          onChange={(event) => setGuestName(event.target.value)}
-        />
-        <span className="font-normal text-muted-foreground">{t.nameHint}</span>
-      </label>
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {(menu.data?.categories ?? []).map((category) => {
-          const image = mediaUrl(category.image_url);
-          return (
-          <a
-            key={category.id}
-            href={`#cat-${category.id}`}
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border bg-card px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={image} alt="" className="size-8 shrink-0 rounded-lg bg-secondary object-contain" />
-            ) : null}
-            {optionName(category.name, locale)}
-          </a>
-          );
-        })}
-      </div>
-      {(menu.data?.categories ?? []).map((category) => (
-        <section key={category.id} id={`cat-${category.id}`} className="grid scroll-mt-4 gap-3">
-          <h2 className="font-display text-[length:var(--text-20)]">
-            {optionName(category.name, locale)}
-          </h2>
-          {mediaUrl(category.image_url) ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={mediaUrl(category.image_url) ?? ""} alt="" className="h-40 w-full rounded-2xl bg-secondary object-contain" />
-          ) : null}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(category.items ?? []).map((item) => {
-              const image = mediaUrl(item.image_url);
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={!item.is_available}
-                  onClick={() => setActiveId(item.id)}
-                  className="flex min-h-24 overflow-hidden rounded-2xl bg-card text-start shadow-elev-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-70"
-                >
-                  {image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={image} alt="" className="h-24 w-24 shrink-0 bg-secondary object-contain" />
-                  ) : (
-                    <div className="flex h-24 w-24 shrink-0 items-center justify-center bg-secondary text-2xl font-semibold text-primary">
-                      {optionName(item.name, locale).trim().charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <span className="flex min-w-0 flex-1 flex-col justify-center gap-1 p-3">
-                    <span className="font-medium">{optionName(item.name, locale)}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {item.is_available ? (
-                        branchPrices.get(item.id) ? (
-                          <Money amount={branchPrices.get(item.id) ?? ""} currency={currency} locale={locale} />
-                        ) : (
-                          <span>{branchMenu.isLoading ? t.loading : t.validate}</span>
-                        )
-                      ) : (
-                        <span className="inline-flex rounded-full bg-[var(--status-soldout-bg)] px-2 py-0.5 text-xs font-medium text-[var(--status-soldout)]">{t.unavailable}</span>
-                      )}
-                    </span>
-                    {item.is_available ? <span className="text-sm font-medium text-primary">{t.add}</span> : null}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      ))}
-      {active ? (
-        <Sheet open onOpenChange={(open) => !open && setActiveId(null)}>
-          <SheetContent
-            side="bottom"
-            showCloseButton={false}
-            className="mx-auto flex max-h-[92dvh] w-full max-w-md flex-col gap-0 overflow-hidden rounded-t-3xl p-0"
-          >
-            <div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-4 pb-2">
-              <SheetTitle className="text-lg">{optionName(active.name, locale)}</SheetTitle>
-              <SheetClose className="inline-flex min-h-11 shrink-0 items-center rounded-xl border bg-card px-3 text-sm font-medium">
-                {t.close}
-              </SheetClose>
-            </div>
-            <ItemConfigurator
-              item={active}
-              currency={currency}
-              branchPrice={branchPrices.get(active.id) ?? null}
-              onDone={() => {
-                setActiveId(null);
-                void queryClient.invalidateQueries({ queryKey: ["guest-cart"] });
-                void queryClient.invalidateQueries({ queryKey: ["guest-quote"] });
-              }}
-            />
-          </SheetContent>
-        </Sheet>
-      ) : null}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto grid max-w-md grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-          <Link href="/order/checkout" className={`${(cart.data?.total_items ?? 0) > 0 ? guestPrimaryButton : guestSecondaryButton} gap-2`}>
-            <span>
-              {t.checkout}
-              {(cart.data?.total_items ?? 0) > 0 ? ` (${cart.data?.total_items})` : ""}
-            </span>
-            {(cart.data?.total_items ?? 0) > 0 && cartQuote.data ? (
-              <Money amount={quotedOrderTotal(cartQuote.data)} currency={currency} locale={locale} />
-            ) : null}
-          </Link>
-          <Link
-            href="/order/service"
-            className="inline-flex min-h-14 items-center justify-center rounded-xl border bg-card px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            {t.service}
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ItemConfigurator({
-  item,
-  currency,
-  branchPrice,
-  onDone,
-}: {
-  item: MenuItem;
-  currency: string;
-  branchPrice: string | null;
-  onDone: () => void;
-}) {
-  const { t, locale } = useGuestCopy();
-  const session = useGuest((state) => state.session);
-  const guestName = useGuest((state) => state.guestName);
-  const setGuestName = useGuest((state) => state.setGuestName);
-  const [quantity, setQuantity] = useState(1);
-  const paused = useOrderingPaused();
-  const [notes, setNotes] = useState("");
-  const [selected, setSelected] = useState<Record<string, string[]>>({});
-  const [choiceError, setChoiceError] = useState("");
-
-  const groups = (item.modifier_groups ?? []) as ModifierGroup[];
-
-  function missingGroup(): string | null {
-    for (const group of groups) {
-      const count = (selected[group.id] ?? []).length;
-      const minimum = group.is_required ? Math.max(1, group.min_choices ?? 1) : (group.min_choices ?? 0);
-      if (count < minimum) return optionName(group.name, locale);
-    }
-    return null;
-  }
-
-  const missing = missingGroup();
-
-  function toggle(group: ModifierGroup, optionId: string) {
-    setSelected((current) => {
-      const existing = current[group.id] ?? [];
-      const max = group.max_choices ?? 1;
-      const has = existing.includes(optionId);
-      const next = has
-        ? existing.filter((id) => id !== optionId)
-        : max <= 1
-          ? [optionId]
-          : [...existing, optionId].slice(-max);
-      return { ...current, [group.id]: next };
-    });
-  }
-
-  const selectedGroups = Object.entries(selected)
-    .filter(([, optionIds]) => optionIds.length > 0)
-    .map(([group_id, option_ids]) => ({ group_id, option_ids }));
-
-  const quoteItems = useMemo<QuoteItemInput[] | null>(() => {
-    if (missing !== null) return null;
-    const optionIds = Object.values(selected).flat();
-    return [{
-      item_id: item.id,
-      quantity,
-      selected_option_ids: optionIds,
-      special_instructions: notes || null,
-    }];
-  }, [item.id, missing, notes, quantity, selected]);
-  const quote = useGuestOrderQuote(quoteItems, t.oops);
-
-  const priced = useQuery({
-    queryKey: ["validate", item.id, quantity, selectedGroups, session?.tableId],
-    enabled: missing === null,
-    queryFn: async () => {
-      const body: components["schemas"]["ValidateItemSelectionRequest"] = {
-        item_id: item.id,
-        quantity,
-        selected_groups: selectedGroups,
-        special_instructions: notes || null,
-        table_id: session?.tableId,
-        guest_label: guestName || null,
-      };
-      const result = await guestApi.POST("/api/v1/menu/validate-item-selection", { body });
-      if (!result.response.ok || !result.data) {
-        throw asApiError(result.error, result.response, t.oops, locale);
-      }
-      return result.data;
-    },
-  });
-
-  const add = useMutation({
-    mutationFn: async (validated: Validated) => {
-      const body: components["schemas"]["AddCartItemRequest"] = {
-        guest_name: guestName || "Guest",
-        item_id: validated.item_id,
-        item_name: validated.item_name,
-        unit_price: branchPrice ?? validated.base_price,
-        quantity: validated.quantity,
-        notes: notes || null,
-        modifiers: (validated.selected_modifiers ?? []).map((modifier) => ({
-          option_id: modifier.option_id,
-          name: modifier.name,
-          price: modifier.price_delta,
-        })),
-      };
-      const result = await guestApi.POST("/api/v1/sessions/{session_id}/cart/items", {
-        params: { path: { session_id: session?.sessionId ?? "" } },
-        body,
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success(t.added);
-      onDone();
-    },
-    onError: (error: Error, validated) => {
-      void resumeIfSessionGone(error).then((gone) => {
-        if (gone) {
-          if (useGuest.getState().session) add.mutate(validated);
-          return;
-        }
-        toast.error(error.message);
-      });
-    },
-  });
-
-  const title = optionName(item.name, locale);
-  const description = item.description ? optionName(item.description, locale) : "";
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-4 pb-4">
-      {mediaUrl(item.image_url) ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={mediaUrl(item.image_url) ?? ""} alt="" className="max-h-40 w-full rounded-xl bg-secondary object-contain" />
-      ) : null}
-      {description && description !== title ? (
-        <p className="text-sm text-muted-foreground">{description}</p>
-      ) : null}
-      {groups.map((group) => (
-        <fieldset key={group.id} className="grid gap-2">
-          <legend className="text-sm font-medium">
-            {optionName(group.name, locale)}
-            {group.is_required ? ` · ${t.required}` : ""}
-          </legend>
-          {(group.options ?? []).map((option) => {
-            const soldOut = option.is_available === false;
-            const delta = Number(option.price_delta);
-            const chosen = (selected[group.id] ?? []).includes(option.id);
-            return (
-              <label key={option.id} className={`flex min-h-14 items-center gap-3 rounded-xl border px-3 text-sm ${chosen ? "border-primary bg-secondary" : "bg-card"} ${soldOut ? "text-muted-foreground" : ""}`}>
-                <input
-                  type={group.max_choices === 1 ? "radio" : "checkbox"}
-                  name={group.id}
-                  className="size-5"
-                  checked={chosen}
-                  disabled={soldOut}
-                  onChange={() => {
-                    if (soldOut) return;
-                    setChoiceError("");
-                    toggle(group, option.id);
-                  }}
-                />
-                <span className="flex-1">
-                  {optionName(option.name, locale)}
-                  {soldOut ? ` · ${t.unavailable}` : ""}
-                </span>
-                {!soldOut && Number.isFinite(delta) && delta !== 0 ? (
-                  <Money amount={option.price_delta} currency={currency} locale={locale} />
-                ) : null}
-              </label>
-            );
-          })}
-        </fieldset>
-      ))}
-      <div className="grid gap-1 text-sm font-medium">
-        {t.quantity}
-        <div className="flex items-center gap-3">
-          <button type="button" className="inline-flex size-12 items-center justify-center rounded-xl border bg-card text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" aria-label={t.fewer} onClick={() => setQuantity((current) => Math.max(1, current - 1))}>−</button>
-          <span className="min-w-8 text-center text-base">{quantity}</span>
-          <button type="button" className="inline-flex size-12 items-center justify-center rounded-xl border bg-card text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" aria-label={t.more} onClick={() => setQuantity((current) => current + 1)}>+</button>
-        </div>
-      </div>
-      <label className="grid gap-1 text-sm font-medium">
-        {t.yourName}
-        <input className={guestField} autoComplete="name" value={guestName} onChange={(event) => setGuestName(event.target.value)} />
-      </label>
-      <label className="grid gap-1 text-sm font-medium">
-        {t.notes}
-        <textarea
-          className="min-h-20 rounded-xl border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-        />
-      </label>
-      {choiceError ? (
-        <p role="alert" className="text-sm text-destructive">
-          {choiceError}
+      {remoteNote ? (
+        <p role="status" className="mb-3 guest-card px-4 py-3 text-sm">
+          {t.cartUpdated}
         </p>
       ) : null}
-      {missing ? (
-        <p className="text-sm">{t.pricePending}</p>
-      ) : quote.isLoading ? (
-        <p className="text-sm">{t.validate}</p>
-      ) : quote.isError ? (
-        <p className="text-sm text-destructive">{quote.error instanceof Error ? quote.error.message : t.oops}</p>
-      ) : quote.data ? (
-        <GuestQuoteSummary
-          pricing={quote.data}
-          labels={{ subtotal: t.subtotal, discount: t.discount, serviceFee: t.serviceFee, tax: t.tax, total: t.total }}
-          locale={locale}
-          currency={currency}
-        />
+
+      <div className="sticky top-0 z-20 -mx-4 border-b border-[var(--guest-line)] bg-[var(--guest-canvas)]/96 px-4 pb-2.5 pt-1 backdrop-blur-md">
+        <label className="guest-search">
+          <span className="sr-only">{t.searchMenu}</span>
+          <input
+            className={guestField}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t.searchMenu}
+            autoComplete="off"
+          />
+          {search ? (
+            <button
+              type="button"
+              className="absolute end-2 top-1/2 z-10 -translate-y-1/2 px-2 text-xs font-semibold text-[var(--guest-quiet)]"
+              onClick={() => setSearch("")}
+            >
+              {t.clearSearch}
+            </button>
+          ) : (
+            <svg className="guest-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" />
+              <path d="M16.2 16.2 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          )}
+        </label>
+        <div className="guest-cat-strip mt-2.5 flex gap-2 overflow-x-auto pb-0.5" role="tablist" aria-label={t.menu}>
+          {filteredCategories.map((category) => {
+            const active = activeCategoryId === category.id;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                ref={(node) => registerTab(category.id, node)}
+                data-active={active ? "true" : "false"}
+                className="guest-cat-tab guest-motion shrink-0"
+                onClick={() => scrollToCategory(category.id)}
+              >
+                {optionName(category.name, locale)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {filteredCategories.length === 0 ? (
+        <div className="grid gap-3 py-16 text-center">
+          <p className="guest-display guest-display-lg">{t.searchEmpty}</p>
+          <button type="button" className={guestSecondaryButton} onClick={() => setSearch("")}>
+            {t.clearSearch}
+          </button>
+        </div>
       ) : (
-        <p className="text-sm">{t.pricePending}</p>
+        <GuestReveal className="mt-2 grid gap-6" stagger={0.05} y={12}>
+          {filteredCategories.map((category) => (
+            <section
+              key={category.id}
+              id={`cat-${category.id}`}
+              data-guest-reveal
+              className="scroll-mt-36 grid gap-0"
+            >
+              <div className="guest-section-head">
+                <h2 className="guest-display shrink-0 text-[var(--guest-ink)]">
+                  {optionName(category.name, locale)}
+                </h2>
+              </div>
+              <ul className="grid">
+                {(category.items ?? []).map((item) => {
+                  const image = mediaUrl(item.image_url);
+                  const title = optionName(item.name, locale);
+                  const description = item.description ? optionName(item.description, locale) : "";
+                  const needsOptions = itemNeedsOptions(item);
+                  const ownLine = simpleLineForItem(
+                    cart.data?.items ?? [],
+                    item.id,
+                    session.guestId,
+                    guestName,
+                  );
+                  const qty = ownLine?.quantity ?? 0;
+                  const soldOut = !item.is_available;
+                  return (
+                    <li
+                      key={item.id}
+                      className="guest-menu-row"
+                      data-soldout={soldOut ? "true" : "false"}
+                    >
+                      <div className="guest-thumb relative size-[4.5rem] shrink-0">
+                        {image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={image} alt="" className="size-full object-cover" />
+                        ) : (
+                          <div className="flex size-full items-center justify-center text-xl font-extrabold text-[var(--guest-quiet)]">
+                            {title.trim().charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        {qty > 0 ? (
+                          <span className="guest-pill absolute -end-1.5 -top-1.5 flex size-5 items-center justify-center bg-[var(--guest-orange)] text-[10px] font-bold text-white">
+                            {qty}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="min-w-0 flex-1 pe-1">
+                        <p className="guest-title">{title}</p>
+                        {description && description !== title ? (
+                          <p className="guest-body mt-0.5 line-clamp-2">{description}</p>
+                        ) : null}
+                      </div>
+                      <div className="flex min-w-[4.75rem] shrink-0 flex-col items-end gap-1.5">
+                        {soldOut ? (
+                          <span className="guest-pill inline-flex bg-[var(--status-soldout-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--status-soldout)]">
+                            {t.unavailable}
+                          </span>
+                        ) : branchPrices.get(item.id) ? (
+                          <span className="guest-price text-end leading-none" dir="ltr">
+                            <Money amount={branchPrices.get(item.id) ?? ""} currency={currency} locale={locale} />
+                          </span>
+                        ) : (
+                          <span className="guest-body text-end">{t.validate}</span>
+                        )}
+                        {needsOptions && !soldOut ? (
+                          <p className="max-w-[5.5rem] text-end text-[10px] font-semibold leading-tight text-[var(--guest-orange)]">
+                            * {t.requiredOptions}
+                          </p>
+                        ) : null}
+                        {!soldOut ? (
+                          needsOptions ? (
+                            <button
+                              type="button"
+                              className="guest-btn guest-btn-icon guest-motion"
+                              aria-label={t.chooseOptions}
+                              disabled={paused}
+                              ref={(node) => {
+                                optionsTriggerRef.current = node;
+                              }}
+                              onClick={() => requireNameThen({ mode: "options", itemId: item.id })}
+                            >
+                              +
+                            </button>
+                          ) : qty > 0 && ownLine ? (
+                            <div className="guest-stepper">
+                              <button
+                                type="button"
+                                aria-label={t.fewer}
+                                disabled={adjustQty.isPending || paused}
+                                onClick={() => adjustQty.mutate({ line: ownLine, next: qty - 1 })}
+                              >
+                                −
+                              </button>
+                              <span>{qty}</span>
+                              <button
+                                type="button"
+                                aria-label={t.more}
+                                disabled={adjustQty.isPending || paused || quickAdd.isPending}
+                                onClick={() => adjustQty.mutate({ line: ownLine, next: qty + 1 })}
+                              >
+                                +
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="guest-btn guest-btn-icon guest-motion"
+                              aria-label={t.add}
+                              disabled={paused || quickAdd.isPending}
+                              onClick={() => requireNameThen({ mode: "quick", itemId: item.id })}
+                            >
+                              +
+                            </button>
+                          )
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </GuestReveal>
       )}
-    </div>
-    <div className="shrink-0 border-t bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <button
-        type="button"
-        className={`${guestPrimaryButton} gap-2`}
-        disabled={add.isPending || !guestName.trim() || paused}
-        onClick={() => {
-          const needed = missingGroup();
-          if (needed) {
-            setChoiceError(t.chooseRequired.replace("{name}", needed));
-            return;
+
+      <ItemSheet
+        item={active}
+        open={Boolean(active)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveId(null);
+            void queryClient.invalidateQueries({ queryKey: ["guest-cart"] });
+            void queryClient.invalidateQueries({ queryKey: ["guest-quote"] });
           }
-          if (!priced.data || !quote.data) return;
-          add.mutate(priced.data);
         }}
-      >
-        {add.isPending ? t.paying : t.add}
-        {quote.data ? <Money amount={quotedOrderTotal(quote.data)} currency={currency} locale={locale} /> : null}
-      </button>
-    </div>
+        currency={currency}
+        branchPrice={active ? branchPrices.get(active.id) ?? null : null}
+        cartVersion={cart.data?.version ?? 1}
+        triggerRef={optionsTriggerRef}
+      />
+
+      <NicknameSheet
+        open={nameOpen}
+        onOpenChange={(open) => {
+          setNameOpen(open);
+          if (!open) setPendingAfterName(null);
+        }}
+        onSaved={onNicknameSaved}
+      />
+
+      {cartCount > 0 ? (
+        <div
+          className={`fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 ${
+            flash ? "guest-cart-bar-flash" : ""
+          }`}
+        >
+          <div className="guest-phone">
+            <Link
+              href="/order/checkout"
+              className="guest-cart-bar guest-btn guest-motion gap-3 px-4 text-white"
+            >
+              <span className="guest-pill inline-flex size-7 items-center justify-center bg-white text-xs font-extrabold text-[var(--guest-orange)]">
+                {cartCount}
+              </span>
+              <span className="flex-1 text-start text-sm font-bold">{t.viewTableOrder}</span>
+              {cartQuote.data ? (
+                <span className="text-sm font-extrabold tabular-nums" dir="ltr">
+                  <Money amount={quotedOrderTotal(cartQuote.data)} currency={currency} locale={locale} />
+                </span>
+              ) : null}
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -25,6 +25,10 @@ async function proxy(
   const branchId = request.headers.get("x-branch-id");
   if (brandId) headers.set("x-brand-id", brandId);
   if (branchId) headers.set("x-branch-id", branchId);
+  const ifMatch = request.headers.get("if-match");
+  if (ifMatch) headers.set("if-match", ifMatch);
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (idempotencyKey) headers.set("idempotency-key", idempotencyKey);
   const orderAccessToken = request.headers.get("x-order-access-token");
   if (orderAccessToken) headers.set("x-order-access-token", orderAccessToken);
   // The API rate-limits public pickup orders per client IP and only trusts

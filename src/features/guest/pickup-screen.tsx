@@ -212,7 +212,7 @@ export function PickupScreen({ branchId }: { branchId: string }) {
               {statusLine}
             </p>
           )}
-          <button type="button" className="min-h-14 rounded-lg border text-sm font-medium" onClick={placeAnother}>
+          <button type="button" className="guest-btn guest-btn-secondary guest-motion" onClick={placeAnother}>
             {t.placeAnother}
           </button>
         </section>
@@ -241,14 +241,14 @@ export function PickupScreen({ branchId }: { branchId: string }) {
         <section key={category.category_id} className="grid gap-2">
           <h2 className="font-semibold">{pickLocale(category.category_name, locale)}</h2>
           {(category.items ?? []).filter((item) => item.is_available !== false).map((item) => (
-            <label key={item.id} className="flex min-h-14 items-center justify-between gap-3 rounded-lg border px-3">
-              <span>
+            <label key={item.id} className="guest-card flex min-h-14 items-center justify-between gap-3 px-3">
+              <span className="guest-title">
                 {pickLocale(item.name, locale)} · <Money amount={item.final_price} currency={menuData.currency || "EGP"} locale={locale} />
               </span>
               <input
                 type="number"
                 min={0}
-                className="h-11 w-16 rounded-lg border px-2"
+                className="guest-field !h-11 !w-16 !px-2 text-center"
                 value={selected[item.id] ?? 0}
                 onChange={(event) =>
                   setSelected((current) => ({ ...current, [item.id]: Number(event.target.value) || 0 }))
@@ -259,14 +259,14 @@ export function PickupScreen({ branchId }: { branchId: string }) {
         </section>
       ))}
       <fieldset className="grid gap-2">
-        <legend className="text-sm font-medium">{t.vehicle}</legend>
-        <input className="h-12 rounded-lg border px-3" placeholder={t.color} value={color} onChange={(event) => setColor(event.target.value)} />
-        <input className="h-12 rounded-lg border px-3" placeholder={t.model} value={model} onChange={(event) => setModel(event.target.value)} />
-        <input className="h-12 rounded-lg border px-3" placeholder={t.plate} value={plate} onChange={(event) => setPlate(event.target.value)} />
+        <legend className="guest-title">{t.vehicle}</legend>
+        <input className="guest-field" placeholder={t.color} value={color} onChange={(event) => setColor(event.target.value)} />
+        <input className="guest-field" placeholder={t.model} value={model} onChange={(event) => setModel(event.target.value)} />
+        <input className="guest-field" placeholder={t.plate} value={plate} onChange={(event) => setPlate(event.target.value)} />
       </fieldset>
-      <label className="grid gap-1 text-sm">
+      <label className="grid gap-1.5 guest-title">
         {t.fee}
-        <select className="h-12 rounded-lg border px-3" value={govId} onChange={(event) => setGovId(event.target.value)}>
+        <select className="guest-field" value={govId} onChange={(event) => setGovId(event.target.value)}>
           <option value="">—</option>
           {(govs.data ?? []).map((gov) => (
             <option key={gov.id} value={gov.id}>
@@ -274,7 +274,7 @@ export function PickupScreen({ branchId }: { branchId: string }) {
             </option>
           ))}
         </select>
-        <select className="h-12 rounded-lg border px-3" value={zoneId} onChange={(event) => setZoneId(event.target.value)}>
+        <select className="guest-field" value={zoneId} onChange={(event) => setZoneId(event.target.value)}>
           <option value="">—</option>
           {(zones.data ?? []).map((zone) => (
             <option key={zone.id} value={zone.id}>
@@ -284,7 +284,7 @@ export function PickupScreen({ branchId }: { branchId: string }) {
         </select>
         {fee.data ? <Money amount={fee.data.delivery_fee} locale={locale} /> : null}
       </label>
-      <button type="button" className="min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground" disabled={pending} onClick={() => void place()}>
+      <button type="button" className="guest-btn guest-btn-primary guest-motion" disabled={pending} onClick={() => void place()}>
         {t.placeOrder}
       </button>
     </div>

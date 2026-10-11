@@ -57,6 +57,7 @@ const ICONS: Record<string, LucideIcon> = {
   "/app/floor": LayoutGrid,
   "/app/floor/requests": ConciergeBell,
   "/app/pos": Receipt,
+  "/app/orders": ClipboardList,
   "/app/kds": Monitor,
   "/app/kds/expo": ClipboardList,
   "/app/payments": Wallet,

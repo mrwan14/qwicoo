@@ -46,7 +46,7 @@ async function fetchAndPrintReceipt(orderId: string, locale: "en" | "ar", failed
   if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, failed, locale);
   const receipt = result.data as StaffOrderReceipt;
   const labels = ordersCopy[locale];
-  printReceipt(receipt, locale, {
+  await printReceipt(receipt, locale, {
     receipt: labels.receipt,
     date: labels.date,
     table: labels.table,
@@ -126,13 +126,6 @@ function OrderConfirmation({
       setPrinting(false);
     }
   }
-
-  useEffect(() => {
-    if (!confirmation.paid || !autoPrint || !canPrint) return;
-    void handlePrint();
-    // Print once when this confirmation mounts with auto-print on.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmation.id]);
 
   return (
     <section role="status" aria-live="polite" className="grid gap-3 rounded-xl bg-muted/70 p-4">
@@ -417,6 +410,12 @@ export function PosScreen() {
       if (result.response.status === 502 && effectiveTender === "CASH") return saveOffline();
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.checkoutFailed, locale);
       const order = result.data;
+      // Fire-and-forget so checkout UI is not blocked while the print dialog is open.
+      if (order.is_paid && readAutoPrint()) {
+        void fetchAndPrintReceipt(order.id, locale, t.receiptFailed).catch((error: unknown) => {
+          toast.error(error instanceof Error ? error.message : t.receiptFailed);
+        });
+      }
       return {
         id: order.id,
         pickup: order.pickup_number ?? null,

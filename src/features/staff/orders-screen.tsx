@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -39,6 +39,7 @@ function orderLabel(row: StaffOrderListItem): string {
 export function OrdersScreen() {
   const t = useStaffSection(ordersCopy);
   const { locale } = useLocale();
+  const queryClient = useQueryClient();
   const branchId = useScope((state) => state.branchId);
   const today = useMemo(() => cairoToday(), []);
   const [search, setSearch] = useState("");
@@ -111,16 +112,16 @@ export function OrdersScreen() {
 
   const reprint = useMutation({
     mutationFn: async () => {
-      if (!receipt.data) {
-        const result = await browserApi.GET("/api/v1/orders/{order_id}/receipt", {
-          params: { path: { order_id: selectedId ?? "" } },
-        });
-        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.receiptFailed, locale);
-        return result.data as StaffOrderReceipt;
-      }
-      return receipt.data;
+      // Always hit the API so RECEIPT_REPRINT is audited and totals stay fresh.
+      const result = await browserApi.GET("/api/v1/orders/{order_id}/receipt", {
+        params: { path: { order_id: selectedId ?? "" } },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.receiptFailed, locale);
+      const data = result.data as StaffOrderReceipt;
+      queryClient.setQueryData(["staff-receipt", selectedId, branchId], data);
+      await printReceipt(data, locale, receiptLabels);
+      return data;
     },
-    onSuccess: (data) => printReceipt(data, locale, receiptLabels),
     onError: (error: Error) => toast.error(error.message),
   });
 

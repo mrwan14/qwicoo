@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
 import { PageHeader } from "@/components/ops/page-header";
-import { EmptyState, LoadingState } from "@/components/ops/states";
+import { LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatCairoDateTime } from "@/lib/format/time";

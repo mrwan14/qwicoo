@@ -139,11 +139,12 @@ test("inventory errors have english and arabic copy", () => {
   }
 });
 
-test("purchasing screens stay out of this slice", () => {
-  const hrefs = Object.values(INVENTORY_HREFS);
-  assert.equal(hrefs.some((href) => /supplier|purchase|count|transfer/i.test(href)), false);
-  assert.ok(hrefs.includes("/app/inventory/waste"));
-  assert.ok(hrefs.includes("/app/inventory/prep"));
+test("suppliers are readable with the catalogue, and purchasing stays held", () => {
+  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "suppliers"), true);
+  assert.equal(canOpenInventoryPage("CASHIER", "suppliers"), true);
+  assert.equal(canOpenInventoryPage("WAITER", "suppliers"), false);
+  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/suppliers"));
+  assert.equal(Object.values(INVENTORY_HREFS).some((href) => /purchase|\/counts|transfer/.test(href)), false);
 });
 
 test("csv preview blocks commit while any row is an error", () => {

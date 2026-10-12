@@ -23,6 +23,7 @@ export function navKey(item: NavItem): string {
 const PLATFORM = ["SUPER_ADMIN"] as const satisfies readonly UserRole[];
 const BRAND_SCOPE = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER"] as const satisfies readonly UserRole[];
 const BRANCH_OPS = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"] as const satisfies readonly UserRole[];
+const INVENTORY = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN", "KITCHEN_STAFF", "CASHIER"] as const satisfies readonly UserRole[];
 
 export const NAV_ITEMS: readonly NavItem[] = [
   {
@@ -72,6 +73,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     shell: "admin",
     phase: 2,
     roles: [...BRANCH_OPS],
+  },
+  {
+    href: "/app/inventory",
+    labelKey: "inventory",
+    group: "brandOps",
+    shell: "admin",
+    phase: 8,
+    roles: [...INVENTORY],
   },
   {
     href: "/app/qr",

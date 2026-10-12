@@ -7,6 +7,7 @@ import { brandsCopy } from "@/lib/i18n/staff/brands";
 import { commonCopy } from "@/lib/i18n/staff/common";
 import { floorCopy } from "@/lib/i18n/staff/floor";
 import { handoverCopy } from "@/lib/i18n/staff/handover";
+import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { kdsCopy } from "@/lib/i18n/staff/kds";
 import { menuCopy } from "@/lib/i18n/staff/menu";
 import { navCopy } from "@/lib/i18n/staff/nav";
@@ -31,6 +32,7 @@ export const staffCopy = {
     common: commonCopy.en,
     floor: floorCopy.en,
     handover: handoverCopy.en,
+    inventory: inventoryCopy.en,
     kds: kdsCopy.en,
     menu: menuCopy.en,
     nav: navCopy.en,
@@ -54,6 +56,7 @@ export const staffCopy = {
     common: commonCopy.ar,
     floor: floorCopy.ar,
     handover: handoverCopy.ar,
+    inventory: inventoryCopy.ar,
     kds: kdsCopy.ar,
     menu: menuCopy.ar,
     nav: navCopy.ar,

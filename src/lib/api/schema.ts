@@ -1584,6 +1584,625 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventory/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Units */
+        get: operations["list_units_api_v1_inventory_units_get"];
+        put?: never;
+        /** Post Unit */
+        post: operations["post_unit_api_v1_inventory_units_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/units/{unit_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Unit */
+        patch: operations["patch_unit_api_v1_inventory_units__unit_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/inventory/conversions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversions */
+        get: operations["list_conversions_api_v1_inventory_conversions_get"];
+        put?: never;
+        /** Post Conversion */
+        post: operations["post_conversion_api_v1_inventory_conversions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/conversions/{conversion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Conversion */
+        delete: operations["delete_conversion_api_v1_inventory_conversions__conversion_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/ingredients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ingredients */
+        get: operations["get_ingredients_api_v1_inventory_ingredients_get"];
+        put?: never;
+        /** Post Ingredient */
+        post: operations["post_ingredient_api_v1_inventory_ingredients_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/ingredients/{ingredient_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get One Ingredient */
+        get: operations["get_one_ingredient_api_v1_inventory_ingredients__ingredient_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Ingredient */
+        patch: operations["patch_ingredient_api_v1_inventory_ingredients__ingredient_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/inventory/imports/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Preview */
+        post: operations["import_preview_api_v1_inventory_imports_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/imports/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Commit */
+        post: operations["import_commit_api_v1_inventory_imports_commit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/branches/{branch_id}/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Branch Warehouses */
+        get: operations["list_branch_warehouses_api_v1_inventory_branches__branch_id__warehouses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/brands/{brand_id}/central-kitchens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Central Kitchens */
+        get: operations["list_central_kitchens_api_v1_inventory_brands__brand_id__central_kitchens_get"];
+        put?: never;
+        /** Post Central Kitchen */
+        post: operations["post_central_kitchen_api_v1_inventory_brands__brand_id__central_kitchens_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/warehouses/{warehouse_id}/opening-balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Opening */
+        post: operations["post_opening_api_v1_inventory_warehouses__warehouse_id__opening_balances_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/warehouses/{warehouse_id}/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Adjustment */
+        post: operations["post_adjustment_api_v1_inventory_warehouses__warehouse_id__adjustments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/warehouses/{warehouse_id}/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Stock */
+        get: operations["get_stock_api_v1_inventory_warehouses__warehouse_id__stock_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/warehouses/{warehouse_id}/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Movements */
+        get: operations["get_movements_api_v1_inventory_warehouses__warehouse_id__movements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Recipes */
+        get: operations["list_recipes_api_v1_inventory_recipes_get"];
+        put?: never;
+        /** Post Recipe */
+        post: operations["post_recipe_api_v1_inventory_recipes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/recipes/{recipe_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Recipe */
+        put: operations["put_recipe_api_v1_inventory_recipes__recipe_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/recipes/{recipe_id}/cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Recipe Cost */
+        get: operations["get_recipe_cost_api_v1_inventory_recipes__recipe_id__cost_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/deduction-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Deduction Jobs */
+        get: operations["list_deduction_jobs_api_v1_inventory_deduction_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Supplier */
+        post: operations["post_supplier_api_v1_inventory_suppliers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/suppliers/{supplier_id}/ingredients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Supplier Ingredient */
+        post: operations["post_supplier_ingredient_api_v1_inventory_suppliers__supplier_id__ingredients_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/purchase-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Purchase Order */
+        post: operations["post_purchase_order_api_v1_inventory_purchase_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/purchase-orders/{order_id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send Purchase Order */
+        post: operations["send_purchase_order_api_v1_inventory_purchase_orders__order_id__send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/purchase-orders/{order_id}/receive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Receive Po */
+        post: operations["receive_po_api_v1_inventory_purchase_orders__order_id__receive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/warehouses/{warehouse_id}/purchase-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Purchase Suggestions */
+        get: operations["purchase_suggestions_api_v1_inventory_warehouses__warehouse_id__purchase_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/warehouses/{warehouse_id}/waste": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Waste */
+        post: operations["post_waste_api_v1_inventory_warehouses__warehouse_id__waste_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/warehouses/{warehouse_id}/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Count Start */
+        post: operations["post_count_start_api_v1_inventory_warehouses__warehouse_id__counts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/counts/{count_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Count Submit */
+        post: operations["post_count_submit_api_v1_inventory_counts__count_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/counts/{count_id}/post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Count Post */
+        post: operations["post_count_post_api_v1_inventory_counts__count_id__post_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Transfer */
+        post: operations["post_transfer_api_v1_inventory_transfers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/transfers/{transfer_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Transfer */
+        post: operations["approve_transfer_api_v1_inventory_transfers__transfer_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/transfers/{transfer_id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Transfer Send */
+        post: operations["post_transfer_send_api_v1_inventory_transfers__transfer_id__send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/transfers/{transfer_id}/receive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Transfer Receive */
+        post: operations["post_transfer_receive_api_v1_inventory_transfers__transfer_id__receive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/warehouses/{warehouse_id}/prep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Prep */
+        post: operations["post_prep_api_v1_inventory_warehouses__warehouse_id__prep_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/branches/{branch_id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Branch Settings */
+        get: operations["get_branch_settings_api_v1_inventory_branches__branch_id__settings_get"];
+        /** Put Branch Settings */
+        put: operations["put_branch_settings_api_v1_inventory_branches__branch_id__settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/reports/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Usage Report */
+        get: operations["get_usage_report_api_v1_inventory_reports_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/reports/usage.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Usage Csv */
+        get: operations["get_usage_csv_api_v1_inventory_reports_usage_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/join": {
         parameters: {
             query?: never;
@@ -4140,6 +4759,27 @@ export interface components {
             /** Lines */
             lines?: components["schemas"]["AdjustLine"][];
         };
+        /** AdjustmentCreate */
+        AdjustmentCreate: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /** Qty */
+            qty: number | string;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Reason */
+            reason: string;
+            /** Unit Cost */
+            unit_cost?: number | string | null;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
+        };
         /**
          * AdminChatRequest
          * @description Admin assistant question. ``branch_id`` cannot widen the caller's scope.
@@ -5805,6 +6445,13 @@ export interface components {
              */
             gmv_share_percentage: string;
         };
+        /** CentralKitchenCreate */
+        CentralKitchenCreate: {
+            /** Name */
+            name: string;
+            /** Code */
+            code: string;
+        };
         /**
          * ChangePasswordRequest
          * @description Change the password while signed in. Other devices are signed out.
@@ -5928,6 +6575,77 @@ export interface components {
                 [key: string]: string;
             } | null;
         };
+        /** ConversionCreate */
+        ConversionCreate: {
+            /**
+             * From Unit Id
+             * Format: uuid
+             */
+            from_unit_id: string;
+            /**
+             * To Unit Id
+             * Format: uuid
+             */
+            to_unit_id: string;
+            /** Factor */
+            factor: number | string;
+            /** Ingredient Id */
+            ingredient_id?: string | null;
+        };
+        /** ConversionListResponse */
+        ConversionListResponse: {
+            /** Items */
+            items: components["schemas"]["ConversionResponse"][];
+        };
+        /** ConversionResponse */
+        ConversionResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Brand Id
+             * Format: uuid
+             */
+            brand_id: string;
+            /** Ingredient Id */
+            ingredient_id: string | null;
+            /**
+             * From Unit Id
+             * Format: uuid
+             */
+            from_unit_id: string;
+            /**
+             * To Unit Id
+             * Format: uuid
+             */
+            to_unit_id: string;
+            /** Factor */
+            factor: string;
+        };
+        /** CountStart */
+        CountStart: {
+            /** Kind */
+            kind: string;
+            /** Ingredient Ids */
+            ingredient_ids?: string[] | null;
+        };
+        /** CountSubmit */
+        CountSubmit: {
+            /** Lines */
+            lines: components["schemas"]["CountSubmitLine"][];
+        };
+        /** CountSubmitLine */
+        CountSubmitLine: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /** Counted Qty */
+            counted_qty: number | string;
+        };
         /**
          * CreateKitchenStationRequest
          * @description Payload for creating a custom branch kitchen station.
@@ -6006,6 +6724,13 @@ export interface components {
              * @description Optional customer note; mandatory (3-200 chars) for request_type OTHER
              */
             note?: string | null;
+        };
+        /** CsvImportRequest */
+        CsvImportRequest: {
+            /** Csv Text */
+            csv_text: string;
+            /** Warehouse Id */
+            warehouse_id?: string | null;
         };
         /**
          * CustomerProfileResponse
@@ -6110,6 +6835,39 @@ export interface components {
              * @default []
              */
             branch_rankings: components["schemas"]["BranchPerformanceRow"][];
+        };
+        /** DeductionJobListResponse */
+        DeductionJobListResponse: {
+            /** Items */
+            items: components["schemas"]["DeductionJobResponse"][];
+        };
+        /** DeductionJobResponse */
+        DeductionJobResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Order Id
+             * Format: uuid
+             */
+            order_id: string;
+            /**
+             * Branch Id
+             * Format: uuid
+             */
+            branch_id: string;
+            /** Kind */
+            kind: string;
+            /** Status */
+            status: string;
+            /** Attempts */
+            attempts: number;
+            /** Last Error */
+            last_error: string | null;
+            /** Next Attempt At */
+            next_attempt_at: string | null;
         };
         /**
          * DeleteAccountRequest
@@ -7106,6 +7864,116 @@ export interface components {
             /** Is Used */
             is_used: boolean;
         };
+        /** ImportCommitResponse */
+        ImportCommitResponse: {
+            /** Created */
+            created: number;
+            /** Updated */
+            updated: number;
+            /** Opened */
+            opened: number;
+            /** Skipped */
+            skipped: number;
+        };
+        /** ImportPreviewResponse */
+        ImportPreviewResponse: {
+            /** Rows */
+            rows: components["schemas"]["ImportPreviewRow"][];
+        };
+        /** ImportPreviewRow */
+        ImportPreviewRow: {
+            /** Line */
+            line: number;
+            /** Sku */
+            sku: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "create" | "update" | "error";
+            /** Message */
+            message?: string | null;
+            /** Opening Qty */
+            opening_qty?: string | null;
+        };
+        /** IngredientCreate */
+        IngredientCreate: {
+            /** Sku */
+            sku: string;
+            name: components["schemas"]["LocalizedName"];
+            /** Category */
+            category?: string | null;
+            /**
+             * Base Unit Id
+             * Format: uuid
+             */
+            base_unit_id: string;
+            /**
+             * Is Prep
+             * @default false
+             */
+            is_prep: boolean;
+            /**
+             * Reorder Level
+             * @default 0
+             */
+            reorder_level: number | string;
+            /**
+             * Par Level
+             * @default 0
+             */
+            par_level: number | string;
+        };
+        /** IngredientListResponse */
+        IngredientListResponse: {
+            /** Items */
+            items: components["schemas"]["IngredientResponse"][];
+        };
+        /** IngredientResponse */
+        IngredientResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Brand Id
+             * Format: uuid
+             */
+            brand_id: string;
+            /** Sku */
+            sku: string;
+            name: components["schemas"]["LocalizedName"];
+            /** Category */
+            category: string | null;
+            /**
+             * Base Unit Id
+             * Format: uuid
+             */
+            base_unit_id: string;
+            /** Is Prep */
+            is_prep: boolean;
+            /** Reorder Level */
+            reorder_level: string;
+            /** Par Level */
+            par_level: string;
+            /** Is Active */
+            is_active: boolean;
+        };
+        /** IngredientUpdate */
+        IngredientUpdate: {
+            name?: components["schemas"]["LocalizedName"] | null;
+            /** Category */
+            category?: string | null;
+            /** Is Prep */
+            is_prep?: boolean | null;
+            /** Reorder Level */
+            reorder_level?: number | string | null;
+            /** Par Level */
+            par_level?: number | string | null;
+            /** Is Active */
+            is_active?: boolean | null;
+        };
         /**
          * InitiateOnlinePaymentRequest
          * @description Customer request to initiate an online checkout transaction.
@@ -7782,6 +8650,13 @@ export interface components {
              * Ar
              * @description Arabic text representation
              */
+            ar: string;
+        };
+        /** LocalizedName */
+        LocalizedName: {
+            /** En */
+            en: string;
+            /** Ar */
             ar: string;
         };
         /**
@@ -9536,6 +10411,59 @@ export interface components {
             /** Detail */
             detail: string;
         };
+        /** MovementListResponse */
+        MovementListResponse: {
+            /** Items */
+            items: components["schemas"]["MovementResponse"][];
+        };
+        /** MovementResponse */
+        MovementResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Warehouse Id
+             * Format: uuid
+             */
+            warehouse_id: string;
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            movement_type: components["schemas"]["MovementType"];
+            /** Qty */
+            qty: string;
+            /** Unit Cost */
+            unit_cost: string;
+            /** Total Cost */
+            total_cost: string;
+            /** Reference Type */
+            reference_type: string | null;
+            /** Reference Id */
+            reference_id: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Created By */
+            created_by: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Already Posted
+             * @default false
+             */
+            already_posted: boolean;
+        };
+        /**
+         * MovementType
+         * @enum {string}
+         */
+        MovementType: "OPENING" | "PURCHASE_RECEIPT" | "SALE" | "SALE_REVERSAL" | "WASTE" | "ADJUSTMENT" | "COUNT_VARIANCE" | "TRANSFER_OUT" | "TRANSFER_IN" | "PREP_PRODUCE" | "PREP_CONSUME" | "TRANSFER_VARIANCE";
         /**
          * MyUsualModifier
          * @description A priced, localized modifier choice on the saved order.
@@ -9935,6 +10863,23 @@ export interface components {
              * @default false
              */
             paymob: boolean;
+        };
+        /** OpeningBalanceCreate */
+        OpeningBalanceCreate: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /** Qty */
+            qty: number | string;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Unit Cost */
+            unit_cost: number | string;
         };
         /**
          * OpeningHours
@@ -10930,6 +11875,38 @@ export interface components {
              */
             name: string;
         };
+        /** PrepDrift */
+        PrepDrift: {
+            /** Explanation */
+            explanation: string;
+            /** Items */
+            items: components["schemas"]["PrepDriftItem"][];
+        };
+        /** PrepDriftItem */
+        PrepDriftItem: {
+            /** Sku */
+            sku: string;
+            /** Name */
+            name: {
+                [key: string]: unknown;
+            };
+            /** On Hand */
+            on_hand: string;
+            /** Sale Qty */
+            sale_qty: string;
+            /** Leaf Skus */
+            leaf_skus: string[];
+        };
+        /** PrepProduce */
+        PrepProduce: {
+            /**
+             * Prep Ingredient Id
+             * Format: uuid
+             */
+            prep_ingredient_id: string;
+            /** Batches */
+            batches: number | string;
+        };
         /**
          * PresignedUrlRequest
          * @description Payload to request an S3/R2 presigned upload URL.
@@ -11430,6 +12407,38 @@ export interface components {
              */
             locale: "en" | "ar";
         };
+        /** PurchaseLineIn */
+        PurchaseLineIn: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Qty */
+            qty: number | string;
+            /** Unit Price */
+            unit_price: number | string;
+        };
+        /** PurchaseOrderCreate */
+        PurchaseOrderCreate: {
+            /**
+             * Warehouse Id
+             * Format: uuid
+             */
+            warehouse_id: string;
+            /**
+             * Supplier Id
+             * Format: uuid
+             */
+            supplier_id: string;
+            /** Lines */
+            lines: components["schemas"]["PurchaseLineIn"][];
+        };
         /**
          * QRExportFormat
          * @description Supported export media formats for table QR codes.
@@ -11576,6 +12585,154 @@ export interface components {
              * @description Client device GPS longitude for server-side geofence validation
              */
             longitude?: number | null;
+        };
+        /** ReceiveLineIn */
+        ReceiveLineIn: {
+            /**
+             * Line Id
+             * Format: uuid
+             */
+            line_id: string;
+            /** Qty */
+            qty: number | string;
+            /** Unit Price */
+            unit_price?: number | string | null;
+        };
+        /** ReceiveRequest */
+        ReceiveRequest: {
+            /** Lines */
+            lines: components["schemas"]["ReceiveLineIn"][];
+        };
+        /** RecipeCostComponent */
+        RecipeCostComponent: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /** Sku */
+            sku: string;
+            /** Qty */
+            qty: string;
+            /** Unit Cost */
+            unit_cost: string;
+            /** Line Cost */
+            line_cost: string;
+        };
+        /** RecipeCostResponse */
+        RecipeCostResponse: {
+            /**
+             * Recipe Id
+             * Format: uuid
+             */
+            recipe_id: string;
+            /** Portions */
+            portions: string;
+            /** Cost */
+            cost: string;
+            /** Price */
+            price: string | null;
+            /** Margin Pct */
+            margin_pct: string | null;
+            /** Unpriced Ingredient Ids */
+            unpriced_ingredient_ids: string[];
+            /** Components */
+            components: components["schemas"]["RecipeCostComponent"][];
+        };
+        /** RecipeCreate */
+        RecipeCreate: {
+            /**
+             * Target Type
+             * @enum {string}
+             */
+            target_type: "MENU_ITEM" | "MODIFIER_OPTION" | "PREP";
+            /** Menu Item Id */
+            menu_item_id?: string | null;
+            /** Modifier Option Id */
+            modifier_option_id?: string | null;
+            /** Prep Ingredient Id */
+            prep_ingredient_id?: string | null;
+            /**
+             * Yield Qty
+             * @default 1
+             */
+            yield_qty: number | string;
+            /** Lines */
+            lines: components["schemas"]["RecipeLineIn"][];
+        };
+        /** RecipeLineIn */
+        RecipeLineIn: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /** Qty */
+            qty: number | string;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /**
+             * Waste Pct
+             * @default 0
+             */
+            waste_pct: number | string;
+        };
+        /** RecipeLineResponse */
+        RecipeLineResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Qty */
+            qty: string;
+            /** Waste Pct */
+            waste_pct: string;
+        };
+        /** RecipeListResponse */
+        RecipeListResponse: {
+            /** Items */
+            items: components["schemas"]["RecipeResponse"][];
+        };
+        /** RecipeResponse */
+        RecipeResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Brand Id
+             * Format: uuid
+             */
+            brand_id: string;
+            /** Target Type */
+            target_type: string;
+            /** Menu Item Id */
+            menu_item_id: string | null;
+            /** Modifier Option Id */
+            modifier_option_id: string | null;
+            /** Prep Ingredient Id */
+            prep_ingredient_id: string | null;
+            /** Yield Qty */
+            yield_qty: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Lines */
+            lines?: components["schemas"]["RecipeLineResponse"][];
         };
         /**
          * RefreshRequest
@@ -11962,6 +13119,41 @@ export interface components {
          * @enum {string}
          */
         ServiceRequestType: "WATER" | "WATER_REFILL" | "CUTLERY" | "NAPKINS" | "PLATES" | "WAITER_CALL" | "PACK_LEFTOVERS" | "BILL_REQUEST" | "TAKEAWAY_ORDER" | "OTHER";
+        /** SettingsBody */
+        SettingsBody: {
+            /**
+             * Allow Negative Stock
+             * @default true
+             */
+            allow_negative_stock: boolean;
+            /**
+             * Auto Sold Out
+             * @default false
+             */
+            auto_sold_out: boolean;
+            /** Alert User Ids */
+            alert_user_ids?: string[];
+        };
+        /** SettingsResponse */
+        SettingsResponse: {
+            /**
+             * Allow Negative Stock
+             * @default true
+             */
+            allow_negative_stock: boolean;
+            /**
+             * Auto Sold Out
+             * @default false
+             */
+            auto_sold_out: boolean;
+            /** Alert User Ids */
+            alert_user_ids?: string[];
+            /**
+             * Branch Id
+             * Format: uuid
+             */
+            branch_id: string;
+        };
         /**
          * ShiftInfo
          * @description Current shift schedule details.
@@ -12919,6 +14111,78 @@ export interface components {
             /** @description Customer. */
             customer: components["schemas"]["VehicleCustomerSummary"];
         };
+        /** StockListResponse */
+        StockListResponse: {
+            /**
+             * Warehouse Id
+             * Format: uuid
+             */
+            warehouse_id: string;
+            /** Items */
+            items: components["schemas"]["StockRowResponse"][];
+        };
+        /** StockRowResponse */
+        StockRowResponse: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /** Sku */
+            sku: string;
+            name: components["schemas"]["LocalizedName"];
+            /** Base Unit Code */
+            base_unit_code: string;
+            /** On Hand */
+            on_hand: string;
+            /** Avg Cost */
+            avg_cost: string;
+            /** Reorder Level */
+            reorder_level: string;
+            /** Par Level */
+            par_level: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "low" | "out" | "negative";
+        };
+        /** SupplierCreate */
+        SupplierCreate: {
+            /** Name */
+            name: string;
+            /** Contact Name */
+            contact_name?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Email */
+            email?: string | null;
+            /**
+             * Lead Time Days
+             * @default 0
+             */
+            lead_time_days: number;
+        };
+        /** SupplierIngredientCreate */
+        SupplierIngredientCreate: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /**
+             * Pack Unit Id
+             * Format: uuid
+             */
+            pack_unit_id: string;
+            /** Pack Size */
+            pack_size: number | string;
+            /**
+             * Last Price
+             * @default 0
+             */
+            last_price: number | string;
+        };
         /** SyncActionResult */
         SyncActionResult: {
             /** Index */
@@ -13236,6 +14500,56 @@ export interface components {
             /** Expires In */
             expires_in: number;
         };
+        /** TransferCreate */
+        TransferCreate: {
+            /**
+             * From Warehouse Id
+             * Format: uuid
+             */
+            from_warehouse_id: string;
+            /**
+             * To Warehouse Id
+             * Format: uuid
+             */
+            to_warehouse_id: string;
+            /** Lines */
+            lines: components["schemas"]["TransferLineIn"][];
+        };
+        /** TransferLineIn */
+        TransferLineIn: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Qty */
+            qty: number | string;
+        };
+        /** TransferReceive */
+        TransferReceive: {
+            /** Lines */
+            lines: components["schemas"]["TransferReceiveLine"][];
+            /**
+             * Close Short
+             * @default false
+             */
+            close_short: boolean;
+        };
+        /** TransferReceiveLine */
+        TransferReceiveLine: {
+            /**
+             * Line Id
+             * Format: uuid
+             */
+            line_id: string;
+            /** Qty */
+            qty: number | string;
+        };
         /** TransitionAction */
         TransitionAction: {
             /**
@@ -13264,6 +14578,51 @@ export interface components {
              * @enum {string}
              */
             target_status: "PREPARING" | "READY" | "DELIVERED";
+        };
+        /** UnitCreate */
+        UnitCreate: {
+            /** Code */
+            code: string;
+            name: components["schemas"]["LocalizedName"];
+            dimension: components["schemas"]["UnitDimension"];
+            /**
+             * Is Base
+             * @default false
+             */
+            is_base: boolean;
+        };
+        /**
+         * UnitDimension
+         * @enum {string}
+         */
+        UnitDimension: "WEIGHT" | "VOLUME" | "COUNT";
+        /** UnitListResponse */
+        UnitListResponse: {
+            /** Items */
+            items: components["schemas"]["UnitResponse"][];
+        };
+        /** UnitResponse */
+        UnitResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Brand Id
+             * Format: uuid
+             */
+            brand_id: string;
+            /** Code */
+            code: string;
+            name: components["schemas"]["LocalizedName"];
+            dimension: components["schemas"]["UnitDimension"];
+            /** Is Base */
+            is_base: boolean;
+        };
+        /** UnitUpdate */
+        UnitUpdate: {
+            name?: components["schemas"]["LocalizedName"] | null;
         };
         /**
          * UpdateBranchFinancialSettingsRequest
@@ -13360,6 +14719,58 @@ export interface components {
             questions: number;
             /** Refused */
             refused: number;
+        };
+        /** UsageIngredient */
+        UsageIngredient: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /** Sku */
+            sku: string;
+            /** Name */
+            name: {
+                [key: string]: unknown;
+            };
+            /** Is Prep */
+            is_prep: boolean;
+            /** On Hand */
+            on_hand: string;
+            /** Value */
+            value: string;
+            /** Theoretical Usage Qty */
+            theoretical_usage_qty: string;
+            /** Count Variance Qty */
+            count_variance_qty: string;
+        };
+        /** UsageReportResponse */
+        UsageReportResponse: {
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /** Valuation */
+            valuation: string;
+            /** Cogs */
+            cogs: string;
+            /** Net Sales */
+            net_sales: string;
+            /** Food Cost Pct */
+            food_cost_pct: string | null;
+            /** Ingredients */
+            ingredients: components["schemas"]["UsageIngredient"][];
+            /** Top Ingredients */
+            top_ingredients: components["schemas"]["UsageIngredient"][];
+            /** Waste By Reason */
+            waste_by_reason: components["schemas"]["WasteReasonRow"][];
+            prep_drift: components["schemas"]["PrepDrift"];
         };
         /**
          * UserResponse
@@ -14137,6 +15548,64 @@ export interface components {
              * @description ISO 4217 currency code, such as EGP.
              */
             currency: string;
+        };
+        /**
+         * WarehouseKind
+         * @enum {string}
+         */
+        WarehouseKind: "BRANCH_STORE" | "CENTRAL_KITCHEN";
+        /** WarehouseListResponse */
+        WarehouseListResponse: {
+            /** Items */
+            items: components["schemas"]["WarehouseResponse"][];
+        };
+        /** WarehouseResponse */
+        WarehouseResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Brand Id
+             * Format: uuid
+             */
+            brand_id: string;
+            /** Branch Id */
+            branch_id: string | null;
+            kind: components["schemas"]["WarehouseKind"];
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Is Active */
+            is_active: boolean;
+        };
+        /** WasteCreate */
+        WasteCreate: {
+            /**
+             * Ingredient Id
+             * Format: uuid
+             */
+            ingredient_id: string;
+            /** Qty */
+            qty: number | string;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Reason Code */
+            reason_code: string;
+            /** Note */
+            note?: string | null;
+        };
+        /** WasteReasonRow */
+        WasteReasonRow: {
+            /** Reason */
+            reason: string;
+            /** Qty */
+            qty: string;
         };
         /**
          * ZReportGenerateRequest
@@ -22535,6 +24004,5334 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_units_api_v1_inventory_units_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitListResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_unit_api_v1_inventory_units_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    patch_unit_api_v1_inventory_units__unit_id__patch: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    list_conversions_api_v1_inventory_conversions_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+                ingredient_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversionListResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_conversion_api_v1_inventory_conversions_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversionResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_conversion_api_v1_inventory_conversions__conversion_id__delete: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path: {
+                conversion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ingredients_api_v1_inventory_ingredients_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientListResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_ingredient_api_v1_inventory_ingredients_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngredientCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    get_one_ingredient_api_v1_inventory_ingredients__ingredient_id__get: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path: {
+                ingredient_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    patch_ingredient_api_v1_inventory_ingredients__ingredient_id__patch: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path: {
+                ingredient_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngredientUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    import_preview_api_v1_inventory_imports_preview_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CsvImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreviewResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    import_commit_api_v1_inventory_imports_commit_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CsvImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCommitResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    list_branch_warehouses_api_v1_inventory_branches__branch_id__warehouses_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseListResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    list_central_kitchens_api_v1_inventory_brands__brand_id__central_kitchens_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseListResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_central_kitchen_api_v1_inventory_brands__brand_id__central_kitchens_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CentralKitchenCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_opening_api_v1_inventory_warehouses__warehouse_id__opening_balances_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                warehouse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpeningBalanceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovementResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_adjustment_api_v1_inventory_warehouses__warehouse_id__adjustments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                warehouse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovementResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    get_stock_api_v1_inventory_warehouses__warehouse_id__stock_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                warehouse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockListResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    get_movements_api_v1_inventory_warehouses__warehouse_id__movements_get: {
+        parameters: {
+            query?: {
+                ingredient_id?: string | null;
+                movement_type?: components["schemas"]["MovementType"] | null;
+                created_from?: string | null;
+                created_to?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                warehouse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovementListResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    list_recipes_api_v1_inventory_recipes_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeListResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_recipe_api_v1_inventory_recipes_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    put_recipe_api_v1_inventory_recipes__recipe_id__put: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path: {
+                recipe_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    get_recipe_cost_api_v1_inventory_recipes__recipe_id__cost_get: {
+        parameters: {
+            query: {
+                warehouse_id: string;
+            };
+            header?: never;
+            path: {
+                recipe_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeCostResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    list_deduction_jobs_api_v1_inventory_deduction_jobs_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                branch_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeductionJobListResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_supplier_api_v1_inventory_suppliers_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_supplier_ingredient_api_v1_inventory_suppliers__supplier_id__ingredients_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path: {
+                supplier_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierIngredientCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_purchase_order_api_v1_inventory_purchase_orders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseOrderCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    send_purchase_order_api_v1_inventory_purchase_orders__order_id__send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    receive_po_api_v1_inventory_purchase_orders__order_id__receive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceiveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    purchase_suggestions_api_v1_inventory_warehouses__warehouse_id__purchase_suggestions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                warehouse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_waste_api_v1_inventory_warehouses__warehouse_id__waste_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                warehouse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WasteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovementResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_count_start_api_v1_inventory_warehouses__warehouse_id__counts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                warehouse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CountStart"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_count_submit_api_v1_inventory_counts__count_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                count_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CountSubmit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_count_post_api_v1_inventory_counts__count_id__post_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                count_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_transfer_api_v1_inventory_transfers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    approve_transfer_api_v1_inventory_transfers__transfer_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transfer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_transfer_send_api_v1_inventory_transfers__transfer_id__send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transfer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_transfer_receive_api_v1_inventory_transfers__transfer_id__receive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transfer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferReceive"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    post_prep_api_v1_inventory_warehouses__warehouse_id__prep_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                warehouse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrepProduce"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    get_branch_settings_api_v1_inventory_branches__branch_id__settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    put_branch_settings_api_v1_inventory_branches__branch_id__settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    get_usage_report_api_v1_inventory_reports_usage_get: {
+        parameters: {
+            query?: {
+                branch_id?: string | null;
+                brand_id?: string | null;
+                start?: string | null;
+                end?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageReportResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    get_usage_csv_api_v1_inventory_reports_usage_csv_get: {
+        parameters: {
+            query?: {
+                branch_id?: string | null;
+                brand_id?: string | null;
+                start?: string | null;
+                end?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": unknown;
+                    "text/plain": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": unknown;
+                    "text/plain": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": unknown;
+                    "text/plain": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": unknown;
+                    "text/plain": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": unknown;
+                    "text/plain": components["schemas"]["ValidationErrorResponse"];
                 };
             };
         };

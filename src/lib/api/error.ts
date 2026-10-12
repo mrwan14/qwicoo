@@ -1,3 +1,4 @@
+import { inventoryErrorCatalog } from "@/features/staff/inventory/errors";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
 type Catalog = {
@@ -14,6 +15,7 @@ type Catalog = {
  * or the Arabic text. All three resolve to the same entry.
  */
 const CATALOG: Record<string, Catalog> = {
+  ...inventoryErrorCatalog,
   GEOLOCATION_REQUIRED: {
     en: "Allow location access, or enter the table PIN, to join this table.",
     ar: "إحداثيات الموقع الجغرافي مطلوبة للتحقق من النطاق الجغرافي للفرع",

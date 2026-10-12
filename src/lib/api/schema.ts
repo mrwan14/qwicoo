@@ -1452,6 +1452,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/brands/{brand_id}/payment-gateways/paymob": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Paymob gateway settings
+         * @description Returns the brand Paymob configuration. Secrets are masked to the last four characters.
+         */
+        get: operations["get_paymob_gateway_api_v1_brands__brand_id__payment_gateways_paymob_get"];
+        /**
+         * Save Paymob gateway settings
+         * @description Create or update the brand Paymob configuration. Omitted secrets are left unchanged.
+         */
+        put: operations["put_paymob_gateway_api_v1_brands__brand_id__payment_gateways_paymob_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/brands/{brand_id}/payment-gateways/paymob/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check Paymob credentials locally
+         * @description Validates key format and integration ids. Does not call Paymob and creates nothing chargeable.
+         */
+        post: operations["test_paymob_gateway_api_v1_brands__brand_id__payment_gateways_paymob_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/features/platform": {
         parameters: {
             query?: never;
@@ -3345,6 +3389,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payments/paymob/intention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a Paymob Unified Checkout
+         * @description Guest table token or branch staff. Creates one PENDING payment, then a Paymob intention. The same Idempotency-Key and body returns the stored checkout URL and does not call Paymob again. A different body with the same key is 409 IDEMPOTENCY_KEY_MISMATCH. Gateway currency must match the branch currency.
+         */
+        post: operations["create_paymob_intention_api_v1_payments_paymob_intention_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/webhooks/paymob": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Paymob transaction callback
+         * @description HMAC-SHA512 over the documented transaction fields. This callback is the only path that settles a Paymob payment.
+         */
+        post: operations["paymob_webhook_api_v1_payments_webhooks_paymob_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/paymob/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Paymob guest return
+         * @description Verifies the redirect HMAC and sends the guest to the result page. Does not settle the payment.
+         */
+        get: operations["paymob_return_api_v1_payments_paymob_return_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payments/webhooks/{provider}": {
         parameters: {
             query?: never;
@@ -3419,6 +3523,26 @@ export interface paths {
         get: operations["list_pending_branch_payments_api_v1_payments_branch_pending_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/{payment_id}/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refund a captured Paymob payment
+         * @description Full refund when amount is omitted. Partial refunds cannot exceed the captured amount. A same-day card capture is voided first; any other refund calls Paymob's refund API.
+         */
+        post: operations["refund_paymob_payment_api_v1_payments__payment_id__refund_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10333,7 +10457,7 @@ export interface components {
          * @description Accepted payment tender types.
          * @enum {string}
          */
-        PaymentMethod: "CASH" | "CARD_TERMINAL" | "POS_TERMINAL" | "STRIPE" | "ONLINE_CARD" | "APPLE_PAY" | "LOCAL_WALLET" | "ONLINE_PREPAID";
+        PaymentMethod: "CASH" | "CARD_TERMINAL" | "POS_TERMINAL" | "STRIPE" | "ONLINE_CARD" | "APPLE_PAY" | "LOCAL_WALLET" | "ONLINE_PREPAID" | "PAYMOB";
         /**
          * PaymentRequiredDetail
          * @description Nested body of a 409 that blocks handover until the cashier is paid.
@@ -10434,7 +10558,230 @@ export interface components {
          * @description Settlement status for transactions.
          * @enum {string}
          */
-        PaymentStatus: "PENDING" | "PENDING_CASHIER_VERIFICATION" | "COMPLETED" | "FAILED" | "REFUNDED";
+        PaymentStatus: "PENDING" | "PENDING_CASHIER_VERIFICATION" | "COMPLETED" | "FAILED" | "REFUNDED" | "EXPIRED";
+        /**
+         * PaymobConnectionTestResponse
+         * @description Result of a local credential check. This call does not contact Paymob.
+         */
+        PaymobConnectionTestResponse: {
+            /**
+             * Ok
+             * @default true
+             * @constant
+             */
+            ok: true;
+            /**
+             * Provider
+             * @default paymob
+             * @constant
+             */
+            provider: "paymob";
+            /** Is Live */
+            is_live: boolean;
+            /** Currency */
+            currency: string;
+        };
+        /**
+         * PaymobGatewayResponse
+         * @description Gateway configuration with secrets reduced to their last four characters.
+         */
+        PaymobGatewayResponse: {
+            /**
+             * Brand Id
+             * Format: uuid
+             */
+            brand_id: string;
+            /**
+             * Provider
+             * @constant
+             */
+            provider: "paymob";
+            /**
+             * Secret Key Masked
+             * @example ****abcd
+             */
+            secret_key_masked: string;
+            /**
+             * Public Key Masked
+             * @example ****wxyz
+             */
+            public_key_masked: string;
+            /**
+             * Hmac Secret Masked
+             * @example ****1234
+             */
+            hmac_secret_masked: string;
+            integration_ids: components["schemas"]["PaymobIntegrationIds"];
+            /** Currency */
+            currency: string;
+            /** Is Live */
+            is_live: boolean;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * PaymobGatewayUpsert
+         * @description Create or replace a brand's Paymob credentials.
+         *
+         *     Omit a secret on update to keep the stored value. A present secret replaces it.
+         */
+        PaymobGatewayUpsert: {
+            /**
+             * Secret Key
+             * @description Paymob secret key. Omitted on update keeps the stored key.
+             */
+            secret_key?: string | null;
+            /**
+             * Public Key
+             * @description Paymob public key. Omitted on update keeps the stored key.
+             */
+            public_key?: string | null;
+            /**
+             * Hmac Secret
+             * @description Paymob HMAC secret. Omitted on update keeps the stored secret.
+             */
+            hmac_secret?: string | null;
+            integration_ids: components["schemas"]["PaymobIntegrationIds"];
+            /**
+             * Currency
+             * @default EGP
+             * @example EGP
+             */
+            currency: string;
+            /**
+             * Is Live
+             * @description True when the keys and integration ids are live, not sandbox.
+             * @default false
+             */
+            is_live: boolean;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+        };
+        /**
+         * PaymobIntegrationIds
+         * @description Paymob integration ids. At least one is required to take a payment.
+         */
+        PaymobIntegrationIds: {
+            /**
+             * Card
+             * @description Card integration id.
+             * @example 123456
+             */
+            card?: number | null;
+            /**
+             * Wallet
+             * @description Mobile wallet integration id.
+             * @example 123457
+             */
+            wallet?: number | null;
+            /**
+             * Kiosk
+             * @description Optional kiosk integration id.
+             */
+            kiosk?: number | null;
+        };
+        /**
+         * PaymobIntentionRequest
+         * @description Start a Paymob Unified Checkout for an order.
+         */
+        PaymobIntentionRequest: {
+            /**
+             * Order Id
+             * Format: uuid
+             */
+            order_id: string;
+            /**
+             * Amount
+             * @description Amount in major units. Omit to charge the remaining balance.
+             * @example 120.50
+             */
+            amount?: number | string | null;
+            /**
+             * Phone
+             * @description Guest phone for Paymob billing data. Digits, optional leading +.
+             * @example +201001234567
+             */
+            phone?: string | null;
+        };
+        /**
+         * PaymobIntentionResponse
+         * @description Checkout URL for the guest. The client secret is inside the URL only.
+         */
+        PaymobIntentionResponse: {
+            /**
+             * Payment Id
+             * Format: uuid
+             */
+            payment_id: string;
+            /**
+             * Order Id
+             * Format: uuid
+             */
+            order_id: string;
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+            /** Status */
+            status: string;
+            /** Checkout Url */
+            checkout_url: string;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
+        };
+        /**
+         * PaymobRefundRequest
+         * @description Full refund when amount is omitted. Partial refunds cannot exceed the capture.
+         */
+        PaymobRefundRequest: {
+            /**
+             * Amount
+             * @example 40.00
+             */
+            amount?: number | string | null;
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * PaymobRefundResponse
+         * @description Result of a Paymob void or refund. The captured row stays COMPLETED until it is fully refunded.
+         */
+        PaymobRefundResponse: {
+            /**
+             * Payment Id
+             * Format: uuid
+             */
+            payment_id: string;
+            /**
+             * Order Id
+             * Format: uuid
+             */
+            order_id: string;
+            /** Status */
+            status: string;
+            /** Refunded Amount */
+            refunded_amount: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Provider Action
+             * @enum {string}
+             */
+            provider_action: "void" | "refund";
+        };
         /**
          * PlatformFeatureCreate
          * @description Schema for registering a new platform feature.
@@ -21777,6 +22124,103 @@ export interface operations {
             };
         };
     };
+    get_paymob_gateway_api_v1_brands__brand_id__payment_gateways_paymob_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymobGatewayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_paymob_gateway_api_v1_brands__brand_id__payment_gateways_paymob_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymobGatewayUpsert"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymobGatewayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_paymob_gateway_api_v1_brands__brand_id__payment_gateways_paymob_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymobConnectionTestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_platform_features_api_v1_features_platform_get: {
         parameters: {
             query?: {
@@ -25962,6 +26406,95 @@ export interface operations {
             };
         };
     };
+    create_paymob_intention_api_v1_payments_paymob_intention_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "accept-language"?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymobIntentionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymobIntentionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paymob_webhook_api_v1_payments_webhooks_paymob_post: {
+        parameters: {
+            query?: {
+                hmac?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paymob_return_api_v1_payments_paymob_return_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     payment_gateway_webhook_api_v1_payments_webhooks__provider__post: {
         parameters: {
             query?: never;
@@ -26089,6 +26622,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentResponse"][];
+                };
+            };
+        };
+    };
+    refund_paymob_payment_api_v1_payments__payment_id__refund_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PaymobRefundRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymobRefundResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

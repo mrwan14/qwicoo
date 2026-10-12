@@ -294,6 +294,82 @@ const CATALOG: Record<string, Catalog> = {
     en: "You've reached this month's question limit.",
     ar: "وصلت إلى حد الأسئلة لهذا الشهر.",
   },
+  PAYMOB_CURRENCY_MISMATCH: {
+    en: "Paymob is set to a different currency than this branch.",
+    ar: "عملة Paymob مختلفة عن عملة الفرع.",
+  },
+  PAYMOB_PHONE_REQUIRED: {
+    en: "Enter a phone number so Paymob can take this payment.",
+    ar: "أدخل رقم هاتف حتى يتمكن Paymob من تحصيل هذه الدفعة.",
+  },
+  PAYMOB_AUTH_FAILED: {
+    en: "Paymob rejected the secret key. Check it in the Paymob dashboard and save it again.",
+    ar: "رفض Paymob المفتاح السري. راجع المفتاح في لوحة Paymob ثم احفظه من جديد.",
+  },
+  PAYMOB_INTEGRATION_INVALID: {
+    en: "Paymob doesn't recognize one of the integration ids. Check the card, wallet, and kiosk ids.",
+    ar: "لم يتعرف Paymob على أحد معرّفات التكامل. راجع معرّفات البطاقة والمحفظة والكشك.",
+  },
+  PAYMOB_REJECTED: {
+    en: "Paymob couldn't start this payment. Try again in a moment.",
+    ar: "تعذّر على Paymob بدء هذه الدفعة. حاول مرة أخرى بعد لحظات.",
+  },
+  PUBLIC_API_BASE_URL_UNSET: {
+    en: "Online payments aren't reachable yet. The public API address still needs to be set.",
+    ar: "المدفوعات عبر الإنترنت غير متاحة بعد. عنوان الواجهة العام ما زال غير مضبوط.",
+  },
+  PAYMOB_REFUND_EXCEEDS_CAPTURED: {
+    en: "That refund is more than the amount still available on this payment.",
+    ar: "مبلغ الاسترداد أكبر من المبلغ المتبقي على هذه الدفعة.",
+  },
+  ACCESS_FORBIDDEN_BRAND_MISMATCH: {
+    en: "You can only change Paymob for your own brand.",
+    ar: "يمكنك تعديل Paymob لعلامتك فقط.",
+  },
+  PAYMOB_SECRET_KEY_FORMAT: {
+    en: "The secret key doesn't match this mode. Test keys start with egy_sk_test_, and live keys start with egy_sk_live_.",
+    ar: "المفتاح السري لا يطابق هذا الوضع. مفاتيح التجربة تبدأ بـ egy_sk_test_ ومفاتيح التشغيل تبدأ بـ egy_sk_live_.",
+  },
+  PAYMOB_PUBLIC_KEY_FORMAT: {
+    en: "The public key doesn't match this mode. Test keys start with egy_pk_test_, and live keys start with egy_pk_live_.",
+    ar: "المفتاح العام لا يطابق هذا الوضع. مفاتيح التجربة تبدأ بـ egy_pk_test_ ومفاتيح التشغيل تبدأ بـ egy_pk_live_.",
+  },
+  PAYMOB_HMAC_SECRET_MISSING: {
+    en: "The HMAC secret is missing.",
+    ar: "سر HMAC غير موجود.",
+  },
+  PAYMOB_INTEGRATION_REQUIRED: {
+    en: "Add at least one integration id: card, wallet, or kiosk.",
+    ar: "أضف معرّف تكامل واحداً على الأقل: بطاقة أو محفظة أو كشك.",
+  },
+  PAYMOB_GATEWAY_NOT_CONFIGURED: {
+    en: "Paymob isn't connected for this brand yet.",
+    ar: "Paymob غير متصل لهذه العلامة بعد.",
+  },
+  PAYMOB_SECRETS_REQUIRED: {
+    en: "Enter the secret key, public key, and HMAC secret to connect Paymob.",
+    ar: "أدخل المفتاح السري والمفتاح العام وسر HMAC لربط Paymob.",
+  },
+  PAYMOB_GATEWAY_INACTIVE: {
+    en: "Online payments are turned off for this brand.",
+    ar: "المدفوعات عبر الإنترنت متوقفة لهذه العلامة.",
+  },
+  PAYMOB_PHONE_INVALID: {
+    en: "Enter a phone number with 8 to 15 digits. A leading + is fine.",
+    ar: "أدخل رقم هاتف من 8 إلى 15 رقماً. يمكن أن يبدأ بعلامة +.",
+  },
+  PAYMOB_REFUND_NOT_CAPTURABLE: {
+    en: "Only a completed Paymob payment can be refunded.",
+    ar: "يمكن استرداد دفعة Paymob المكتملة فقط.",
+  },
+  PAYMOB_PAYMENT_IN_PROGRESS: {
+    en: "A payment is already in progress for this order. Wait a moment, then try again.",
+    ar: "هناك دفعة قيد التنفيذ لهذا الطلب. انتظر قليلاً ثم حاول مرة أخرى.",
+  },
+  IDEMPOTENCY_KEY_MISMATCH: {
+    en: "That payment attempt changed. Start it again.",
+    ar: "تغيّرت محاولة الدفع. ابدأها من جديد.",
+  },
 };
 
 /** Free-text API replies that carry a known meaning. */

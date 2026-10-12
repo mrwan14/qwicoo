@@ -13,6 +13,7 @@ import { navCopy } from "@/lib/i18n/staff/nav";
 import { offlineCopy } from "@/lib/i18n/staff/offline";
 import { ordersCopy } from "@/lib/i18n/staff/orders";
 import { paymentsCopy } from "@/lib/i18n/staff/payments";
+import { paymobCopy } from "@/lib/i18n/staff/paymob";
 import { peopleCopy } from "@/lib/i18n/staff/people";
 import { posCopy } from "@/lib/i18n/staff/pos";
 import { qrCopy } from "@/lib/i18n/staff/qr";
@@ -36,6 +37,7 @@ export const staffCopy = {
     offline: offlineCopy.en,
     orders: ordersCopy.en,
     payments: paymentsCopy.en,
+    paymob: paymobCopy.en,
     people: peopleCopy.en,
     pos: posCopy.en,
     qr: qrCopy.en,
@@ -58,6 +60,7 @@ export const staffCopy = {
     offline: offlineCopy.ar,
     orders: ordersCopy.ar,
     payments: paymentsCopy.ar,
+    paymob: paymobCopy.ar,
     people: peopleCopy.ar,
     pos: posCopy.ar,
     qr: qrCopy.ar,

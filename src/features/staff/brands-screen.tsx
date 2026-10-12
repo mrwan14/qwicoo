@@ -26,6 +26,7 @@ import {
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AnalyticsScreen } from "@/features/staff/backoffice-screen";
+import { PaymobSettings } from "@/features/staff/paymob-settings";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
@@ -211,16 +212,16 @@ export function BrandsScreen() {
   );
 }
 
-export function BrandDetailScreen({ brandId }: { brandId: string }) {
+export function BrandDetailScreen({ brandId, apiOrigin }: { brandId: string; apiOrigin: string }) {
   const t = useStaffSection(brandsCopy);
   const isPlatform = useScope((state) => state.homeScope === "platform");
   if (!isPlatform) return <BrandOwnerDashboard brandId={brandId} />;
-  return <BrandSetup brandId={brandId} backHref="/app/brands" backLabel={t.back} />;
+  return <BrandSetup brandId={brandId} apiOrigin={apiOrigin} backHref="/app/brands" backLabel={t.back} />;
 }
 
-export function BrandSettingsScreen({ brandId }: { brandId: string }) {
+export function BrandSettingsScreen({ brandId, apiOrigin }: { brandId: string; apiOrigin: string }) {
   const t = useStaffSection(brandsCopy);
-  return <BrandSetup brandId={brandId} backHref={`/app/brands/${brandId}`} backLabel={t.dashboard} />;
+  return <BrandSetup brandId={brandId} apiOrigin={apiOrigin} backHref={`/app/brands/${brandId}`} backLabel={t.dashboard} />;
 }
 
 function BrandOwnerDashboard({ brandId }: { brandId: string }) {
@@ -252,7 +253,17 @@ function BrandOwnerDashboard({ brandId }: { brandId: string }) {
   );
 }
 
-function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHref: string; backLabel: string }) {
+function BrandSetup({
+  brandId,
+  apiOrigin,
+  backHref,
+  backLabel,
+}: {
+  brandId: string;
+  apiOrigin: string;
+  backHref: string;
+  backLabel: string;
+}) {
   const t = useStaffSection(brandsCopy);
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -344,6 +355,7 @@ function BrandSetup({ brandId, backHref, backLabel }: { brandId: string; backHre
           logo.mutate(file);
         }}
       />
+      <PaymobSettings brandId={brandId} apiOrigin={apiOrigin} />
       <div className="flex items-center justify-between gap-3">
         <div className="grid gap-0.5">
           <h2 className="text-lg font-semibold">{t.branchesTitle}</h2>

@@ -313,7 +313,8 @@ const en = {
     produced: "Produced {qty}.",
     empty: "No prep ingredients yet.",
     noRecipe: "This prep item has no recipe.",
-    depth: "This recipe nests too deeply to preview.",
+    short: "Short",
+    cost: "Cost",
   },
   reports: {
     title: "Reports",
@@ -684,7 +685,8 @@ const ar = {
     produced: "أُنتج {qty}.",
     empty: "لا مكوّنات تحضير بعد.",
     noRecipe: "مكوّن التحضير هذا بلا وصفة.",
-    depth: "هذه الوصفة متداخلة أكثر مما يمكن معاينته.",
+    short: "ناقص",
+    cost: "التكلفة",
   },
   reports: {
     title: "التقارير",

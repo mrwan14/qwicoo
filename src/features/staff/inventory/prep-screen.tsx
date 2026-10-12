@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
+import { Money } from "@/components/ops/money";
 import { PageHeader } from "@/components/ops/page-header";
-import { EmptyState, LoadingState } from "@/components/ops/states";
+import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { fill } from "@/lib/i18n/dictionary";
@@ -15,14 +16,13 @@ import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
-import { control, InventoryFrame, primaryButton, useWarehouses, WarehouseSelect } from "./chrome";
+import { control, InventoryFrame, primaryButton, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
 import { formatQty } from "./qty";
-import { previewPrepConsumption, type PrepIngredient, type PrepRecipe } from "./prep";
-import type { ConversionEdge } from "./units";
 
 export function PrepScreen() {
   const t = useStaffSection(inventoryCopy);
   const { locale } = useLocale();
+  const currency = useBranchCurrency();
   const brandId = useScope((state) => state.brandId) ?? "";
   const warehouses = useWarehouses();
   const [warehouseId, setWarehouseId] = useState("");
@@ -40,67 +40,28 @@ export function PrepScreen() {
       return result.data.items;
     },
   });
-  const recipes = useQuery({
-    queryKey: ["inventory", "recipes", brandId],
-    enabled: Boolean(brandId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/recipes", { params: { query: { brand_id: brandId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data.items;
-    },
-  });
-  const conversions = useQuery({
-    queryKey: ["inventory", "conversions", brandId],
-    enabled: Boolean(brandId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/conversions", { params: { query: { brand_id: brandId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data.items;
-    },
-  });
   const preps = (ingredients.data ?? []).filter((item) => item.is_prep);
-  const preview = useMemo(() => {
-    const recipe = (recipes.data ?? []).find((item) => item.prep_ingredient_id === prepId && item.is_active);
-    if (!prepId || !recipe) return null;
-    const graph: PrepRecipe[] = (recipes.data ?? []).map((item) => ({
-      id: item.id,
-      prepIngredientId: item.prep_ingredient_id,
-      yieldQty: item.yield_qty,
-      isActive: item.is_active,
-      lines: (item.lines ?? []).map((line) => ({
-        ingredientId: line.ingredient_id,
-        qty: line.qty,
-        unitId: line.unit_id,
-        wastePct: line.waste_pct,
-      })),
-    }));
-    const catalog: PrepIngredient[] = (ingredients.data ?? []).map((item) => ({
-      id: item.id,
-      sku: item.sku,
-      isPrep: item.is_prep,
-      baseUnitId: item.base_unit_id,
-    }));
-    const edges: ConversionEdge[] = (conversions.data ?? []).map((edge) => ({
-      ingredientId: edge.ingredient_id,
-      fromUnitId: edge.from_unit_id,
-      toUnitId: edge.to_unit_id,
-      factor: edge.factor,
-    }));
-    const current = graph.find((item) => item.id === recipe.id);
-    if (!current) return null;
-    return previewPrepConsumption(current, Number(batches), graph, catalog, edges);
-  }, [batches, conversions.data, ingredients.data, prepId, recipes.data]);
+  const preview = useQuery({
+    queryKey: ["inventory", "prep-preview", selected, prepId, batches],
+    enabled: Boolean(selected && prepId && Number(batches) > 0),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/warehouses/{warehouse_id}/prep/preview", {
+        params: { path: { warehouse_id: selected }, query: { prep_ingredient_id: prepId, batches } },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data;
+    },
+  });
   const produce = useMutation({
     mutationFn: async () => {
       const result = await browserApi.POST("/api/v1/inventory/warehouses/{warehouse_id}/prep", {
         params: { path: { warehouse_id: selected } },
         body: { prep_ingredient_id: prepId, batches },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      const body = result.data as { produced_qty?: string | number } | undefined;
-      return body?.produced_qty;
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data.produced_qty;
     },
-    onSuccess: (qty) => toast.success(fill(t.prep.produced, { qty: formatQty(qty ?? batches, locale) })),
+    onSuccess: (qty) => toast.success(fill(t.prep.produced, { qty: formatQty(qty, locale) })),
     onError: (error) => toast.error(error instanceof Error ? error.message : t.loadFailed),
   });
 
@@ -124,19 +85,26 @@ export function PrepScreen() {
           <span>{t.prep.batches}</span>
           <input className={`${control} h-14 text-lg`} inputMode="decimal" value={batches} onChange={(event) => setBatches(event.target.value)} required />
         </label>
-        {preview && !preview.ok ? <p className="text-sm text-destructive">{preview.code === "RECIPE_TOO_DEEP" || preview.code === "RECIPE_CYCLE" ? t.prep.depth : t.prep.noRecipe}</p> : null}
-        {preview && preview.ok ? (
+        {preview.isLoading ? <LoadingState label={t.loading} /> : null}
+        {preview.isError ? <QueryErrorState error={preview.error} screen={t.tabs.prep} onRetry={() => void preview.refetch()} /> : null}
+        {preview.data ? (
           <div className="grid gap-2">
             <h2 className="font-medium">{t.prep.preview}</h2>
+            <p className="text-sm">{t.prep.cost} <Money amount={preview.data.total_cost} currency={currency} /></p>
             <ul className="grid gap-1 text-sm">
-              {preview.leaves.map((leaf) => {
-                const ingredient = (ingredients.data ?? []).find((item) => item.id === leaf.ingredientId);
-                return <li key={leaf.ingredientId}>{ingredient ? pickLocale(ingredient.name, locale) : leaf.sku} · {formatQty(leaf.qty, locale)}</li>;
+              {preview.data.components.map((leaf) => {
+                const ingredient = (ingredients.data ?? []).find((item) => item.id === leaf.ingredient_id);
+                return (
+                  <li key={leaf.ingredient_id}>
+                    {ingredient ? pickLocale(ingredient.name, locale) : leaf.sku} · {formatQty(leaf.qty, locale)}
+                    {leaf.short ? ` · ${t.prep.short}` : ""}
+                  </li>
+                );
               })}
             </ul>
           </div>
         ) : null}
-        <button type="submit" className={primaryButton} disabled={produce.isPending || !preview || !preview.ok || !selected}>{t.prep.confirm}</button>
+        <button type="submit" className={primaryButton} disabled={produce.isPending || !preview.data || !selected}>{t.prep.confirm}</button>
       </form>
     </InventoryFrame>
   );

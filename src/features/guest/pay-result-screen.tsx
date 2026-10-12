@@ -20,7 +20,7 @@ import {
 } from "@/lib/paymob/result";
 import { useGuest } from "@/stores/guest";
 
-import "@/features/guest/guest.css";
+import "./guest.css";
 
 type GuestOrder = components["schemas"]["OrderResponse"];
 

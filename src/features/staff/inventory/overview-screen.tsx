@@ -53,6 +53,17 @@ export function OverviewScreen() {
       return result.data;
     },
   });
+  const overview = useQuery({
+    queryKey: ["inventory", "branch-overview", branchId],
+    enabled: Boolean(branchId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/branches/{branch_id}/overview", {
+        params: { path: { branch_id: branchId ?? "" } as unknown as undefined },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data;
+    },
+  });
   const jobs = useQuery({
     queryKey: ["inventory", "jobs", "FAILED", branchId],
     enabled: reports && Boolean(branchId),
@@ -94,6 +105,15 @@ export function OverviewScreen() {
               <Stat label={t.overview.low} value={formatQty(counts.low, locale)} />
               <Stat label={t.overview.out} value={formatQty(counts.out, locale)} />
               <Stat label={t.overview.negative} value={formatQty(counts.negative, locale)} />
+            </dl>
+          ) : null}
+          {overview.isError ? <QueryErrorState error={overview.error} screen={t.tabs.overview} onRetry={() => void overview.refetch()} /> : null}
+          {overview.data ? (
+            <dl className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
+              <Stat label={t.overview.pendingOrders} value={<Link href={INVENTORY_HREFS.purchaseOrders} className="underline">{formatQty(overview.data.pending_purchase_orders, locale)}</Link>} />
+              <Stat label={t.overview.transfersApprove} value={<Link href={INVENTORY_HREFS.transfers} className="underline">{formatQty(overview.data.transfers_to_approve, locale)}</Link>} />
+              <Stat label={t.overview.transfersSend} value={<Link href={INVENTORY_HREFS.transfers} className="underline">{formatQty(overview.data.transfers_to_send, locale)}</Link>} />
+              <Stat label={t.overview.transfersReceive} value={<Link href={INVENTORY_HREFS.transfers} className="underline">{formatQty(overview.data.transfers_to_receive, locale)}</Link>} />
             </dl>
           ) : null}
           {reports && usage.data ? (

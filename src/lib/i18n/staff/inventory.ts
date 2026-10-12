@@ -56,6 +56,10 @@ const en = {
     foodCost: "Food cost",
     failedJobs: "Failed deductions",
     jobsLink: "Review failed jobs",
+    pendingOrders: "Purchase orders still open",
+    transfersApprove: "Transfers to approve",
+    transfersSend: "Transfers to send",
+    transfersReceive: "Transfers to receive",
     noReport: "Usage and food cost are on the reports tab for managers.",
   },
   stock: {
@@ -419,6 +423,10 @@ const ar = {
     foodCost: "تكلفة الطعام",
     failedJobs: "خصومات فاشلة",
     jobsLink: "مراجعة الخصومات الفاشلة",
+    pendingOrders: "أوامر شراء ما زالت مفتوحة",
+    transfersApprove: "تحويلات بانتظار الموافقة",
+    transfersSend: "تحويلات بانتظار الإرسال",
+    transfersReceive: "تحويلات بانتظار الاستلام",
     noReport: "الاستخدام وتكلفة الطعام في تبويب التقارير للمدراء.",
   },
   stock: {

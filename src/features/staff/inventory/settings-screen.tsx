@@ -5,10 +5,12 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/ops/page-header";
-import { LoadingState, QueryErrorState } from "@/components/ops/states";
+import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { formatCairoDateTime } from "@/lib/format/time";
 import { useLocale } from "@/lib/i18n/locale-store";
+import { pickLocale } from "@/lib/i18n/locale-text";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
@@ -23,6 +25,17 @@ export function SettingsScreen() {
   const [negative, setNegative] = useState(true);
   const [soldOut, setSoldOut] = useState(false);
   const [alerts, setAlerts] = useState<string[]>([]);
+  const soldOutItems = useQuery({
+    queryKey: ["inventory", "sold-out", branchId],
+    enabled: Boolean(branchId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/branches/{branch_id}/sold-out", {
+        params: { path: { branch_id: branchId } as unknown as undefined },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data.items;
+    },
+  });
   const settings = useQuery({
     queryKey: ["inventory", "settings", branchId],
     enabled: Boolean(branchId),
@@ -87,6 +100,22 @@ export function SettingsScreen() {
           <button type="submit" className={primaryButton} disabled={save.isPending}>{t.settings.save}</button>
         </form>
       ) : null}
+      <section className="grid max-w-xl gap-2">
+        <h2 className="font-medium">{t.settings.forced}</h2>
+        {soldOutItems.isLoading ? <LoadingState label={t.loading} /> : null}
+        {soldOutItems.isError ? <QueryErrorState error={soldOutItems.error} screen={t.tabs.settings} onRetry={() => void soldOutItems.refetch()} /> : null}
+        {soldOutItems.data && soldOutItems.data.length === 0 ? <EmptyState title={t.settings.forcedEmpty} body={t.settings.soldOutHint} /> : null}
+        {soldOutItems.data && soldOutItems.data.length > 0 ? (
+          <ul className="grid gap-1 text-sm">
+            {soldOutItems.data.map((item) => (
+              <li key={item.menu_item_id} className="flex items-center justify-between gap-3 border-b py-2">
+                <span>{pickLocale(item.name, locale)}</span>
+                <span className="text-muted-foreground">{t.settings.since} {formatCairoDateTime(item.since, locale)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
     </InventoryFrame>
   );
 }

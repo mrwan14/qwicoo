@@ -355,6 +355,9 @@ const en = {
     soldOutHint: "Only items inventory turned off come back when you restock.",
     alerts: "Alert these people when stock hits reorder",
     save: "Save settings",
+    forced: "Items inventory turned off",
+    forcedEmpty: "Nothing is forced sold out right now.",
+    since: "Since",
   },
   jobs: {
     title: "Deduction jobs",
@@ -723,6 +726,9 @@ const ar = {
     soldOutHint: "لا تعود إلا الأصناف التي أوقفها المخزون، وذلك عند إعادة التخزين.",
     alerts: "نبّه هؤلاء عندما يصل المخزون إلى إعادة الطلب",
     save: "حفظ الإعدادات",
+    forced: "أصناف أوقفها المخزون",
+    forcedEmpty: "لا أصناف أوقفها المخزون الآن.",
+    since: "منذ",
   },
   jobs: {
     title: "خصم المبيعات",

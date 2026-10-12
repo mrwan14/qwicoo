@@ -38,6 +38,7 @@ const TAB_ORDER: InventoryPage[] = [
   "import",
   "recipes",
   "suppliers",
+  "purchaseOrders",
   "waste",
   "prep",
   "reports",

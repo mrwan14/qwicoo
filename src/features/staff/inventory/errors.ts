@@ -65,6 +65,18 @@ export const inventoryErrorCatalog: Record<string, InventoryErrorCopy> = {
     en: "Only a draft purchase order can be sent.",
     ar: "يمكن إرسال أمر الشراء وهو مسودة فقط.",
   },
+  PO_HAS_RECEIPTS: {
+    en: "This order already has a receipt. Close the rest instead of cancelling it.",
+    ar: "هذا الأمر فيه استلام بالفعل. أغلق المتبقي بدل إلغائه.",
+  },
+  PO_NOT_CANCELLABLE: {
+    en: "This purchase order can no longer be cancelled.",
+    ar: "لم يعد يمكن إلغاء أمر الشراء هذا.",
+  },
+  WAREHOUSE_OR_BRANCH_REQUIRED: {
+    en: "Choose a branch or a store.",
+    ar: "اختر فرعاً أو مخزناً.",
+  },
   TRANSFER_NOT_APPROVED: {
     en: "Approve the transfer before sending it.",
     ar: "وافق على التحويل قبل إرساله.",

@@ -11,6 +11,7 @@ import {
 import { importCommitAllowed } from "@/features/staff/inventory/csv.ts";
 import { formatPlateCost } from "@/features/staff/inventory/cost.ts";
 import { previewPrepConsumption } from "@/features/staff/inventory/prep.ts";
+import { purchaseCancel } from "@/features/staff/inventory/purchasing.ts";
 import { conversionFactor } from "@/features/staff/inventory/units.ts";
 import type { UserRole } from "@/lib/auth/roles.ts";
 
@@ -139,12 +140,22 @@ test("inventory errors have english and arabic copy", () => {
   }
 });
 
-test("suppliers are readable with the catalogue, and purchasing stays held", () => {
+test("suppliers and purchase orders follow catalogue and stock roles", () => {
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "suppliers"), true);
-  assert.equal(canOpenInventoryPage("CASHIER", "suppliers"), true);
-  assert.equal(canOpenInventoryPage("WAITER", "suppliers"), false);
-  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/suppliers"));
-  assert.equal(Object.values(INVENTORY_HREFS).some((href) => /purchase|\/counts|transfer/.test(href)), false);
+  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "purchaseOrders"), true);
+  assert.equal(canOpenInventoryPage("WAITER", "purchaseOrders"), false);
+  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/purchase-orders"));
+  assert.equal(Object.values(INVENTORY_HREFS).some((href) => /\/counts|transfer/.test(href)), false);
+});
+
+test("a purchase with receipts closes instead of cancelling", () => {
+  assert.deepEqual(purchaseCancel("DRAFT", 0), { closeRemaining: false });
+  assert.deepEqual(purchaseCancel("SENT", 0), { closeRemaining: false });
+  assert.deepEqual(purchaseCancel("SENT", 2), { closeRemaining: true });
+  assert.deepEqual(purchaseCancel("PARTIALLY_RECEIVED", 2), { closeRemaining: true });
+  assert.equal(purchaseCancel("RECEIVED", 4), null);
+  assert.equal(purchaseCancel("CANCELLED", 0), null);
+  assert.equal(purchaseCancel("CLOSED", 1), null);
 });
 
 test("csv preview blocks commit while any row is an error", () => {

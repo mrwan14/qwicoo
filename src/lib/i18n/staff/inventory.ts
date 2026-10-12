@@ -296,7 +296,7 @@ const en = {
       STAFF_MEAL: "Staff meal",
       OTHER: "Other",
     },
-    history: "Recent waste is on the movements tab.",
+    history: "Recent waste in this store.",
   },
   prep: {
     title: "Prep",
@@ -659,7 +659,7 @@ const ar = {
       STAFF_MEAL: "وجبة الفريق",
       OTHER: "أخرى",
     },
-    history: "الهدر الأخير في تبويب الحركات.",
+    history: "الهدر الأخير في هذا المخزن.",
   },
   prep: {
     title: "التحضير",

@@ -3,14 +3,15 @@ import { test } from "node:test";
 
 import { friendlyMessage } from "@/lib/api/error.ts";
 import {
+  canApproveTransfer,
   canOpenInventory,
   canOpenInventoryPage,
   INVENTORY_HREFS,
   inventoryPagesFor,
 } from "@/features/staff/inventory/access.ts";
+import { countReview } from "@/features/staff/inventory/counts.ts";
 import { importCommitAllowed } from "@/features/staff/inventory/csv.ts";
 import { formatPlateCost } from "@/features/staff/inventory/cost.ts";
-import { countReview } from "@/features/staff/inventory/counts.ts";
 import { previewPrepConsumption } from "@/features/staff/inventory/prep.ts";
 import { purchaseCancel } from "@/features/staff/inventory/purchasing.ts";
 import { conversionFactor } from "@/features/staff/inventory/units.ts";
@@ -166,7 +167,10 @@ test("suppliers and purchase orders follow catalogue and stock roles", () => {
   assert.equal(canOpenInventoryPage("CASHIER", "counts"), true);
   assert.equal(canOpenInventoryPage("WAITER", "counts"), false);
   assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/counts"));
-  assert.equal(Object.values(INVENTORY_HREFS).some((href) => href.includes("transfer")), false);
+  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "transfers"), true);
+  assert.equal(canApproveTransfer("BRANCH_ADMIN"), false);
+  assert.equal(canApproveTransfer("REGIONAL_MANAGER"), true);
+  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/transfers"));
 });
 
 test("a purchase with receipts closes instead of cancelling", () => {

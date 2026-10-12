@@ -31,6 +31,7 @@ export const INVENTORY_HREFS: Record<InventoryPage, string> = {
   suppliers: "/app/inventory/suppliers",
   purchaseOrders: "/app/inventory/purchase-orders",
   counts: "/app/inventory/counts",
+  transfers: "/app/inventory/transfers",
   waste: "/app/inventory/waste",
   prep: "/app/inventory/prep",
   reports: "/app/inventory/reports",
@@ -49,6 +50,7 @@ export type InventoryPage =
   | "suppliers"
   | "purchaseOrders"
   | "counts"
+  | "transfers"
   | "waste"
   | "prep"
   | "reports"
@@ -65,6 +67,7 @@ const PAGE_ROLES: Record<InventoryPage, readonly UserRole[]> = {
   suppliers: READ,
   purchaseOrders: READ,
   counts: WASTE,
+  transfers: READ,
   import: CATALOGUE_WRITE,
   waste: WASTE,
   prep: STOCK_WRITE,
@@ -108,4 +111,8 @@ export function canSeeReports(role: UserRole | null | undefined): boolean {
 /** Central-kitchen writes are brand-level. Branch roles may read a kitchen in their brand. */
 export function canWriteCentralKitchen(role: UserRole | null | undefined): boolean {
   return has(CATALOGUE_WRITE, role);
+}
+
+export function canApproveTransfer(role: UserRole | null | undefined): boolean {
+  return has(["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER"], role);
 }

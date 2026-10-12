@@ -77,6 +77,10 @@ export const inventoryErrorCatalog: Record<string, InventoryErrorCopy> = {
     en: "Choose a branch or a store.",
     ar: "اختر فرعاً أو مخزناً.",
   },
+  WAREHOUSE_OR_BRAND_REQUIRED: {
+    en: "Choose a store, or look across the brand.",
+    ar: "اختر مخزناً، أو اعرض العلامة كلها.",
+  },
   TRANSFER_NOT_APPROVED: {
     en: "Approve the transfer before sending it.",
     ar: "وافق على التحويل قبل إرساله.",

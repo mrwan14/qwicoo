@@ -199,6 +199,7 @@ export function StockScreen() {
         canAdjust={canAdjust}
         canWaste={canWaste}
         canCount={Boolean(me && canOpenInventoryPage(me.role, "counts") && !centralLocked)}
+        canTransfer={Boolean(me && canWriteStock(me.role) && !centralLocked)}
         onClose={() => setRow(null)}
       />
     </InventoryFrame>
@@ -231,6 +232,7 @@ function StockDrawer({
   canAdjust,
   canWaste,
   canCount,
+  canTransfer,
   onClose,
 }: {
   row: StockRow | null;
@@ -240,6 +242,7 @@ function StockDrawer({
   canAdjust: boolean;
   canWaste: boolean;
   canCount: boolean;
+  canTransfer: boolean;
   onClose: () => void;
 }) {
   const t = useStaffSection(inventoryCopy);
@@ -317,6 +320,9 @@ function StockDrawer({
               ) : null}
               {canCount && row ? (
                 <Link href={`${INVENTORY_HREFS.counts}?ingredient=${row.ingredient_id}`} className={secondaryButton}>{t.counts.start}</Link>
+              ) : null}
+              {canTransfer && row ? (
+                <Link href={`${INVENTORY_HREFS.transfers}?ingredient=${row.ingredient_id}`} className={secondaryButton}>{t.transfers.request}</Link>
               ) : null}
             </div>
             <label className="grid gap-1 text-sm">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,8 +21,8 @@ import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
-import { canRecordWaste, canWriteCentralKitchen, canWriteStock } from "./access";
-import { control, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
+import { canOpenInventoryPage, canRecordWaste, canWriteCentralKitchen, canWriteStock } from "./access";
+import { control, INVENTORY_HREFS, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
 import { formatQty, lineValue } from "./qty";
 import { convertQty, type ConversionEdge } from "./units";
 
@@ -197,6 +198,7 @@ export function StockScreen() {
         baseUnitId={row ? byIngredient.get(row.ingredient_id)?.base_unit_id : undefined}
         canAdjust={canAdjust}
         canWaste={canWaste}
+        canCount={Boolean(me && canOpenInventoryPage(me.role, "counts") && !centralLocked)}
         onClose={() => setRow(null)}
       />
     </InventoryFrame>
@@ -228,6 +230,7 @@ function StockDrawer({
   baseUnitId,
   canAdjust,
   canWaste,
+  canCount,
   onClose,
 }: {
   row: StockRow | null;
@@ -236,6 +239,7 @@ function StockDrawer({
   baseUnitId: string | undefined;
   canAdjust: boolean;
   canWaste: boolean;
+  canCount: boolean;
   onClose: () => void;
 }) {
   const t = useStaffSection(inventoryCopy);
@@ -310,6 +314,9 @@ function StockDrawer({
               ) : null}
               {canWaste ? (
                 <button type="button" className={mode === "waste" ? primaryButton : secondaryButton} onClick={() => setMode("waste")}>{t.stock.waste}</button>
+              ) : null}
+              {canCount && row ? (
+                <Link href={`${INVENTORY_HREFS.counts}?ingredient=${row.ingredient_id}`} className={secondaryButton}>{t.counts.start}</Link>
               ) : null}
             </div>
             <label className="grid gap-1 text-sm">

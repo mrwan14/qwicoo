@@ -30,6 +30,7 @@ export const INVENTORY_HREFS: Record<InventoryPage, string> = {
   recipes: "/app/inventory/recipes",
   suppliers: "/app/inventory/suppliers",
   purchaseOrders: "/app/inventory/purchase-orders",
+  counts: "/app/inventory/counts",
   waste: "/app/inventory/waste",
   prep: "/app/inventory/prep",
   reports: "/app/inventory/reports",
@@ -47,6 +48,7 @@ export type InventoryPage =
   | "recipes"
   | "suppliers"
   | "purchaseOrders"
+  | "counts"
   | "waste"
   | "prep"
   | "reports"
@@ -62,6 +64,7 @@ const PAGE_ROLES: Record<InventoryPage, readonly UserRole[]> = {
   recipes: READ,
   suppliers: READ,
   purchaseOrders: READ,
+  counts: WASTE,
   import: CATALOGUE_WRITE,
   waste: WASTE,
   prep: STOCK_WRITE,

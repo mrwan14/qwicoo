@@ -10,6 +10,7 @@ import {
 } from "@/features/staff/inventory/access.ts";
 import { importCommitAllowed } from "@/features/staff/inventory/csv.ts";
 import { formatPlateCost } from "@/features/staff/inventory/cost.ts";
+import { countReview } from "@/features/staff/inventory/counts.ts";
 import { previewPrepConsumption } from "@/features/staff/inventory/prep.ts";
 import { purchaseCancel } from "@/features/staff/inventory/purchasing.ts";
 import { conversionFactor } from "@/features/staff/inventory/units.ts";
@@ -140,12 +141,32 @@ test("inventory errors have english and arabic copy", () => {
   }
 });
 
+test("count review shows the payload variance, including an empty count", () => {
+  const review = countReview({
+    expected_qty: "10",
+    counted_qty: "8",
+    variance_qty: "-2",
+    variance_value: "-4.00",
+  });
+  assert.equal(review.expected, "10");
+  assert.equal(review.counted, "8");
+  assert.equal(review.varianceQty, "-2");
+  assert.equal(review.varianceValue, "-4.00");
+  const open = countReview({ expected_qty: "3", counted_qty: null, variance_qty: null, variance_value: null });
+  assert.equal(open.counted, null);
+  assert.equal(open.varianceQty, null);
+});
+
 test("suppliers and purchase orders follow catalogue and stock roles", () => {
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "suppliers"), true);
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "purchaseOrders"), true);
   assert.equal(canOpenInventoryPage("WAITER", "purchaseOrders"), false);
   assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/purchase-orders"));
-  assert.equal(Object.values(INVENTORY_HREFS).some((href) => /\/counts|transfer/.test(href)), false);
+  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "counts"), true);
+  assert.equal(canOpenInventoryPage("CASHIER", "counts"), true);
+  assert.equal(canOpenInventoryPage("WAITER", "counts"), false);
+  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/counts"));
+  assert.equal(Object.values(INVENTORY_HREFS).some((href) => href.includes("transfer")), false);
 });
 
 test("a purchase with receipts closes instead of cancelling", () => {

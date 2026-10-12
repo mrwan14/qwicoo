@@ -18,7 +18,7 @@ import { itemNeedsOptions } from "@/features/guest/item-options";
 import { ItemSheet, NicknameSheet } from "@/features/guest/item-sheet";
 import { GuestReveal } from "@/features/guest/guest-motion";
 import { GuestSkeleton, useOrderingPaused } from "@/features/guest/ordering-status";
-import { resumeIfSessionGone } from "@/features/guest/session";
+import { rememberPaymobOffer, resumeIfSessionGone } from "@/features/guest/session";
 import {
   GuestQueryError,
   PresenceNote,
@@ -114,12 +114,14 @@ export function MenuScreen() {
 
   useAbsorbBranding(branchMenu.data);
   useEffect(() => {
+    rememberPaymobOffer(menu.data);
+    rememberPaymobOffer(branchMenu.data);
     const brandId = branchMenu.data?.brand_id;
     const current = useGuest.getState().session;
     if (brandId && current && current.branchId === branchMenu.data?.branch_id && current.brandId !== brandId) {
       useGuest.getState().setSession({ ...current, brandId });
     }
-  }, [branchMenu.data]);
+  }, [branchMenu.data, menu.data]);
 
   const { cart, remoteNote } = useSharedCart();
   const { flash } = useCartActivity(cart.data);

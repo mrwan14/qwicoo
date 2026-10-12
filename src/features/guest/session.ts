@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/api/error";
 import type { components } from "@/lib/api/schema";
 import { mergeGuestBranding } from "@/lib/guest/branding";
+import { explicitPaymobOffer, paymobOffered } from "@/lib/paymob/checkout";
 import { useGuest, type GuestSession } from "@/stores/guest";
 
 type PresenceResponse = Omit<components["schemas"]["TableSessionResponse"], "session_token">;
@@ -39,7 +40,20 @@ export function toGuestSession(data: PresenceResponse): GuestSession {
     tableNumber: data.table_number,
     branchName: typeof data.branch_name === "string" ? data.branch_name : null,
     presenceVerified: data.is_presence_verified,
+    onlinePayments: paymobOffered(data) ? { paymob: true } : undefined,
   };
+}
+
+/** Keep the guest-safe Paymob flag when a menu, session, or order payload includes it. */
+export function rememberPaymobOffer(source: unknown): void {
+  const offered = explicitPaymobOffer(source);
+  if (offered === undefined) return;
+  const current = useGuest.getState().session;
+  if (!current || Boolean(current.onlinePayments?.paymob) === offered) return;
+  useGuest.getState().setSession({
+    ...current,
+    onlinePayments: offered ? { paymob: true } : undefined,
+  });
 }
 
 /** Apply a successful presence response into the guest store. */

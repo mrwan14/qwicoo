@@ -10,7 +10,8 @@ import { Money } from "@/components/ops/money";
 import { guestStatus, PAYABLE_STATUSES } from "@/features/guest/copy";
 import { GuestReveal, GuestTrackSteps, OrderWaitingScene } from "@/features/guest/guest-motion";
 import { GuestSkeleton } from "@/features/guest/ordering-status";
-import { isGuestSessionGone, resumeIfSessionGone } from "@/features/guest/session";
+import { PayOnlineSheet } from "@/features/guest/pay-online-sheet";
+import { isGuestSessionGone, rememberPaymobOffer, resumeIfSessionGone } from "@/features/guest/session";
 import { BillSheet, WaiterSheet } from "@/features/guest/service-sheets";
 import {
   GuestQueryError,
@@ -25,11 +26,11 @@ import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import { getPickupOrder } from "@/lib/guest/pickup-orders";
 import type { components } from "@/lib/api/schema";
+import { paymobOffered } from "@/lib/paymob/checkout";
 import { useGuest } from "@/stores/guest";
 
 type OrderStatus = components["schemas"]["OrderStatus"];
 type GuestOrder = components["schemas"]["OrderResponse"] & { display_number?: string | null };
-type PaymentMethod = components["schemas"]["PaymentMethod"];
 
 const STEPS: readonly OrderStatus[] = ["SUBMITTED", "PREPARING", "READY", "DELIVERED"];
 const GUEST_CANCELLABLE: ReadonlySet<OrderStatus> = new Set(["DRAFT", "PENDING_STAFF_CONFIRMATION"]);
@@ -69,6 +70,7 @@ export function TrackScreen() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [waiterOpen, setWaiterOpen] = useState(false);
   const [billOpen, setBillOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
 
   function statusTone(value: OrderStatus): string {
     if (value === "PREPARING") return "var(--guest-amber)";
@@ -98,40 +100,22 @@ export function TrackScreen() {
   });
 
   const pay = useMutation({
-    mutationFn: async ({ method, activeOrder }: { method: PaymentMethod; activeOrder: GuestOrder }) => {
-      if (method === "CASH") {
-        const body: components["schemas"]["OfflinePaymentRequest"] = {
-          order_id: activeOrder.id,
-          amount: activeOrder.total_amount,
-          method,
-        };
-        const result = await guestApi.POST("/api/v1/payments/offline/request", { body });
-        if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
-        return null;
-      }
-      const body: components["schemas"]["InitiateOnlinePaymentRequest"] = {
+    mutationFn: async (activeOrder: GuestOrder) => {
+      const body: components["schemas"]["OfflinePaymentRequest"] = {
         order_id: activeOrder.id,
         amount: activeOrder.total_amount,
-        method,
-        idempotency_key: crypto.randomUUID(),
+        method: "CASH",
       };
-      const result = await guestApi.POST("/api/v1/payments/online/initiate", { body });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.oops, locale);
-      return result.data.checkout_url ?? null;
+      const result = await guestApi.POST("/api/v1/payments/offline/request", { body });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
     },
     onMutate: () => setNotice(null),
-    onSuccess: (checkoutUrl, { method, activeOrder: paidOrder }) => {
-      if (checkoutUrl) {
-        window.location.assign(checkoutUrl);
-        return;
-      }
-      if (method === "CASH") {
-        setCashRequestedOrderId(paidOrder.id);
-        setNotice(t.paymentRequested);
-      }
+    onSuccess: (_data, paidOrder) => {
+      setCashRequestedOrderId(paidOrder.id);
+      setNotice(t.paymentRequested);
       void order.refetch();
     },
-    onError: (error: Error, { activeOrder: paidOrder }) => {
+    onError: (error: Error, paidOrder) => {
       if (error instanceof ApiError && error.code === "PRESENCE_VERIFICATION_REQUIRED") {
         setNotice(t.confirmTable);
         return;
@@ -203,6 +187,7 @@ export function TrackScreen() {
   useEffect(() => {
     const current = order.data;
     if (!current) return;
+    rememberPaymobOffer(current);
     if (current.is_paid || current.status === "PAID" || current.status === "CLOSED") {
       if (cashRequestedOrderId === current.id) setCashRequestedOrderId(null);
     }
@@ -254,6 +239,7 @@ export function TrackScreen() {
   const finished = status === "CLOSED" || (handedOver && paid);
   const cashRequested = !paid && (cashRequestedOrderId === activeOrder.id || notice === t.paymentRequested);
   const canPay = PAYABLE_STATUSES.has(status) && !paid && !cashRequested && !finished && !payAtCounter;
+  const offerPaymob = canPay && (paymobOffered(session) || paymobOffered(activeOrder));
   const current = stepIndex(status);
   const showKitchen = !rejected && !pending && !finished && !payAtCounter;
   const reference =
@@ -411,18 +397,15 @@ export function TrackScreen() {
                 type="button"
                 className={guestPrimaryButton}
                 disabled={pay.isPending}
-                onClick={() => pay.mutate({ method: "CASH", activeOrder })}
+                onClick={() => pay.mutate(activeOrder)}
               >
-                {pay.isPending && pay.variables?.method === "CASH" ? t.paying : t.payCash}
+                {pay.isPending ? t.paying : t.payCash}
               </button>
-              <button
-                type="button"
-                className={guestSecondaryButton}
-                disabled={pay.isPending}
-                onClick={() => pay.mutate({ method: "ONLINE_CARD", activeOrder })}
-              >
-                {pay.isPending && pay.variables?.method === "ONLINE_CARD" ? t.paying : t.payOnline}
-              </button>
+              {offerPaymob ? (
+                <button type="button" className={guestSecondaryButton} onClick={() => setPayOpen(true)}>
+                  {t.payOnlineCard}
+                </button>
+              ) : null}
             </>
           ) : null}
           <button type="button" className={guestSecondaryButton} onClick={() => setWaiterOpen(true)}>
@@ -474,6 +457,7 @@ export function TrackScreen() {
       />
       <WaiterSheet open={waiterOpen} onOpenChange={setWaiterOpen} />
       <BillSheet open={billOpen} onOpenChange={setBillOpen} />
+      <PayOnlineSheet open={payOpen} onOpenChange={setPayOpen} order={activeOrder} />
     </GuestReveal>
   );
 }

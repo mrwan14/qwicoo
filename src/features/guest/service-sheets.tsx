@@ -6,6 +6,9 @@ import { toast } from "sonner";
 
 import { BottomSheet } from "@/features/guest/bottom-sheet";
 import { guestServiceType } from "@/features/guest/copy";
+import { PayOnlineSheet } from "@/features/guest/pay-online-sheet";
+import { paymobOffered } from "@/lib/paymob/checkout";
+import { useGuest } from "@/stores/guest";
 import {
   createGuestServiceRequest,
   fetchActiveServiceRequests,
@@ -116,10 +119,13 @@ export function BillSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t, locale } = useGuestCopy();
+  const session = useGuest((state) => state.session);
+  const offered = paymobOffered(session);
   const queryClient = useQueryClient();
   const [method, setMethod] = useState<"cash" | "card">("cash");
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
 
   const active = useQuery({
     queryKey: ["guest-requests"],
@@ -160,6 +166,7 @@ export function BillSheet({
   }
 
   return (
+    <>
     <BottomSheet
       open={open}
       onOpenChange={onOpenChange}
@@ -196,6 +203,20 @@ export function BillSheet({
           {t.billCard}
         </button>
       </div>
+      {offered && !sent && !alreadyOpen ? (
+        <button
+          type="button"
+          className={`${guestSecondaryButton} mt-4`}
+          onClick={() => {
+            onOpenChange(false);
+            setPayOpen(true);
+          }}
+        >
+          {t.payOnlineCard}
+        </button>
+      ) : null}
     </BottomSheet>
+    <PayOnlineSheet open={payOpen} onOpenChange={setPayOpen} />
+    </>
   );
 }

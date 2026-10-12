@@ -15,6 +15,8 @@ export type GuestSession = {
   branchName: string | null;
   /** True when this guest proved presence (geofence or PIN). */
   presenceVerified?: boolean;
+  /** Guest-safe Paymob flag. Absent until the API says the brand accepts online payments. */
+  onlinePayments?: { paymob: true };
 };
 
 type GuestState = {

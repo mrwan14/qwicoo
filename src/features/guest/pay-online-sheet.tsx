@@ -98,7 +98,7 @@ export function PayOnlineSheet({
       onOpenChange={onOpenChange}
       title={t.payOnlineTitle}
       footer={
-        <button type="button" className={guestPrimaryButton} disabled={pay.isPending || !order} onClick={() => pay.mutate()}>
+        <button type="button" className={guestPrimaryButton} disabled={pay.isPending || !order || remaining === "0.00"} onClick={() => pay.mutate()}>
           {pay.isPending ? t.paying : error ? t.payRetry : t.payNow}
         </button>
       }
@@ -110,6 +110,7 @@ export function PayOnlineSheet({
           className="grid gap-4"
           onSubmit={(event) => {
             event.preventDefault();
+            if (remaining === "0.00") return;
             pay.mutate();
           }}
         >

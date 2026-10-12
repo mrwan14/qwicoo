@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import { BottomSheet } from "@/features/guest/bottom-sheet";
 import { guestServiceType } from "@/features/guest/copy";
 import { PayOnlineSheet } from "@/features/guest/pay-online-sheet";
-import { paymobOffered } from "@/lib/paymob/checkout";
+import { asApiError } from "@/lib/api/error";
+import { guestApi } from "@/lib/api/guest";
+import { paymobOffered, remainingBalance } from "@/lib/paymob/checkout";
 import { useGuest } from "@/stores/guest";
 import {
   createGuestServiceRequest,
@@ -121,6 +123,17 @@ export function BillSheet({
   const { t, locale } = useGuestCopy();
   const session = useGuest((state) => state.session);
   const offered = paymobOffered(session);
+  const activeOrder = useQuery({
+    queryKey: ["guest-active", session?.sessionId],
+    enabled: open && offered && Boolean(session),
+    queryFn: async () => {
+      const result = await guestApi.GET("/api/v1/orders/active");
+      if (result.response.status === 404) return null;
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.oops, locale);
+      return result.data;
+    },
+  });
+  const paidInFull = activeOrder.data != null && remainingBalance(activeOrder.data) === "0.00";
   const queryClient = useQueryClient();
   const [method, setMethod] = useState<"cash" | "card">("cash");
   const [pending, setPending] = useState(false);
@@ -203,7 +216,7 @@ export function BillSheet({
           {t.billCard}
         </button>
       </div>
-      {offered && !sent && !alreadyOpen ? (
+      {offered && !paidInFull && !sent && !alreadyOpen ? (
         <button
           type="button"
           className={`${guestSecondaryButton} mt-4`}

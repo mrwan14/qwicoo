@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { attemptFingerprint, nextPayAttempt, normalizePaymobPhone } from "./checkout.ts";
+import { attemptFingerprint, nextPayAttempt, normalizePaymobPhone, paymobOffered } from "./checkout.ts";
 
 test("the idempotency key is reused on retry and replaced when amount or phone changes", () => {
   const orderId = "order-1";
@@ -17,6 +17,13 @@ test("the idempotency key is reused on retry and replaced when amount or phone c
   const newPhone = attemptFingerprint({ orderId, amount: "20.00", phone: "+201009999999" });
   const afterPhone = nextPayAttempt(afterAmount, newPhone, () => "key-4");
   assert.equal(afterPhone.key, "key-4");
+});
+
+test("pay online is offered only when online_payments.paymob is true", () => {
+  assert.equal(paymobOffered({ online_payments: { paymob: true } }), true);
+  assert.equal(paymobOffered({ onlinePayments: { paymob: true } }), true);
+  assert.equal(paymobOffered({ online_payments: { paymob: false } }), false);
+  assert.equal(paymobOffered({}), false);
 });
 
 test("phone keeps an optional plus and 8 to 15 digits", () => {

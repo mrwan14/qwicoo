@@ -15,7 +15,7 @@ import { paymobCopy } from "@/lib/i18n/staff/paymob";
 import { amountWithinBalance } from "@/lib/paymob/checkout";
 import { paymobError } from "@/lib/paymob/errors";
 import { canRefundPaymob } from "@/lib/paymob/gateway";
-import { refundableRemaining } from "@/lib/paymob/refund";
+import { refundableAmount } from "@/lib/paymob/refund";
 
 const field = "h-11 w-full border border-input bg-background px-3 text-sm";
 
@@ -37,8 +37,8 @@ export function PaymobRefunds({ orderId }: { orderId: string }) {
     mutationFn: async (paymentId: string) => {
       const typed = amount.trim();
       const payment = (order.data?.payments ?? []).find((row) => row.id === paymentId);
-      if (!payment) throw new Error(t.refundFailed);
-      const left = refundableRemaining(payment, order.data?.payments ?? []);
+      const left = refundableAmount(payment?.refundable_amount);
+      if (!payment || !left) throw new Error(t.refundFailed);
       if (typed && !amountWithinBalance(typed, left)) throw new Error(t.amountInvalid);
       const result = await browserApi.POST("/api/v1/payments/{payment_id}/refund", {
         params: { path: { payment_id: paymentId } },
@@ -58,18 +58,18 @@ export function PaymobRefunds({ orderId }: { orderId: string }) {
   });
 
   if (!allowed) return null;
-  const payments = order.data?.payments ?? [];
-  const captures = payments.filter(
-    (payment) => payment.payment_method === "PAYMOB" && payment.status === "COMPLETED" && refundableRemaining(payment, payments) !== "0.00",
-  );
+  const captures = (order.data?.payments ?? []).flatMap((payment) => {
+    const left = refundableAmount(payment.refundable_amount);
+    return left ? [{ payment, left }] : [];
+  });
   if (captures.length === 0) return null;
-  const selected = captures.find((payment) => payment.id === openId) ?? null;
-  const remaining = selected ? refundableRemaining(selected, payments) : "0.00";
-  const currency = selected?.currency || "EGP";
+  const selected = captures.find((row) => row.payment.id === openId) ?? null;
+  const remaining = selected?.left ?? "0.00";
+  const currency = selected?.payment.currency || "EGP";
 
   return (
     <div className="grid w-full gap-2">
-      {captures.map((payment) => (
+      {captures.map(({ payment }) => (
         <button
           key={payment.id}
           type="button"
@@ -98,7 +98,7 @@ export function PaymobRefunds({ orderId }: { orderId: string }) {
             type="button"
             className="min-h-11 w-full bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
             disabled={!selected || refund.isPending}
-            onClick={() => { if (selected) refund.mutate(selected.id); }}
+            onClick={() => { if (selected) refund.mutate(selected.payment.id); }}
           >
             {refund.isPending ? t.refunding : t.refundConfirm}
           </button>

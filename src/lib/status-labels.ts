@@ -40,12 +40,12 @@ export function paymobPaymentStatusLabel(status: string | null | undefined, loca
 }
 
 export function receiptPaymentCaption(
-  payment: { method: string; status: string; reference?: string | null; transaction_reference?: string | null },
+  payment: { method: string; status: string; provider_txn_id?: string | null },
   locale?: LocaleCode,
 ): string {
   const method = paymentMethodLabel(payment.method, locale);
   if (payment.method !== "PAYMOB") return `${method} · ${paymentStatusLabel(payment.status, locale)}`;
-  const reference = (payment.reference ?? payment.transaction_reference ?? "").trim();
+  const reference = (payment.provider_txn_id ?? "").trim();
   return `${method} · ${paymobPaymentStatusLabel(payment.status, locale)} · ${reference || "—"}`;
 }
 

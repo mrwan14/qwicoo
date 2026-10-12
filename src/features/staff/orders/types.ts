@@ -41,7 +41,8 @@ export type StaffReceiptPaymentLine = {
   status: string;
   amount: string;
   reference?: string | null;
-  transaction_reference?: string | null;
+  provider_txn_id?: string | null;
+  refundable_amount?: string | null;
 };
 
 export type StaffOrderReceipt = {

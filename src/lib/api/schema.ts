@@ -6779,6 +6779,7 @@ export interface components {
              * @default false
              */
             is_curbside_enabled: boolean;
+            online_payments?: components["schemas"]["OnlinePaymentsFlags"];
             /** Categories */
             categories?: components["schemas"]["GuestBranchMenuCategoryGroup"][];
         };
@@ -9924,6 +9925,18 @@ export interface components {
             total_amount: number | string;
         };
         /**
+         * OnlinePaymentsFlags
+         * @description Which online gateways a guest may use for this brand.
+         */
+        OnlinePaymentsFlags: {
+            /**
+             * Paymob
+             * @description True when the brand has an active Paymob gateway with credentials set
+             * @default false
+             */
+            paymob: boolean;
+        };
+        /**
          * OpeningHours
          * @description Weekly schedule. A missing day or an empty list means closed that day. At most four ranges per day.
          */
@@ -10534,6 +10547,21 @@ export interface components {
             pickup_number?: number | null;
             /** Fulfillment Type */
             fulfillment_type?: string | null;
+            /**
+             * Provider
+             * @description Online gateway, e.g. 'paymob'; null for cash/card-terminal
+             */
+            provider?: string | null;
+            /**
+             * Provider Txn Id
+             * @description Gateway transaction id (Paymob transaction id)
+             */
+            provider_txn_id?: string | null;
+            /**
+             * Refundable Amount
+             * @description Captured minus refunded, only for COMPLETED Paymob rows when sibling rows are known; else null
+             */
+            refundable_amount?: string | null;
         };
         /**
          * PaymentSettlementResponse
@@ -12538,6 +12566,70 @@ export interface components {
              */
             is_available?: boolean | null;
         };
+        /** StaffOrderReceiptResponse */
+        StaffOrderReceiptResponse: {
+            /**
+             * Order Id
+             * Format: uuid
+             */
+            order_id: string;
+            /** Receipt Number */
+            receipt_number: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Currency
+             * @default EGP
+             */
+            currency: string;
+            /** Branch Name */
+            branch_name?: string | null;
+            /** Branch Address */
+            branch_address?: string | null;
+            /** Branch Phone */
+            branch_phone?: string | null;
+            /** Brand Name */
+            brand_name?: string | null;
+            /** Brand Logo Url */
+            brand_logo_url?: string | null;
+            /** Cashier Name */
+            cashier_name?: string | null;
+            /** Table Label */
+            table_label?: string | null;
+            status: components["schemas"]["OrderStatus"];
+            /** Items */
+            items: components["schemas"]["StaffReceiptItemLine"][];
+            /** Subtotal */
+            subtotal: string;
+            /**
+             * Discount Total
+             * @default 0.00
+             */
+            discount_total: string;
+            /**
+             * Service Fee Total
+             * @default 0.00
+             */
+            service_fee_total: string;
+            /**
+             * Tax Total
+             * @default 0.00
+             */
+            tax_total: string;
+            /** Total Amount */
+            total_amount: string;
+            /** Payments */
+            payments: components["schemas"]["StaffReceiptPaymentLine"][];
+            /** Is Paid */
+            is_paid: boolean;
+            /** Extras */
+            extras?: {
+                [key: string]: unknown;
+            };
+        };
         /** StaffPushKeys */
         StaffPushKeys: {
             /** P256Dh */
@@ -12591,6 +12683,34 @@ export interface components {
         StaffPushUnsubscribeRequest: {
             /** Endpoint */
             endpoint: string;
+        };
+        /** StaffReceiptItemLine */
+        StaffReceiptItemLine: {
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity: number;
+            /** Unit Price */
+            unit_price: string;
+            /** Line Total */
+            line_total: string;
+        };
+        /** StaffReceiptPaymentLine */
+        StaffReceiptPaymentLine: {
+            /** Method */
+            method: string;
+            /** Status */
+            status: string;
+            /** Amount */
+            amount: string;
+            /** Reference */
+            reference?: string | null;
+            /** Provider */
+            provider?: string | null;
+            /** Provider Txn Id */
+            provider_txn_id?: string | null;
+            /** Refundable Amount */
+            refundable_amount?: string | null;
         };
         /**
          * StaffResponse
@@ -13040,6 +13160,8 @@ export interface components {
              * @description Brand accent as #RRGGBB, or null
              */
             accent_color?: string | null;
+            /** @description Guest-safe online payment availability (booleans only) */
+            online_payments?: components["schemas"]["OnlinePaymentsFlags"];
             /**
              * Table Id
              * Format: uuid
@@ -25101,7 +25223,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["StaffOrderReceiptResponse"];
                 };
             };
             /** @description Validation Error */

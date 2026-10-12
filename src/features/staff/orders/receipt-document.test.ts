@@ -63,6 +63,19 @@ test("discount line appears only when non-zero", () => {
   assert.match(html, /Discount/);
 });
 
+test("a Paymob line shows the provider transaction id", () => {
+  const html = receiptDocumentHtml(
+    sampleReceipt({
+      payments: [{ method: "PAYMOB", status: "COMPLETED", amount: "40.00", provider_txn_id: "192036465", reference: "slip-9" }],
+    }),
+    "en",
+    labels,
+  );
+  assert.match(html, /Paymob/);
+  assert.match(html, /192036465/);
+  assert.doesNotMatch(html, /slip-9/);
+});
+
 test("unpaid receipt without payments shows unpaid label", () => {
   const html = receiptDocumentHtml(sampleReceipt({ payments: [], is_paid: false }), "en", labels);
   assert.match(html, /Unpaid/);

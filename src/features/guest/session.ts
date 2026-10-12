@@ -1,7 +1,7 @@
 import { ApiError } from "@/lib/api/error";
 import type { components } from "@/lib/api/schema";
 import { mergeGuestBranding } from "@/lib/guest/branding";
-import { explicitPaymobOffer, paymobOffered } from "@/lib/paymob/checkout";
+import { explicitPaymobOffer } from "@/lib/paymob/checkout";
 import { useGuest, type GuestSession } from "@/stores/guest";
 
 type PresenceResponse = Omit<components["schemas"]["TableSessionResponse"], "session_token">;
@@ -40,7 +40,7 @@ export function toGuestSession(data: PresenceResponse): GuestSession {
     tableNumber: data.table_number,
     branchName: typeof data.branch_name === "string" ? data.branch_name : null,
     presenceVerified: data.is_presence_verified,
-    onlinePayments: paymobOffered(data) ? { paymob: true } : undefined,
+    onlinePayments: data.online_payments?.paymob === true ? { paymob: true } : undefined,
   };
 }
 

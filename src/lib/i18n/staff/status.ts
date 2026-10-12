@@ -21,6 +21,14 @@ const en = {
     COMPLETED: "Paid",
     FAILED: "Payment failed",
     REFUNDED: "Refunded",
+    EXPIRED: "Expired",
+  },
+  paymobStatus: {
+    PENDING: "Pending",
+    COMPLETED: "Completed",
+    FAILED: "Failed",
+    REFUNDED: "Refunded",
+    EXPIRED: "Expired",
   },
   method: {
     CASH: "Cash",
@@ -31,6 +39,7 @@ const en = {
     APPLE_PAY: "Apple Pay",
     LOCAL_WALLET: "Wallet",
     ONLINE_PREPAID: "Prepaid",
+    PAYMOB: "Paymob",
   },
   occupancy: {
     AVAILABLE: "Available",
@@ -68,6 +77,14 @@ const ar = {
     COMPLETED: "مدفوع",
     FAILED: "فشل الدفع",
     REFUNDED: "مُسترد",
+    EXPIRED: "منتهٍ",
+  },
+  paymobStatus: {
+    PENDING: "قيد الانتظار",
+    COMPLETED: "مكتمل",
+    FAILED: "فشل",
+    REFUNDED: "مُسترد",
+    EXPIRED: "منتهٍ",
   },
   method: {
     CASH: "كاش",
@@ -78,6 +95,7 @@ const ar = {
     APPLE_PAY: "Apple Pay",
     LOCAL_WALLET: "محفظة",
     ONLINE_PREPAID: "مدفوع مسبقاً",
+    PAYMOB: "Paymob",
   },
   occupancy: {
     AVAILABLE: "متاحة",

@@ -49,6 +49,9 @@ const en = {
     net: "Net sales",
     tax: "Tax",
     print: "Print",
+    cash: "Cash",
+    card: "Card terminal",
+    online: "Online (includes Paymob)",
   },
   analytics: {
     failed: "Analytics failed",
@@ -247,6 +250,9 @@ const ar = {
     net: "صافي المبيعات",
     tax: "الضريبة",
     print: "طباعة",
+    cash: "كاش",
+    card: "جهاز البطاقة",
+    online: "عبر الإنترنت (يشمل Paymob)",
   },
   analytics: {
     failed: "تعذّر تحميل التحليلات",

@@ -3,7 +3,7 @@
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 import { formatMoney } from "@/lib/format/money";
 import { formatCairoDateTime } from "@/lib/format/time";
-import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
+import { receiptPaymentCaption } from "@/lib/status-labels";
 
 import { printHtmlInIframe } from "./print-html";
 import { receiptDocumentHtml, type ReceiptLabels } from "./receipt-document";
@@ -114,7 +114,7 @@ export function Receipt({
           payments.map((payment, index) => (
             <p key={`${payment.method}-${index}`} className="flex justify-between gap-2 text-muted-foreground">
               <span>
-                {paymentMethodLabel(payment.method, locale)} · {paymentStatusLabel(payment.status, locale)}
+                {receiptPaymentCaption(payment, locale)}
               </span>
               <span dir="ltr">{money(payment.amount, currency, locale)}</span>
             </p>

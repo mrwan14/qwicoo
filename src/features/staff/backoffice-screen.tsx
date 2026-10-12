@@ -262,6 +262,20 @@ export function ZReportScreen({ reportId }: { reportId: string }) {
           <dd className="text-lg font-semibold"><Money amount={data.total_tax} /></dd>
         </div>
       </dl>
+      <dl className="grid w-full border">
+        <div className="flex items-center justify-between gap-4 border-b px-4 py-3">
+          <dt className="text-sm text-muted-foreground">{t.cash}</dt>
+          <dd className="font-semibold"><Money amount={data.payment_channels.cash} /></dd>
+        </div>
+        <div className="flex items-center justify-between gap-4 border-b px-4 py-3">
+          <dt className="text-sm text-muted-foreground">{t.card}</dt>
+          <dd className="font-semibold"><Money amount={data.payment_channels.card_pos} /></dd>
+        </div>
+        <div className="flex items-center justify-between gap-4 px-4 py-3">
+          <dt className="text-sm text-muted-foreground">{t.online}</dt>
+          <dd className="font-semibold"><Money amount={data.payment_channels.online} /></dd>
+        </div>
+      </dl>
       <button type="button" className="min-h-11 w-fit rounded-xl border px-4 text-sm print:hidden" onClick={() => window.print()}>{t.print}</button>
     </article>
   );

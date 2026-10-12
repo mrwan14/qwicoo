@@ -33,6 +33,22 @@ export function paymentMethodLabel(method: string | null | undefined, locale?: L
   return fromMap(copy.method as Record<PaymentMethod, string>, method, copy.none);
 }
 
+/** Paymob rows use their own status words. Cash and other tenders keep the shared labels. */
+export function paymobPaymentStatusLabel(status: string | null | undefined, locale?: LocaleCode): string {
+  const copy = labels(locale);
+  return fromMap(copy.paymobStatus as Record<PaymentStatus, string>, status, copy.none);
+}
+
+export function receiptPaymentCaption(
+  payment: { method: string; status: string; reference?: string | null; transaction_reference?: string | null },
+  locale?: LocaleCode,
+): string {
+  const method = paymentMethodLabel(payment.method, locale);
+  if (payment.method !== "PAYMOB") return `${method} · ${paymentStatusLabel(payment.status, locale)}`;
+  const reference = (payment.reference ?? payment.transaction_reference ?? "").trim();
+  return `${method} · ${paymobPaymentStatusLabel(payment.status, locale)} · ${reference || "—"}`;
+}
+
 export function occupancyLabel(state: string | null | undefined, locale?: LocaleCode): string {
   const copy = labels(locale);
   return fromMap(copy.occupancy as Record<Occupancy, string>, state, copy.none);

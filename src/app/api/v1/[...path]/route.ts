@@ -29,6 +29,8 @@ async function proxy(
   const authorization = staffAuthorization(path, token);
   if (authorization) headers.set("authorization", authorization);
   headers.set("accept-language", requestLocale(request));
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (idempotencyKey) headers.set("idempotency-key", idempotencyKey);
 
   if (!publicAssistant) {
     const brandId = request.headers.get("x-brand-id");

@@ -9,6 +9,7 @@ import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Receipt, printReceipt, type ReceiptLabels } from "@/features/staff/orders/receipt";
+import { PaymobRefunds } from "@/features/staff/paymob-refund";
 import type { StaffOrderListItem, StaffOrderListResponse, StaffOrderReceipt } from "@/features/staff/orders/types";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -243,6 +244,7 @@ export function OrdersScreen() {
             {receipt.isLoading ? <LoadingState label={t.printing} /> : null}
             {receipt.isError ? <p className="text-sm text-destructive">{receipt.error.message}</p> : null}
             {receipt.data ? <Receipt receipt={receipt.data} locale={locale} labels={receiptLabels} /> : null}
+            {selectedId ? <PaymobRefunds orderId={selectedId} /> : null}
             <button
               type="button"
               className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"

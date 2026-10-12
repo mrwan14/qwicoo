@@ -17,6 +17,7 @@ import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { StatusChip } from "@/components/ops/status-chip";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { printReceipt } from "@/features/staff/orders/receipt";
+import { PaymobPosCheckout } from "@/features/staff/paymob-pos";
 import type { StaffOrderReceipt } from "@/features/staff/orders/types";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -520,6 +521,7 @@ export function PosScreen() {
           {tables.isError ? <span className="text-sm text-destructive">{tables.error instanceof Error ? tables.error.message : t.tablesFailed}</span> : null}
         </label>
       ) : null}
+      {orderType === "DINE_IN" && tableId ? <PaymobPosCheckout tableId={tableId} online={online} /> : null}
       <label className="grid gap-1 text-sm">
         {t.tender}
         <span className="text-sm leading-6 text-muted-foreground">{online ? t.tenderOnline : t.tenderOffline}</span>

@@ -35,7 +35,7 @@ export function normalizePaymobPhone(raw: string): string | null {
   return cleaned;
 }
 
-function toCents(value: string): number | null {
+export function majorToCents(value: string): number | null {
   const trimmed = value.trim();
   if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return null;
   const [whole, frac = ""] = trimmed.split(".");
@@ -57,20 +57,20 @@ export type BalanceOrder = {
 /** Remaining balance in major units. Completed payments reduce the total. */
 export function remainingBalance(order: BalanceOrder): string {
   if (order.is_paid) return "0.00";
-  const total = toCents(order.total_amount);
+  const total = majorToCents(order.total_amount);
   if (total == null) return "0.00";
   let paid = 0;
   for (const payment of order.payments ?? []) {
     if (payment.status !== "COMPLETED") continue;
-    const amount = toCents(payment.amount);
+    const amount = majorToCents(payment.amount);
     if (amount != null) paid += amount;
   }
   return centsToMajor(Math.max(0, total - paid));
 }
 
 export function amountWithinBalance(amount: string, remaining: string): boolean {
-  const asked = toCents(amount.trim());
-  const left = toCents(remaining);
+  const asked = majorToCents(amount.trim());
+  const left = majorToCents(remaining);
   if (asked == null || left == null) return false;
   return asked > 0 && asked <= left;
 }

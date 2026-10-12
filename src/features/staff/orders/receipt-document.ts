@@ -1,7 +1,7 @@
 import { formatMoney } from "@/lib/format/money";
 import { formatCairoDateTime } from "@/lib/format/time";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
-import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
+import { receiptPaymentCaption } from "@/lib/status-labels";
 
 import type { StaffOrderReceipt } from "./types";
 
@@ -92,7 +92,7 @@ export function receiptDocumentHtml(receipt: StaffOrderReceipt, locale: LocaleCo
     .map(
       (payment) => `
       <div class="row">
-        <span>${escapeHtml(paymentMethodLabel(payment.method, locale))} · ${escapeHtml(paymentStatusLabel(payment.status, locale))}</span>
+        <span>${escapeHtml(receiptPaymentCaption(payment, locale))}</span>
         <span class="ltr">${escapeHtml(money(payment.amount, currency, locale))}</span>
       </div>`,
     )

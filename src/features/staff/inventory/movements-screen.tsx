@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/ops/page-header";
@@ -175,10 +176,12 @@ export function MovementsScreen() {
                 const displayUnit = displayUnitId ? byUnit.get(displayUnitId) : undefined;
                 const qty = formatQty(display ?? row.qty, locale);
                 const unit = display != null && displayUnit ? pickLocale(displayUnit.name, locale) : base ? pickLocale(base.name, locale) : "";
-                const who = row.created_by ? byPerson.get(row.created_by) ?? "" : "";
-                const reference = row.reference_type === "ORDER_ITEM"
-                  ? t.movements.orderItem
-                  : [row.reference_type, row.reference_id?.slice(0, 8)].filter(Boolean).join(" ");
+                const who = row.created_by_name || (row.created_by ? byPerson.get(row.created_by) ?? "" : "");
+                const reference = (row.movement_type === "SALE" || row.movement_type === "SALE_REVERSAL") && row.order_id
+                  ? <Link href={`/app/orders?order=${row.order_id}`} className="underline">{t.movements.order}</Link>
+                  : row.reference_type === "ORDER_ITEM"
+                    ? t.movements.orderItem
+                    : [row.reference_type, row.reference_id?.slice(0, 8)].filter(Boolean).join(" ");
                 return (
                   <tr key={row.id} className="border-b">
                     <td className="px-3 py-2 whitespace-nowrap">{formatCairoDateTime(row.created_at, locale)}</td>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -59,7 +60,7 @@ export function OrdersScreen() {
     dateFrom: today,
     dateTo: today,
   });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(useSearchParams().get("order"));
 
   const list = useQuery({
     queryKey: ["staff-orders", branchId, applied],

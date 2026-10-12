@@ -95,6 +95,7 @@ const en = {
     qty: "Quantity",
     empty: "No movements match these filters.",
     orderItem: "Order item",
+    order: "Order",
     types: {
       OPENING: "Opening",
       PURCHASE_RECEIPT: "Purchase receipt",
@@ -462,6 +463,7 @@ const ar = {
     qty: "الكمية",
     empty: "لا حركات تطابق هذه التصفية.",
     orderItem: "بند طلب",
+    order: "الطلب",
     types: {
       OPENING: "افتتاح",
       PURCHASE_RECEIPT: "استلام شراء",

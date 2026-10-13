@@ -135,7 +135,7 @@ test("prep preview explodes to leaves and does not consume the prep sku", () => 
 });
 
 test("inventory errors have english and arabic copy", () => {
-  for (const code of ["INSUFFICIENT_STOCK", "REASON_REQUIRED", "WASTE_REASON", "NOTE_REQUIRED", "SKU_TAKEN", "RECIPE_CYCLE"]) {
+  for (const code of ["INSUFFICIENT_STOCK", "REASON_REQUIRED", "WASTE_REASON", "NOTE_REQUIRED", "SKU_TAKEN", "RECIPE_CYCLE", "REPLACEMENT_ONLY_ON_MODIFIER"]) {
     const en = friendlyMessage(code, "fallback", "en");
     const ar = friendlyMessage(code, "fallback", "ar");
     assert.notEqual(en, code);

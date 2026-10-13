@@ -8281,6 +8281,12 @@ export interface components {
              */
             is_prep: boolean;
             /**
+             * Deduct As Prep
+             * @description Prep only. True: sales and other recipes consume this prep's own stock. False: they use its recipe's ingredients. The first prep production turns it on.
+             * @default false
+             */
+            deduct_as_prep: boolean;
+            /**
              * Reorder Level
              * @default 0
              */
@@ -8320,6 +8326,8 @@ export interface components {
             base_unit_id: string;
             /** Is Prep */
             is_prep: boolean;
+            /** Deduct As Prep */
+            deduct_as_prep: boolean;
             /** Reorder Level */
             reorder_level: string;
             /** Par Level */
@@ -8334,6 +8342,8 @@ export interface components {
             category?: string | null;
             /** Is Prep */
             is_prep?: boolean | null;
+            /** Deduct As Prep */
+            deduct_as_prep?: boolean | null;
             /** Reorder Level */
             reorder_level?: number | string | null;
             /** Par Level */
@@ -13284,6 +13294,11 @@ export interface components {
              * @default 0
              */
             waste_pct: number | string;
+            /**
+             * Replaces Ingredient Id
+             * @description Modifier option recipes only. When the option is chosen, the base recipe line for this ingredient is skipped and this line's qty is used instead.
+             */
+            replaces_ingredient_id?: string | null;
         };
         /** RecipeLineResponse */
         RecipeLineResponse: {
@@ -13306,6 +13321,8 @@ export interface components {
             qty: string;
             /** Waste Pct */
             waste_pct: string;
+            /** Replaces Ingredient Id */
+            replaces_ingredient_id?: string | null;
         };
         /** RecipeListResponse */
         RecipeListResponse: {

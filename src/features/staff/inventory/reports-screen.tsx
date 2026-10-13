@@ -54,8 +54,27 @@ export function ReportsScreen() {
       return result.data;
     },
   });
+  const ingredients = useQuery({
+    queryKey: ["inventory", "ingredients", brandId, "all"],
+    enabled: allowed && Boolean(brandId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/ingredients", {
+        params: { query: { brand_id: brandId ?? "", active_only: false } },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data.items;
+    },
+  });
+  const stockedSkus = useMemo(() => {
+    const skus = new Set<string>();
+    for (const item of ingredients.data ?? []) {
+      if (item.deduct_as_prep) skus.add(item.sku);
+    }
+    return skus;
+  }, [ingredients.data]);
   const data = report.data;
   const name = (value: { [key: string]: unknown }) => pickLocale(value, locale);
+  const stocked = (sku: string) => stockedSkus.has(sku);
 
   async function exportServer() {
     const result = await browserApi.GET("/api/v1/inventory/reports/usage.csv", {
@@ -152,14 +171,32 @@ export function ReportsScreen() {
             title={t.reports.drift}
             onExport={() => downloadText("prep-drift.csv", toCsv([
               [t.ingredient, t.reports.onHand, t.reports.theoretical, "leaves"],
-              ...data.prep_drift.items.map((row) => [name(row.name) || row.sku, row.on_hand, row.sale_qty, row.leaf_skus.join(" ")]),
+              ...data.prep_drift.items.map((row) => [
+                name(row.name) || row.sku,
+                row.on_hand,
+                row.sale_qty,
+                stocked(row.sku) ? "" : row.leaf_skus.join(" "),
+              ]),
             ]))}
           >
-            <p className="text-sm text-muted-foreground">{data.prep_drift.explanation || t.reports.driftCaption}</p>
-            <ul className="grid gap-2 text-sm">
-              {data.prep_drift.items.map((row) => (
-                <li key={row.sku}>{name(row.name) || row.sku} · {formatQty(row.on_hand, locale)} · {row.leaf_skus.join(", ")}</li>
-              ))}
+            <p className="text-start text-sm text-muted-foreground">{t.reports.driftCaption}</p>
+            <ul className="grid w-full gap-2 text-sm">
+              {data.prep_drift.items.map((row) => {
+                const tracked = stocked(row.sku);
+                const label = name(row.name);
+                return (
+                  <li key={row.sku} className="flex w-full flex-wrap items-center gap-2">
+                    {label ? <span>{label}</span> : <bdi>{row.sku}</bdi>}
+                    {tracked ? (
+                      <span className="inline-flex items-center border px-2 py-0.5 text-xs font-medium">{t.reports.stockedPrep}</span>
+                    ) : null}
+                    <span className="tabular-nums">{formatQty(row.on_hand, locale)}</span>
+                    {tracked || row.leaf_skus.length === 0 ? null : (
+                      <bdi className="text-muted-foreground">{row.leaf_skus.join(", ")}</bdi>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </Section>
         </div>

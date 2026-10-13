@@ -138,6 +138,7 @@ function IngredientDrawer({
   const [category, setCategory] = useState(current?.category ?? "");
   const [baseUnitId, setBaseUnitId] = useState(current?.base_unit_id ?? units.find((unit) => unit.is_base)?.id ?? "");
   const [isPrep, setIsPrep] = useState(current?.is_prep ?? false);
+  const [deductAsPrep, setDeductAsPrep] = useState(current?.deduct_as_prep ?? false);
   const [reorder, setReorder] = useState(current?.reorder_level ?? "0");
   const [par, setPar] = useState(current?.par_level ?? "0");
   const [active, setActive] = useState(current?.is_active ?? true);
@@ -163,7 +164,15 @@ function IngredientDrawer({
       if (current) {
         const result = await browserApi.PATCH("/api/v1/inventory/ingredients/{ingredient_id}", {
           params: { path: { ingredient_id: current.id }, query: { brand_id: brandId } },
-          body: { name, category: category.trim() || null, is_prep: isPrep, reorder_level: reorder, par_level: par, is_active: active },
+          body: {
+            name,
+            category: category.trim() || null,
+            is_prep: isPrep,
+            deduct_as_prep: isPrep ? deductAsPrep : false,
+            reorder_level: reorder,
+            par_level: par,
+            is_active: active,
+          },
         });
         if (!result.response.ok) throw asApiError(result.error, result.response, t.loadFailed, locale);
         return;
@@ -176,6 +185,7 @@ function IngredientDrawer({
           category: category.trim() || null,
           base_unit_id: baseUnitId,
           is_prep: isPrep,
+          deduct_as_prep: isPrep ? deductAsPrep : false,
           reorder_level: reorder || "0",
           par_level: par || "0",
         },
@@ -243,6 +253,15 @@ function IngredientDrawer({
               </select>
             </label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={isPrep} onChange={(event) => setIsPrep(event.target.checked)} />{t.ingredients.prep}</label>
+            {isPrep ? (
+              <div className="grid w-full gap-1 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" className="size-4 shrink-0" checked={deductAsPrep} onChange={(event) => setDeductAsPrep(event.target.checked)} />
+                  <span>{t.ingredients.stockedPrep}</span>
+                </label>
+                <p className="text-start text-muted-foreground">{t.ingredients.stockedPrepHint}</p>
+              </div>
+            ) : null}
             <label className="grid gap-1 text-sm"><span>{t.ingredients.reorder}</span><input className={control} inputMode="decimal" value={reorder} onChange={(event) => setReorder(event.target.value)} /></label>
             <label className="grid gap-1 text-sm"><span>{t.ingredients.par}</span><input className={control} inputMode="decimal" value={par} onChange={(event) => setPar(event.target.value)} /></label>
             {current ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} />{t.ingredients.active}</label> : null}

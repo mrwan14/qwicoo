@@ -245,6 +245,10 @@ export const inventoryErrorCatalog: Record<string, InventoryErrorCopy> = {
     en: "Choose a menu item, a modifier, or a prep ingredient.",
     ar: "اختر صنفاً من القائمة أو إضافة أو مكوّن تحضير.",
   },
+  REPLACEMENT_ONLY_ON_MODIFIER: {
+    en: "Only a modifier option can replace a base ingredient.",
+    ar: "استبدال مكوّن أساسي يكون لخيار إضافة فقط.",
+  },
   MENU_ITEM_NOT_FOUND: {
     en: "That menu item is not on this brand.",
     ar: "صنف القائمة هذا ليس في هذه العلامة.",

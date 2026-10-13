@@ -24,7 +24,7 @@ import { untrackedMenu } from "./untracked";
 
 type Recipe = components["schemas"]["RecipeResponse"];
 type Target = "MENU_ITEM" | "MODIFIER_OPTION" | "PREP";
-type Line = { ingredient_id: string; qty: string; unit_id: string; waste_pct: string };
+type Line = { ingredient_id: string; qty: string; unit_id: string; waste_pct: string; replaces_ingredient_id: string };
 
 export function RecipesScreen() {
   const t = useStaffSection(inventoryCopy);
@@ -222,8 +222,14 @@ function RecipeDrawer({
   const [targetId, setTargetId] = useState(current?.menu_item_id || current?.modifier_option_id || current?.prep_ingredient_id || "");
   const [yieldQty, setYieldQty] = useState(current?.yield_qty ?? "1");
   const [lines, setLines] = useState<Line[]>(
-    current?.lines?.map((line) => ({ ingredient_id: line.ingredient_id, qty: line.qty, unit_id: line.unit_id, waste_pct: line.waste_pct })) ?? [
-      { ingredient_id: "", qty: "", unit_id: "", waste_pct: "0" },
+    current?.lines?.map((line) => ({
+      ingredient_id: line.ingredient_id,
+      qty: line.qty,
+      unit_id: line.unit_id,
+      waste_pct: line.waste_pct,
+      replaces_ingredient_id: line.replaces_ingredient_id ?? "",
+    })) ?? [
+      { ingredient_id: "", qty: "", unit_id: "", waste_pct: "0", replaces_ingredient_id: "" },
     ],
   );
   const save = useMutation({
@@ -234,7 +240,15 @@ function RecipeDrawer({
         modifier_option_id: target === "MODIFIER_OPTION" ? targetId : null,
         prep_ingredient_id: target === "PREP" ? targetId : null,
         yield_qty: yieldQty || "1",
-        lines: lines.filter((line) => line.ingredient_id && line.qty && line.unit_id),
+        lines: lines
+          .filter((line) => line.ingredient_id && line.qty && line.unit_id)
+          .map((line) => ({
+            ingredient_id: line.ingredient_id,
+            qty: line.qty,
+            unit_id: line.unit_id,
+            waste_pct: line.waste_pct || "0",
+            replaces_ingredient_id: target === "MODIFIER_OPTION" && line.replaces_ingredient_id ? line.replaces_ingredient_id : null,
+          })),
       };
       const result = current
         ? await browserApi.PUT("/api/v1/inventory/recipes/{recipe_id}", {
@@ -282,6 +296,15 @@ function RecipeDrawer({
                 <option value="">{t.ingredient}</option>
                 {ingredients.map((item) => <option key={item.id} value={item.id}>{pickLocale(item.name, locale)}</option>)}
               </select>
+              {target === "MODIFIER_OPTION" ? (
+                <label className="grid w-full gap-1 text-sm">
+                  <span>{t.recipes.replaces}</span>
+                  <select className={control} value={line.replaces_ingredient_id} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, replaces_ingredient_id: event.target.value } : item))}>
+                    <option value="">{t.recipes.replacesNone}</option>
+                    {ingredients.map((item) => <option key={item.id} value={item.id}>{pickLocale(item.name, locale)}</option>)}
+                  </select>
+                </label>
+              ) : null}
               <div className="grid grid-cols-3 gap-2">
                 <input className={control} inputMode="decimal" placeholder={t.quantity} value={line.qty} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, qty: event.target.value } : item))} />
                 <select className={control} value={line.unit_id} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, unit_id: event.target.value } : item))}>
@@ -293,7 +316,7 @@ function RecipeDrawer({
               <button type="button" className={secondaryButton} onClick={() => setLines(lines.filter((_, i) => i !== index))}>{t.recipes.removeLine}</button>
             </div>
           ))}
-          <button type="button" className={secondaryButton} onClick={() => setLines([...lines, { ingredient_id: "", qty: "", unit_id: "", waste_pct: "0" }])}>{t.recipes.addLine}</button>
+          <button type="button" className={secondaryButton} onClick={() => setLines([...lines, { ingredient_id: "", qty: "", unit_id: "", waste_pct: "0", replaces_ingredient_id: "" }])}>{t.recipes.addLine}</button>
           {canWrite ? <button type="submit" className={primaryButton} disabled={save.isPending}>{t.recipes.save}</button> : null}
         </form>
       </SheetContent>

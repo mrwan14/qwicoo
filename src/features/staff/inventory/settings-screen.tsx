@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { PageHeader } from "@/components/ops/page-header";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatCairoDateTime } from "@/lib/format/time";
@@ -15,11 +16,14 @@ import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
+import { canOpenInventoryPage } from "./access";
 import { InventoryFrame, primaryButton, useStaffNames } from "./chrome";
 
 export function SettingsScreen() {
   const t = useStaffSection(inventoryCopy);
   const { locale } = useLocale();
+  const me = useStaffSession();
+  const allowed = Boolean(me && canOpenInventoryPage(me.role, "settings"));
   const branchId = useScope((state) => state.branchId) ?? "";
   const names = useStaffNames();
   const [negative, setNegative] = useState(true);
@@ -27,7 +31,7 @@ export function SettingsScreen() {
   const [alerts, setAlerts] = useState<string[]>([]);
   const soldOutItems = useQuery({
     queryKey: ["inventory", "sold-out", branchId],
-    enabled: Boolean(branchId),
+    enabled: allowed && Boolean(branchId),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/inventory/branches/{branch_id}/sold-out", {
         params: { path: { branch_id: branchId } as unknown as undefined },
@@ -38,7 +42,7 @@ export function SettingsScreen() {
   });
   const settings = useQuery({
     queryKey: ["inventory", "settings", branchId],
-    enabled: Boolean(branchId),
+    enabled: allowed && Boolean(branchId),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/inventory/branches/{branch_id}/settings", {
         params: { path: { branch_id: branchId } as unknown as undefined },

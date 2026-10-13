@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { PageHeader } from "@/components/ops/page-header";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatCairoDateTime } from "@/lib/format/time";
@@ -12,16 +13,19 @@ import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
+import { canOpenInventoryPage } from "./access";
 import { InventoryFrame } from "./chrome";
 import { formatQty } from "./qty";
 
 export function JobsScreen() {
   const t = useStaffSection(inventoryCopy);
   const { locale } = useLocale();
+  const me = useStaffSession();
+  const allowed = Boolean(me && canOpenInventoryPage(me.role, "jobs"));
   const branchId = useScope((state) => state.branchId);
   const jobs = useQuery({
     queryKey: ["inventory", "jobs", "FAILED", branchId],
-    enabled: Boolean(branchId),
+    enabled: allowed && Boolean(branchId),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/inventory/deduction-jobs", {
         params: { query: { status: "FAILED", branch_id: branchId } },

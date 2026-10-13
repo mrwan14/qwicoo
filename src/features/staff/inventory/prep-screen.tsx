@@ -40,6 +40,15 @@ export function PrepScreen() {
       return result.data.items;
     },
   });
+  const units = useQuery({
+    queryKey: ["inventory", "units", brandId],
+    enabled: Boolean(brandId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/units", { params: { query: { brand_id: brandId } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data.items;
+    },
+  });
   const preps = (ingredients.data ?? []).filter((item) => item.is_prep);
   const preview = useQuery({
     queryKey: ["inventory", "prep-preview", selected, prepId, batches],
@@ -61,7 +70,12 @@ export function PrepScreen() {
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
       return result.data.produced_qty;
     },
-    onSuccess: (qty) => toast.success(fill(t.prep.produced, { qty: formatQty(qty, locale) })),
+    onSuccess: (qty) => {
+      const prep = (ingredients.data ?? []).find((item) => item.id === prepId);
+      const unit = (units.data ?? []).find((item) => item.id === prep?.base_unit_id);
+      const unitName = unit ? pickLocale(unit.name, locale) : "";
+      toast.success(fill(t.prep.produced, { qty: formatQty(qty, locale), unit: unitName ? ` ${unitName}` : "" }));
+    },
     onError: (error) => toast.error(error instanceof Error ? error.message : t.loadFailed),
   });
 
@@ -94,9 +108,11 @@ export function PrepScreen() {
             <ul className="grid gap-1 text-sm">
               {preview.data.components.map((leaf) => {
                 const ingredient = (ingredients.data ?? []).find((item) => item.id === leaf.ingredient_id);
+                const unit = (units.data ?? []).find((item) => item.id === ingredient?.base_unit_id);
+                const unitName = unit ? pickLocale(unit.name, locale) : "";
                 return (
                   <li key={leaf.ingredient_id}>
-                    {ingredient ? pickLocale(ingredient.name, locale) : leaf.sku} · {formatQty(leaf.qty, locale)}
+                    {ingredient ? pickLocale(ingredient.name, locale) : leaf.sku} · {formatQty(leaf.qty, locale)}{unitName ? ` ${unitName}` : ""}
                     {leaf.short ? ` · ${t.prep.short}` : ""}
                   </li>
                 );

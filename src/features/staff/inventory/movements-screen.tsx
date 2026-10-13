@@ -16,7 +16,7 @@ import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
-import { control, InventoryFrame, useStaffNames, useWarehouses, WarehouseSelect } from "./chrome";
+import { control, InventoryFrame, useWarehouses, WarehouseSelect } from "./chrome";
 import { formatQty } from "./qty";
 import { convertQty, type ConversionEdge } from "./units";
 
@@ -41,7 +41,6 @@ export function MovementsScreen() {
   const { locale } = useLocale();
   const brandId = useScope((state) => state.brandId);
   const warehouses = useWarehouses();
-  const names = useStaffNames();
   const [warehouseId, setWarehouseId] = useState("");
   const [ingredientId, setIngredientId] = useState("");
   const [movementType, setMovementType] = useState("");
@@ -107,7 +106,6 @@ export function MovementsScreen() {
   }));
   const byIngredient = useMemo(() => new Map((ingredients.data ?? []).map((item) => [item.id, item])), [ingredients.data]);
   const byUnit = useMemo(() => new Map((units.data ?? []).map((item) => [item.id, item])), [units.data]);
-  const byPerson = useMemo(() => new Map((names.data ?? []).map((person) => [person.id, person.name])), [names.data]);
 
   return (
     <InventoryFrame page="movements">
@@ -176,7 +174,7 @@ export function MovementsScreen() {
                 const displayUnit = displayUnitId ? byUnit.get(displayUnitId) : undefined;
                 const qty = formatQty(display ?? row.qty, locale);
                 const unit = display != null && displayUnit ? pickLocale(displayUnit.name, locale) : base ? pickLocale(base.name, locale) : "";
-                const who = row.created_by_name || (row.created_by ? byPerson.get(row.created_by) ?? "" : "");
+                const who = row.created_by_name ?? "";
                 const reference = (row.movement_type === "SALE" || row.movement_type === "SALE_REVERSAL") && row.order_id
                   ? <Link href={`/app/orders?order=${row.order_id}`} className="underline">{t.movements.order}</Link>
                   : row.reference_type === "ORDER_ITEM"

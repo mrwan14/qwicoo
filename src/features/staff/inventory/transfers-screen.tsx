@@ -22,7 +22,18 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { canApproveTransfer, canWriteStock } from "./access";
-import { control, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
+import {
+  control,
+  InventoryFrame,
+  primaryButton,
+  secondaryButton,
+  useBranchCurrency,
+  useBrandWarehouses,
+  useWarehouses,
+  warehouseLabel,
+  WarehouseSelect,
+  type LabeledWarehouse,
+} from "./chrome";
 import { formatQty } from "./qty";
 
 const STATUSES = ["REQUESTED", "APPROVED", "REJECTED", "SENT", "RECEIVED"] as const;
@@ -39,6 +50,7 @@ export function TransfersScreen() {
   const canWrite = canWriteStock(me?.role);
   const canApprove = canApproveTransfer(me?.role);
   const warehouses = useWarehouses();
+  const labelOf = useWarehouseName();
   const [warehouseId, setWarehouseId] = useState("");
   const [direction, setDirection] = useState<"from" | "to" | "brand">(canApprove ? "brand" : "from");
   const [status, setStatus] = useState("");
@@ -67,7 +79,6 @@ export function TransfersScreen() {
   });
   const rows = transfers.data?.items ?? [];
   const total = transfers.data?.total ?? 0;
-  const nameOf = (id: string) => warehouses.data?.find((item) => item.id === id)?.name ?? id.slice(0, 8);
 
   return (
     <InventoryFrame page="transfers">
@@ -113,8 +124,8 @@ export function TransfersScreen() {
                 return (
                   <tr key={row.id} className="cursor-pointer border-b hover:bg-muted/40" onClick={() => setSelected(row.id)}>
                     <td className="px-3 py-2 whitespace-nowrap">{formatCairoDateTime(row.created_at, locale)}</td>
-                    <td className="px-3 py-2">{nameOf(row.from_warehouse_id)}</td>
-                    <td className="px-3 py-2">{nameOf(row.to_warehouse_id)}</td>
+                    <td className="px-3 py-2">{labelOf(row.from_warehouse_id)}</td>
+                    <td className="px-3 py-2">{labelOf(row.to_warehouse_id)}</td>
                     <td className="px-3 py-2">{state ? t.transfers.statuses[state] : row.status}</td>
                   </tr>
                 );
@@ -145,6 +156,19 @@ export function TransfersScreen() {
       ) : null}
     </InventoryFrame>
   );
+}
+
+function useWarehouseName() {
+  const t = useStaffSection(inventoryCopy);
+  const local = useWarehouses();
+  const brand = useBrandWarehouses();
+  const catalog = new Map<string, LabeledWarehouse>();
+  for (const item of local.data ?? []) catalog.set(item.id, item);
+  for (const item of brand.data ?? []) catalog.set(item.id, item);
+  return (id: string) => {
+    const warehouse = catalog.get(id);
+    return warehouse ? warehouseLabel(warehouse, t) : id.slice(0, 8);
+  };
 }
 
 function TransferDrawer({
@@ -184,7 +208,7 @@ function TransferDrawer({
   return (
     <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
       <SheetContent side="right" className="w-full overflow-y-auto rounded-none sm:max-w-xl">
-        <SheetHeader><SheetTitle>{transferId === "new" ? t.transfers.request : t.transfers.title}</SheetTitle></SheetHeader>
+        <SheetHeader className="pe-12"><SheetTitle>{transferId === "new" ? t.transfers.request : t.transfers.title}</SheetTitle></SheetHeader>
         {transferId === "new" ? <RequestTransfer brandId={brandId} presetIngredient={presetIngredient} onClose={onClose} /> : null}
         {detail.isLoading ? <LoadingState label={t.loading} /> : null}
         {detail.isError ? <QueryErrorState error={detail.error} screen={t.tabs.transfers} onRetry={() => void detail.refetch()} /> : null}
@@ -209,6 +233,26 @@ function TransferDetail({
 }) {
   const t = useStaffSection(inventoryCopy);
   const { locale } = useLocale();
+  const labelOf = useWarehouseName();
+  const ingredients = useQuery({
+    queryKey: ["inventory", "ingredients", transfer.brand_id, "all"],
+    enabled: Boolean(transfer.brand_id),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/ingredients", {
+        params: { query: { brand_id: transfer.brand_id, active_only: false } },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data.items;
+    },
+  });
+  const ingredientName = (id: string, sku: string) => {
+    const item = ingredients.data?.find((row) => row.id === id);
+    return item ? pickLocale(item.name, locale) || sku : sku;
+  };
+  const statusLabel = (status: string) => {
+    const known = STATUSES.find((item) => item === status);
+    return known ? t.transfers.statuses[known] : status;
+  };
   const [note, setNote] = useState("");
   const [receive, setReceive] = useState<Record<string, string>>({});
   const [closeShort, setCloseShort] = useState(false);
@@ -241,10 +285,12 @@ function TransferDetail({
   return (
     <div className="grid gap-4 px-4 pb-6">
       <p className="text-sm">{state ? t.transfers.statuses[state] : transfer.status}</p>
+      <p className="text-sm">{t.transfers.from} · {labelOf(transfer.from_warehouse_id)}</p>
+      <p className="text-sm">{t.transfers.to} · {labelOf(transfer.to_warehouse_id)}</p>
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b">
-            {[t.ingredient, t.transfers.requested, t.transfers.sent, t.transfers.received, t.transfers.outstanding].map((label) => (
+            {[t.ingredient, t.transfers.requested, t.transfers.sent, t.transfers.received, t.transfers.outstanding, t.stock.unitCost].map((label) => (
               <th key={label} className="px-2 py-2 text-start font-medium">{label}</th>
             ))}
           </tr>
@@ -252,11 +298,12 @@ function TransferDetail({
         <tbody>
           {transfer.lines.map((line) => (
             <tr key={line.id} className="border-b">
-              <td className="px-2 py-2">{line.ingredient_sku}</td>
+              <td className="px-2 py-2">{ingredientName(line.ingredient_id, line.ingredient_sku)}</td>
               <td className="px-2 py-2 tabular-nums">{formatQty(line.qty_requested, locale)}</td>
               <td className="px-2 py-2 tabular-nums">{formatQty(line.qty_sent, locale)}</td>
               <td className="px-2 py-2 tabular-nums">{formatQty(line.qty_received, locale)}</td>
-              <td className="px-2 py-2 tabular-nums">{formatQty(line.qty_outstanding, locale)} · <Money amount={line.unit_cost} currency={currency} /></td>
+              <td className="px-2 py-2 tabular-nums">{formatQty(line.qty_outstanding, locale)}</td>
+              <td className="px-2 py-2"><Money amount={line.unit_cost} currency={currency} /></td>
             </tr>
           ))}
         </tbody>
@@ -273,7 +320,7 @@ function TransferDetail({
         <div className="grid gap-2">
           {transfer.lines.filter((line) => Number(line.qty_outstanding) > 0).map((line) => (
             <label key={line.id} className="grid gap-1 text-sm">
-              <span>{line.ingredient_sku}</span>
+              <span>{ingredientName(line.ingredient_id, line.ingredient_sku)}</span>
               <input className={`${control} h-14 text-lg`} inputMode="decimal" value={receive[line.id] ?? ""} onChange={(event) => setReceive({ ...receive, [line.id]: event.target.value })} />
             </label>
           ))}
@@ -290,9 +337,9 @@ function TransferDetail({
         <ol className="grid gap-2 border-s ps-3 text-sm">
           {transfer.events.map((event) => (
             <li key={event.id}>
-              <span className="font-medium">{event.to_status}</span>
+              <span className="font-medium">{statusLabel(event.to_status)}</span>
               <span className="text-muted-foreground"> · {formatCairoDateTime(event.created_at, locale)} · {event.actor_name ?? ""}</span>
-              {event.note ? <p>{event.note}</p> : null}
+              {event.note ? <p>{event.note === "close_short" ? t.transfers.closeShortNote : event.note}</p> : null}
             </li>
           ))}
         </ol>
@@ -306,6 +353,7 @@ function RequestTransfer({ brandId, presetIngredient, onClose }: { brandId: stri
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const warehouses = useWarehouses();
+  const destinations = useBrandWarehouses();
   const [fromId, setFromId] = useState("");
   const [toId, setToId] = useState("");
   const [lines, setLines] = useState<LineDraft[]>([{ ingredientId: presetIngredient, unitId: "", qty: "" }]);
@@ -350,13 +398,13 @@ function RequestTransfer({ brandId, presetIngredient, onClose }: { brandId: stri
       <label className="grid gap-1 text-sm"><span>{t.transfers.from}</span>
         <select className={control} value={fromId} onChange={(event) => setFromId(event.target.value)} required>
           <option value="">{t.transfers.from}</option>
-          {(warehouses.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          {(warehouses.data ?? []).map((item) => <option key={item.id} value={item.id}>{warehouseLabel(item, t)}</option>)}
         </select>
       </label>
       <label className="grid gap-1 text-sm"><span>{t.transfers.to}</span>
         <select className={control} value={toId} onChange={(event) => setToId(event.target.value)} required>
           <option value="">{t.transfers.to}</option>
-          {(warehouses.data ?? []).filter((item) => item.id !== fromId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          {(destinations.data ?? []).filter((item) => item.id !== fromId).map((item) => <option key={item.id} value={item.id}>{warehouseLabel(item, t)}</option>)}
         </select>
       </label>
       {lines.map((line, index) => (

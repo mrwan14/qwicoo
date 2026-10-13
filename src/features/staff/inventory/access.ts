@@ -116,3 +116,10 @@ export function canWriteCentralKitchen(role: UserRole | null | undefined): boole
 export function canApproveTransfer(role: UserRole | null | undefined): boolean {
   return has(["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER"], role);
 }
+
+/** GET /branches/{id}/staff. Mirrors STAFF_LIST_ROLES. */
+const STAFF_LIST: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"];
+
+export function canListStaff(role: UserRole | null | undefined): boolean {
+  return has(STAFF_LIST, role);
+}

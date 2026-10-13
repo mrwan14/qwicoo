@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Money } from "@/components/ops/money";
 import { PageHeader } from "@/components/ops/page-header";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { useLocale } from "@/lib/i18n/locale-store";
@@ -16,6 +17,7 @@ import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
+import { canOpenInventoryPage } from "./access";
 import { InventoryBarChart } from "./charts";
 import { downloadText, toCsv } from "./cost";
 import { control, InventoryFrame, secondaryButton, useBranchCurrency } from "./chrome";
@@ -24,7 +26,9 @@ import { cairoCalendarDay, cairoInclusiveRange, formatQty } from "./qty";
 export function ReportsScreen() {
   const t = useStaffSection(inventoryCopy);
   const { locale } = useLocale();
-  const currency = useBranchCurrency();
+  const me = useStaffSession();
+  const allowed = Boolean(me && canOpenInventoryPage(me.role, "reports"));
+  const currency = useBranchCurrency(allowed);
   const brandId = useScope((state) => state.brandId);
   const branchId = useScope((state) => state.branchId);
   const today = useMemo(() => cairoCalendarDay(), []);
@@ -34,7 +38,7 @@ export function ReportsScreen() {
   const [scope, setScope] = useState<"branch" | "brand">("branch");
   const report = useQuery({
     queryKey: ["inventory", "report", scope, branchId, brandId, start, end],
-    enabled: Boolean(scope === "branch" ? branchId : brandId),
+    enabled: allowed && Boolean(scope === "branch" ? branchId : brandId),
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/inventory/reports/usage", {
         params: {

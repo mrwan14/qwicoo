@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorDetail } from "@/lib/api/error";
-import { createApiClient, requestLocale } from "@/lib/api/server-client";
-import type { components } from "@/lib/api/schema";
+import { requestLocale } from "@/lib/api/server-client";
 import { STAFF_TOKEN_COOKIE, staffCookieOptions } from "@/lib/auth/cookies";
+import { getApiOrigin } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -18,38 +18,47 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ detail: "Enter an email and password." }, { status: 400 });
   }
 
-  const credentials: components["schemas"]["Body_login_for_access_token_api_v1_auth_token_post"] = {
-    username: email,
-    password,
-    scope: "",
-  };
-
   try {
     const locale = requestLocale(request);
-    const client = createApiClient({ locale });
-    const result = await client.POST("/api/v1/auth/token", {
-      body: credentials,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    // Direct fetch: the OpenAPI client rebuilds the Request after setting headers,
+    // and Next's fetch then throws "expected non-null body source" — a 401 for a
+    // wrong password was caught and reported as API unreachable.
+    const upstream = await fetch(`${getApiOrigin()}/api/v1/auth/token`, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "accept-language": locale,
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ username: email, password, scope: "" }),
+      cache: "no-store",
     });
 
-    if (result.response.status === 429) {
+    if (upstream.status === 429) {
       return NextResponse.json(
         { detail: "Too many sign-in attempts. Wait a moment and try again." },
         { status: 429 },
       );
     }
 
-    if (!result.data) {
-      const detail = errorDetail(result.error, "Sign-in failed.", locale);
-      return NextResponse.json({ detail }, { status: result.response.status || 401 });
+    if (upstream.status === 401) {
+      return NextResponse.json({ detail: "Incorrect email or password" }, { status: 401 });
     }
 
-    const response = NextResponse.json({ expires_in: result.data.expires_in });
-    response.cookies.set(
-      STAFF_TOKEN_COOKIE,
-      result.data.access_token,
-      staffCookieOptions(result.data.expires_in),
-    );
+    const payload = (await upstream.json().catch(() => null)) as {
+      access_token?: unknown;
+      expires_in?: unknown;
+      detail?: unknown;
+      code?: unknown;
+    } | null;
+
+    if (!upstream.ok || typeof payload?.access_token !== "string" || typeof payload.expires_in !== "number") {
+      const detail = errorDetail(payload, "Sign-in failed.", locale);
+      return NextResponse.json({ detail }, { status: upstream.status || 401 });
+    }
+
+    const response = NextResponse.json({ expires_in: payload.expires_in });
+    response.cookies.set(STAFF_TOKEN_COOKIE, payload.access_token, staffCookieOptions(payload.expires_in));
     return response;
   } catch {
     return NextResponse.json({ detail: "API unreachable." }, { status: 502 });

@@ -2276,6 +2276,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventory/brands/{brand_id}/transfer-destinations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Transfer Destinations
+         * @description Active stores and central kitchens of the brand a transfer can go to. No stock or costs.
+         */
+        get: operations["list_transfer_destinations_api_v1_inventory_brands__brand_id__transfer_destinations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventory/transfers/{transfer_id}": {
         parameters: {
             query?: never;
@@ -15249,6 +15269,31 @@ export interface components {
             to_warehouse_id: string;
             /** Lines */
             lines: components["schemas"]["TransferLineIn"][];
+        };
+        /** TransferDestination */
+        TransferDestination: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Type */
+            type: string;
+            /** Name */
+            name: string;
+            /** Branch Id */
+            branch_id: string | null;
+            /** Branch Name */
+            branch_name: {
+                [key: string]: string;
+            } | string | null;
+            /** Is Central */
+            is_central: boolean;
+        };
+        /** TransferDestinationListResponse */
+        TransferDestinationListResponse: {
+            /** Items */
+            items: components["schemas"]["TransferDestination"][];
         };
         /** TransferDetailResponse */
         TransferDetailResponse: {
@@ -31301,6 +31346,128 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CountDetailResponse"];
+                };
+            };
+            /** @description Bad request: BAD_REQUEST */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "BAD_REQUEST",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "CONFLICT",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "type": "missing",
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    list_transfer_destinations_api_v1_inventory_brands__brand_id__transfer_destinations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferDestinationListResponse"];
                 };
             };
             /** @description Bad request: BAD_REQUEST */

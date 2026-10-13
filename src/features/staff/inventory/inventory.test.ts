@@ -14,6 +14,7 @@ import { importCommitAllowed } from "@/features/staff/inventory/csv.ts";
 import { formatPlateCost } from "@/features/staff/inventory/cost.ts";
 import { previewPrepConsumption } from "@/features/staff/inventory/prep.ts";
 import { purchaseCancel } from "@/features/staff/inventory/purchasing.ts";
+import { canReceiveTransfer, transferDestinationLabel, transferTargets } from "@/features/staff/inventory/transfers.ts";
 import { conversionFactor } from "@/features/staff/inventory/units.ts";
 import type { UserRole } from "@/lib/auth/roles.ts";
 
@@ -187,4 +188,45 @@ test("csv preview blocks commit while any row is an error", () => {
   assert.equal(importCommitAllowed([{ action: "create" }, { action: "update" }]), true);
   assert.equal(importCommitAllowed([{ action: "create" }, { action: "error" }]), false);
   assert.equal(importCommitAllowed([]), false);
+});
+
+test("transfer destinations read store then branch, and central kitchens name the kitchen", () => {
+  const branch = { id: "store-a", name: "Branch store", branch_name: { en: "Zamalek", ar: "الزمالك" }, is_central: false };
+  assert.equal(transferDestinationLabel(branch, "en", "Central kitchen"), "\u2068Branch store\u2069, \u2068Zamalek\u2069");
+  assert.equal(transferDestinationLabel(branch, "ar", "مطبخ مركزي"), "\u2068Branch store\u2069، \u2068الزمالك\u2069");
+  assert.equal(
+    transferDestinationLabel({ id: "kitchen", name: "Commissary", branch_name: null, is_central: true }, "en", "Central kitchen"),
+    "\u2068Commissary\u2069, \u2068Central kitchen\u2069",
+  );
+  assert.equal(
+    transferDestinationLabel({ id: "kitchen", name: "المطبخ", branch_name: null, is_central: true }, "ar", "مطبخ مركزي"),
+    "\u2068المطبخ\u2069، \u2068مطبخ مركزي\u2069",
+  );
+  const choices = transferTargets(
+    [
+      { id: "store-a" },
+      { id: "store-b" },
+      { id: "kitchen" },
+    ],
+    "store-a",
+  );
+  assert.deepEqual(choices.map((item) => item.id), ["store-b", "kitchen"]);
+});
+
+test("receive stays on the destination branch", () => {
+  const warehouses = [
+    { id: "store-a", branchId: "branch-a", central: false },
+    { id: "store-b", branchId: "branch-b", central: false },
+    { id: "kitchen", branchId: null, central: true },
+  ];
+  const sent = { status: "SENT", focusedBranchId: "branch-a", warehouses };
+  assert.equal(canReceiveTransfer({ ...sent, role: "BRANCH_ADMIN", toWarehouseId: "store-b" }), false);
+  assert.equal(canReceiveTransfer({ ...sent, role: "BRANCH_ADMIN", toWarehouseId: "store-a" }), true);
+  assert.equal(canReceiveTransfer({ ...sent, role: "BRANCH_ADMIN", toWarehouseId: "kitchen" }), false);
+  assert.equal(canReceiveTransfer({ ...sent, role: "BRANCH_ADMIN", toWarehouseId: "store-a", status: "APPROVED" }), false);
+  assert.equal(canReceiveTransfer({ ...sent, role: "KITCHEN_STAFF", toWarehouseId: "store-a" }), false);
+  assert.equal(canReceiveTransfer({ ...sent, role: "REGIONAL_MANAGER", toWarehouseId: "store-a" }), true);
+  assert.equal(canReceiveTransfer({ ...sent, role: "REGIONAL_MANAGER", toWarehouseId: "kitchen" }), false);
+  assert.equal(canReceiveTransfer({ ...sent, role: "BRAND_ADMIN", toWarehouseId: "kitchen" }), true);
+  assert.equal(canReceiveTransfer({ ...sent, role: "BRAND_ADMIN", toWarehouseId: "store-b" }), false);
 });

@@ -22,6 +22,7 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { canApproveTransfer, canWriteStock } from "./access";
+import { canReceiveTransfer, transferDestinationLabel, transferTargets } from "./transfers";
 import {
   control,
   InventoryFrame,
@@ -32,7 +33,6 @@ import {
   useWarehouses,
   warehouseLabel,
   WarehouseSelect,
-  type LabeledWarehouse,
 } from "./chrome";
 import { formatQty } from "./qty";
 
@@ -158,17 +158,37 @@ export function TransfersScreen() {
   );
 }
 
+function useTransferDestinations(enabled = true) {
+  const t = useStaffSection(inventoryCopy);
+  const { locale } = useLocale();
+  const brandId = useScope((state) => state.brandId);
+  return useQuery({
+    queryKey: ["inventory", "transfer-destinations", brandId],
+    enabled: enabled && Boolean(brandId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/brands/{brand_id}/transfer-destinations", {
+        params: { path: { brand_id: brandId ?? "" } },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data.items;
+    },
+  });
+}
+
 function useWarehouseName() {
   const t = useStaffSection(inventoryCopy);
+  const { locale } = useLocale();
+  const me = useStaffSession();
   const local = useWarehouses();
   const brand = useBrandWarehouses();
-  const catalog = new Map<string, LabeledWarehouse>();
-  for (const item of local.data ?? []) catalog.set(item.id, item);
-  for (const item of brand.data ?? []) catalog.set(item.id, item);
-  return (id: string) => {
-    const warehouse = catalog.get(id);
-    return warehouse ? warehouseLabel(warehouse, t) : id.slice(0, 8);
-  };
+  const destinations = useTransferDestinations(canWriteStock(me?.role));
+  const catalog = new Map<string, string>();
+  for (const item of local.data ?? []) catalog.set(item.id, warehouseLabel(item, t));
+  for (const item of brand.data ?? []) catalog.set(item.id, warehouseLabel(item, t));
+  for (const item of destinations.data ?? []) {
+    if (!catalog.has(item.id)) catalog.set(item.id, transferDestinationLabel(item, locale, t.centralKitchen));
+  }
+  return (id: string) => catalog.get(id) ?? id.slice(0, 8);
 }
 
 function TransferDrawer({
@@ -233,7 +253,21 @@ function TransferDetail({
 }) {
   const t = useStaffSection(inventoryCopy);
   const { locale } = useLocale();
+  const me = useStaffSession();
+  const branchId = useScope((state) => state.branchId) ?? "";
+  const scopedWarehouses = useWarehouses();
   const labelOf = useWarehouseName();
+  const receiveHere = canReceiveTransfer({
+    role: me?.role,
+    status: transfer.status,
+    toWarehouseId: transfer.to_warehouse_id,
+    focusedBranchId: branchId,
+    warehouses: (scopedWarehouses.data ?? []).map((item) => ({
+      id: item.id,
+      branchId: item.branch_id,
+      central: item.kind === "CENTRAL_KITCHEN",
+    })),
+  });
   const ingredients = useQuery({
     queryKey: ["inventory", "ingredients", transfer.brand_id, "all"],
     enabled: Boolean(transfer.brand_id),
@@ -316,7 +350,7 @@ function TransferDetail({
         </div>
       ) : null}
       {canWrite && transfer.status === "APPROVED" ? <button type="button" className={primaryButton} disabled={act.isPending} onClick={() => act.mutate("send")}>{t.transfers.send}</button> : null}
-      {canWrite && transfer.status === "SENT" ? (
+      {receiveHere ? (
         <div className="grid gap-2">
           {transfer.lines.filter((line) => Number(line.qty_outstanding) > 0).map((line) => (
             <label key={line.id} className="grid gap-1 text-sm">
@@ -353,9 +387,10 @@ function RequestTransfer({ brandId, presetIngredient, onClose }: { brandId: stri
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const warehouses = useWarehouses();
-  const destinations = useBrandWarehouses();
+  const destinations = useTransferDestinations();
   const [fromId, setFromId] = useState("");
   const [toId, setToId] = useState("");
+  const targets = transferTargets(destinations.data ?? [], fromId);
   const [lines, setLines] = useState<LineDraft[]>([{ ingredientId: presetIngredient, unitId: "", qty: "" }]);
   const ingredients = useQuery({
     queryKey: ["inventory", "ingredients", brandId, "active"],
@@ -396,7 +431,11 @@ function RequestTransfer({ brandId, presetIngredient, onClose }: { brandId: stri
   return (
     <form className="grid gap-3 px-4 pb-6" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
       <label className="grid gap-1 text-sm"><span>{t.transfers.from}</span>
-        <select className={control} value={fromId} onChange={(event) => setFromId(event.target.value)} required>
+        <select className={control} value={fromId} onChange={(event) => {
+          const next = event.target.value;
+          setFromId(next);
+          if (toId === next) setToId("");
+        }} required>
           <option value="">{t.transfers.from}</option>
           {(warehouses.data ?? []).map((item) => <option key={item.id} value={item.id}>{warehouseLabel(item, t)}</option>)}
         </select>
@@ -404,9 +443,10 @@ function RequestTransfer({ brandId, presetIngredient, onClose }: { brandId: stri
       <label className="grid gap-1 text-sm"><span>{t.transfers.to}</span>
         <select className={control} value={toId} onChange={(event) => setToId(event.target.value)} required>
           <option value="">{t.transfers.to}</option>
-          {(destinations.data ?? []).filter((item) => item.id !== fromId).map((item) => <option key={item.id} value={item.id}>{warehouseLabel(item, t)}</option>)}
+          {targets.map((item) => <option key={item.id} value={item.id}>{transferDestinationLabel(item, locale, t.centralKitchen)}</option>)}
         </select>
       </label>
+      {destinations.isError ? <QueryErrorState error={destinations.error} screen={t.tabs.transfers} onRetry={() => void destinations.refetch()} /> : null}
       {lines.map((line, index) => (
         <div key={index} className="grid gap-2 border-b py-2">
           <select className={control} value={line.ingredientId} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, ingredientId: event.target.value } : item))} required>

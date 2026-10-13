@@ -142,9 +142,9 @@ async function branchStores(
 
 /**
  * Warehouses this caller may read: every in-scope branch store, plus the brand's central kitchens.
- * There is no brand-wide warehouse list. Branch stores are GET /branches/{id}/warehouses, and that
- * route requires branch access, so a branch admin only receives their own store. Other branches'
- * stores are an API gap — do not invent ids or call branches they cannot open.
+ * Branch stores are GET /branches/{id}/warehouses, and that route requires branch access, so a
+ * branch admin only receives their own store. Transfer targets are a different list
+ * (GET /brands/{id}/transfer-destinations); do not invent ids here.
  */
 export function useBrandWarehouses() {
   const t = useStaffSection(inventoryCopy);

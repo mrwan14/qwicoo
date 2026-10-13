@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { friendlyMessage } from "@/lib/api/error.ts";
 import {
   canApproveTransfer,
+  canListBranches,
   canOpenInventory,
   canOpenInventoryPage,
   INVENTORY_HREFS,
@@ -171,6 +172,10 @@ test("suppliers and purchase orders follow catalogue and stock roles", () => {
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "transfers"), true);
   assert.equal(canApproveTransfer("BRANCH_ADMIN"), false);
   assert.equal(canApproveTransfer("REGIONAL_MANAGER"), true);
+  assert.equal(canListBranches("KITCHEN_STAFF"), false);
+  assert.equal(canListBranches("RUNNER"), false);
+  assert.equal(canListBranches("CASHIER"), true);
+  assert.equal(canListBranches("BRANCH_ADMIN"), true);
   assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/transfers"));
 });
 

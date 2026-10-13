@@ -20,7 +20,7 @@ import { navCopy } from "@/lib/i18n/staff/nav";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
-import { canListStaff, canOpenInventoryPage, INVENTORY_HREFS, type InventoryPage } from "./access";
+import { canListBranches, canListStaff, canOpenInventoryPage, INVENTORY_HREFS, type InventoryPage } from "./access";
 import { warehouseLabel } from "./transfers";
 
 export const control = "h-11 w-full border border-input bg-background px-3 text-sm";
@@ -134,22 +134,32 @@ async function branchStores(
 export function useBrandWarehouses() {
   const t = useStaffSection(inventoryCopy);
   const { locale } = useLocale();
+  const me = useStaffSession();
   const brandId = useScope((state) => state.brandId);
+  const branchId = useScope((state) => state.branchId);
   const branches = useScope((state) => state.branches);
   const branchKey = branches.map((branch) => branch.id).join(",");
+  const listBranches = canListBranches(me?.role);
   return useQuery({
-    queryKey: ["inventory", "brand-warehouses", brandId, branchKey, locale],
-    enabled: Boolean(brandId),
+    queryKey: ["inventory", "brand-warehouses", brandId, branchKey, branchId, me?.role, locale],
+    enabled: Boolean(brandId && me),
     queryFn: async () => {
-      let listed: { id: string; name: unknown }[] = [];
-      try {
-        listed = await listFocusedBranches(brandId ?? "", locale, t.loadFailed);
-      } catch (error) {
-        if (branches.length === 0) throw error;
+      let known: { id: string; name: unknown }[];
+      if (!listBranches) {
+        const focused = branches.find((branch) => branch.id === branchId);
+        known = focused ? [focused] : branchId ? [{ id: branchId, name: "" }] : [];
+      } else {
+        let listed: { id: string; name: unknown }[] = [];
+        try {
+          listed = await listFocusedBranches(brandId ?? "", locale, t.loadFailed);
+        } catch (error) {
+          if (branches.length === 0) throw error;
+        }
+        const rawNames = new Map(listed.map((branch) => [branch.id, branch.name]));
+        const scope = branches.length > 0 ? branches : listed;
+        known = scope.map((branch) => ({ id: branch.id, name: rawNames.get(branch.id) ?? branch.name }));
       }
-      const rawNames = new Map(listed.map((branch) => [branch.id, branch.name]));
-      const known = branches.length > 0 ? branches : listed;
-      const stores = (await Promise.all(known.map((branch) => branchStores({ id: branch.id, name: rawNames.get(branch.id) ?? branch.name }, locale, t.loadFailed)))).flat();
+      const stores = (await Promise.all(known.map((branch) => branchStores(branch, locale, t.loadFailed)))).flat();
       const kitchens = await browserApi.GET("/api/v1/inventory/brands/{brand_id}/central-kitchens", {
         params: { path: { brand_id: brandId ?? "" } },
       });

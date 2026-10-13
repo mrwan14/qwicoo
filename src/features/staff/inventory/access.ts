@@ -117,6 +117,20 @@ export function canApproveTransfer(role: UserRole | null | undefined): boolean {
   return has(["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER"], role);
 }
 
+/** GET /api/v1/branches. Mirrors list_branches RequireRoles. Kitchen staff are not on it. */
+const BRANCH_LIST: readonly UserRole[] = [
+  "SUPER_ADMIN",
+  "BRAND_ADMIN",
+  "REGIONAL_MANAGER",
+  "BRANCH_ADMIN",
+  "CASHIER",
+  "WAITER",
+];
+
+export function canListBranches(role: UserRole | null | undefined): boolean {
+  return has(BRANCH_LIST, role);
+}
+
 /** GET /branches/{id}/staff. Mirrors STAFF_LIST_ROLES. */
 const STAFF_LIST: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"];
 

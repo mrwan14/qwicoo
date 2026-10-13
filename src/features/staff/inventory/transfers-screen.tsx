@@ -22,7 +22,7 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { canApproveTransfer, canWriteStock } from "./access";
-import { canReceiveTransfer, transferDestinationLabel, transferTargets } from "./transfers";
+import { canReceiveTransfer, transferTargets, warehouseLabel } from "./transfers";
 import {
   control,
   InventoryFrame,
@@ -31,7 +31,6 @@ import {
   useBranchCurrency,
   useBrandWarehouses,
   useWarehouses,
-  warehouseLabel,
   WarehouseSelect,
 } from "./chrome";
 import { formatQty } from "./qty";
@@ -183,10 +182,8 @@ function useWarehouseName() {
   const brand = useBrandWarehouses();
   const destinations = useTransferDestinations(canWriteStock(me?.role));
   const catalog = new Map<string, string>();
-  for (const item of local.data ?? []) catalog.set(item.id, warehouseLabel(item, t));
-  for (const item of brand.data ?? []) catalog.set(item.id, warehouseLabel(item, t));
-  for (const item of destinations.data ?? []) {
-    if (!catalog.has(item.id)) catalog.set(item.id, transferDestinationLabel(item, locale, t.centralKitchen));
+  for (const item of [...(local.data ?? []), ...(brand.data ?? []), ...(destinations.data ?? [])]) {
+    catalog.set(item.id, warehouseLabel(item, locale, t));
   }
   return (id: string) => catalog.get(id) ?? id.slice(0, 8);
 }
@@ -227,7 +224,7 @@ function TransferDrawer({
   }
   return (
     <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent side="right" className="w-full overflow-y-auto rounded-none sm:max-w-xl">
+      <SheetContent side="right" className="w-full overflow-x-hidden overflow-y-auto rounded-none sm:max-w-xl">
         <SheetHeader className="pe-12"><SheetTitle>{transferId === "new" ? t.transfers.request : t.transfers.title}</SheetTitle></SheetHeader>
         {transferId === "new" ? <RequestTransfer brandId={brandId} presetIngredient={presetIngredient} onClose={onClose} /> : null}
         {detail.isLoading ? <LoadingState label={t.loading} /> : null}
@@ -317,31 +314,33 @@ function TransferDetail({
   });
 
   return (
-    <div className="grid gap-4 px-4 pb-6">
+    <div className="grid min-w-0 gap-4 px-4 pb-6">
       <p className="text-sm">{state ? t.transfers.statuses[state] : transfer.status}</p>
       <p className="text-sm">{t.transfers.from} · {labelOf(transfer.from_warehouse_id)}</p>
       <p className="text-sm">{t.transfers.to} · {labelOf(transfer.to_warehouse_id)}</p>
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b">
-            {[t.ingredient, t.transfers.requested, t.transfers.sent, t.transfers.received, t.transfers.outstanding, t.stock.unitCost].map((label) => (
-              <th key={label} className="px-2 py-2 text-start font-medium">{label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {transfer.lines.map((line) => (
-            <tr key={line.id} className="border-b">
-              <td className="px-2 py-2">{ingredientName(line.ingredient_id, line.ingredient_sku)}</td>
-              <td className="px-2 py-2 tabular-nums">{formatQty(line.qty_requested, locale)}</td>
-              <td className="px-2 py-2 tabular-nums">{formatQty(line.qty_sent, locale)}</td>
-              <td className="px-2 py-2 tabular-nums">{formatQty(line.qty_received, locale)}</td>
-              <td className="px-2 py-2 tabular-nums">{formatQty(line.qty_outstanding, locale)}</td>
-              <td className="px-2 py-2"><Money amount={line.unit_cost} currency={currency} /></td>
+      <div className="max-w-full overflow-x-auto">
+        <table className="w-max min-w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b">
+              {[t.ingredient, t.transfers.requested, t.transfers.sent, t.transfers.received, t.transfers.outstanding, t.stock.unitCost].map((label) => (
+                <th key={label} className="px-2 py-2 text-start font-medium whitespace-nowrap">{label}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {transfer.lines.map((line) => (
+              <tr key={line.id} className="border-b">
+                <td className="px-2 py-2 whitespace-nowrap">{ingredientName(line.ingredient_id, line.ingredient_sku)}</td>
+                <td className="px-2 py-2 tabular-nums whitespace-nowrap">{formatQty(line.qty_requested, locale)}</td>
+                <td className="px-2 py-2 tabular-nums whitespace-nowrap">{formatQty(line.qty_sent, locale)}</td>
+                <td className="px-2 py-2 tabular-nums whitespace-nowrap">{formatQty(line.qty_received, locale)}</td>
+                <td className="px-2 py-2 tabular-nums whitespace-nowrap">{formatQty(line.qty_outstanding, locale)}</td>
+                <td className="px-2 py-2 whitespace-nowrap"><Money amount={line.unit_cost} currency={currency} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {canApprove && transfer.status === "REQUESTED" ? (
         <div className="grid gap-2">
           <button type="button" className={primaryButton} disabled={act.isPending} onClick={() => act.mutate("approve")}>{t.transfers.approve}</button>
@@ -437,13 +436,13 @@ function RequestTransfer({ brandId, presetIngredient, onClose }: { brandId: stri
           if (toId === next) setToId("");
         }} required>
           <option value="">{t.transfers.from}</option>
-          {(warehouses.data ?? []).map((item) => <option key={item.id} value={item.id}>{warehouseLabel(item, t)}</option>)}
+          {(warehouses.data ?? []).map((item) => <option key={item.id} value={item.id}>{warehouseLabel(item, locale, t)}</option>)}
         </select>
       </label>
       <label className="grid gap-1 text-sm"><span>{t.transfers.to}</span>
         <select className={control} value={toId} onChange={(event) => setToId(event.target.value)} required>
           <option value="">{t.transfers.to}</option>
-          {targets.map((item) => <option key={item.id} value={item.id}>{transferDestinationLabel(item, locale, t.centralKitchen)}</option>)}
+          {targets.map((item) => <option key={item.id} value={item.id}>{warehouseLabel(item, locale, t)}</option>)}
         </select>
       </label>
       {destinations.isError ? <QueryErrorState error={destinations.error} screen={t.tabs.transfers} onRetry={() => void destinations.refetch()} /> : null}

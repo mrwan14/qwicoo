@@ -7,26 +7,29 @@ import { canWriteCentralKitchen, canWriteStock } from "./access";
 const FSI = "\u2068";
 const PDI = "\u2069";
 
-export type TransferDestinationOption = {
-  id: string;
-  name: string;
+export type WarehouseLabelInput = {
+  name?: string | null;
+  kind?: string | null;
+  type?: string | null;
+  is_central?: boolean;
+  /** Bilingual branch name, or a name already resolved for one locale. Never the stored warehouse name. */
+  branchName?: unknown;
   branch_name?: unknown;
-  is_central: boolean;
 };
 
-/** "Store, Branch" with each part isolated so Arabic and English stay in order. */
-export function transferDestinationLabel(
-  destination: Pick<TransferDestinationOption, "name" | "branch_name" | "is_central">,
+/** "Branch name · Branch store" or "Kitchen name · Central kitchen", each part isolated for RTL. */
+export function warehouseLabel(
+  warehouse: WarehouseLabelInput,
   locale: LocaleCode,
-  centralKitchen: string,
+  labels: { branchStore: string; centralKitchen: string },
 ): string {
-  const place = destination.is_central ? centralKitchen : pickLocale(destination.branch_name, locale);
-  const separator = locale === "ar" ? "، " : ", ";
-  return [destination.name, place]
-    .map((part) => part.trim())
+  const central = warehouse.is_central === true || warehouse.kind === "CENTRAL_KITCHEN" || warehouse.type === "CENTRAL_KITCHEN";
+  const place = central ? (warehouse.name ?? "").trim() : pickLocale(warehouse.branch_name ?? warehouse.branchName, locale).trim();
+  const type = central ? labels.centralKitchen : labels.branchStore;
+  return [place, type]
     .filter(Boolean)
     .map((part) => `${FSI}${part}${PDI}`)
-    .join(separator);
+    .join(" · ");
 }
 
 /** Drop the store the transfer is leaving. */

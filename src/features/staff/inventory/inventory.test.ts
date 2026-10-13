@@ -14,7 +14,7 @@ import { importCommitAllowed } from "@/features/staff/inventory/csv.ts";
 import { formatPlateCost } from "@/features/staff/inventory/cost.ts";
 import { previewPrepConsumption } from "@/features/staff/inventory/prep.ts";
 import { purchaseCancel } from "@/features/staff/inventory/purchasing.ts";
-import { canReceiveTransfer, transferDestinationLabel, transferTargets } from "@/features/staff/inventory/transfers.ts";
+import { canReceiveTransfer, transferTargets, warehouseLabel } from "@/features/staff/inventory/transfers.ts";
 import { conversionFactor } from "@/features/staff/inventory/units.ts";
 import type { UserRole } from "@/lib/auth/roles.ts";
 
@@ -190,17 +190,24 @@ test("csv preview blocks commit while any row is an error", () => {
   assert.equal(importCommitAllowed([]), false);
 });
 
-test("transfer destinations read store then branch, and central kitchens name the kitchen", () => {
-  const branch = { id: "store-a", name: "Branch store", branch_name: { en: "Zamalek", ar: "الزمالك" }, is_central: false };
-  assert.equal(transferDestinationLabel(branch, "en", "Central kitchen"), "\u2068Branch store\u2069, \u2068Zamalek\u2069");
-  assert.equal(transferDestinationLabel(branch, "ar", "مطبخ مركزي"), "\u2068Branch store\u2069، \u2068الزمالك\u2069");
+test("warehouse labels use the branch name and the translated store type", () => {
+  const labels = { branchStore: "Branch store", centralKitchen: "Central kitchen" };
+  const arabic = { branchStore: "مخزن الفرع", centralKitchen: "مطبخ مركزي" };
+  const branch = { name: "Branch store", branch_name: { en: "Zamalek", ar: "الزمالك" }, is_central: false };
+  assert.equal(warehouseLabel(branch, "en", labels), "\u2068Zamalek\u2069 · \u2068Branch store\u2069");
+  assert.equal(warehouseLabel(branch, "ar", arabic), "\u2068الزمالك\u2069 · \u2068مخزن الفرع\u2069");
   assert.equal(
-    transferDestinationLabel({ id: "kitchen", name: "Commissary", branch_name: null, is_central: true }, "en", "Central kitchen"),
-    "\u2068Commissary\u2069, \u2068Central kitchen\u2069",
+    warehouseLabel({ name: "Branch store", kind: "BRANCH_STORE", branchName: { en: "Zamalek", ar: "الزمالك" } }, "en", labels),
+    "\u2068Zamalek\u2069 · \u2068Branch store\u2069",
+  );
+  assert.equal(warehouseLabel({ name: "Branch store", kind: "BRANCH_STORE", branch_name: null }, "en", { ...labels, branchStore: "Store" }), "\u2068Store\u2069");
+  assert.equal(
+    warehouseLabel({ name: "Commissary", kind: "CENTRAL_KITCHEN", branchName: null }, "en", labels),
+    "\u2068Commissary\u2069 · \u2068Central kitchen\u2069",
   );
   assert.equal(
-    transferDestinationLabel({ id: "kitchen", name: "المطبخ", branch_name: null, is_central: true }, "ar", "مطبخ مركزي"),
-    "\u2068المطبخ\u2069، \u2068مطبخ مركزي\u2069",
+    warehouseLabel({ name: "المطبخ", is_central: true, branch_name: null }, "ar", arabic),
+    "\u2068المطبخ\u2069 · \u2068مطبخ مركزي\u2069",
   );
   const choices = transferTargets(
     [

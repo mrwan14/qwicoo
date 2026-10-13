@@ -14,13 +14,14 @@ import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
 import { denyAccess } from "@/lib/auth/session-client";
 import { useLocale } from "@/lib/i18n/locale-store";
-import { pickLocale, type LocaleCode } from "@/lib/i18n/locale-text";
+import type { LocaleCode } from "@/lib/i18n/locale-text";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { navCopy } from "@/lib/i18n/staff/nav";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { canListStaff, canOpenInventoryPage, INVENTORY_HREFS, type InventoryPage } from "./access";
+import { warehouseLabel } from "./transfers";
 
 export const control = "h-11 w-full border border-input bg-background px-3 text-sm";
 export const primaryButton =
@@ -95,23 +96,7 @@ export function InventoryFrame({ page, children }: { page: InventoryPage; childr
 }
 
 export type Warehouse = components["schemas"]["WarehouseResponse"];
-export type LabeledWarehouse = Warehouse & { branchName: string | null };
-
-export function warehouseLabel(
-  warehouse: Pick<LabeledWarehouse, "name" | "kind" | "branchName">,
-  labels: { branchStore: string; centralKitchen: string },
-): string {
-  if (warehouse.kind === "CENTRAL_KITCHEN") return `${warehouse.name} · ${labels.centralKitchen}`;
-  return `${warehouse.branchName || warehouse.name} · ${labels.branchStore}`;
-}
-
-function branchTitle(
-  branch: { display_name?: string | null; name?: unknown; slug?: string | null },
-  locale: LocaleCode,
-): string {
-  const display = branch.display_name?.trim();
-  return display || pickLocale(branch.name, locale) || branch.slug || "";
-}
+export type LabeledWarehouse = Warehouse & { branchName: unknown };
 
 function currentBranchName(branchId: string): string {
   return useScope.getState().branches.find((branch) => branch.id === branchId)?.name ?? "";
@@ -128,7 +113,7 @@ function forBranch(branchId: string) {
 }
 
 async function branchStores(
-  branch: { id: string; name: string },
+  branch: { id: string; name: unknown },
   locale: LocaleCode,
   fallback: string,
 ): Promise<LabeledWarehouse[]> {
@@ -137,7 +122,7 @@ async function branchStores(
     middleware: [forBranch(branch.id)],
   });
   if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, fallback, locale);
-  return result.data.items.map((item) => ({ ...item, branchName: branch.name || null }));
+  return result.data.items.map((item) => ({ ...item, branchName: branch.name ?? null }));
 }
 
 /**
@@ -156,8 +141,15 @@ export function useBrandWarehouses() {
     queryKey: ["inventory", "brand-warehouses", brandId, branchKey, locale],
     enabled: Boolean(brandId),
     queryFn: async () => {
-      const known = branches.length > 0 ? branches : await listFocusedBranches(brandId ?? "", locale, t.loadFailed);
-      const stores = (await Promise.all(known.map((branch) => branchStores(branch, locale, t.loadFailed)))).flat();
+      let listed: { id: string; name: unknown }[] = [];
+      try {
+        listed = await listFocusedBranches(brandId ?? "", locale, t.loadFailed);
+      } catch (error) {
+        if (branches.length === 0) throw error;
+      }
+      const rawNames = new Map(listed.map((branch) => [branch.id, branch.name]));
+      const known = branches.length > 0 ? branches : listed;
+      const stores = (await Promise.all(known.map((branch) => branchStores({ id: branch.id, name: rawNames.get(branch.id) ?? branch.name }, locale, t.loadFailed)))).flat();
       const kitchens = await browserApi.GET("/api/v1/inventory/brands/{brand_id}/central-kitchens", {
         params: { path: { brand_id: brandId ?? "" } },
       });
@@ -171,7 +163,7 @@ export function useBrandWarehouses() {
 }
 
 async function listFocusedBranches(brandId: string, locale: LocaleCode, fallback: string) {
-  const found: { id: string; name: string }[] = [];
+  const found: { id: string; name: unknown }[] = [];
   const limit = 100;
   let offset = 0;
   for (;;) {
@@ -181,7 +173,7 @@ async function listFocusedBranches(brandId: string, locale: LocaleCode, fallback
     if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, fallback, locale);
     for (const branch of result.data) {
       if (branch.brand_id && branch.brand_id !== brandId) continue;
-      found.push({ id: branch.id, name: branchTitle(branch, locale) });
+      found.push({ id: branch.id, name: branch.name });
     }
     if (result.data.length < limit) return found;
     offset += limit;
@@ -197,8 +189,7 @@ export function useWarehouses() {
     queryKey: ["inventory", "warehouses", brandId, branchId, locale],
     enabled: Boolean(brandId && branchId),
     queryFn: async () => {
-      const name = currentBranchName(branchId ?? "");
-      const branchName = name || (await focusedBranchName(branchId ?? "", locale));
+      const branchName = (await branchNameValue(branchId ?? "")) ?? currentBranchName(branchId ?? "");
       const stores = await branchStores({ id: branchId ?? "", name: branchName }, locale, t.loadFailed);
       const kitchens = await browserApi.GET("/api/v1/inventory/brands/{brand_id}/central-kitchens", {
         params: { path: { brand_id: brandId ?? "" } },
@@ -209,13 +200,13 @@ export function useWarehouses() {
   });
 }
 
-async function focusedBranchName(branchId: string, locale: LocaleCode): Promise<string> {
-  if (!branchId) return "";
+async function branchNameValue(branchId: string): Promise<unknown> {
+  if (!branchId) return null;
   const profile = await browserApi.GET("/api/v1/branches/{branch_id}", {
     params: { path: { branch_id: branchId } },
   });
-  if (!profile.response.ok || !profile.data) return "";
-  return branchTitle(profile.data, locale);
+  if (!profile.response.ok || !profile.data) return null;
+  return profile.data.name ?? null;
 }
 
 export function useBranchCurrency(enabled = true) {
@@ -245,13 +236,14 @@ export function WarehouseSelect({
   onChange: (id: string) => void;
 }) {
   const t = useStaffSection(inventoryCopy);
+  const { locale } = useLocale();
   return (
     <label className="grid gap-1 text-sm">
       <span className="text-muted-foreground">{t.warehouse}</span>
       <select className={control} value={value} onChange={(event) => onChange(event.target.value)}>
         {warehouses.map((warehouse) => (
           <option key={warehouse.id} value={warehouse.id}>
-            {warehouseLabel(warehouse, t)}
+            {warehouseLabel(warehouse, locale, t)}
           </option>
         ))}
       </select>

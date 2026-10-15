@@ -218,7 +218,7 @@ export function CheckoutScreen() {
             currency={currency}
           />
         ) : null}
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--guest-line)] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-6px_20px_rgb(37_37_37/6%)]">
+        <div className="fixed inset-x-0 bottom-0 z-30 bg-[var(--guest-canvas)] px-5 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="guest-phone grid gap-2">
             <button
               type="button"
@@ -285,16 +285,15 @@ export function CheckoutScreen() {
 
       <ul className="grid gap-6">
         {groups.map((group) => (
-          <li key={group.guestName} className="grid gap-2">
+          <li key={group.guestName} className="grid gap-3">
             <h2 className="guest-display text-xl text-[var(--guest-ink)]">{group.guestName}</h2>
-            <hr className="guest-rule" />
-            <ul className="grid gap-0 divide-y divide-[var(--guest-line)] border-y border-[var(--guest-line)]">
+            <ul className="grid gap-3">
               {group.lines.map((line) => {
                 const index = lines.findIndex((entry) => entry.id === line.id);
                 const quoted = index >= 0 ? quotedByIndex[index] : undefined;
                 const mine = lineIsMine(line, session.guestId, guestName);
                 return (
-                  <li key={line.id} className="grid gap-2 py-3">
+                  <li key={line.id} className="guest-card grid gap-2 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-medium">{line.item_name}</p>
@@ -394,7 +393,7 @@ export function CheckoutScreen() {
       </label>
 
       {quote.isError ? (
-        <p className="text-sm text-destructive">{quote.error instanceof Error ? quote.error.message : t.oops}</p>
+        <p className="guest-alert guest-alert-error text-sm">{quote.error instanceof Error ? quote.error.message : t.oops}</p>
       ) : quote.data ? (
         <div className="guest-card p-4">
           <h2 className="guest-display text-xl">{t.total}</h2>
@@ -417,7 +416,7 @@ export function CheckoutScreen() {
         <p className="text-sm">{t.validate}</p>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--guest-line)] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-6px_20px_rgb(37_37_37/6%)]">
+      <div className="fixed inset-x-0 bottom-0 z-30 bg-[var(--guest-canvas)] px-5 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="guest-phone grid gap-2">
           <button
             type="button"

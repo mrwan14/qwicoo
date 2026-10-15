@@ -274,11 +274,7 @@ export function TrackScreen() {
           />
         </div>
       ) : (
-        <div
-          data-guest-reveal
-          className="guest-card px-4 py-4"
-          style={{ borderInlineStartWidth: 6, borderInlineStartColor: statusTone(status) }}
-        >
+        <div data-guest-reveal className="guest-card px-4 py-4">
           {rejected ? (
             <div className="grid gap-2">
               <p className="guest-display text-2xl">{t.orderRejected}</p>
@@ -327,12 +323,9 @@ export function TrackScreen() {
       ) : null}
 
       {(activeOrder.items ?? []).length > 0 ? (
-        <ul
-          data-guest-reveal
-          className="grid gap-0 divide-y divide-[var(--guest-line)] border-y border-[var(--guest-line)]"
-        >
+        <ul data-guest-reveal className="grid gap-3">
           {(activeOrder.items ?? []).map((item) => (
-            <li key={item.id} className="flex items-start justify-between gap-3 py-3">
+            <li key={item.id} className="guest-card flex items-start justify-between gap-3 p-4">
               <div className="min-w-0">
                 <p className="font-medium">
                   <span className="tabular-nums" dir="ltr">

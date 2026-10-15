@@ -61,10 +61,10 @@ export function GuestMotionSkeleton({ label }: { label?: string }) {
 
   return (
     <div ref={root} role="status" className="grid gap-3" aria-live="polite">
-      <div className="guest-skel-bar h-8 w-36 rounded-[var(--guest-radius-btn)] bg-[var(--guest-muted)]" />
-      <div className="guest-skel-bar h-24 w-full rounded-[var(--guest-radius-card)] bg-[var(--guest-muted)]" />
-      <div className="guest-skel-bar h-14 w-full rounded-[var(--guest-radius-btn)] bg-[var(--guest-muted)]" />
-      <div className="guest-skel-bar h-14 w-3/4 rounded-[var(--guest-radius-btn)] bg-[var(--guest-muted)]" />
+      <div className="guest-skel-bar h-8 w-36" />
+      <div className="guest-skel-bar h-24 w-full" />
+      <div className="guest-skel-bar h-14 w-full" />
+      <div className="guest-skel-bar h-14 w-3/4" />
       {label ? <span className="sr-only">{label}</span> : null}
     </div>
   );

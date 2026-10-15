@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Logo } from "@/components/ops/logo";
 import { ErrorState, LoadingState } from "@/components/ops/states";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -10,7 +10,7 @@ import { BillSheet, WaiterSheet } from "@/features/guest/service-sheets";
 import { OrderingPausedNotice, isGuestUnreachable, useOrderingPaused } from "@/features/guest/ordering-status";
 import { guestTableToken, isGuestSessionGone, recoverGuestSession } from "@/features/guest/session";
 import { initials } from "@/lib/auth/scope";
-import { accentForeground, mergeGuestBranding, sameBranding } from "@/lib/guest/branding";
+import { mergeGuestBranding, sameBranding } from "@/lib/guest/branding";
 import { mediaUrl } from "@/lib/media";
 import { useGuest } from "@/stores/guest";
 
@@ -229,7 +229,6 @@ export function GuestShell({
   resume?: boolean;
 }) {
   const { t, locale, dir, setLocale } = useGuestCopy();
-  const accent = useGuest((state) => (neutral ? null : (state.branding?.accent ?? null)));
   const paused = useOrderingPaused();
   const placeLabel = useGuestPlaceLabel();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -240,15 +239,6 @@ export function GuestShell({
   useEffect(() => {
     void useGuest.persist.rehydrate();
   }, []);
-
-  const style = accent
-    ? ({
-        "--primary": accent,
-        "--guest-orange": accent,
-        "--primary-foreground": accentForeground(accent),
-        "--ring": accent,
-      } as CSSProperties)
-    : undefined;
 
   function onDrawerAction(action: GuestDrawerAction) {
     if (action === "about") {
@@ -266,14 +256,14 @@ export function GuestShell({
   }
 
   return (
-    <div dir={dir} lang={locale} style={style} className="guest-theme min-h-dvh overflow-x-hidden">
+    <div dir={dir} lang={locale} className="guest-theme min-h-dvh overflow-x-hidden">
       <div className="guest-phone">
-        <header className="flex items-center justify-between gap-2.5 px-4 pb-1.5 pt-2.5">
+        <header className="flex items-center justify-between gap-2.5 px-5 pb-1.5 pt-3">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {!neutral ? (
               <button
                 type="button"
-                className="guest-btn guest-motion !h-10 !w-10 !min-h-10 shrink-0 !rounded-[10px] !border-0 !bg-[var(--guest-orange-soft)] !p-0 !text-[var(--guest-orange)] !shadow-none"
+                className="guest-icon-btn guest-motion shrink-0"
                 aria-label={t.openMenu}
                 onClick={() => setDrawerOpen(true)}
               >
@@ -288,13 +278,13 @@ export function GuestShell({
           </div>
           <button
             type="button"
-            className="guest-btn guest-motion !h-9 !min-h-9 !w-auto shrink-0 !rounded-full !border-0 !bg-[var(--guest-muted)] !px-3.5 !text-xs !font-bold !shadow-none"
+            className="guest-lang guest-motion shrink-0"
             onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
           >
             {t.language}
           </button>
         </header>
-        <div className="grid gap-3 px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1">
+        <div className="grid gap-3 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1">
           {paused ? <OrderingPausedNotice /> : null}
           <div>{resume ? <GuestResume>{children}</GuestResume> : children}</div>
         </div>

@@ -1,19 +1,28 @@
-import { Nunito, Baloo_Bhaijaan_2 } from "next/font/google";
+import { Cairo, Fraunces, Inter } from "next/font/google";
 import type { ReactNode } from "react";
 
-const guestDisplay = Nunito({
+import { GuestDocumentFonts } from "@/features/guest/document-fonts";
+
+const guestDisplay = Fraunces({
   variable: "--font-guest-display",
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  weight: ["500", "600", "700"],
 });
 
-const guestArabic = Baloo_Bhaijaan_2({
+const guestBody = Inter({
+  variable: "--font-guest-body",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const guestArabic = Cairo({
   variable: "--font-guest-arabic",
-  subsets: ["arabic"],
+  subsets: ["arabic", "latin"],
   weight: ["400", "500", "600", "700"],
 });
 
 /** Guest-route fonts only — does not affect staff or landing. */
 export default function GuestLayout({ children }: { children: ReactNode }) {
-  return <div className={`${guestDisplay.variable} ${guestArabic.variable}`}>{children}</div>;
+  const fonts = `${guestDisplay.variable} ${guestBody.variable} ${guestArabic.variable}`;
+  return <GuestDocumentFonts className={fonts}>{children}</GuestDocumentFonts>;
 }

@@ -126,7 +126,7 @@ export function BottomSheet({
               </SheetTitle>
               <button
                 type="button"
-                className="guest-btn guest-btn-secondary guest-motion !h-11 !w-11 !min-h-11 shrink-0 !p-0 text-xl leading-none"
+                className="guest-icon-btn guest-motion shrink-0 text-xl leading-none"
                 aria-label={t.close}
                 onClick={close}
               >

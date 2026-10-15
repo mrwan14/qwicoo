@@ -61,7 +61,7 @@ export function PayResultScreen({ locale }: { locale: LocaleCode }) {
 
   return (
     <div dir={dir} lang={locale} className="guest-theme min-h-dvh">
-      <div className="guest-phone grid gap-4 px-4 py-8">
+      <div className="guest-phone grid gap-4 px-6 py-10">
         {view === "paid" ? (
           <>
             <h1 className="guest-display text-3xl">{t.paySuccessTitle}</h1>

@@ -31,11 +31,15 @@ test("landing and globals keep square radius (no guest pill leak)", () => {
 
 test("guest layout loads Fraunces, Inter, and Cairo only", () => {
   const layout = readFileSync(new URL("../../app/(guest)/layout.tsx", import.meta.url), "utf8");
-  assert.match(layout, /Fraunces/);
-  assert.match(layout, /Inter/);
-  assert.match(layout, /Cairo/);
+  const fonts = readFileSync(new URL("./guest-fonts.ts", import.meta.url), "utf8");
+  assert.match(layout, /guestFontClassName/);
+  assert.match(fonts, /Fraunces/);
+  assert.match(fonts, /Inter/);
+  assert.match(fonts, /Cairo/);
   assert.doesNotMatch(layout, /Nunito/);
   assert.doesNotMatch(layout, /Baloo/);
+  assert.doesNotMatch(fonts, /Nunito/);
+  assert.doesNotMatch(fonts, /Baloo/);
 });
 
 test("guest chrome does not repaint buttons with a restaurant accent", () => {

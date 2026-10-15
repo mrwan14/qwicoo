@@ -291,7 +291,7 @@ export function ItemSheet({
           <p className="guest-body">{description}</p>
         ) : null}
         {branchPrice ? (
-          <p className="guest-price text-base" dir="ltr">
+          <p className="guest-price guest-price-accent text-base" dir="ltr">
             <Money amount={branchPrice} currency={currency} locale={locale} />
           </p>
         ) : null}
@@ -359,34 +359,34 @@ export function ItemSheet({
               }}
               className={`grid gap-2 ${needsBand ? "guest-required-band" : ""} ${highlighted ? "outline outline-2 outline-[var(--guest-orange)] outline-offset-2" : ""}`}
             >
-              <legend className="guest-title">
-                {optionName(group.name, locale)}
-                {group.is_required ? (
-                  <span className="guest-pill ms-2 inline-flex bg-[var(--guest-orange)] px-2 py-0.5 text-xs font-semibold text-white">
-                    {t.required}
-                  </span>
-                ) : hint ? (
-                  <span className="guest-body ms-2 font-normal">{hint}</span>
+              <legend className="grid gap-0.5">
+                <span className="guest-title">{optionName(group.name, locale)}</span>
+                {hint ? (
+                  <span className="guest-caption font-normal">{hint}</span>
+                ) : group.is_required ? (
+                  <span className="guest-badge guest-badge-accent w-fit">{t.required}</span>
                 ) : null}
               </legend>
-              {hint && !group.is_required ? (
-                <p className="guest-body">{hint}</p>
-              ) : null}
-              <div className="grid grid-cols-2 gap-2">
+              <div className={group.max_choices === 1 ? "flex flex-wrap gap-2" : "grid gap-2"}>
                 {(group.options ?? []).map((option) => {
                   const soldOut = option.is_available === false;
                   const chosen = (workingSelection[group.id] ?? []).includes(option.id);
                   const delta = Number(option.price_delta);
+                  const single = group.max_choices === 1;
+                  const showDelta = !soldOut && Number.isFinite(delta) && delta !== 0;
                   return (
                     <label
                       key={option.id}
                       data-selected={chosen ? "true" : "false"}
-                      className={`guest-option-tile guest-motion flex flex-col justify-center gap-1 text-sm ${
-                        soldOut ? "opacity-50" : ""
-                      }`}
+                      data-active={single && chosen ? "true" : "false"}
+                      className={
+                        single
+                          ? `guest-cat-tab guest-motion inline-flex items-center gap-2 ${soldOut ? "opacity-50" : ""}`
+                          : `guest-option-tile guest-motion flex flex-row items-center justify-between gap-3 text-sm ${soldOut ? "opacity-50" : ""}`
+                      }
                     >
                       <input
-                        type={group.max_choices === 1 ? "radio" : "checkbox"}
+                        type={single ? "radio" : "checkbox"}
                         name={`${group.id}-${mode === "same" ? "all" : activeUnit}`}
                         className="sr-only"
                         checked={chosen}
@@ -402,7 +402,7 @@ export function ItemSheet({
                         {optionName(option.name, locale)}
                         {soldOut ? ` · ${t.unavailable}` : ""}
                       </span>
-                      {!soldOut && Number.isFinite(delta) && delta !== 0 ? (
+                      {showDelta ? (
                         <span className="guest-price text-xs" dir="ltr">
                           + <Money amount={option.price_delta} currency={currency} locale={locale} />
                         </span>
@@ -418,7 +418,7 @@ export function ItemSheet({
         <label className="grid gap-1.5 guest-title">
           {t.notes}
           <textarea
-            className="min-h-20 w-full rounded-[var(--guest-radius-card)] border border-[var(--guest-line)] bg-white px-3 py-2.5 text-base font-normal shadow-[var(--guest-shadow-soft)] outline-none focus:border-[var(--guest-orange)]"
+            className={`${guestField} min-h-24 py-3`}
             placeholder={t.notes}
             value={mode === "same" ? (notes[0] ?? "") : (notes[activeUnit] ?? "")}
             onChange={(event) => {
@@ -434,7 +434,7 @@ export function ItemSheet({
         </label>
 
         {choiceError ? (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="guest-alert guest-alert-error text-sm">
             {choiceError}
           </p>
         ) : null}

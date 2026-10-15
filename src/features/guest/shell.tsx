@@ -9,7 +9,6 @@ import { GuestAboutPanel, GuestDrawer, type GuestDrawerAction } from "@/features
 import { BillSheet, WaiterSheet } from "@/features/guest/service-sheets";
 import { OrderingPausedNotice, isGuestUnreachable, useOrderingPaused } from "@/features/guest/ordering-status";
 import { guestTableToken, isGuestSessionGone, recoverGuestSession } from "@/features/guest/session";
-import { initials } from "@/lib/auth/scope";
 import { mergeGuestBranding, sameBranding } from "@/lib/guest/branding";
 import { mediaUrl } from "@/lib/media";
 import { useGuest } from "@/stores/guest";
@@ -80,34 +79,25 @@ export function LineDetails({ modifiers, note }: { modifiers: readonly string[];
 function BrandHeader() {
   const branding = useGuest((state) => state.branding);
   const branchName = useGuest((state) => state.session?.branchName ?? null);
-  const placeLabel = useGuestPlaceLabel();
   const [logoFailed, setLogoFailed] = useState(false);
   const name = branding?.name ?? branchName;
+  const branchCaption = branding?.name && branchName && branchName !== branding.name ? branchName : null;
   if (!name) {
-    return (
-      <span className="min-w-0">
-        <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-2xl" />
-        <p className="truncate text-sm text-[var(--guest-quiet)]">{placeLabel}</p>
-      </span>
-    );
+    return <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-2xl" />;
   }
 
   const logo = branding?.logoUrl && !logoFailed ? mediaUrl(branding.logoUrl) : null;
   return (
     <span className="inline-flex min-w-0 items-center gap-2.5">
-      <span className="guest-thumb flex size-9 shrink-0 items-center justify-center overflow-hidden bg-[var(--guest-muted)] text-xs font-bold text-[var(--guest-ink)]">
-        {logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt={name} className="size-full object-contain p-0.5" onError={() => setLogoFailed(true)} />
-        ) : (
-          <span aria-hidden>{initials(name)}</span>
-        )}
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-[15px] font-extrabold leading-tight text-[var(--guest-ink)]">{name}</span>
-        <span className="block truncate text-[11px] font-medium text-[var(--guest-quiet)]">
-          {[branchName && branding?.name ? branchName : null, placeLabel].filter(Boolean).join(" · ")}
+      {logo ? (
+        <span className="guest-thumb flex size-9 shrink-0 items-center justify-center overflow-hidden bg-[var(--guest-sunken)] text-xs font-bold text-[var(--guest-ink)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo} alt="" className="size-full object-contain p-0.5" onError={() => setLogoFailed(true)} />
         </span>
+      ) : null}
+      <span className="min-w-0">
+        <span className="guest-display block truncate text-[1.25rem]">{name}</span>
+        {branchCaption ? <span className="guest-caption block truncate">{branchCaption}</span> : null}
       </span>
     </span>
   );
@@ -234,6 +224,7 @@ export function GuestShell({
   const { t, locale, dir, setLocale } = useGuestCopy();
   const paused = useOrderingPaused();
   const placeLabel = useGuestPlaceLabel();
+  const tableNumber = useGuest((state) => state.session?.tableNumber);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [waiterOpen, setWaiterOpen] = useState(false);
@@ -279,6 +270,9 @@ export function GuestShell({
             ) : null}
             {neutral ? <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-xl" /> : <BrandHeader />}
           </div>
+          {!neutral && tableNumber ? (
+            <span className="guest-badge guest-badge-accent shrink-0">{placeLabel}</span>
+          ) : null}
           <button
             type="button"
             className="guest-lang guest-motion shrink-0"

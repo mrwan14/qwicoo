@@ -131,6 +131,10 @@
   color: #ffffff;
 }
 
+.guest-theme .guest-price-accent {
+  color: var(--guest-orange-deep);
+}
+
 .guest-theme .guest-motion {
   transition:
     transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -364,8 +368,8 @@
 }
 
 .guest-theme .guest-badge-soldout {
-  background: var(--guest-tint);
-  color: var(--guest-faint);
+  background: var(--guest-sunken);
+  color: var(--guest-quiet);
 }
 
 .guest-theme .guest-badge-live {
@@ -527,6 +531,7 @@
 .guest-theme .guest-option-tile[data-selected="true"] {
   border-color: var(--guest-orange);
   background: var(--guest-orange-soft);
+  padding-inline-end: 2.25rem;
 }
 
 .guest-theme .guest-option-tile[data-selected="true"]::after {

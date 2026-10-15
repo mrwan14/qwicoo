@@ -280,7 +280,7 @@ export function MenuScreen() {
         </p>
       ) : null}
 
-      <div className="sticky top-0 z-20 -mx-4 border-b border-[var(--guest-line)] bg-[var(--guest-canvas)]/96 px-4 pb-2.5 pt-1 backdrop-blur-md">
+      <div className="sticky top-0 z-20 -mx-5 border-b border-[var(--guest-line)] bg-[var(--guest-canvas)]/95 px-5 pb-3 pt-1 backdrop-blur-md">
         <label className="guest-search">
           <span className="sr-only">{t.searchMenu}</span>
           <input
@@ -347,7 +347,7 @@ export function MenuScreen() {
                   {optionName(category.name, locale)}
                 </h2>
               </div>
-              <ul className="grid">
+              <ul className="grid gap-3">
                 {(category.items ?? []).map((item) => {
                   const image = mediaUrl(item.image_url);
                   const title = optionName(item.name, locale);
@@ -364,7 +364,7 @@ export function MenuScreen() {
                   return (
                     <li
                       key={item.id}
-                      className="guest-menu-row"
+                      className="guest-item-card"
                       data-soldout={soldOut ? "true" : "false"}
                     >
                       <div className="guest-thumb relative size-[4.5rem] shrink-0">
@@ -387,24 +387,20 @@ export function MenuScreen() {
                         {description && description !== title ? (
                           <p className="guest-body mt-0.5 line-clamp-2">{description}</p>
                         ) : null}
-                      </div>
-                      <div className="flex min-w-[4.75rem] shrink-0 flex-col items-end gap-1.5">
                         {soldOut ? (
-                          <span className="guest-pill inline-flex bg-[var(--status-soldout-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--status-soldout)]">
-                            {t.unavailable}
-                          </span>
+                          <span className="guest-badge guest-badge-soldout mt-2">{t.unavailable}</span>
                         ) : branchPrices.get(item.id) ? (
-                          <span className="guest-price text-end leading-none" dir="ltr">
+                          <p className="guest-price guest-price-accent mt-2 leading-none" dir="ltr">
                             <Money amount={branchPrices.get(item.id) ?? ""} currency={currency} locale={locale} />
-                          </span>
+                          </p>
                         ) : (
-                          <span className="guest-body text-end">{t.validate}</span>
+                          <p className="guest-caption mt-2">{t.validate}</p>
                         )}
                         {needsOptions && !soldOut ? (
-                          <p className="max-w-[5.5rem] text-end text-[10px] font-semibold leading-tight text-[var(--guest-orange)]">
-                            * {t.requiredOptions}
-                          </p>
+                          <p className="guest-caption mt-1 text-[var(--guest-orange-deep)]">* {t.requiredOptions}</p>
                         ) : null}
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
                         {!soldOut ? (
                           needsOptions ? (
                             <button
@@ -495,17 +491,18 @@ export function MenuScreen() {
           <div className="guest-phone">
             <Link
               href="/order/checkout"
-              className="guest-cart-bar guest-btn guest-motion gap-3 px-4 text-white"
+              className="guest-cart-bar guest-btn guest-motion gap-3 px-5 text-white"
             >
-              <span className="guest-pill inline-flex size-7 items-center justify-center bg-white text-xs font-extrabold text-[var(--guest-orange)]">
-                {cartCount}
+              <span className="min-w-0 flex-1 truncate text-start text-sm font-semibold">
+                {t.cartCount.replace("{n}", String(cartCount))}
+                {cartQuote.data ? (
+                  <span dir="ltr">
+                    {" · "}
+                    <Money amount={quotedOrderTotal(cartQuote.data)} currency={currency} locale={locale} />
+                  </span>
+                ) : null}
               </span>
-              <span className="flex-1 text-start text-sm font-bold">{t.viewTableOrder}</span>
-              {cartQuote.data ? (
-                <span className="text-sm font-extrabold tabular-nums" dir="ltr">
-                  <Money amount={quotedOrderTotal(cartQuote.data)} currency={currency} locale={locale} />
-                </span>
-              ) : null}
+              <span className="text-sm font-semibold">{t.viewCart}</span>
             </Link>
           </div>
         </div>

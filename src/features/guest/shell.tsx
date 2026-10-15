@@ -222,11 +222,14 @@ export function GuestShell({
   children,
   neutral = false,
   resume = !neutral,
+  header = true,
 }: {
   children: ReactNode;
   neutral?: boolean;
   /** Recover a dropped table session. Off for pickup and the join form. */
   resume?: boolean;
+  /** The join flow draws its own top bar. Menu and order keep this one. */
+  header?: boolean;
 }) {
   const { t, locale, dir, setLocale } = useGuestCopy();
   const paused = useOrderingPaused();
@@ -258,7 +261,7 @@ export function GuestShell({
   return (
     <div dir={dir} lang={locale} className="guest-theme min-h-dvh overflow-x-hidden">
       <div className="guest-phone">
-        <header className="flex items-center justify-between gap-2.5 px-5 pb-1.5 pt-3">
+        {header ? <header className="flex items-center justify-between gap-2.5 px-5 pb-1.5 pt-3">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {!neutral ? (
               <button
@@ -283,10 +286,18 @@ export function GuestShell({
           >
             {t.language}
           </button>
-        </header>
-        <div className="grid gap-3 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1">
+        </header> : null}
+        <div
+          className={
+            header
+              ? "grid gap-3 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1"
+              : "flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4"
+          }
+        >
           {paused ? <OrderingPausedNotice /> : null}
-          <div>{resume ? <GuestResume>{children}</GuestResume> : children}</div>
+          <div className={header ? undefined : "flex min-h-0 flex-1 flex-col"}>
+            {resume ? <GuestResume>{children}</GuestResume> : children}
+          </div>
         </div>
       </div>
       {!neutral ? (

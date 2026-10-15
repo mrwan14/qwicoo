@@ -293,7 +293,7 @@ export function MenuScreen() {
           {search ? (
             <button
               type="button"
-              className="absolute end-2 top-1/2 z-10 -translate-y-1/2 px-2 text-xs font-semibold text-[var(--guest-quiet)]"
+              className="absolute end-1 top-1/2 z-10 inline-flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center px-3 text-xs font-semibold text-[var(--guest-quiet)]"
               onClick={() => setSearch("")}
             >
               {t.clearSearch}

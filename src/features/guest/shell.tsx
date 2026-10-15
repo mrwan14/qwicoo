@@ -2,12 +2,11 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Logo } from "@/components/ops/logo";
-import { ErrorState, LoadingState } from "@/components/ops/states";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { guestCopy } from "@/features/guest/copy";
 import { GuestAboutPanel, GuestDrawer, type GuestDrawerAction } from "@/features/guest/guest-drawer";
 import { BillSheet, WaiterSheet } from "@/features/guest/service-sheets";
-import { OrderingPausedNotice, isGuestUnreachable, useOrderingPaused } from "@/features/guest/ordering-status";
+import { GuestSkeleton, OrderingPausedNotice, isGuestUnreachable, useOrderingPaused } from "@/features/guest/ordering-status";
 import { guestTableToken, isGuestSessionGone, recoverGuestSession } from "@/features/guest/session";
 import { mergeGuestBranding, sameBranding } from "@/lib/guest/branding";
 import { mediaUrl } from "@/lib/media";
@@ -156,7 +155,7 @@ export function GuestResume({ children }: { children: ReactNode }) {
     };
   }, [storedToken]);
 
-  if (!ready) return <LoadingState label={t.rejoining} />;
+  if (!ready) return <GuestSkeleton label={t.rejoining} />;
   if (session) return children;
   return <RejoinTable message={failed ? t.sessionGone : undefined} />;
 }
@@ -183,7 +182,7 @@ export function GuestQueryError({
   }, [gone, token, retried, onRetry]);
 
   if (gone) {
-    if (token && !retried) return <LoadingState label={t.rejoining} />;
+    if (token && !retried) return <GuestSkeleton label={t.rejoining} />;
     return <RejoinTable />;
   }
 
@@ -199,12 +198,13 @@ export function GuestQueryError({
   }
 
   return (
-    <ErrorState
-      title={t.oopsTitle}
-      body={error instanceof Error ? error.message : t.oops}
-      onRetry={onRetry}
-      retryLabel={t.retry}
-    />
+    <div role="alert" className="guest-alert guest-alert-error grid gap-3">
+      <h2 className="guest-display text-xl">{t.oopsTitle}</h2>
+      <p className="guest-body">{error instanceof Error ? error.message : t.oops}</p>
+      <button type="button" className={guestPrimaryButton} onClick={onRetry}>
+        {t.retry}
+      </button>
+    </div>
   );
 }
 

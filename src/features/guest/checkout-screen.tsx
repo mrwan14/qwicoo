@@ -239,20 +239,10 @@ export function CheckoutScreen() {
 
   if (lines.length === 0) {
     return (
-      <div className="grid gap-6 py-10 text-center">
-        <div
-          className="mx-auto grid size-36 place-items-center guest-card"
-          aria-hidden
-        >
-          <div className="grid gap-1">
-            <span className="mx-auto block size-10 border-2 border-[var(--guest-orange)]" />
-            <span className="mx-auto block h-2 w-16 bg-[var(--guest-sage)]" />
-            <span className="mx-auto block h-2 w-12 bg-[var(--guest-amber)]" />
-          </div>
-        </div>
+      <div className="grid gap-4 py-10 text-center">
         <div className="grid gap-2">
-          <h1 className="guest-display text-3xl">{t.cart}</h1>
-          <p className="text-sm text-[var(--guest-quiet)]">{t.emptyCart}</p>
+          <h1 className="guest-display guest-display-lg">{t.cart}</h1>
+          <p className="guest-body">{t.emptyCart}</p>
         </div>
         <Link href="/order" className={guestPrimaryButton}>
           {t.backMenu}

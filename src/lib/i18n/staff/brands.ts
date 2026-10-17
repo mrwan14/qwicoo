@@ -63,6 +63,18 @@ const en = {
   createBranch: "Create branch",
   uploadUrlFailed: "Upload URL failed",
   uploadFailed: "Upload failed",
+  qwicooTitle: "Qwicoo app",
+  qwicooHint: "What this restaurant shows in the Qwicoo app.",
+  mobileApp: "Qwicoo app",
+  storeFeature: "Store",
+  deliveryFeature: "Delivery",
+  featureOn: "On",
+  featureOff: "Off",
+  featuresLink: "Features",
+  featuresFailed: "Could not load features",
+  qwicooSaveFailed: "Could not update the Qwicoo app",
+  qwicooOn: "Qwicoo app turned on",
+  qwicooOff: "Qwicoo app turned off",
 } as const;
 
 const ar = {
@@ -128,6 +140,18 @@ const ar = {
   createBranch: "إنشاء الفرع",
   uploadUrlFailed: "تعذّر تجهيز رابط الرفع",
   uploadFailed: "تعذّر الرفع",
+  qwicooTitle: "تطبيق كويكو",
+  qwicooHint: "ما يظهر لهذا المطعم في تطبيق كويكو.",
+  mobileApp: "تطبيق كويكو",
+  storeFeature: "المتجر",
+  deliveryFeature: "التوصيل",
+  featureOn: "مفعّل",
+  featureOff: "متوقف",
+  featuresLink: "الميزات",
+  featuresFailed: "تعذّر تحميل الميزات",
+  qwicooSaveFailed: "تعذّر تحديث تطبيق كويكو",
+  qwicooOn: "تم تشغيل تطبيق كويكو",
+  qwicooOff: "تم إيقاف تطبيق كويكو",
 } as const;
 
 export const brandsCopy = defineDictionary(en, ar);

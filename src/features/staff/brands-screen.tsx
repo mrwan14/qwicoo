@@ -13,6 +13,7 @@ import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { brandsCopy } from "@/lib/i18n/staff/brands";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
 import { LiveCount } from "@/components/ops/live-fact";
 import { PageHeader } from "@/components/ops/page-header";
@@ -265,6 +266,7 @@ function BrandSetup({
   backLabel: string;
 }) {
   const t = useStaffSection(brandsCopy);
+  const me = useStaffSession();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [branchOpen, setBranchOpen] = useState(false);
@@ -355,6 +357,7 @@ function BrandSetup({
           logo.mutate(file);
         }}
       />
+      {me?.role === "SUPER_ADMIN" ? <QwicooAppPanel brandId={brandId} /> : null}
       <PaymobSettings brandId={brandId} apiOrigin={apiOrigin} />
       <div className="flex items-center justify-between gap-3">
         <div className="grid gap-0.5">
@@ -385,6 +388,72 @@ function BrandSetup({
         ))}
       </ul>
     </div>
+  );
+}
+
+function QwicooAppPanel({ brandId }: { brandId: string }) {
+  const t = useStaffSection(brandsCopy);
+  const queryClient = useQueryClient();
+  const features = useQuery({
+    queryKey: ["features-brand", brandId],
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/features/brand/{brand_id}", {
+        params: { path: { brand_id: brandId } },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.featuresFailed);
+      return result.data.items;
+    },
+  });
+  const toggle = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const result = await browserApi.PUT("/api/v1/features/brand/{brand_id}/{feature_key}", {
+        params: { path: { brand_id: brandId, feature_key: "MOBILE_APP" } },
+        body: { is_enabled_by_super_admin: enabled },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.qwicooSaveFailed);
+      return enabled;
+    },
+    onSuccess: (enabled) => {
+      toast.success(enabled ? t.qwicooOn : t.qwicooOff);
+      void queryClient.invalidateQueries({ queryKey: ["features-brand", brandId] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const enabled = (key: string) => features.data?.some((item) => item.feature_key === key && item.is_enabled_by_super_admin) ?? false;
+  const mobileOn = enabled("MOBILE_APP");
+
+  return (
+    <section className="grid gap-3 border bg-card p-4">
+      <div className="grid gap-1">
+        <h2 className="font-semibold">{t.qwicooTitle}</h2>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.qwicooHint}</p>
+      </div>
+      {features.isError ? <p className="text-sm text-destructive">{features.error.message}</p> : null}
+      <div className="flex flex-wrap items-center justify-between gap-3 border px-3 py-2">
+        <span className="text-sm font-medium">{t.mobileApp}</span>
+        <button
+          type="button"
+          className="min-h-11 border px-4 text-sm font-medium disabled:opacity-50"
+          disabled={features.isLoading || toggle.isPending}
+          aria-pressed={mobileOn}
+          onClick={() => toggle.mutate(!mobileOn)}
+        >
+          {mobileOn ? t.featureOn : t.featureOff}
+        </button>
+      </div>
+      <ul className="grid gap-2 text-sm">
+        {[
+          ["RETAIL_STORE", t.storeFeature],
+          ["DELIVERY_MODULE", t.deliveryFeature],
+        ].map(([key, label]) => (
+          <li key={key} className="flex flex-wrap items-center justify-between gap-3 border px-3 py-2">
+            <span>{label}</span>
+            <span className="text-muted-foreground">{enabled(key) ? t.featureOn : t.featureOff}</span>
+          </li>
+        ))}
+      </ul>
+      <Link href="/app/features" className="text-sm underline-offset-2 hover:underline">{t.featuresLink}</Link>
+    </section>
   );
 }
 

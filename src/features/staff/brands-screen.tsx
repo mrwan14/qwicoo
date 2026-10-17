@@ -394,10 +394,10 @@ function BrandSetup({
 function readBrandMobile(brand: object): { featured: boolean; sortOrder: string; logoUrl: string | null; coverUrl: string | null } {
   const row = brand as Record<string, unknown>;
   const sort = row.mobile_sort_order;
-  const logo = row.mobile_logo_url;
-  const cover = row.mobile_cover_url;
+  const logo = row.app_logo_url;
+  const cover = row.app_cover_url;
   return {
-    featured: row.mobile_featured === true,
+    featured: row.is_featured === true,
     sortOrder: typeof sort === "number" ? String(sort) : "0",
     logoUrl: typeof logo === "string" && logo.trim() ? logo : null,
     coverUrl: typeof cover === "string" && cover.trim() ? cover : null,
@@ -439,6 +439,8 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
   const [logoUrl, setLogoUrl] = useState<string | null | undefined>(undefined);
   const [coverUrl, setCoverUrl] = useState<string | null | undefined>(undefined);
   const [directoryReady, setDirectoryReady] = useState(false);
+  const [logoTouched, setLogoTouched] = useState(false);
+  const [coverTouched, setCoverTouched] = useState(false);
   const loadedBrandId = useRef<string | null>(null);
   useEffect(() => {
     if (loadedBrandId.current === brand.id) return;
@@ -447,6 +449,8 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
     setSortOrder(saved.sortOrder);
     setLogoUrl(saved.logoUrl);
     setCoverUrl(saved.coverUrl);
+    setLogoTouched(false);
+    setCoverTouched(false);
     loadedBrandId.current = brand.id;
     setDirectoryReady(true);
   }, [brand]);
@@ -455,8 +459,8 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
       const body: components["schemas"]["BrandMobileUpdate"] = {
         featured,
         sort_order: Number(sortOrder) || 0,
-        ...(logoUrl !== undefined ? { logo_url: logoUrl } : {}),
-        ...(coverUrl !== undefined ? { cover_url: coverUrl } : {}),
+        ...(logoTouched ? { logo_url: logoUrl ?? null } : {}),
+        ...(coverTouched ? { cover_url: coverUrl ?? null } : {}),
       };
       const result = await browserApi.PATCH("/api/v1/super-admin/brands/{brand_id}/mobile", {
         params: { path: { brand_id: brandId } },
@@ -470,14 +474,21 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
       setSortOrder(String(saved.sort_order));
       setLogoUrl(saved.logo_url ?? null);
       setCoverUrl(saved.cover_url ?? null);
+      setLogoTouched(false);
+      setCoverTouched(false);
       toast.success(t.directorySaved);
     },
     onError: (error: Error) => toast.error(error.message),
   });
   async function pickAppImage(file: File, kind: "logo" | "cover") {
     await uploadLogo(file, "brands", async (publicUrl) => {
-      if (kind === "logo") setLogoUrl(publicUrl);
-      else setCoverUrl(publicUrl);
+      if (kind === "logo") {
+        setLogoUrl(publicUrl);
+        setLogoTouched(true);
+      } else {
+        setCoverUrl(publicUrl);
+        setCoverTouched(true);
+      }
     }, { url: t.uploadUrlFailed, upload: t.uploadFailed });
   }
 
@@ -535,7 +546,7 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
             if (!file) return;
             void pickAppImage(file, "logo").catch((error: unknown) => toast.error(error instanceof Error ? error.message : t.uploadFailed));
           }} />
-          {logoUrl ? <button type="button" className="min-h-11 w-fit border px-3 text-sm" onClick={() => setLogoUrl(null)}>{t.clearImage}</button> : null}
+          {logoUrl ? <button type="button" className="min-h-11 w-fit border px-3 text-sm" onClick={() => { setLogoUrl(null); setLogoTouched(true); }}>{t.clearImage}</button> : null}
         </label>
         <label className="grid gap-1 text-sm">
           {t.appCover}
@@ -544,7 +555,7 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
             if (!file) return;
             void pickAppImage(file, "cover").catch((error: unknown) => toast.error(error instanceof Error ? error.message : t.uploadFailed));
           }} />
-          {coverUrl ? <button type="button" className="min-h-11 w-fit border px-3 text-sm" onClick={() => setCoverUrl(null)}>{t.clearImage}</button> : null}
+          {coverUrl ? <button type="button" className="min-h-11 w-fit border px-3 text-sm" onClick={() => { setCoverUrl(null); setCoverTouched(true); }}>{t.clearImage}</button> : null}
         </label>
         {logoUrl ? (
           // App images are stored on the upload host, which next/image is not set up to optimise.

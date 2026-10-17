@@ -52,6 +52,12 @@ const en = {
   cancelling: "Cancelling…",
   cancelFailed: "Could not cancel the order",
   cancelled: "Order cancelled",
+  refunds: "Refunds",
+  refundsLoading: "Loading refunds",
+  refundsFailed: "Could not load refunds",
+  noRefunds: "No refunds on this order.",
+  drawer: "Drawer",
+  openTill: "Open the till",
 } as const;
 
 const ar = {
@@ -106,6 +112,12 @@ const ar = {
   cancelling: "جارٍ الإلغاء…",
   cancelFailed: "تعذّر إلغاء الطلب",
   cancelled: "تم إلغاء الطلب",
+  refunds: "المردودات",
+  refundsLoading: "جارٍ تحميل المردودات",
+  refundsFailed: "تعذّر تحميل المردودات",
+  noRefunds: "لا مردودات على هذا الطلب.",
+  drawer: "الدرج",
+  openTill: "افتح الصندوق",
 } as const;
 
 export const ordersCopy = defineDictionary(en, ar);

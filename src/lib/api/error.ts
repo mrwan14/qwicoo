@@ -156,6 +156,10 @@ const CATALOG: Record<string, Catalog> = {
     ar: "لا يوجد طلب نشط لهذه الطاولة",
     aliases: ["No active order found for this table"],
   },
+  CASH_DRAWER_NOT_OPEN: {
+    en: "No cash drawer is open. Open the till before refunding collected cash.",
+    ar: "لا يوجد درج نقدية مفتوح. افتح الصندوق قبل رد مبلغ تم قبضه.",
+  },
   DELIVERY_DRAWER_NOT_OPEN: {
     en: "No cash drawer is open for this branch. Open the drawer before handing over this delivery.",
     ar: "لا يوجد درج نقدية مفتوح في هذا الفرع. افتح الدرج قبل تسليم الطلب.",

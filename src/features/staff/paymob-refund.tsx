@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -11,6 +12,7 @@ import { getStaffOrder } from "@/lib/api/staff-order";
 import { formatMoney } from "@/lib/format/money";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
+import { ordersCopy } from "@/lib/i18n/staff/orders";
 import { paymobCopy } from "@/lib/i18n/staff/paymob";
 import { amountWithinBalance } from "@/lib/paymob/checkout";
 import { paymobError } from "@/lib/paymob/errors";
@@ -24,9 +26,11 @@ export function PaymobRefunds({ orderId }: { orderId: string }) {
   const allowed = canRefundPaymob(me?.role);
   const { locale } = useLocale();
   const t = paymobCopy[locale];
+  const orders = ordersCopy[locale];
   const queryClient = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
+  const [needsDrawer, setNeedsDrawer] = useState(false);
   const order = useQuery({
     queryKey: ["staff-order", orderId],
     enabled: allowed,
@@ -50,11 +54,16 @@ export function PaymobRefunds({ orderId }: { orderId: string }) {
       toast.success(t.refunded);
       setOpenId(null);
       setAmount("");
+      setNeedsDrawer(false);
+      void queryClient.invalidateQueries({ queryKey: ["order-refunds", orderId] });
       void queryClient.invalidateQueries({ queryKey: ["staff-order", orderId] });
       void queryClient.invalidateQueries({ queryKey: ["staff-orders"] });
       void queryClient.invalidateQueries({ queryKey: ["staff-receipt", orderId] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error & { code?: string | null }) => {
+      setNeedsDrawer(error.code === "CASH_DRAWER_NOT_OPEN");
+      toast.error(error.message);
+    },
   });
 
   if (!allowed) return null;
@@ -69,6 +78,7 @@ export function PaymobRefunds({ orderId }: { orderId: string }) {
 
   return (
     <div className="grid w-full gap-2">
+      {needsDrawer ? <Link href="/app/financials" className="text-sm underline-offset-2 hover:underline">{orders.openTill}</Link> : null}
       {captures.map(({ payment }) => (
         <button
           key={payment.id}

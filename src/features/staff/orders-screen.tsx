@@ -13,6 +13,7 @@ import { useStaffSession } from "@/components/ops/staff-session";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cancelOffer, matchesOrderChannel, optionalRecordString, staffOrderStatus } from "@/features/staff/delivery";
 import { Receipt, printReceipt, type ReceiptLabels } from "@/features/staff/orders/receipt";
+import { OrderRefunds } from "@/features/staff/orders/refunds";
 import { PaymobRefunds } from "@/features/staff/paymob-refund";
 import type { StaffOrderListItem, StaffOrderListResponse, StaffOrderReceipt } from "@/features/staff/orders/types";
 import { asApiError } from "@/lib/api/error";
@@ -293,6 +294,7 @@ export function OrdersScreen() {
             {receipt.isLoading ? <LoadingState label={t.printing} /> : null}
             {receipt.isError ? <p className="text-sm text-destructive">{receipt.error.message}</p> : null}
             {receipt.data ? <Receipt receipt={receipt.data} locale={locale} labels={receiptLabels} /> : null}
+            {selectedId ? <OrderRefunds orderId={selectedId} /> : null}
             {selectedId ? <PaymobRefunds orderId={selectedId} /> : null}
             {offer === "locked" ? (
               <button type="button" className="min-h-11 border px-4 text-sm opacity-50" disabled title={t.cancelLocked}>

@@ -28,13 +28,11 @@ import { analyticsCopy } from "@/lib/i18n/staff/analytics";
 import { attendanceCopy } from "@/lib/i18n/staff/attendance";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import type { components } from "@/lib/api/schema";
+import { drawerCloseFigures } from "@/features/staff/till";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
-
-function cairoBusinessDate(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-}
+const square = "h-11 w-full border px-3 text-sm";
 
 function attendanceStatusLabel(status: string | null | undefined, labels: {
   notCheckedIn: string;
@@ -91,6 +89,7 @@ export function FinancialsScreen() {
   const [opening, setOpening] = useState("0.00");
   const [counted, setCounted] = useState("0.00");
   const [closeOpen, setCloseOpen] = useState(false);
+  const [closedShift, setClosedShift] = useState<components["schemas"]["CashDrawerSessionResponse"] | null>(null);
   const drawer = useQuery({
     queryKey: ["drawer", branchId],
     queryFn: async () => {
@@ -113,10 +112,12 @@ export function FinancialsScreen() {
       const result = await browserApi.POST("/api/v1/financials/drawer/close", {
         body: { declared_cash_amount: counted, closing_notes: "End of shift" },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.closeFailed);
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.closeFailed);
+      return result.data;
     },
-    onSuccess: () => {
+    onSuccess: (session) => {
       setCloseOpen(false);
+      setClosedShift(session);
       void queryClient.invalidateQueries({ queryKey: ["drawer"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -130,8 +131,10 @@ export function FinancialsScreen() {
     },
   });
   const generate = useMutation({
-    mutationFn: async () => {
-      const result = await browserApi.POST("/api/v1/financials/z-report/generate", { body: {} });
+    mutationFn: async (drawerSessionId: string) => {
+      const result = await browserApi.POST("/api/v1/financials/z-report/generate", {
+        body: { drawer_session_id: drawerSessionId },
+      });
       if (!result.response.ok) throw asApiError(result.error, result.response, t.generateFailed);
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["z-reports"] }),
@@ -142,7 +145,7 @@ export function FinancialsScreen() {
 
   const shiftOpen = drawer.data?.status === "OPEN";
   const reportRows = reports.data ?? [];
-  const todayReport = reportRows.some((report) => report.business_date === cairoBusinessDate());
+  const closedFigures = drawerCloseFigures(closedShift);
 
   return (
     <div className="grid gap-4">
@@ -153,7 +156,7 @@ export function FinancialsScreen() {
       {drawer.isLoading ? <LoadingState label={t.loading} /> : null}
       {drawer.isError ? <QueryErrorState error={drawer.error} screen={t.drawerScreen} onRetry={() => void drawer.refetch()} /> : null}
       {reports.isError ? <QueryErrorState error={reports.error} screen={t.reportsScreen} onRetry={() => void reports.refetch()} /> : null}
-      <section className="grid gap-4 rounded-2xl border bg-card p-4">
+      <section className="grid gap-4 border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-medium">{t.drawerTitle}</h2>
@@ -171,8 +174,8 @@ export function FinancialsScreen() {
           <label className="grid gap-1 text-sm">
             {t.opening}
             <span className="text-sm leading-6 text-muted-foreground">{t.openingHint}</span>
-            <input className={control} inputMode="decimal" value={opening} onChange={(event) => setOpening(event.target.value)} />
-            <button type="button" className="mt-2 min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={shiftOpen || open.isPending} onClick={() => open.mutate()}>
+            <input className={square} inputMode="decimal" value={opening} onChange={(event) => setOpening(event.target.value)} />
+            <button type="button" className="mt-2 min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={shiftOpen || open.isPending} onClick={() => open.mutate()}>
               {open.isPending ? t.starting : t.startShift}
             </button>
             {shiftOpen ? <span className="text-sm text-muted-foreground">{t.shiftAlready}</span> : null}
@@ -180,12 +183,24 @@ export function FinancialsScreen() {
           <label className="grid gap-1 text-sm">
             {t.counted}
             <span className="text-sm leading-6 text-muted-foreground">{t.countedHint}</span>
-            <input className={control} inputMode="decimal" value={counted} onChange={(event) => setCounted(event.target.value)} />
-            <button type="button" className="mt-2 min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={!shiftOpen || close.isPending} onClick={() => setCloseOpen(true)}>
+            <input className={square} inputMode="decimal" value={counted} onChange={(event) => setCounted(event.target.value)} />
+            <button type="button" className="mt-2 min-h-11 border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={!shiftOpen || close.isPending} onClick={() => setCloseOpen(true)}>
               {t.endShift}
             </button>
           </label>
         </div>
+        {closedFigures ? (
+          <dl className="grid gap-2 border-t pt-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">{t.calculated}</dt>
+              <dd className="font-semibold tabular-nums">{closedFigures.calculated ? <Money amount={closedFigures.calculated} /> : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">{t.variance}</dt>
+              <dd className="font-semibold tabular-nums">{closedFigures.variance ? <Money amount={closedFigures.variance} /> : "—"}</dd>
+            </div>
+          </dl>
+        ) : null}
       </section>
       <section className="grid gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -193,17 +208,21 @@ export function FinancialsScreen() {
             <h2 className="font-medium">{t.reportTitle}</h2>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.reportHint}</p>
           </div>
-          <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={generate.isPending} onClick={() => generate.mutate()}>
-            {generate.isPending ? (todayReport ? t.updating : t.creating) : todayReport ? t.updateToday : t.createReport}
-          </button>
+          {closedShift?.status === "CLOSED" ? (
+            <button type="button" className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={generate.isPending} onClick={() => generate.mutate(closedShift.id)}>
+              {generate.isPending ? t.creating : t.createForShift}
+            </button>
+          ) : null}
         </div>
         {reportRows.length === 0 ? <p className="text-sm text-muted-foreground">{t.noReports}</p> : (
-          <div className="overflow-x-auto rounded-2xl border bg-card">
-            <table className="w-full min-w-[520px] border-collapse text-sm">
+          <div className="overflow-x-auto border bg-card">
+            <table className="w-full min-w-[760px] border-collapse text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.report}</th>
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.day}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.period}</th>
+                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.drawer}</th>
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.grossSales}</th>
                 </tr>
               </thead>
@@ -213,7 +232,9 @@ export function FinancialsScreen() {
                     <th scope="row" className="px-4 py-3 text-start font-medium">
                       <Link className="underline-offset-2 hover:underline" href={`/app/financials/z/${report.id}`}>{report.report_number}</Link>
                     </th>
-                    <td className="px-4 py-3">{report.business_date}</td>
+                    <td className="px-4 py-3 tabular-nums">{report.business_date}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatCairoDateTime(report.period_start, locale)} – {formatCairoDateTime(report.period_end, locale)}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{report.drawer_session_id ? report.drawer_session_id.slice(0, 8) : "—"}</td>
                     <td className="px-4 py-3"><Money amount={report.gross_sales} /></td>
                   </tr>
                 ))}
@@ -229,6 +250,7 @@ export function FinancialsScreen() {
 
 export function ZReportScreen({ reportId }: { reportId: string }) {
   const t = useStaffSection(analyticsCopy).z;
+  const { locale } = useLocale();
   const report = useQuery({
     queryKey: ["z", reportId],
     queryFn: async () => {
@@ -247,17 +269,20 @@ export function ZReportScreen({ reportId }: { reportId: string }) {
         <Link href="/app/financials" className="text-sm text-muted-foreground underline-offset-2 hover:underline print:hidden">{t.back}</Link>
         <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
         <p className="text-sm text-muted-foreground">{data.report_number} · {data.business_date}</p>
+        <p className="text-sm text-muted-foreground">{t.period}: {formatCairoDateTime(data.period_start, locale)} – {formatCairoDateTime(data.period_end, locale)}</p>
+        <p className="text-sm text-muted-foreground">{t.drawer}: {data.drawer_session_id ?? "—"}</p>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.codNote}</p>
       </div>
       <dl className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border bg-card p-4">
+        <div className="border bg-card p-4">
           <dt className="text-sm text-muted-foreground">{t.gross}</dt>
           <dd className="text-lg font-semibold"><Money amount={data.gross_sales} /></dd>
         </div>
-        <div className="rounded-2xl border bg-card p-4">
+        <div className="border bg-card p-4">
           <dt className="text-sm text-muted-foreground">{t.net}</dt>
           <dd className="text-lg font-semibold"><Money amount={data.net_sales} /></dd>
         </div>
-        <div className="rounded-2xl border bg-card p-4">
+        <div className="border bg-card p-4">
           <dt className="text-sm text-muted-foreground">{t.tax}</dt>
           <dd className="text-lg font-semibold"><Money amount={data.total_tax} /></dd>
         </div>
@@ -271,12 +296,20 @@ export function ZReportScreen({ reportId }: { reportId: string }) {
           <dt className="text-sm text-muted-foreground">{t.card}</dt>
           <dd className="font-semibold"><Money amount={data.payment_channels.card_pos} /></dd>
         </div>
-        <div className="flex items-center justify-between gap-4 px-4 py-3">
+        <div className="flex items-center justify-between gap-4 border-b px-4 py-3">
           <dt className="text-sm text-muted-foreground">{t.online}</dt>
           <dd className="font-semibold"><Money amount={data.payment_channels.online} /></dd>
         </div>
+        <div className="flex items-center justify-between gap-4 border-b px-4 py-3">
+          <dt className="text-sm text-muted-foreground">{t.deliveryFees}</dt>
+          <dd className="font-semibold"><Money amount={data.delivery_fees} /></dd>
+        </div>
+        <div className="flex items-center justify-between gap-4 px-4 py-3">
+          <dt className="text-sm text-muted-foreground">{t.refunds}</dt>
+          <dd className="font-semibold"><Money amount={data.total_refunds} /></dd>
+        </div>
       </dl>
-      <button type="button" className="min-h-11 w-fit rounded-xl border px-4 text-sm print:hidden" onClick={() => window.print()}>{t.print}</button>
+      <button type="button" className="min-h-11 w-fit border px-4 text-sm print:hidden" onClick={() => window.print()}>{t.print}</button>
     </article>
   );
 }

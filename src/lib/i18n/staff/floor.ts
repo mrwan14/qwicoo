@@ -47,6 +47,18 @@ const en = {
   confirming: "Confirming…",
   confirmOrder: "Confirm order",
   reject: "Reject",
+  addTable: "Add table",
+  addTableTitle: "Add a table",
+  addTableBody: "The table shows on this floor as soon as it is created.",
+  tableNumberLabel: "Table number",
+  tableNumberPlaceholder: "12",
+  capacityLabel: "Seats",
+  zoneLabel: "Zone",
+  zonePlaceholder: "Indoor",
+  adding: "Adding…",
+  tableCreated: "Table added",
+  couldNotCreateTable: "Could not add the table",
+  cancel: "Cancel",
 } as const;
 
 const ar = {
@@ -96,6 +108,18 @@ const ar = {
   confirming: "جارٍ التأكيد…",
   confirmOrder: "تأكيد الطلب",
   reject: "رفض",
+  addTable: "إضافة طاولة",
+  addTableTitle: "إضافة طاولة",
+  addTableBody: "تظهر الطاولة في هذه الصالة فور إنشائها.",
+  tableNumberLabel: "رقم الطاولة",
+  tableNumberPlaceholder: "١٢",
+  capacityLabel: "المقاعد",
+  zoneLabel: "المنطقة",
+  zonePlaceholder: "Indoor",
+  adding: "جارٍ الإضافة…",
+  tableCreated: "تمت إضافة الطاولة",
+  couldNotCreateTable: "تعذّر إضافة الطاولة",
+  cancel: "إلغاء",
 } as const;
 
 export const floorCopy = defineDictionary(en, ar);

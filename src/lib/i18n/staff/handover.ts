@@ -49,6 +49,9 @@ const en = {
   handingOver: "Handing over…",
   guestHasFood: "Guest has the food",
   markReady: "Mark ready to hand over",
+  pack: "Pack",
+  store: "Store",
+  bay: "Bay {number}",
 } as const;
 
 const ar = {
@@ -100,6 +103,9 @@ const ar = {
   handingOver: "جارٍ التسليم…",
   guestHasFood: "الضيف استلم الطعام",
   markReady: "علّمها جاهزة للتسليم",
+  pack: "التجهيز",
+  store: "المتجر",
+  bay: "المسار {number}",
 } as const;
 
 export const handoverCopy = defineDictionary(en, ar);

@@ -37,6 +37,21 @@ const en = {
   tax: "Tax",
   thanks: "Thank you",
   close: "Close",
+  channel: "Channel",
+  mobile: "Mobile",
+  delivery: "Delivery",
+  deliveryBoard: "Delivery board",
+  reject: "Reject order",
+  cancelOrder: "Cancel order",
+  cancelLocked: "Only a branch admin can cancel an order in progress",
+  cancelTitle: "Cancel this order?",
+  rejectTitle: "Reject this order?",
+  reason: "Reason",
+  reasonHint: "Say why this order is being cancelled.",
+  confirmCancel: "Cancel order",
+  cancelling: "Cancelling…",
+  cancelFailed: "Could not cancel the order",
+  cancelled: "Order cancelled",
 } as const;
 
 const ar = {
@@ -76,6 +91,21 @@ const ar = {
   tax: "الضريبة",
   thanks: "شكراً لكم",
   close: "إغلاق",
+  channel: "القناة",
+  mobile: "الجوال",
+  delivery: "توصيل",
+  deliveryBoard: "لوحة التوصيل",
+  reject: "رفض الطلب",
+  cancelOrder: "إلغاء الطلب",
+  cancelLocked: "لا يمكن إلغاء الطلب بعد اعتماده إلا من قبل مسؤول الفرع",
+  cancelTitle: "إلغاء هذا الطلب؟",
+  rejectTitle: "رفض هذا الطلب؟",
+  reason: "السبب",
+  reasonHint: "اكتب سبب الإلغاء.",
+  confirmCancel: "إلغاء الطلب",
+  cancelling: "جارٍ الإلغاء…",
+  cancelFailed: "تعذّر إلغاء الطلب",
+  cancelled: "تم إلغاء الطلب",
 } as const;
 
 export const ordersCopy = defineDictionary(en, ar);

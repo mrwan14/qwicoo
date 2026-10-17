@@ -139,6 +139,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER"],
   },
   {
+    href: "/app/orders/delivery",
+    labelKey: "deliveryBoard",
+    group: "brandOps",
+    shell: "ops",
+    phase: 3,
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER"],
+  },
+  {
     href: "/app/kds",
     labelKey: "kds",
     group: "brandOps",

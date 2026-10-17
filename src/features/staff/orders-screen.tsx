@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -8,7 +9,9 @@ import { toast } from "sonner";
 import { Money } from "@/components/ops/money";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { cancelOffer, matchesOrderChannel, optionalRecordString, staffOrderStatus } from "@/features/staff/delivery";
 import { Receipt, printReceipt, type ReceiptLabels } from "@/features/staff/orders/receipt";
 import { PaymobRefunds } from "@/features/staff/paymob-refund";
 import type { StaffOrderListItem, StaffOrderListResponse, StaffOrderReceipt } from "@/features/staff/orders/types";
@@ -18,6 +21,7 @@ import { formatCairoDateTime } from "@/lib/format/time";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { ordersCopy } from "@/lib/i18n/staff/orders";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
+import { orderStatusLabel } from "@/lib/status-labels";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full border border-input bg-background px-3 text-sm";
@@ -41,12 +45,14 @@ function orderLabel(row: StaffOrderListItem): string {
 export function OrdersScreen() {
   const t = useStaffSection(ordersCopy);
   const { locale } = useLocale();
+  const me = useStaffSession();
   const queryClient = useQueryClient();
   const branchId = useScope((state) => state.branchId);
   const today = useMemo(() => cairoToday(), []);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [source, setSource] = useState("");
+  const [channel, setChannel] = useState<"" | "mobile" | "delivery">("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paid, setPaid] = useState<"" | "true" | "false">("");
   const [dateFrom, setDateFrom] = useState(today);
@@ -55,12 +61,14 @@ export function OrdersScreen() {
     search: "",
     status: "",
     source: "",
+    channel: "" as "" | "mobile" | "delivery",
     paymentMethod: "",
     paid: "" as "" | "true" | "false",
     dateFrom: today,
     dateTo: today,
   });
   const [selectedId, setSelectedId] = useState<string | null>(useSearchParams().get("order"));
+  const [cancelReason, setCancelReason] = useState("");
 
   const list = useQuery({
     queryKey: ["staff-orders", branchId, applied],
@@ -127,23 +135,48 @@ export function OrdersScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const cancel = useMutation({
+    mutationFn: async () => {
+      const reason = cancelReason.trim();
+      if (!selectedId || !reason) throw new Error(t.reasonHint);
+      const result = await browserApi.POST("/api/v1/orders/{order_id}/cancel", {
+        params: { path: { order_id: selectedId } },
+        body: { reason },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.cancelFailed, locale);
+    },
+    onSuccess: () => {
+      setCancelReason("");
+      setSelectedId(null);
+      toast.success(t.cancelled);
+      void queryClient.invalidateQueries({ queryKey: ["staff-orders"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   if (!branchId) return null;
   if (list.isLoading) return <LoadingState label={t.loading} />;
   if (list.isError) return <QueryErrorState error={list.error} screen={t.screen} onRetry={() => void list.refetch()} />;
 
-  const rows = list.data?.items ?? [];
+  const allRows = list.data?.items ?? [];
+  const rows = allRows.filter((row) => matchesOrderChannel(row, applied.channel));
+  const selected = allRows.find((row) => row.id === selectedId) ?? null;
+  const offer = cancelOffer(me?.role, selected?.status);
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.hint}</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="grid gap-1">
+          <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.hint}</p>
+        </div>
+        <Link href="/app/orders/delivery" className="text-sm underline-offset-2 hover:underline">{t.deliveryBoard}</Link>
       </div>
       <form
         className="grid gap-3 bg-card p-4 lg:grid-cols-4"
         onSubmit={(event) => {
           event.preventDefault();
-          setApplied({ search, status, source, paymentMethod, paid, dateFrom, dateTo });
+          setApplied({ search, status, source, channel, paymentMethod, paid, dateFrom, dateTo });
         }}
       >
         <label className="grid gap-1 text-sm lg:col-span-2">
@@ -163,9 +196,17 @@ export function OrdersScreen() {
           {t.source}
           <select className={control} value={source} onChange={(event) => setSource(event.target.value)}>
             <option value="">{t.any}</option>
-            {["POS", "QR", "DRIVE_THRU", "PICKUP", "MOBILE"].map((value) => (
+            {["POS", "QR", "DRIVE_THRU", "PICKUP"].map((value) => (
               <option key={value} value={value}>{value}</option>
             ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm">
+          {t.channel}
+          <select className={control} value={channel} onChange={(event) => setChannel(event.target.value as "" | "mobile" | "delivery")}>
+            <option value="">{t.any}</option>
+            <option value="mobile">{t.mobile}</option>
+            <option value="delivery">{t.delivery}</option>
           </select>
         </label>
         <label className="grid gap-1 text-sm">
@@ -223,7 +264,14 @@ export function OrdersScreen() {
                   <th scope="row" className="px-4 py-3 text-start font-medium tabular-nums">{orderLabel(row)}</th>
                   <td className="px-4 py-3">{row.table_label ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <StatusChip tone={row.is_paid ? "available" : "ordered"}>{row.status}</StatusChip>
+                    <StatusChip tone={row.is_paid ? "available" : "ordered"}>
+                      {staffOrderStatus({
+                        fulfillmentType: row.fulfillment_type,
+                        deliveryStatus: optionalRecordString(row, "delivery_status"),
+                        fallback: orderStatusLabel(row.status, locale),
+                        locale,
+                      })}
+                    </StatusChip>
                   </td>
                   <td className="px-4 py-3">{row.order_source}</td>
                   <td className="px-4 py-3">
@@ -246,6 +294,29 @@ export function OrdersScreen() {
             {receipt.isError ? <p className="text-sm text-destructive">{receipt.error.message}</p> : null}
             {receipt.data ? <Receipt receipt={receipt.data} locale={locale} labels={receiptLabels} /> : null}
             {selectedId ? <PaymobRefunds orderId={selectedId} /> : null}
+            {offer === "locked" ? (
+              <button type="button" className="min-h-11 border px-4 text-sm opacity-50" disabled title={t.cancelLocked}>
+                {t.cancelOrder}
+              </button>
+            ) : null}
+            {offer === "reject" || offer === "cancel" ? (
+              <form
+                className="grid gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  cancel.mutate();
+                }}
+              >
+                <label className="grid gap-1 text-sm">
+                  {offer === "reject" ? t.rejectTitle : t.cancelTitle}
+                  <span className="text-sm leading-6 text-muted-foreground">{t.reasonHint}</span>
+                  <textarea className="min-h-20 border bg-background px-3 py-2" value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} required />
+                </label>
+                <button type="submit" className="min-h-11 border px-4 text-sm font-medium disabled:opacity-50" disabled={cancel.isPending || !cancelReason.trim()}>
+                  {cancel.isPending ? t.cancelling : offer === "reject" ? t.reject : t.confirmCancel}
+                </button>
+              </form>
+            ) : null}
             <button
               type="button"
               className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"

@@ -156,6 +156,22 @@ const CATALOG: Record<string, Catalog> = {
     ar: "لا يوجد طلب نشط لهذه الطاولة",
     aliases: ["No active order found for this table"],
   },
+  DELIVERY_DRAWER_NOT_OPEN: {
+    en: "No cash drawer is open for this branch. Open the drawer before handing over this delivery.",
+    ar: "لا يوجد درج نقدية مفتوح في هذا الفرع. افتح الدرج قبل تسليم الطلب.",
+  },
+  DELIVERY_NOT_AVAILABLE: {
+    en: "Delivery isn't available for this order.",
+    ar: "التوصيل غير متاح لهذا الطلب.",
+  },
+  DELIVERY_NOT_READY: {
+    en: "This delivery isn't ready for that step yet.",
+    ar: "هذا الطلب غير جاهز لهذه الخطوة بعد.",
+  },
+  CASH_NOT_COLLECTED: {
+    en: "Confirm that the driver handed over the cash, then try again.",
+    ar: "أكّد أن السائق سلّم المبلغ نقداً، ثم أعد المحاولة.",
+  },
   ORDER_NOT_FOUND: {
     en: "We couldn't find that order.",
     ar: "الطلب غير موجود",

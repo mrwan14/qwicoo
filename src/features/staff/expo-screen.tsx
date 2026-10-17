@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
+import { isDeliveryFulfillment, optionalRecordString, staffOrderStatus } from "@/features/staff/delivery";
 
 import { StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { useStaffSession } from "@/components/ops/staff-session";
@@ -18,7 +19,7 @@ import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale, type LocaleCode } from "@/lib/i18n/locale-text";
 import { handoverCopy } from "@/lib/i18n/staff/handover";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
-import { stationLabel } from "@/lib/status-labels";
+import { orderStatusLabel, stationLabel } from "@/lib/status-labels";
 import type { components } from "@/lib/api/schema";
 import { useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
@@ -33,6 +34,7 @@ type CardLine = {
   quantity: number;
   modifiers: string[];
   note: string | null;
+  badge: string | null;
   /** Only kitchen ticket lines can be bumped one by one. */
   ticketItemId?: string;
 };
@@ -75,6 +77,7 @@ function cardLines(order: ExpoOrder, locale: LocaleCode): CardLine[] {
       quantity: item.quantity,
       modifiers: modifierNames(item.modifiers, locale),
       note: item.notes?.trim() || null,
+      badge: item.badge === "Store" ? "Store" : null,
     }));
   }
   return (order.ticket_items ?? []).map((item) => ({
@@ -83,6 +86,7 @@ function cardLines(order: ExpoOrder, locale: LocaleCode): CardLine[] {
     quantity: item.quantity,
     modifiers: [],
     note: null,
+    badge: null,
     ticketItemId: item.id,
   }));
 }
@@ -256,12 +260,20 @@ export function ExpoScreen() {
               {lines.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t.noItems}</p>
               ) : (
+                <div className="grid gap-3">
+                {[
+                  { title: null, rows: lines.filter((line) => line.badge !== "Store") },
+                  { title: t.pack, rows: lines.filter((line) => line.badge === "Store") },
+                ].filter((group) => group.rows.length > 0).map((group) => (
+                <div key={group.title ?? "kitchen"} className="grid gap-2">
+                  {group.title ? <p className="text-sm font-medium">{group.title}</p> : null}
                 <ul className="grid gap-2">
-                  {lines.map((line) => {
+                  {group.rows.map((line) => {
                     const body = (
                       <>
                         <span className="text-base">
                           <span className="font-semibold tabular-nums">{line.quantity} ×</span> {line.name}
+                          {line.badge === "Store" ? <span className="ms-2 border px-1.5 py-0.5 text-xs font-medium">{t.store}</span> : null}
                         </span>
                         {line.modifiers.length > 0 ? (
                           <span className="text-sm text-muted-foreground">+ {line.modifiers.join(", ")}</span>
@@ -276,7 +288,7 @@ export function ExpoScreen() {
                         {line.ticketItemId && !runnerOnly ? (
                           <button
                             type="button"
-                            className="grid min-h-14 w-full gap-0.5 rounded-xl border px-3 py-2 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                            className="grid min-h-14 w-full gap-0.5 border px-3 py-2 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
                             disabled={ticketBump.isPending && ticketBump.variables === line.ticketItemId}
                             onClick={() => line.ticketItemId && ticketBump.mutate(line.ticketItemId)}
                           >
@@ -286,16 +298,29 @@ export function ExpoScreen() {
                             </span>
                           </button>
                         ) : (
-                          <div className="grid gap-0.5 rounded-lg bg-muted/70 px-3 py-2">{body}</div>
+                          <div className="grid gap-0.5 border bg-muted/70 px-3 py-2">{body}</div>
                         )}
                       </li>
                     );
                   })}
                 </ul>
+                </div>
+                ))}
+                </div>
               )}
               </td>
               <td className="px-4 py-4">
-                <StatusChip tone={ready ? "ready" : "ordered"}>{ready ? t.readyToHand : t.stillKitchen}</StatusChip>
+                <StatusChip tone={ready ? "ready" : "ordered"}>
+                  {staffOrderStatus({
+                    fulfillmentType: order.fulfillment_type,
+                    deliveryStatus: optionalRecordString(order, "delivery_status"),
+                    fallback: isDeliveryFulfillment(order.fulfillment_type)
+                      ? orderStatusLabel(order.status, locale)
+                      : (ready ? t.readyToHand : t.stillKitchen),
+                    locale,
+                  })}
+                </StatusChip>
+                {order.pickup_bay != null ? <p className="mt-2 text-sm">{fill(t.bay, { number: order.pickup_bay })}</p> : null}
                 {dishesLeft ? (
                   <p className="mt-2 text-sm text-muted-foreground">{fill(t.dishesReady, { ready: order.ready_ticket_items, total: order.total_ticket_items })}</p>
                 ) : null}

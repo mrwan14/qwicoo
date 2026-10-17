@@ -5,6 +5,7 @@ import { authCopy } from "@/lib/i18n/staff/auth";
 import { branchCopy } from "@/lib/i18n/staff/branch";
 import { brandsCopy } from "@/lib/i18n/staff/brands";
 import { commonCopy } from "@/lib/i18n/staff/common";
+import { deliveryBoardCopy } from "@/lib/i18n/staff/delivery-board";
 import { floorCopy } from "@/lib/i18n/staff/floor";
 import { handoverCopy } from "@/lib/i18n/staff/handover";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
@@ -30,6 +31,7 @@ export const staffCopy = {
     branch: branchCopy.en,
     brands: brandsCopy.en,
     common: commonCopy.en,
+    deliveryBoard: deliveryBoardCopy.en,
     floor: floorCopy.en,
     handover: handoverCopy.en,
     inventory: inventoryCopy.en,
@@ -54,6 +56,7 @@ export const staffCopy = {
     branch: branchCopy.ar,
     brands: brandsCopy.ar,
     common: commonCopy.ar,
+    deliveryBoard: deliveryBoardCopy.ar,
     floor: floorCopy.ar,
     handover: handoverCopy.ar,
     inventory: inventoryCopy.ar,

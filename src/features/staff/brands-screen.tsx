@@ -357,7 +357,7 @@ function BrandSetup({
           logo.mutate(file);
         }}
       />
-      {me?.role === "SUPER_ADMIN" ? <QwicooAppPanel brandId={brandId} /> : null}
+      {me?.role === "SUPER_ADMIN" ? <QwicooAppPanel brandId={brandId} brand={brand.data} /> : null}
       <PaymobSettings brandId={brandId} apiOrigin={apiOrigin} />
       <div className="flex items-center justify-between gap-3">
         <div className="grid gap-0.5">
@@ -391,7 +391,20 @@ function BrandSetup({
   );
 }
 
-function QwicooAppPanel({ brandId }: { brandId: string }) {
+function readBrandMobile(brand: object): { featured: boolean; sortOrder: string; logoUrl: string | null; coverUrl: string | null } {
+  const row = brand as Record<string, unknown>;
+  const sort = row.mobile_sort_order;
+  const logo = row.mobile_logo_url;
+  const cover = row.mobile_cover_url;
+  return {
+    featured: row.mobile_featured === true,
+    sortOrder: typeof sort === "number" ? String(sort) : "0",
+    logoUrl: typeof logo === "string" && logo.trim() ? logo : null,
+    coverUrl: typeof cover === "string" && cover.trim() ? cover : null,
+  };
+}
+
+function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components["schemas"]["BrandResponse"] }) {
   const t = useStaffSection(brandsCopy);
   const queryClient = useQueryClient();
   const features = useQuery({
@@ -425,6 +438,18 @@ function QwicooAppPanel({ brandId }: { brandId: string }) {
   const [sortOrder, setSortOrder] = useState("0");
   const [logoUrl, setLogoUrl] = useState<string | null | undefined>(undefined);
   const [coverUrl, setCoverUrl] = useState<string | null | undefined>(undefined);
+  const [directoryReady, setDirectoryReady] = useState(false);
+  const loadedBrandId = useRef<string | null>(null);
+  useEffect(() => {
+    if (loadedBrandId.current === brand.id) return;
+    const saved = readBrandMobile(brand);
+    setFeatured(saved.featured);
+    setSortOrder(saved.sortOrder);
+    setLogoUrl(saved.logoUrl);
+    setCoverUrl(saved.coverUrl);
+    loadedBrandId.current = brand.id;
+    setDirectoryReady(true);
+  }, [brand]);
   const directory = useMutation({
     mutationFn: async () => {
       const body: components["schemas"]["BrandMobileUpdate"] = {
@@ -521,7 +546,16 @@ function QwicooAppPanel({ brandId }: { brandId: string }) {
           }} />
           {coverUrl ? <button type="button" className="min-h-11 w-fit border px-3 text-sm" onClick={() => setCoverUrl(null)}>{t.clearImage}</button> : null}
         </label>
-        <button type="submit" className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={directory.isPending}>{t.saveDirectory}</button>
+        {logoUrl ? (
+          // App images are stored on the upload host, which next/image is not set up to optimise.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={mediaUrl(logoUrl) ?? logoUrl} alt="" className="h-16 w-16 object-cover" />
+        ) : null}
+        {coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={mediaUrl(coverUrl) ?? coverUrl} alt="" className="h-16 w-full object-cover" />
+        ) : null}
+        <button type="submit" className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={!directoryReady || directory.isPending}>{t.saveDirectory}</button>
       </form>
     </section>
   );

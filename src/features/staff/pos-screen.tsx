@@ -251,7 +251,7 @@ export function PosScreen() {
     queryKey: storeOnlineKey(branchId, "probe"),
     enabled: Boolean(branchId) && storeRole,
     retry: false,
-    queryFn: () => storeOnlineAvailable(),
+    queryFn: () => storeOnlineAvailable(locale),
   });
   const [storeShown, setStoreShown] = useState(false);
   useEffect(() => {
@@ -262,7 +262,7 @@ export function PosScreen() {
     queryKey: storeOnlineKey(branchId, "new"),
     enabled: storeShown && Boolean(branchId),
     retry: false,
-    queryFn: fetchStoreOnlineNew,
+    queryFn: () => fetchStoreOnlineNew(locale),
   });
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("");

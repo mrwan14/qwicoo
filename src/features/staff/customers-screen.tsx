@@ -23,8 +23,19 @@ export function CustomersScreen() {
   const t = useStaffSection(customersCopy);
   const { locale } = useLocale();
   const me = useStaffSession();
+  const isSuper = me?.role === "SUPER_ADMIN";
   const scopedBrand = useScope((state) => state.brandId);
-  const brandId = me?.role === "SUPER_ADMIN" ? scopedBrand : me?.brand_id ?? scopedBrand;
+  const [pickedBrand, setPickedBrand] = useState<string | null>(null);
+  const brandId = isSuper ? (pickedBrand ?? scopedBrand) : me?.brand_id ?? scopedBrand;
+  const brands = useQuery({
+    queryKey: ["brands", "qwicoo-customers"],
+    enabled: isSuper,
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/brands", { params: { query: { limit: 100 } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.failed, locale);
+      return result.data.items ?? [];
+    },
+  });
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
   const [q, setQ] = useState("");
@@ -66,6 +77,17 @@ export function CustomersScreen() {
         <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.hint}</p>
       </div>
+      {isSuper ? (
+        <label className="grid max-w-md gap-1 text-sm">
+          {t.restaurant}
+          <select className={field} value={brandId ?? ""} onChange={(event) => setPickedBrand(event.target.value)}>
+            <option value="">{t.chooseBrand}</option>
+            {(brands.data ?? []).map((brand) => (
+              <option key={brand.id} value={brand.id}>{brand.name}</option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       {!brandId ? <EmptyState title={t.chooseBrand} body="" /> : (
         <>
           <form

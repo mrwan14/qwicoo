@@ -168,6 +168,18 @@ const CATALOG: Record<string, Catalog> = {
     en: "Pack the Store items before handing over this order.",
     ar: "جهّز منتجات المتجر قبل تسليم هذا الطلب.",
   },
+  NO_STORE_LINES: {
+    en: "This order has no Store items.",
+    ar: "هذا الطلب لا يحتوي على منتجات من المتجر.",
+  },
+  STORE_HAS_KITCHEN_ITEMS: {
+    en: "This order still has kitchen items. Hand it over from Expo.",
+    ar: "هذا الطلب فيه أصناف من المطبخ. سلّمه من شاشة التسليم.",
+  },
+  PAYMENT_REQUIRED: {
+    en: "Please take payment before handing this order over.",
+    ar: "يُرجى تحصيل المبلغ قبل تسليم الطلب.",
+  },
   STORE_STOCK_BELOW_RESERVED: {
     en: "You can't set stock below what's held for open orders.",
     ar: "لا يمكن ضبط المخزون أقل مما هو محجوز للطلبات المفتوحة.",

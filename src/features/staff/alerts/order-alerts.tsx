@@ -9,6 +9,7 @@ import { useStaffSession } from "@/components/ops/staff-session";
 import { fetchFloorLive, floorLiveQueryKey } from "@/hooks/use-floor-live";
 import { pollUnlessRoleDenied, usePageVisible } from "@/hooks/use-page-visible";
 import { fill } from "@/lib/i18n/dictionary";
+import { useLocale } from "@/lib/i18n/locale-store";
 import { commonCopy } from "@/lib/i18n/staff/common";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { isAudioUnlocked, playTone, unlockAudio } from "@/lib/sound/tones";
@@ -91,6 +92,7 @@ export function alertTitle(event: AlertEvent, copy: (typeof commonCopy)["en"]): 
 /** One watcher for the whole staff app. Mounted once from StaffRuntime. */
 export function OrderAlerts() {
   const copy = useStaffSection(commonCopy);
+  const { locale } = useLocale();
   const me = useStaffSession();
   const router = useRouter();
   const branchId = useScope((state) => state.branchId);
@@ -110,7 +112,7 @@ export function OrderAlerts() {
   const expo = useQuery({ queryKey: expoKey(branchId), queryFn: fetchExpoOrders, enabled: on("expo"), refetchInterval, retry: false });
   const service = useQuery({ queryKey: serviceQueueKey(branchId), queryFn: fetchServiceQueue, enabled: on("service"), refetchInterval, retry: false });
   const payments = useQuery({ queryKey: paymentsPendingKey(branchId), queryFn: fetchPendingPayments, enabled: on("payments"), refetchInterval, retry: false });
-  const storeOnline = useQuery({ queryKey: storeOnlineKey(branchId, "new"), queryFn: fetchStoreOnlineNew, enabled: on("storeOnline"), refetchInterval, retry: false });
+  const storeOnline = useQuery({ queryKey: storeOnlineKey(branchId, "new"), queryFn: () => fetchStoreOnlineNew(locale), enabled: on("storeOnline"), refetchInterval, retry: false });
 
   const previous = useRef<Snapshot | null>(null);
   const wasAway = useRef(false);

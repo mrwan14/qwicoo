@@ -285,7 +285,7 @@ export function StoreTab({
             <input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} />
             {t.availableLabel}
           </label>
-          <button type="submit" className={button} disabled={save.isPending || (!editing && !categoryId)}>{save.isPending ? t.creating : t.storeSaved}</button>
+          <button type="submit" className={button} disabled={save.isPending || (!editing && !categoryId)}>{save.isPending ? t.creating : editing ? t.saveStoreItem : t.addStoreItem}</button>
         </form>
       ) : null}
       {listed.length === 0 ? <p className="text-sm text-muted-foreground">{t.storeEmpty}</p> : (

@@ -2,6 +2,7 @@
 
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import type { LocaleCode } from "@/lib/i18n/locale-text";
 import { fetchStoreOnline } from "@/features/staff/pos/store-online-api";
 
 /** Same keys and endpoints as the Kitchen, Handover, Requests and Payments screens, so React Query shares one fetch. */
@@ -29,8 +30,8 @@ export async function fetchServiceQueue() {
   return result.data;
 }
 
-export async function fetchStoreOnlineNew() {
-  return fetchStoreOnline("new");
+export async function fetchStoreOnlineNew(locale?: LocaleCode) {
+  return fetchStoreOnline("new", locale);
 }
 
 export async function fetchPendingPayments() {

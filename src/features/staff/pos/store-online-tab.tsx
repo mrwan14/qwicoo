@@ -10,12 +10,24 @@ import { acknowledgeOrder } from "@/features/staff/alerts/ignore";
 import { fetchStoreOnlineNew, storeOnlineKey } from "@/features/staff/alerts/queries";
 import { fetchStoreOnline, markHandedOver, markPacked, type StoreOnlineOrder, type StorePackStatus } from "@/features/staff/pos/store-online-api";
 import { vehicleDetails } from "@/features/staff/place-labels";
+import { useLocale } from "@/lib/i18n/locale-store";
 import { kdsCopy } from "@/lib/i18n/staff/kds";
 import { posCopy } from "@/lib/i18n/staff/pos";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 const chip = "min-h-11 shrink-0 px-3 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+
+function orderHeading(order: StoreOnlineOrder): string {
+  const display = order.display_number.trim();
+  const pickup = order.pickup_number != null ? String(order.pickup_number) : "";
+  if (display && display.replace(/^#/, "") !== pickup) {
+    return pickup ? `${display} · #${pickup}` : display;
+  }
+  if (display) return display;
+  if (pickup) return `#${pickup}`;
+  return order.order_id.slice(0, 8);
+}
 
 function channelLabel(type: string, labels: { delivery: string; curbside: string; driveThru: string }): string {
   const value = type.trim().toUpperCase();
@@ -28,6 +40,7 @@ function channelLabel(type: string, labels: { delivery: string; curbside: string
 export function StoreOnlineTab() {
   const t = useStaffSection(posCopy);
   const kitchen = useStaffSection(kdsCopy);
+  const { locale } = useLocale();
   const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<StorePackStatus>("new");
@@ -35,12 +48,12 @@ export function StoreOnlineTab() {
     queryKey: storeOnlineKey(branchId, status),
     enabled: Boolean(branchId),
     retry: false,
-    queryFn: () => (status === "new" ? fetchStoreOnlineNew() : fetchStoreOnline(status)),
+    queryFn: () => (status === "new" ? fetchStoreOnlineNew(locale) : fetchStoreOnline(status, locale)),
   });
   const move = useMutation({
     mutationFn: async (input: { orderId: string; next: "packed" | "handed_over" }) => {
-      if (input.next === "packed") await markPacked(input.orderId);
-      else await markHandedOver(input.orderId);
+      if (input.next === "packed") await markPacked(input.orderId, locale);
+      else await markHandedOver(input.orderId, locale);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["store-online", branchId] });
@@ -124,8 +137,7 @@ function StoreCard({
     <article className="grid gap-2 border bg-card p-4" onClick={onOpen}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h2 className="font-semibold tabular-nums">
-          {order.display_number || order.order_id.slice(0, 8)}
-          {order.pickup_number != null ? ` · #${order.pickup_number}` : ""}
+          {orderHeading(order)}
         </h2>
         <p className="text-sm">{channelLabel(order.fulfillment_type, labels)}</p>
       </div>

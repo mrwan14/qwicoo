@@ -1,6 +1,8 @@
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
+import type { LocaleCode } from "@/lib/i18n/locale-text";
+import { currentLocale } from "@/lib/i18n/locale-store";
 
 export type StorePackStatus = "new" | "packed" | "handed_over";
 
@@ -95,33 +97,37 @@ export function parseStoreOnline(data: unknown): StoreOnlineOrder[] {
   });
 }
 
-export async function storeOnlineAvailable(): Promise<boolean> {
+function failed(error: unknown, response: Response, locale?: LocaleCode) {
+  return asApiError(error, response, "Store orders failed", locale ?? currentLocale());
+}
+
+export async function storeOnlineAvailable(locale?: LocaleCode): Promise<boolean> {
   const result = await browserApi.GET(STORE_ONLINE_PATH, { params: { query: { status: "new" } } });
   if (result.response.status === 404 || result.response.status === 405) return false;
-  if (!result.response.ok) throw asApiError(result.error, result.response, "Store orders failed");
+  if (!result.response.ok) throw failed(result.error, result.response, locale);
   return true;
 }
 
-export async function fetchStoreOnline(status: StorePackStatus): Promise<StoreOnlineOrder[]> {
+export async function fetchStoreOnline(status: StorePackStatus, locale?: LocaleCode): Promise<StoreOnlineOrder[]> {
   const result = await browserApi.GET(STORE_ONLINE_PATH, { params: { query: { status } } });
-  if (!result.response.ok) throw asApiError(result.error, result.response, "Store orders failed");
+  if (!result.response.ok) throw failed(result.error, result.response, locale);
   return parseStoreOnline(result.data);
 }
 
-export async function markPacked(orderId: string): Promise<void> {
+export async function markPacked(orderId: string, locale?: LocaleCode): Promise<void> {
   const result = await browserApi.POST("/api/v1/orders/{order_id}/store-online/packed", {
     params: { path: { order_id: orderId } },
   });
-  if (!result.response.ok) throw asApiError(result.error, result.response, "Store orders failed");
+  if (!result.response.ok) throw failed(result.error, result.response, locale);
   ignoreOwnChange(orderId, "packed");
   ignoreOwnChange(orderId, "new");
 }
 
-export async function markHandedOver(orderId: string): Promise<void> {
+export async function markHandedOver(orderId: string, locale?: LocaleCode): Promise<void> {
   const result = await browserApi.POST("/api/v1/orders/{order_id}/store-online/handed-over", {
     params: { path: { order_id: orderId } },
   });
-  if (!result.response.ok) throw asApiError(result.error, result.response, "Store orders failed");
+  if (!result.response.ok) throw failed(result.error, result.response, locale);
   ignoreOwnChange(orderId, "handed_over");
   ignoreOwnChange(orderId, "new");
 }

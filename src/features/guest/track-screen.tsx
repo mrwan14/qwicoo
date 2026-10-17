@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -212,10 +212,16 @@ export function TrackScreen() {
     },
   });
 
+  const heldError = useRef<unknown>(null);
+  if (order.error) heldError.current = order.error;
+  // A refetch of a failed order clears the error and marks the query pending. Keep the
+  // error on screen so that check does not mount a fresh one and retry forever.
+  const showError = order.isError || (order.isFetched && order.isPending && !order.data && heldError.current);
+
   if (!session) return null;
-  if (order.isLoading) return <GuestSkeleton label={t.loading} />;
-  if (order.isError) {
-    return <GuestQueryError error={order.error} onRetry={() => void order.refetch()} />;
+  if (order.isPending && !order.isFetched) return <GuestSkeleton label={t.loading} />;
+  if (showError) {
+    return <GuestQueryError error={order.error ?? heldError.current} onRetry={() => void order.refetch()} />;
   }
   if (!order.data) {
     return (

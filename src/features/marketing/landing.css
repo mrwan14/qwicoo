@@ -234,6 +234,8 @@
 
 .qw-hub-node {
   position: absolute;
+  left: var(--hub-x);
+  top: var(--hub-y);
   transform: translate(-50%, -50%);
 }
 
@@ -259,13 +261,13 @@
   animation: qw-ring 2.4s ease-out infinite;
 }
 
-[dir="rtl"] .qw-hub-visual {
-  transform: scaleX(-1);
+[dir="rtl"] .qw-hub-node {
+  left: calc(100% - var(--hub-x));
 }
 
-[dir="rtl"] .qw-hub-node,
-[dir="rtl"] .qw-hub-center {
-  transform: translate(-50%, -50%) scaleX(-1);
+[dir="rtl"] .qw-hub-stage svg {
+  transform: scaleX(-1);
+  transform-origin: center;
 }
 
 @media (max-width: 900px) {
@@ -297,24 +299,23 @@
     aspect-ratio: auto;
     display: grid;
     gap: 12px;
-    padding-inline: 20px;
+    padding-inline: clamp(20px, 5vw, 72px);
   }
-  .qw-hub-stage svg {
+  .qw-hub-stage svg,
+  .qw-hub-center .qw-pulse {
     display: none;
-  }
-  .qw-hub-visual {
-    transform: none;
   }
   .qw-hub-node,
   .qw-hub-center,
   [dir="rtl"] .qw-hub-node,
   [dir="rtl"] .qw-hub-center,
-  [dir="rtl"] .qw-hub-visual {
+  [dir="rtl"] .qw-hub-stage svg {
     position: relative;
     left: auto;
     top: auto;
     transform: none;
-    width: auto;
+    width: 100%;
+    min-width: 0;
   }
 }
 

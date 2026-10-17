@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Coffee, Search, Users } from "lucide-react";
 import { Logo } from "@/components/ops/logo";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -192,18 +192,18 @@ export function RejoinTable({ message }: { message?: string }) {
   );
 }
 
-/** Recovers a dropped guest cookie using the stored or URL table token. */
+/** Recovers a dropped guest cookie using the stored table token. */
 export function GuestResume({ children }: { children: ReactNode }) {
   const { t } = useGuestCopy();
   const session = useGuest((state) => state.session);
-  const storedToken = useGuest((state) => state.tableToken);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(() => Boolean(useGuest.getState().session));
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     void Promise.resolve(useGuest.persist.rehydrate()).then(async () => {
       if (cancelled) return;
+      if (useGuest.getState().session) setReady(true);
       const ok = await recoverGuestSession();
       if (cancelled) return;
       if (!ok && (useGuest.getState().tableToken ?? guestTableToken())) setFailed(true);
@@ -212,7 +212,7 @@ export function GuestResume({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [storedToken]);
+  }, []);
 
   if (!ready) return <GuestSkeleton label={t.rejoining} />;
   if (session) return children;
@@ -230,19 +230,25 @@ export function GuestQueryError({
   const gone = isGuestSessionGone(error);
   const paused = useOrderingPaused();
   const token = useGuest((state) => state.tableToken);
-  const [retried, setRetried] = useState(false);
+  /** null while a session-gone error is being checked against the live cookie. */
+  const [sessionLive, setSessionLive] = useState<boolean | null>(null);
+  const checked = useRef(false);
 
   useEffect(() => {
-    if (!gone || !token || retried) return;
-    setRetried(true);
+    if (!gone || checked.current) return;
+    checked.current = true;
+    let cancelled = false;
     void recoverGuestSession().then((ok) => {
-      if (ok) onRetry();
+      if (!cancelled) setSessionLive(ok);
     });
-  }, [gone, token, retried, onRetry]);
+    return () => {
+      cancelled = true;
+    };
+  }, [gone]);
 
   if (gone) {
-    if (token && !retried) return <GuestSkeleton label={t.rejoining} />;
-    return <RejoinTable />;
+    if (sessionLive === null && token) return <GuestSkeleton label={t.rejoining} />;
+    if (sessionLive !== true) return <RejoinTable />;
   }
 
   if (isGuestUnreachable(error)) {
@@ -259,7 +265,9 @@ export function GuestQueryError({
   return (
     <div role="alert" className="guest-alert guest-alert-error grid gap-3">
       <h2 className="guest-display text-xl">{t.oopsTitle}</h2>
-      <p className="guest-body">{error instanceof Error ? error.message : t.oops}</p>
+      <p className="guest-body">
+        {gone && sessionLive ? t.oops : error instanceof Error ? error.message : t.oops}
+      </p>
       <button type="button" className={guestPrimaryButton} onClick={onRetry}>
         {t.retry}
       </button>

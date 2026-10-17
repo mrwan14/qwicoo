@@ -35,14 +35,15 @@ import {
   fetchKdsTickets,
   fetchPendingPayments,
   fetchServiceQueue,
+  fetchStoreOnlineNew,
   kdsTicketsKey,
   paymentsPendingKey,
   serviceQueueKey,
+  storeOnlineKey,
 } from "./queries";
+import { rechimeKey, tickRechimes } from "./rechime";
 
 const POLL_MS = 7000;
-const RECHIME_MS = 45_000;
-const MAX_RECHIMES = 2;
 
 const PAGE: Record<AlertEvent["kind"], string> = {
   confirmation: "/app/floor",
@@ -51,6 +52,7 @@ const PAGE: Record<AlertEvent["kind"], string> = {
   "service-request": "/app/floor/requests",
   "kitchen-ticket": "/app/kds",
   "handover-ready": "/app/kds/expo",
+  "store-online": "/app/pos?tab=store-online",
 };
 
 function localizePlace(place: string, labels: { pickup: string; table: string; order: string }): string {
@@ -81,6 +83,8 @@ export function alertTitle(event: AlertEvent, copy: (typeof commonCopy)["en"]): 
       return fill(copy.newTicket, { place });
     case "handover-ready":
       return fill(copy.handoverReady, { place });
+    case "store-online":
+      return fill(copy.newStoreOrder, { place });
   }
 }
 
@@ -106,11 +110,13 @@ export function OrderAlerts() {
   const expo = useQuery({ queryKey: expoKey(branchId), queryFn: fetchExpoOrders, enabled: on("expo"), refetchInterval, retry: false });
   const service = useQuery({ queryKey: serviceQueueKey(branchId), queryFn: fetchServiceQueue, enabled: on("service"), refetchInterval, retry: false });
   const payments = useQuery({ queryKey: paymentsPendingKey(branchId), queryFn: fetchPendingPayments, enabled: on("payments"), refetchInterval, retry: false });
+  const storeOnline = useQuery({ queryKey: storeOnlineKey(branchId, "new"), queryFn: fetchStoreOnlineNew, enabled: on("storeOnline"), refetchInterval, retry: false });
 
   const previous = useRef<Snapshot | null>(null);
   const wasAway = useRef(false);
-  const pending = useRef(new Map<string, { orderId: string; last: number; count: number }>());
+  const pending = useRef(new Map<string, { ackId: string; last: number; count: number }>());
   const liveTickets = useRef(new Set<string>());
+  const liveStore = useRef(new Set<string>());
   const soundRef = useRef(soundOn);
   soundRef.current = soundOn;
 
@@ -143,6 +149,7 @@ export function OrderAlerts() {
       expo: on("expo") ? expo.data : undefined,
       service: on("service") ? service.data : undefined,
       payments: on("payments") ? payments.data?.map((row) => ({ ...row, branch_id: null })) : undefined,
+      storeOnline: on("storeOnline") ? storeOnline.data : undefined,
     };
     if (Object.values(next).every((value) => value === undefined)) return;
     const now = Date.now();
@@ -150,6 +157,7 @@ export function OrderAlerts() {
     const events = diffSnapshots(previous.current, next, audience, alertIgnoreList, now);
     previous.current = mergeSnapshot(previous.current, next);
     if (next.kitchen) liveTickets.current = new Set(next.kitchen.map((row) => row.sub_ticket_id));
+    if (next.storeOnline) liveStore.current = new Set(next.storeOnline.map((row) => row.order_id));
     const returning = wasAway.current && visible;
     if (returning) wasAway.current = false;
     if (events.length === 0) return;
@@ -158,7 +166,12 @@ export function OrderAlerts() {
       if (event.kind !== "kitchen-ticket") continue;
       const orderId = next.kitchen?.find((row) => row.sub_ticket_id === event.entityId)?.order_id ?? event.entityId;
       acknowledgedOrders.delete(orderId);
-      pending.current.set(event.entityId, { orderId, last: now, count: 0 });
+      pending.current.set(rechimeKey("kitchen", event.entityId), { ackId: orderId, last: now, count: 0 });
+    }
+    for (const event of events) {
+      if (event.kind !== "store-online") continue;
+      acknowledgedOrders.delete(event.entityId);
+      pending.current.set(rechimeKey("store", event.entityId), { ackId: event.entityId, last: now, count: 0 });
     }
 
     const tone = toneFor(events);
@@ -180,26 +193,17 @@ export function OrderAlerts() {
     }
     if (more > 0) toast(fill(copy.andMore, { count: more }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [floor.data, kitchen.data, expo.data, service.data, payments.data]);
+  }, [floor.data, kitchen.data, expo.data, service.data, payments.data, storeOnline.data]);
 
   // Kitchen: re-chime an unacknowledged new ticket after 45 s, at most twice.
   useEffect(() => {
     if (!visible) return;
     const timer = window.setInterval(() => {
       const now = Date.now();
-      let chime = false;
-      for (const [id, entry] of pending.current) {
-        if (!liveTickets.current.has(id) || acknowledgedOrders.has(entry.orderId) || entry.count >= MAX_RECHIMES) {
-          pending.current.delete(id);
-          continue;
-        }
-        if (now - entry.last >= RECHIME_MS) {
-          entry.last = now;
-          entry.count += 1;
-          chime = true;
-        }
-      }
-      if (chime && soundRef.current) playTone("new");
+      const live = new Set<string>();
+      for (const id of liveTickets.current) live.add(rechimeKey("kitchen", id));
+      for (const id of liveStore.current) live.add(rechimeKey("store", id));
+      if (tickRechimes(pending.current, live, acknowledgedOrders, now) && soundRef.current) playTone("new");
     }, 5000);
     return () => window.clearInterval(timer);
   }, [visible]);

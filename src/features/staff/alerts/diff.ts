@@ -19,7 +19,8 @@ export type AlertKind =
   | "payment"
   | "service-request"
   | "kitchen-ticket"
-  | "handover-ready";
+  | "handover-ready"
+  | "store-online";
 
 export type ToneKind = "new" | "ready";
 
@@ -50,6 +51,14 @@ export type ServiceRow = {
   table_number?: string | null;
   request_type: string;
 };
+export type StoreOnlineRow = {
+  order_id: string;
+  branch_id?: string | null;
+  display_number?: string | null;
+  pickup_number?: number | null;
+  store_pack_status: string;
+};
+
 export type PaymentRow = {
   id: string;
   order_id: string;
@@ -66,6 +75,7 @@ export type Snapshot = {
   expo?: ExpoRow[];
   service?: ServiceRow[];
   payments?: PaymentRow[];
+  storeOnline?: StoreOnlineRow[];
 };
 
 export type AlertEvent = {
@@ -88,14 +98,14 @@ export const TOAST_CAP = 3;
 
 /** Which events each role hears, and which queues it needs (only ones its screens already use). */
 const ROLE_KINDS: Record<AlertRole, readonly AlertKind[]> = {
-  CASHIER: ["confirmation", "floor-status", "payment"],
+  CASHIER: ["confirmation", "floor-status", "payment", "store-online"],
   WAITER: ["confirmation", "floor-status", "service-request"],
   KITCHEN_STAFF: ["kitchen-ticket"],
   RUNNER: ["handover-ready"],
   REGIONAL_MANAGER: [],
-  SUPER_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready"],
-  BRAND_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready"],
-  BRANCH_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready"],
+  SUPER_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready", "store-online"],
+  BRAND_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready", "store-online"],
+  BRANCH_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready", "store-online"],
 };
 
 const KIND_SOURCE: Record<AlertKind, Source> = {
@@ -105,6 +115,7 @@ const KIND_SOURCE: Record<AlertKind, Source> = {
   "service-request": "service",
   "kitchen-ticket": "kitchen",
   "handover-ready": "expo",
+  "store-online": "storeOnline",
 };
 
 export const ADMIN_ROLES: ReadonlySet<AlertRole> = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"]);
@@ -213,6 +224,17 @@ function diffSource(source: Source, prev: Snapshot, next: Snapshot): AlertEvent[
         detail: row.payment_method ?? null,
       }));
     }
+    case "storeOnline":
+      return newRows(prev.storeOnline!, next.storeOnline!, (row) => row.order_id)
+        .filter((row) => row.store_pack_status === "new")
+        .map((row) => ({
+          kind: "store-online" as const,
+          entityId: row.order_id,
+          status: "new",
+          place: placeLabel(row),
+          branchId: row.branch_id ?? null,
+          tone: "new" as const,
+        }));
   }
 }
 

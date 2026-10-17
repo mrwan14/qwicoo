@@ -18,6 +18,8 @@ import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale, type LocaleCode } from "@/lib/i18n/locale-text";
 import { handoverCopy } from "@/lib/i18n/staff/handover";
+import { kdsCopy } from "@/lib/i18n/staff/kds";
+import { posCopy } from "@/lib/i18n/staff/pos";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { orderStatusLabel, stationLabel } from "@/lib/status-labels";
 import type { components } from "@/lib/api/schema";
@@ -93,6 +95,8 @@ function cardLines(order: ExpoOrder, locale: LocaleCode): CardLine[] {
 
 export function ExpoScreen() {
   const t = useStaffSection(handoverCopy);
+  const kitchenLabels = useStaffSection(kdsCopy);
+  const posLabels = useStaffSection(posCopy);
   const { locale } = useLocale();
   const me = useStaffSession();
   const runnerOnly = me?.role === "RUNNER";
@@ -321,6 +325,17 @@ export function ExpoScreen() {
                   })}
                 </StatusChip>
                 {order.pickup_bay != null ? <p className="mt-2 text-sm">{fill(t.bay, { number: order.pickup_bay })}</p> : null}
+                {optionalRecordString(order, "store_pack_status") ? (
+                  <p className="mt-2 text-sm">
+                    {kitchenLabels.storeBag}: {
+                      optionalRecordString(order, "store_pack_status") === "packed"
+                        ? posLabels.packed
+                        : optionalRecordString(order, "store_pack_status") === "handed_over"
+                          ? posLabels.handedOver
+                          : posLabels.filterNew
+                    }
+                  </p>
+                ) : null}
                 {dishesLeft ? (
                   <p className="mt-2 text-sm text-muted-foreground">{fill(t.dishesReady, { ready: order.ready_ticket_items, total: order.total_ticket_items })}</p>
                 ) : null}

@@ -164,6 +164,10 @@ const CATALOG: Record<string, Catalog> = {
     en: "The Store isn't enabled for this brand.",
     ar: "المتجر غير مفعّل لهذه العلامة.",
   },
+  STORE_NOT_PACKED: {
+    en: "Pack the Store items before handing over this order.",
+    ar: "جهّز منتجات المتجر قبل تسليم هذا الطلب.",
+  },
   STORE_STOCK_BELOW_RESERVED: {
     en: "You can't set stock below what's held for open orders.",
     ar: "لا يمكن ضبط المخزون أقل مما هو محجوز للطلبات المفتوحة.",

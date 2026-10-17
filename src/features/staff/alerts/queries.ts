@@ -2,12 +2,14 @@
 
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { fetchStoreOnline } from "@/features/staff/pos/store-online-api";
 
 /** Same keys and endpoints as the Kitchen, Handover, Requests and Payments screens, so React Query shares one fetch. */
 export const kdsTicketsKey = (branchId: string | null) => ["kds-tickets", branchId] as const;
 export const expoKey = (branchId: string | null) => ["expo", branchId] as const;
 export const serviceQueueKey = (branchId: string | null) => ["service-queue", branchId] as const;
 export const paymentsPendingKey = (branchId: string | null) => ["payments-pending", branchId] as const;
+export const storeOnlineKey = (branchId: string | null, status?: string) => ["store-online", branchId, status] as const;
 
 export async function fetchKdsTickets() {
   const result = await browserApi.GET("/api/v1/kds/tickets");
@@ -25,6 +27,10 @@ export async function fetchServiceQueue() {
   const result = await browserApi.GET("/api/v1/service-requests/active");
   if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Queue failed");
   return result.data;
+}
+
+export async function fetchStoreOnlineNew() {
+  return fetchStoreOnline("new");
 }
 
 export async function fetchPendingPayments() {

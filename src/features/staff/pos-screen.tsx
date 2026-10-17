@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { MoreHorizontal } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,8 +16,12 @@ import {
 import { Money } from "@/components/ops/money";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { StatusChip } from "@/components/ops/status-chip";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { fetchStoreOnlineNew, storeOnlineKey } from "@/features/staff/alerts/queries";
 import { printReceipt } from "@/features/staff/orders/receipt";
+import { storeOnlineAvailable } from "@/features/staff/pos/store-online-api";
+import { StoreOnlineTab } from "@/features/staff/pos/store-online-tab";
 import { PaymobPosCheckout } from "@/features/staff/paymob-pos";
 import type { StaffOrderReceipt } from "@/features/staff/orders/types";
 import { asApiError } from "@/lib/api/error";
@@ -237,7 +242,28 @@ function previewSubtotal(item: MenuItem, quantity: number, selected: Record<stri
 export function PosScreen() {
   const t = useStaffSection(posCopy);
   const { locale } = useLocale();
+  const me = useStaffSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const branchId = useScope((state) => state.branchId);
+  const storeRole = me?.role === "CASHIER" || me?.role === "BRANCH_ADMIN" || me?.role === "BRAND_ADMIN" || me?.role === "SUPER_ADMIN";
+  const probe = useQuery({
+    queryKey: storeOnlineKey(branchId, "probe"),
+    enabled: Boolean(branchId) && storeRole,
+    retry: false,
+    queryFn: () => storeOnlineAvailable(),
+  });
+  const [storeShown, setStoreShown] = useState(false);
+  useEffect(() => {
+    if (probe.data === true) setStoreShown(true);
+    if (probe.data === false) setStoreShown(false);
+  }, [probe.data]);
+  const newStoreOrders = useQuery({
+    queryKey: storeOnlineKey(branchId, "new"),
+    enabled: storeShown && Boolean(branchId),
+    retry: false,
+    queryFn: fetchStoreOnlineNew,
+  });
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
@@ -461,8 +487,9 @@ export function PosScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (menu.isLoading) return <LoadingState label={t.loading} />;
-  if (menu.isError) return <QueryErrorState error={menu.error} screen={t.screen} onRetry={() => void menu.refetch()} />;
+  const viewingStore = storeShown && searchParams.get("tab") === "store-online";
+  if (!viewingStore && menu.isLoading) return <LoadingState label={t.loading} />;
+  if (!viewingStore && menu.isError) return <QueryErrorState error={menu.error} screen={t.screen} onRetry={() => void menu.refetch()} />;
 
   const total = centsToMoney(lines.reduce((sum, line) => sum + moneyToCents(line.subtotal), 0));
   const sendDisabled = lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim());
@@ -540,7 +567,7 @@ export function PosScreen() {
     </aside>
   );
 
-  return (
+  const sale = (
     <div className="grid gap-4 lg:grid-cols-[minmax(140px,20%)_minmax(0,1fr)_minmax(260px,32%)]">
       <aside className="flex gap-2 overflow-x-auto lg:flex-col">
         {categories.map((category) => {
@@ -627,6 +654,28 @@ export function PosScreen() {
         destructive
         onConfirm={() => cancel.mutate()}
       />
+    </div>
+  );
+
+  function openTab(next: "sale" | "store-online") {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "store-online") params.set("tab", "store-online");
+    else params.delete("tab");
+    const query = params.toString();
+    router.replace(query ? `/app/pos?${query}` : "/app/pos");
+  }
+
+  return (
+    <div className="grid gap-4">
+      {storeShown ? (
+        <div className="flex gap-2 overflow-x-auto">
+          <button type="button" className={`min-h-11 shrink-0 px-3 text-sm ${viewingStore ? "bg-secondary" : "bg-primary font-medium text-primary-foreground"}`} onClick={() => openTab("sale")}>{t.newSale}</button>
+          <button type="button" className={`min-h-11 shrink-0 px-3 text-sm ${viewingStore ? "bg-primary font-medium text-primary-foreground" : "bg-secondary"}`} onClick={() => openTab("store-online")}>
+            {t.storeOnlineTab}{newStoreOrders.data ? ` ${newStoreOrders.data.length}` : ""}
+          </button>
+        </div>
+      ) : null}
+      {viewingStore ? <StoreOnlineTab /> : sale}
     </div>
   );
 }

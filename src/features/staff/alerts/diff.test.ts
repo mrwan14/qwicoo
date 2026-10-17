@@ -16,13 +16,14 @@ const B1 = "branch-1";
 const B2 = "branch-2";
 const all = (role: AlertAudience["role"], extra: Partial<AlertAudience> = {}): AlertAudience => ({ role, branchId: B1, ...extra });
 
-const empty: Snapshot = { floor: [], kitchen: [], expo: [], service: [], payments: [] };
+const empty: Snapshot = { floor: [], kitchen: [], expo: [], service: [], payments: [], storeOnline: [] };
 const busy: Snapshot = {
   floor: [{ table_id: "t1", table_number: "4", active_order_id: "o1", order_status: "PENDING_STAFF_CONFIRMATION" }],
   kitchen: [{ sub_ticket_id: "k1", order_id: "o2", branch_id: B1, pickup_number: 12 }],
   expo: [{ order_id: "o3", branch_id: B1, status: "READY", display_number: "7" }],
   service: [{ id: "s1", branch_id: B1, table_number: "2", request_type: "CALL_WAITER" }],
   payments: [{ id: "p1", order_id: "o4", branch_id: B1, pickup_number: 3, payment_method: "CASH" }],
+  storeOnline: [{ order_id: "s1", branch_id: B1, display_number: "14", pickup_number: 14, store_pack_status: "new" }],
 };
 
 test("first snapshot is a baseline", () => {
@@ -76,13 +77,13 @@ test("cap of three toasts plus and N more", () => {
 
 test("role filtering", () => {
   const kindsOf = (a: AlertAudience) => diffSnapshots(empty, busy, a).map((e) => e.kind).sort();
-  assert.deepEqual(kindsOf(all("CASHIER")), ["confirmation", "payment"]);
+  assert.deepEqual(kindsOf(all("CASHIER")), ["confirmation", "payment", "store-online"]);
   assert.deepEqual(kindsOf(all("WAITER")), ["confirmation", "service-request"]);
   assert.deepEqual(kindsOf(all("KITCHEN_STAFF")), ["kitchen-ticket"]);
   assert.deepEqual(kindsOf(all("RUNNER")), ["handover-ready"]);
   for (const role of ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"] as const) {
     assert.deepEqual(kindsOf(all(role)), []);
-    assert.equal(kindsOf(all(role, { adminOptIn: true })).length, 5);
+    assert.equal(kindsOf(all(role, { adminOptIn: true })).length, 6);
   }
   assert.deepEqual(sourcesFor(all("KITCHEN_STAFF")), ["kitchen"]);
   assert.deepEqual(sourcesFor(all("BRANCH_ADMIN")), []);
@@ -93,6 +94,21 @@ test("kitchen hears a new ticket only for the selected branch", () => {
   const other: Snapshot = { kitchen: [{ sub_ticket_id: "k9", order_id: "o9", branch_id: B2 }] };
   assert.deepEqual(diffSnapshots({ kitchen: [] }, other, all("KITCHEN_STAFF")), []);
   assert.equal(diffSnapshots({ kitchen: [] }, other, { role: "KITCHEN_STAFF", branchId: B2 }).length, 1);
+});
+
+test("a new store order raises one event and a packed row that has left the list raises none", () => {
+  const row = { order_id: "s9", branch_id: B1, pickup_number: 9, store_pack_status: "new" };
+  const created = diffSnapshots({ storeOnline: [] }, { storeOnline: [row] }, all("CASHIER"));
+  assert.equal(created.length, 1);
+  assert.equal(created[0].kind, "store-online");
+  assert.equal(created[0].place, "Pickup 9");
+  assert.deepEqual(diffSnapshots({ storeOnline: [row] }, { storeOnline: [] }, all("CASHIER")), []);
+});
+
+test("ignoreOwnChange swallows the cashier's own pack", () => {
+  const row = { order_id: "s9", branch_id: B1, store_pack_status: "new" };
+  const ignore = addIgnore(new Map(), "s9", "new", 0);
+  assert.deepEqual(diffSnapshots({ storeOnline: [] }, { storeOnline: [row] }, all("CASHIER"), ignore, 1), []);
 });
 
 test("dine-in payment toast names the table from the floor", () => {

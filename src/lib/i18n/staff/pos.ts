@@ -72,6 +72,20 @@ const en = {
   required: "Required",
   quantity: "Quantity",
   addToTicket: "Add to ticket",
+  storeOnlineTab: "Store online orders",
+  newSale: "New sale",
+  packed: "Packed",
+  handedOver: "Handed over",
+  markPacked: "Mark packed",
+  markHandedOver: "Mark handed over",
+  waitingKitchen: "Waiting for the kitchen",
+  cashDue: "Cash due",
+  paid: "Paid",
+  emptyStoreOnline: "No Store orders right now",
+  delivery: "Delivery",
+  curbside: "Curbside",
+  storeOnlineFailed: "Store orders failed",
+  filterNew: "New",
 } as const;
 
 const ar = {
@@ -146,6 +160,20 @@ const ar = {
   required: "مطلوب",
   quantity: "الكمية",
   addToTicket: "أضف إلى التذكرة",
+  storeOnlineTab: "طلبات المتجر أونلاين",
+  newSale: "بيع جديد",
+  packed: "تم التجهيز",
+  handedOver: "تم التسليم",
+  markPacked: "تأكيد التجهيز",
+  markHandedOver: "تأكيد التسليم",
+  waitingKitchen: "بانتظار المطبخ",
+  cashDue: "الدفع نقداً عند الاستلام",
+  paid: "مدفوع",
+  emptyStoreOnline: "لا توجد طلبات متجر حالياً",
+  delivery: "توصيل",
+  curbside: "استلام من السيارة",
+  storeOnlineFailed: "تعذّر تحميل طلبات المتجر",
+  filterNew: "جديد",
 } as const;
 
 export const posCopy = defineDictionary(en, ar);

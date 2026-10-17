@@ -15,6 +15,8 @@ import { LocationPickerDialog, type PickedLocation } from "@/components/ops/loca
 import { ApiError, asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { fill } from "@/lib/i18n/dictionary";
+import { formatMoney } from "@/lib/format/money";
+import { useLocale } from "@/lib/i18n/locale-store";
 import { branchCopy } from "@/lib/i18n/staff/branch";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { mediaUrl } from "@/lib/media";
@@ -25,7 +27,7 @@ import type { components } from "@/lib/api/schema";
 const control = "h-11 w-full rounded-lg border px-3 text-sm";
 const hint = "max-w-lg text-sm leading-6 text-muted-foreground";
 
-const TAB_KEYS = ["profile", "hours", "location", "financials", "sla", "offline", "pin", "tables"] as const;
+const TAB_KEYS = ["profile", "qwicoo", "hours", "location", "financials", "sla", "offline", "pin", "tables"] as const;
 
 type BranchTab = (typeof TAB_KEYS)[number];
 type BranchText = (typeof branchCopy)["en"];
@@ -100,6 +102,7 @@ export function BranchScreen({ branchId }: { branchId: string }) {
         ))}
       </div>
       {tab === "profile" ? <ProfileTab branchId={branchId} currency={branchRecord.currency} address={branchRecord.address ?? ""} /> : null}
+      {tab === "qwicoo" ? <QwicooTab branchId={branchId} /> : null}
       {tab === "hours" ? <HoursTab branchId={branchId} hours={branchRecord.opening_hours} /> : null}
       {tab === "location" ? <LocationTab branch={branchRecord} /> : null}
       {tab === "financials" ? <FinancialsTab branchId={branchId} /> : null}
@@ -107,6 +110,106 @@ export function BranchScreen({ branchId }: { branchId: string }) {
       {tab === "pin" && canSeePin ? <PinTab branchId={branchId} /> : null}
       {tab === "offline" && canSetOffline ? <OfflineTab branchId={branchId} /> : null}
       {tab === "tables" ? <TablesTab branchId={branchId} /> : null}
+    </div>
+  );
+}
+
+const square = "h-11 w-full border bg-background px-3 text-sm";
+
+function QwicooTab({ branchId }: { branchId: string }) {
+  const t = useStaffSection(branchCopy);
+  const { locale } = useLocale();
+  const [govId, setGovId] = useState("");
+  const [zoneId, setZoneId] = useState("");
+  const [amount, setAmount] = useState("0.00");
+  const [result, setResult] = useState<components["schemas"]["CalculateDeliveryFeeResponse"] | null>(null);
+  const governorates = useQuery({
+    queryKey: ["delivery-governorates"],
+    queryFn: async () => {
+      const response = await browserApi.GET("/api/v1/delivery/governorates");
+      if (!response.response.ok || !response.data) throw asApiError(response.error, response.response, t.feeFailed);
+      return response.data;
+    },
+  });
+  const zones = useQuery({
+    queryKey: ["delivery-zones", govId],
+    enabled: Boolean(govId),
+    queryFn: async () => {
+      const response = await browserApi.GET("/api/v1/delivery/governorates/{governorate_id}/zones", {
+        params: { path: { governorate_id: govId } },
+      });
+      if (!response.response.ok || !response.data) throw asApiError(response.error, response.response, t.feeFailed);
+      return response.data;
+    },
+  });
+  const check = useMutation({
+    mutationFn: async () => {
+      if (!govId) throw new Error(t.chooseGovernorate);
+      const response = await browserApi.POST("/api/v1/delivery/calculate-fee", {
+        body: {
+          branch_id: branchId,
+          governorate_id: govId,
+          zone_id: zoneId || null,
+          order_amount: amount,
+        },
+      });
+      if (!response.response.ok || !response.data) throw asApiError(response.error, response.response, t.feeFailed);
+      return response.data;
+    },
+    onSuccess: (data) => setResult(data),
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const nameOf = (row: { name_en: string; name_ar: string }) => (locale === "ar" ? row.name_ar || row.name_en : row.name_en);
+
+  return (
+    <div className="grid max-w-xl gap-4 border bg-card p-4">
+      <div className="grid gap-1">
+        <h2 className="font-medium">{t.tabs.qwicoo}</h2>
+        <p className={hint}>{t.qwicooHint}</p>
+        <p className={hint}>{t.switchesHidden}</p>
+      </div>
+      <Link href="/app/delivery" className="text-sm underline-offset-2 hover:underline">{t.zones}</Link>
+      <form
+        className="grid gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          check.mutate();
+        }}
+      >
+        <h3 className="text-sm font-medium">{t.checkFee}</h3>
+        <label className="grid gap-1 text-sm">
+          {t.governorate}
+          <select className={square} value={govId} onChange={(event) => { setGovId(event.target.value); setZoneId(""); setResult(null); }}>
+            <option value="">{t.chooseGovernorate}</option>
+            {(governorates.data ?? []).map((gov) => (
+              <option key={gov.id} value={gov.id}>{nameOf(gov)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm">
+          {t.zone}
+          <select className={square} value={zoneId} onChange={(event) => setZoneId(event.target.value)} disabled={!govId}>
+            <option value="">{t.anyZone}</option>
+            {(zones.data ?? []).map((zone) => (
+              <option key={zone.id} value={zone.id}>{nameOf(zone)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm">
+          {t.orderAmount}
+          <input className={square} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
+        </label>
+        <button type="submit" className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={check.isPending || !govId}>
+          {check.isPending ? t.checkingFee : t.checkFee}
+        </button>
+      </form>
+      {result ? (
+        <div className="grid gap-1 text-sm">
+          <p>{fill(t.feeResult, { fee: formatMoney(result.delivery_fee, "EGP", locale), minutes: result.estimated_time_minutes })}</p>
+          {result.is_serviceable ? null : <p>{t.notServiceable}</p>}
+          {result.meets_minimum ? null : <p>{fill(t.belowMinimum, { amount: formatMoney(result.min_order_amount, "EGP", locale) })}</p>}
+        </div>
+      ) : null}
     </div>
   );
 }

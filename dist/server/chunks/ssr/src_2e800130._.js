@@ -1,0 +1,3 @@
+module.exports=[47220,a=>{"use strict";function b(a,b){return{en:a,ar:b}}a.s(["defineDictionary",()=>b])},92665,a=>{"use strict";function b(){return(process.env.API_BASE_URL??"http://localhost:8000"??"http://127.0.0.1:8000").replace(/\/+$/,"").replace(/\/api\/v1$/,"")}a.s(["getApiOrigin",()=>b])},45490,a=>{"use strict";a.s(["default",()=>e,"dynamic",()=>d]);var b=a.i(60457),c=a.i(30938);let d="force-dynamic";async function e({params:a,children:d}){let{branchId:e}=await a;return await (0,b.guardScope)(a=>(0,c.canOpenBranch)(a,e)),d}}];
+
+//# sourceMappingURL=src_2e800130._.js.map

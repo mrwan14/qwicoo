@@ -1,0 +1,30 @@
+{
+  "pages": {
+    "/(staff)/app/(admin)/analytics/branches/page": [
+      "static/chunks/ff1a16fafef87110.js",
+      "static/chunks/eab45d022c978f11.js",
+      "static/chunks/ea33158b3ecb950f.css",
+      "static/chunks/f4d3c1131439cf7c.css",
+      "static/chunks/2b6c558038c35425.js",
+      "static/chunks/cc6111db2f721dcf.js",
+      "static/chunks/1751127e8b040761.js",
+      "static/chunks/a5196e0b2ba7a278.js",
+      "static/chunks/21c2411cb7ccba08.js",
+      "static/chunks/021734aac60c2664.js",
+      "static/chunks/90c1ec53d4663d68.js",
+      "static/chunks/380bc6dc2da838af.js",
+      "static/chunks/203096997bc2322b.js",
+      "static/chunks/c2c827750834a907.js",
+      "static/chunks/2cd46191f4b86a06.js",
+      "static/chunks/f71e5ee10f6f5aaa.css",
+      "static/chunks/610f16fa175faf8b.js",
+      "static/chunks/0170e9d6180c36b5.js",
+      "static/chunks/64efcee68f809a8c.js",
+      "static/chunks/4e6dd9bd696cdeaa.js",
+      "static/chunks/522104d29f483357.js",
+      "static/chunks/a32778f17956bfce.js",
+      "static/chunks/9f84ea1980c6d366.js",
+      "static/chunks/turbopack-130cd6db757b87d3.js"
+    ]
+  }
+}

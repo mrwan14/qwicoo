@@ -1,0 +1,17 @@
+{
+  "pages": {},
+  "app": {
+    "[project]/src/app/(staff)/app/(admin)/analytics/page": [
+      "static/media/caa3a2e1cccd8315-s.p.3b6cae6d.woff2",
+      "static/media/797e433ab948586e-s.p.29207c2f.woff2",
+      "static/media/03bda585a99c6450-s.p.ad37b9d9.woff2",
+      "static/media/5e4d537aaa9e154b-s.p.01f07175.woff2",
+      "static/media/c9a0d344f313d307-s.p.2e3b0be0.woff2",
+      "static/media/280fac012b00b901-s.p.9709d1fd.woff2",
+      "static/media/ceec3e50f42c26e3-s.p.d48d1167.woff2",
+      "static/media/5ad8fdb5805e9b4a-s.p.a7af9cce.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pagesUsingSizeAdjust": false
+}

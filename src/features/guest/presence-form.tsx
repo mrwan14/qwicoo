@@ -15,7 +15,7 @@ import {
   type JoinAction,
 } from "@/features/guest/presence-join";
 import { sessionStillValid, toGuestSession } from "@/features/guest/session";
-import { GuestMotionSkeleton } from "@/features/guest/guest-motion";
+import { GuestMotionSkeleton, GuestWelcome } from "@/features/guest/guest-motion";
 import { guestPrimaryButton, useGuestCopy } from "@/features/guest/shell";
 import type { components } from "@/lib/api/schema";
 import { mergeGuestBranding } from "@/lib/guest/branding";
@@ -60,6 +60,7 @@ export function PresenceForm({ token }: { token: string }) {
   const [step, setStep] = useState<Step>("landing");
   const [checkingReturn, setCheckingReturn] = useState(true);
   const [preview, setPreview] = useState<{ branchName: string; tableNumber: string } | null>(null);
+  const [previewSettled, setPreviewSettled] = useState(false);
   const [joined, setJoined] = useState<{ tableNumber: string; place: string } | null>(null);
 
   const place = preview?.branchName || t.restaurant;
@@ -100,6 +101,8 @@ export function PresenceForm({ token }: { token: string }) {
         });
       } catch {
         // The landing still works without a label. Joining still requires location or the PIN.
+      } finally {
+        if (!cancelled) setPreviewSettled(true);
       }
     })();
     return () => {
@@ -132,7 +135,7 @@ export function PresenceForm({ token }: { token: string }) {
       });
       const payload = (await response.json().catch(() => ({}))) as PresenceResponse & { code?: string | null };
       if ([502, 503, 504].includes(response.status)) {
-        setError(t.orderingPaused);
+        setError(t.orderingPausedJoin);
         return;
       }
       if (!response.ok) {
@@ -160,7 +163,7 @@ export function PresenceForm({ token }: { token: string }) {
       setJoined({ tableNumber, place: joinedPlace });
       setStep("joined");
     } catch {
-      setError(t.orderingPaused);
+      setError(t.orderingPausedJoin);
     } finally {
       setPending(false);
     }
@@ -215,7 +218,7 @@ export function PresenceForm({ token }: { token: string }) {
     void submit(effect.action);
   }
 
-  if (checkingReturn) {
+  if (checkingReturn || !previewSettled) {
     return <GuestMotionSkeleton label={t.verifying} />;
   }
 
@@ -236,8 +239,9 @@ export function PresenceForm({ token }: { token: string }) {
 
       {step === "landing" ? (
         <Landing
-          title={preview?.branchName || t.presenceTitle}
-          subtitle={preview?.branchName ? undefined : t.presenceBody}
+          welcome={t.presenceTitle}
+          place={preview?.branchName}
+          body={t.presenceBody}
           tableNumber={preview?.tableNumber}
           tableLabel={t.tableLabel}
           openMenu={t.openMenu}
@@ -328,16 +332,18 @@ function Chevron() {
 }
 
 function Landing({
-  title,
-  subtitle,
+  welcome,
+  place,
+  body,
   tableNumber,
   tableLabel,
   openMenu,
   poweredBy,
   onOpen,
 }: {
-  title: string;
-  subtitle?: string;
+  welcome: string;
+  place?: string;
+  body: string;
   tableNumber?: string;
   tableLabel: string;
   openMenu: string;
@@ -345,21 +351,17 @@ function Landing({
   onOpen: () => void;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6">
-      <div className="grid gap-3 pt-6">
-        <h1 className="guest-display text-[1.875rem] leading-tight">{title}</h1>
-        {subtitle ? <p className="guest-body">{subtitle}</p> : null}
-        {tableNumber ? (
-          <p className="guest-badge guest-badge-accent w-fit">{fill(tableLabel, { n: tableNumber })}</p>
-        ) : null}
-      </div>
-      <div className="mt-auto grid gap-3">
-        <button type="button" className={guestPrimaryButton} onClick={onOpen}>
-          {openMenu}
-        </button>
-        <p className="text-center text-[11px] text-[var(--guest-faint)]">{poweredBy}</p>
-      </div>
-    </div>
+    <GuestWelcome
+      kicker={place ? welcome : undefined}
+      title={place || welcome}
+      body={place ? undefined : body}
+      badge={tableNumber ? fill(tableLabel, { n: tableNumber }) : undefined}
+    >
+      <button type="button" className={guestPrimaryButton} onClick={onOpen}>
+        {openMenu}
+      </button>
+      <p className="text-center text-[11px] text-[var(--guest-faint)]">{poweredBy}</p>
+    </GuestWelcome>
   );
 }
 

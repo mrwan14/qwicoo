@@ -1,0 +1,3 @@
+{
+  "/(guest)/b/[branchId]/pickup/page": "app/(guest)/b/[branchId]/pickup/page.js"
+}

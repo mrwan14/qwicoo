@@ -1,0 +1,1 @@
+{"version":3,"sources":["turbopack:///[project]/src/app/(staff)/app/(ops)/layout.tsx"],"sourcesContent":["export default function OpsLayout({ children }: { children: React.ReactNode }) {\n  return children;\n}\n"],"names":[],"mappings":"uCAAe,SAAS,EAAU,UAAE,CAAQ,CAAiC,EAC3E,OAAO,CACT"}

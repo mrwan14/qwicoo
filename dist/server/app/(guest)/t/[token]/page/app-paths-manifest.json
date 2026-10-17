@@ -1,0 +1,3 @@
+{
+  "/(guest)/t/[token]/page": "app/(guest)/t/[token]/page.js"
+}

@@ -71,6 +71,7 @@ export function ItemSheet({
   const [choiceError, setChoiceError] = useState("");
   const [highlightGroupId, setHighlightGroupId] = useState<string | null>(null);
   const groupRefs = useRef(new Map<string, HTMLElement>());
+  const addStamp = useRef(0);
 
   const groups = useMemo(
     () => (item?.modifier_groups ?? []) as ModifierGroup[],
@@ -211,7 +212,14 @@ export function ItemSheet({
   );
 
   function tryAdd() {
+    const now = performance.now();
+    if (now - addStamp.current < 450) return;
+    addStamp.current = now;
     if (!item) return;
+    if (!guestName.trim()) {
+      setChoiceError(t.nicknameTitle);
+      return;
+    }
     const incompleteIndex =
       mode === "same"
         ? unitIsComplete(groups, units[0] ?? emptySelection())
@@ -225,7 +233,8 @@ export function ItemSheet({
       const group = groups.find((entry) => optionName(entry.name, locale) === missing);
       setChoiceError(missing ? t.chooseRequired.replace("{name}", missing) : t.pricePending);
       setHighlightGroupId(group?.id ?? null);
-      if (group) groupRefs.current.get(group.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const node = group ? groupRefs.current.get(group.id) : null;
+      node?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       return;
     }
     setChoiceError("");
@@ -263,35 +272,39 @@ export function ItemSheet({
               +
             </button>
           </div>
-          <button
-            type="button"
-            className={`${guestPrimaryButton} !w-auto flex-1`}
-            disabled={add.isPending || paused || !guestName.trim()}
-            onClick={tryAdd}
-          >
-            {add.isPending ? t.paying : ctaLabel}
-          </button>
+          <div className="grid min-w-0 flex-1 gap-2">
+            {choiceError ? (
+              <p role="alert" className="guest-alert guest-alert-error text-sm">
+                {choiceError}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              className={`${guestPrimaryButton} w-full`}
+              disabled={add.isPending || paused}
+              onPointerUp={tryAdd}
+              onClick={tryAdd}
+            >
+              {add.isPending ? t.paying : ctaLabel}
+            </button>
+          </div>
         </div>
       }
     >
-      <div className="grid gap-4">
+      <div className="grid gap-6">
         {mediaUrl(item.image_url) ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={mediaUrl(item.image_url) ?? ""}
             alt=""
-            className="guest-thumb max-h-44 w-full object-cover"
+            className="guest-thumb max-h-36 w-full object-cover"
           />
-        ) : (
-          <div className="guest-thumb flex h-32 items-center justify-center text-4xl font-extrabold text-[var(--guest-quiet)]">
-            {title.trim().charAt(0).toUpperCase()}
-          </div>
-        )}
+        ) : null}
         {description && description !== title ? (
           <p className="guest-body">{description}</p>
         ) : null}
         {branchPrice ? (
-          <p className="guest-price guest-price-accent text-base" dir="ltr">
+          <p className="guest-price text-base text-[var(--guest-ink)]" dir="ltr">
             <Money amount={branchPrice} currency={currency} locale={locale} />
           </p>
         ) : null}
@@ -357,17 +370,15 @@ export function ItemSheet({
                 if (node) groupRefs.current.set(group.id, node);
                 else groupRefs.current.delete(group.id);
               }}
-              className={`grid gap-2 ${needsBand ? "guest-required-band" : ""} ${highlighted ? "outline outline-2 outline-[var(--guest-orange)] outline-offset-2" : ""}`}
+              className="guest-choice"
+              data-missing={needsBand ? "true" : "false"}
+              data-highlight={highlighted ? "true" : "false"}
             >
-              <legend className="grid gap-0.5">
+              <legend className="guest-choice-head">
                 <span className="guest-title">{optionName(group.name, locale)}</span>
-                {hint ? (
-                  <span className="guest-caption font-normal">{hint}</span>
-                ) : group.is_required ? (
-                  <span className="guest-badge guest-badge-accent w-fit">{t.required}</span>
-                ) : null}
+                {hint ? <span className="guest-choice-required">{hint}</span> : null}
               </legend>
-              <div className={group.max_choices === 1 ? "flex flex-wrap gap-2" : "grid gap-2"}>
+              <div className="guest-choice-list">
                 {(group.options ?? []).map((option) => {
                   const soldOut = option.is_available === false;
                   const chosen = (workingSelection[group.id] ?? []).includes(option.id);
@@ -378,12 +389,7 @@ export function ItemSheet({
                     <label
                       key={option.id}
                       data-selected={chosen ? "true" : "false"}
-                      data-active={single && chosen ? "true" : "false"}
-                      className={
-                        single
-                          ? `guest-cat-tab guest-motion inline-flex items-center gap-2 ${soldOut ? "opacity-50" : ""}`
-                          : `guest-option-tile guest-motion flex flex-row items-center justify-between gap-3 text-sm ${soldOut ? "opacity-50" : ""}`
-                      }
+                      className={`guest-choice-row guest-motion ${soldOut ? "opacity-50" : ""}`}
                     >
                       <input
                         type={single ? "radio" : "checkbox"}
@@ -398,15 +404,18 @@ export function ItemSheet({
                           updateWorking(toggleOption(workingSelection, group, option.id));
                         }}
                       />
-                      <span>
+                      <span className="min-w-0">
                         {optionName(option.name, locale)}
                         {soldOut ? ` · ${t.unavailable}` : ""}
                       </span>
-                      {showDelta ? (
-                        <span className="guest-price text-xs" dir="ltr">
-                          + <Money amount={option.price_delta} currency={currency} locale={locale} />
-                        </span>
-                      ) : null}
+                      <span className="ms-auto flex shrink-0 items-center gap-2.5">
+                        {showDelta ? (
+                          <span className="text-sm font-medium text-[var(--guest-quiet)]" dir="ltr">
+                            + <Money amount={option.price_delta} currency={currency} locale={locale} />
+                          </span>
+                        ) : null}
+                        <span className="guest-choice-mark" aria-hidden />
+                      </span>
                     </label>
                   );
                 })}
@@ -415,11 +424,11 @@ export function ItemSheet({
           );
         })}
 
-        <label className="grid gap-1.5 guest-title">
-          {t.notes}
+        <label className="grid gap-2">
+          <span className="guest-title">{t.notes}</span>
           <textarea
-            className={`${guestField} min-h-24 py-3`}
-            placeholder={t.notes}
+            className={`${guestField} guest-sheet-note min-h-20 py-3`}
+            placeholder=""
             value={mode === "same" ? (notes[0] ?? "") : (notes[activeUnit] ?? "")}
             onChange={(event) => {
               const value = event.target.value;
@@ -433,11 +442,6 @@ export function ItemSheet({
           />
         </label>
 
-        {choiceError ? (
-          <p role="alert" className="guest-alert guest-alert-error text-sm">
-            {choiceError}
-          </p>
-        ) : null}
       </div>
     </BottomSheet>
   );
@@ -472,9 +476,11 @@ export function NicknameSheet({
           className={guestPrimaryButton}
           disabled={!draft.trim()}
           onClick={() => {
-            setGuestName(draft.trim());
-            onOpenChange(false);
+            const name = draft.trim();
+            if (!name) return;
+            setGuestName(name);
             onSaved();
+            onOpenChange(false);
           }}
         >
           {t.saveNickname}

@@ -4,9 +4,11 @@
  * Guest QR ordering pauses when the API can't be reached, or when the branch's tills are offline
  * (no staff device has checked in lately at a branch that sells offline). Guests order at the counter.
  */
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PauseCircle } from "lucide-react";
+import { X } from "lucide-react";
 
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { guestApi } from "@/lib/api/guest";
 import { useGuest } from "@/stores/guest";
 
@@ -43,19 +45,35 @@ export function useOrderingPaused(): boolean {
 export function OrderingPausedNotice({ onRetry, retryLabel }: { onRetry?: () => void; retryLabel?: string }) {
   const locale = useGuest((state) => state.locale);
   const t = guestCopy[locale];
+  const dir = locale === "ar" ? "rtl" : "ltr";
+  const [open, setOpen] = useState(true);
   return (
-    <section role="alert" className="grid gap-2 guest-card px-4 py-4">
-      <p className="flex items-center gap-2 text-base font-semibold text-[var(--guest-ink)]">
-        <PauseCircle aria-hidden className="size-5 shrink-0 text-[var(--guest-amber)]" />
-        {t.orderingPaused}
-      </p>
-      <p className="guest-body leading-6">{t.orderingPausedBody}</p>
-      {onRetry ? (
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          dir={dir}
+          lang={locale}
+          showCloseButton={false}
+          className="guest-theme max-w-[22rem] gap-2 rounded-[var(--guest-radius-card)] border-0 bg-[var(--guest-surface)] p-5 pe-14 text-[var(--guest-ink)] shadow-[var(--guest-shadow)] ring-0"
+        >
+          <DialogClose
+            className="absolute end-2 top-2 inline-flex size-11 items-center justify-center rounded-full text-[var(--guest-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--guest-orange)]"
+            aria-label={t.close}
+          >
+            <X className="size-5" aria-hidden />
+          </DialogClose>
+          <DialogTitle className="guest-display text-lg leading-6">{t.orderingPaused}</DialogTitle>
+          <DialogDescription className="guest-body text-start text-[var(--guest-quiet)]">
+            {t.orderingPausedBody}
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
+      {!open && onRetry ? (
         <button type="button" className="guest-btn guest-btn-ghost guest-motion justify-self-start" onClick={onRetry}>
           {retryLabel ?? t.retry}
         </button>
       ) : null}
-    </section>
+    </>
   );
 }
 

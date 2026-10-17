@@ -1,0 +1,478 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/guest/session/[action]",
+      "regex": "^/api/guest/session/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPaction": "nxtPaction"
+      },
+      "namedRegex": "^/api/guest/session/(?<nxtPaction>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/guest/[...path]",
+      "regex": "^/api/guest/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/guest/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/v1/[...path]",
+      "regex": "^/api/v1/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/v1/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
+      "page": "/app/branches/[branchId]",
+      "regex": "^/app/branches/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPbranchId": "nxtPbranchId"
+      },
+      "namedRegex": "^/app/branches/(?<nxtPbranchId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/app/brands/[brandId]",
+      "regex": "^/app/brands/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPbrandId": "nxtPbrandId"
+      },
+      "namedRegex": "^/app/brands/(?<nxtPbrandId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/app/brands/[brandId]/settings",
+      "regex": "^/app/brands/([^/]+?)/settings(?:/)?$",
+      "routeKeys": {
+        "nxtPbrandId": "nxtPbrandId"
+      },
+      "namedRegex": "^/app/brands/(?<nxtPbrandId>[^/]+?)/settings(?:/)?$"
+    },
+    {
+      "page": "/app/financials/z/[reportId]",
+      "regex": "^/app/financials/z/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPreportId": "nxtPreportId"
+      },
+      "namedRegex": "^/app/financials/z/(?<nxtPreportId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/app/[...slug]",
+      "regex": "^/app/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/app/(?<nxtPslug>.+?)(?:/)?$"
+    },
+    {
+      "page": "/b/[branchId]/pickup",
+      "regex": "^/b/([^/]+?)/pickup(?:/)?$",
+      "routeKeys": {
+        "nxtPbranchId": "nxtPbranchId"
+      },
+      "namedRegex": "^/b/(?<nxtPbranchId>[^/]+?)/pickup(?:/)?$"
+    },
+    {
+      "page": "/t/[token]",
+      "regex": "^/t/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/t/(?<nxtPtoken>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[locale]/pay/result",
+      "regex": "^/([^/]+?)/pay/result(?:/)?$",
+      "routeKeys": {
+        "nxtPlocale": "nxtPlocale"
+      },
+      "namedRegex": "^/(?<nxtPlocale>[^/]+?)/pay/result(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/app",
+      "regex": "^/app(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app(?:/)?$"
+    },
+    {
+      "page": "/app/analytics",
+      "regex": "^/app/analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/analytics(?:/)?$"
+    },
+    {
+      "page": "/app/analytics/branches",
+      "regex": "^/app/analytics/branches(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/analytics/branches(?:/)?$"
+    },
+    {
+      "page": "/app/analytics/menu",
+      "regex": "^/app/analytics/menu(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/analytics/menu(?:/)?$"
+    },
+    {
+      "page": "/app/assistant",
+      "regex": "^/app/assistant(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/assistant(?:/)?$"
+    },
+    {
+      "page": "/app/attendance",
+      "regex": "^/app/attendance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/attendance(?:/)?$"
+    },
+    {
+      "page": "/app/audit",
+      "regex": "^/app/audit(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/audit(?:/)?$"
+    },
+    {
+      "page": "/app/brands",
+      "regex": "^/app/brands(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/brands(?:/)?$"
+    },
+    {
+      "page": "/app/dashboard",
+      "regex": "^/app/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/dashboard(?:/)?$"
+    },
+    {
+      "page": "/app/delivery",
+      "regex": "^/app/delivery(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/delivery(?:/)?$"
+    },
+    {
+      "page": "/app/features",
+      "regex": "^/app/features(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/features(?:/)?$"
+    },
+    {
+      "page": "/app/financials",
+      "regex": "^/app/financials(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/financials(?:/)?$"
+    },
+    {
+      "page": "/app/floor",
+      "regex": "^/app/floor(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/floor(?:/)?$"
+    },
+    {
+      "page": "/app/floor/requests",
+      "regex": "^/app/floor/requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/floor/requests(?:/)?$"
+    },
+    {
+      "page": "/app/inventory",
+      "regex": "^/app/inventory(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/counts",
+      "regex": "^/app/inventory/counts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/counts(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/import",
+      "regex": "^/app/inventory/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/import(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/ingredients",
+      "regex": "^/app/inventory/ingredients(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/ingredients(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/jobs",
+      "regex": "^/app/inventory/jobs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/jobs(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/movements",
+      "regex": "^/app/inventory/movements(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/movements(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/prep",
+      "regex": "^/app/inventory/prep(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/prep(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/purchase-orders",
+      "regex": "^/app/inventory/purchase\\-orders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/purchase\\-orders(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/recipes",
+      "regex": "^/app/inventory/recipes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/recipes(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/reports",
+      "regex": "^/app/inventory/reports(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/reports(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/settings",
+      "regex": "^/app/inventory/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/settings(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/stock",
+      "regex": "^/app/inventory/stock(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/stock(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/suppliers",
+      "regex": "^/app/inventory/suppliers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/suppliers(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/transfers",
+      "regex": "^/app/inventory/transfers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/transfers(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/units",
+      "regex": "^/app/inventory/units(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/units(?:/)?$"
+    },
+    {
+      "page": "/app/inventory/waste",
+      "regex": "^/app/inventory/waste(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory/waste(?:/)?$"
+    },
+    {
+      "page": "/app/invitations",
+      "regex": "^/app/invitations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/invitations(?:/)?$"
+    },
+    {
+      "page": "/app/kds",
+      "regex": "^/app/kds(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/kds(?:/)?$"
+    },
+    {
+      "page": "/app/kds/expo",
+      "regex": "^/app/kds/expo(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/kds/expo(?:/)?$"
+    },
+    {
+      "page": "/app/menu",
+      "regex": "^/app/menu(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/menu(?:/)?$"
+    },
+    {
+      "page": "/app/menu/combos",
+      "regex": "^/app/menu/combos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/menu/combos(?:/)?$"
+    },
+    {
+      "page": "/app/menu/overrides",
+      "regex": "^/app/menu/overrides(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/menu/overrides(?:/)?$"
+    },
+    {
+      "page": "/app/no-workspace",
+      "regex": "^/app/no\\-workspace(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/no\\-workspace(?:/)?$"
+    },
+    {
+      "page": "/app/offline-orders",
+      "regex": "^/app/offline\\-orders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/offline\\-orders(?:/)?$"
+    },
+    {
+      "page": "/app/orders",
+      "regex": "^/app/orders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/orders(?:/)?$"
+    },
+    {
+      "page": "/app/partner-leads",
+      "regex": "^/app/partner\\-leads(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/partner\\-leads(?:/)?$"
+    },
+    {
+      "page": "/app/payments",
+      "regex": "^/app/payments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/payments(?:/)?$"
+    },
+    {
+      "page": "/app/pos",
+      "regex": "^/app/pos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/pos(?:/)?$"
+    },
+    {
+      "page": "/app/qr",
+      "regex": "^/app/qr(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/qr(?:/)?$"
+    },
+    {
+      "page": "/app/staff",
+      "regex": "^/app/staff(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/staff(?:/)?$"
+    },
+    {
+      "page": "/app/team",
+      "regex": "^/app/team(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/team(?:/)?$"
+    },
+    {
+      "page": "/apple-icon.png",
+      "regex": "^/apple\\-icon\\.png(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/apple\\-icon\\.png(?:/)?$"
+    },
+    {
+      "page": "/forgot-password",
+      "regex": "^/forgot\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forgot\\-password(?:/)?$"
+    },
+    {
+      "page": "/icon.png",
+      "regex": "^/icon\\.png(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/icon\\.png(?:/)?$"
+    },
+    {
+      "page": "/invite/accept",
+      "regex": "^/invite/accept(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/invite/accept(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/manifest.webmanifest",
+      "regex": "^/manifest\\.webmanifest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/manifest\\.webmanifest(?:/)?$"
+    },
+    {
+      "page": "/order",
+      "regex": "^/order(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/order(?:/)?$"
+    },
+    {
+      "page": "/order/checkout",
+      "regex": "^/order/checkout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/order/checkout(?:/)?$"
+    },
+    {
+      "page": "/order/service",
+      "regex": "^/order/service(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/order/service(?:/)?$"
+    },
+    {
+      "page": "/order/track",
+      "regex": "^/order/track(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/order/track(?:/)?$"
+    },
+    {
+      "page": "/reset-password",
+      "regex": "^/reset\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reset\\-password(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Coffee, Search, Users } from "lucide-react";
 import { Logo } from "@/components/ops/logo";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { guestCopy } from "@/features/guest/copy";
@@ -19,6 +20,64 @@ export const guestPrimaryButton = "guest-btn guest-btn-primary guest-motion";
 export const guestSecondaryButton = "guest-btn guest-btn-secondary guest-motion";
 export const guestGhostButton = "guest-btn guest-btn-ghost guest-motion";
 export const guestIconButton = "guest-btn guest-btn-icon guest-motion";
+
+const OpenDrawerContext = createContext<() => void>(() => {});
+
+export function useOpenGuestDrawer() {
+  return useContext(OpenDrawerContext);
+}
+
+const MenuChromeContext = createContext({ searchOpen: false, toggleSearch: () => {} });
+
+export function useMenuChrome() {
+  return useContext(MenuChromeContext);
+}
+
+function MenuTopBar() {
+  const { t } = useGuestCopy();
+  const openDrawer = useOpenGuestDrawer();
+  const { searchOpen, toggleSearch } = useMenuChrome();
+  const placeLabel = useGuestPlaceLabel();
+  const branding = useGuest((state) => state.branding);
+  const branchName = useGuest((state) => state.session?.branchName ?? null);
+  const tableNumber = useGuest((state) => state.session?.tableNumber);
+  const [logoFailed, setLogoFailed] = useState(false);
+  const logo = branding?.logoUrl && !logoFailed ? mediaUrl(branding.logoUrl) : null;
+
+  return (
+    <header className="flex items-center gap-3 px-5 py-2">
+      <button type="button" className="guest-menu-avatar guest-motion" aria-label={t.openMenu} onClick={openDrawer}>
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logo} alt="" className="size-full object-cover" onError={() => setLogoFailed(true)} />
+        ) : (
+          <Coffee className="size-5" aria-hidden />
+        )}
+      </button>
+      <div className="min-w-0 flex-1">
+        <p className="guest-menu-name truncate">{branding?.name || branchName || t.restaurant}</p>
+        {branchName && branding?.name && branchName !== branding.name ? (
+          <p className="truncate text-[11px] leading-[13px] text-[var(--guest-faint)]">{branchName}</p>
+        ) : null}
+      </div>
+      {tableNumber ? (
+        <span className="guest-badge guest-badge-place shrink-0 gap-1.5">
+          <Users className="size-3" aria-hidden />
+          {placeLabel}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        className="guest-menu-search guest-motion"
+        aria-label={t.searchMenu}
+        aria-pressed={searchOpen}
+        onClick={toggleSearch}
+      >
+        <Search className="size-[18px]" aria-hidden />
+      </button>
+    </header>
+  );
+}
 
 export function useGuestCopy() {
   const locale = useGuest((state) => state.locale);
@@ -213,6 +272,7 @@ export function GuestShell({
   neutral = false,
   resume = !neutral,
   header = true,
+  menu = false,
 }: {
   children: ReactNode;
   neutral?: boolean;
@@ -220,12 +280,15 @@ export function GuestShell({
   resume?: boolean;
   /** The join flow draws its own top bar. Menu and order keep this one. */
   header?: boolean;
+  /** Menu screen draws the Palette F header itself. */
+  menu?: boolean;
 }) {
   const { t, locale, dir, setLocale } = useGuestCopy();
   const paused = useOrderingPaused();
   const placeLabel = useGuestPlaceLabel();
   const tableNumber = useGuest((state) => state.session?.tableNumber);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [waiterOpen, setWaiterOpen] = useState(false);
   const [billOpen, setBillOpen] = useState(false);
@@ -250,9 +313,12 @@ export function GuestShell({
   }
 
   return (
-    <div dir={dir} lang={locale} className="guest-theme min-h-dvh overflow-x-hidden">
+    <MenuChromeContext.Provider value={{ searchOpen, toggleSearch: () => setSearchOpen((open) => !open) }}>
+    <OpenDrawerContext.Provider value={() => setDrawerOpen(true)}>
+    <div dir={dir} lang={locale} className="guest-theme min-h-dvh">
       <div className="guest-phone">
-        {header ? <header className="flex items-center justify-between gap-2.5 px-5 pb-1.5 pt-3">
+        {menu ? <MenuTopBar /> : null}
+        {header && !menu ? <header className="flex items-center justify-between gap-2.5 px-5 pb-1.5 pt-3">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {!neutral ? (
               <button
@@ -271,7 +337,7 @@ export function GuestShell({
             {neutral ? <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-xl" /> : <BrandHeader />}
           </div>
           {!neutral && tableNumber ? (
-            <span className="guest-badge guest-badge-accent shrink-0">{placeLabel}</span>
+            <span className="guest-badge guest-badge-place shrink-0">{placeLabel}</span>
           ) : null}
           <button
             type="button"
@@ -283,8 +349,10 @@ export function GuestShell({
         </header> : null}
         <div
           className={
-            header
-              ? "grid gap-3 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1"
+            menu
+              ? "grid min-w-0 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
+              : header
+              ? "grid min-w-0 gap-3 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1"
               : "flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4"
           }
         >
@@ -325,5 +393,7 @@ export function GuestShell({
         </>
       ) : null}
     </div>
+    </OpenDrawerContext.Provider>
+    </MenuChromeContext.Provider>
   );
 }

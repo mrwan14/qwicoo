@@ -12,8 +12,10 @@ test("guest radius tokens live under .guest-theme only", () => {
   assert.match(guestCss, /--guest-radius-card:\s*24px/);
   assert.match(guestCss, /--guest-radius-sheet:\s*32px/);
   assert.match(guestCss, /--guest-btn-h:\s*56px/);
-  assert.match(guestCss, /--guest-orange:\s*#c86b3c/);
-  assert.match(guestCss, /--guest-canvas:\s*#fbf6ee/);
+  assert.match(guestCss, /--guest-orange:\s*#f96d34/);
+  assert.match(guestCss, /--guest-canvas:\s*#f5f1ec/);
+  assert.match(guestCss, /--guest-highlight:\s*#f4ad40/);
+  assert.match(guestCss, /--guest-sage:\s*#6ea292/);
   assert.match(guestCss, /font-family:\s*var\(--font-guest-arabic\)/);
   assert.match(guestCss, /\.guest-btn-primary/);
   assert.match(guestCss, /\.guest-sheet-footer/);

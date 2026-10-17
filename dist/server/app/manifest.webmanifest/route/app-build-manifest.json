@@ -1,0 +1,12 @@
+{
+  "pages": {
+    "/manifest.webmanifest/route": [
+      "static/chunks/64efcee68f809a8c.js",
+      "static/chunks/4e6dd9bd696cdeaa.js",
+      "static/chunks/522104d29f483357.js",
+      "static/chunks/a32778f17956bfce.js",
+      "static/chunks/9f84ea1980c6d366.js",
+      "static/chunks/turbopack-130cd6db757b87d3.js"
+    ]
+  }
+}

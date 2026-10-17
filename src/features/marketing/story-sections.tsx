@@ -345,13 +345,11 @@ function Hub({ locale }: { locale: LocaleCode }) {
                 )}
           </svg>
         </div>
-        <div className="qw-hub-center w-[220px] bg-ink px-[18px] py-[18px] text-center text-canvas shadow-[0_0_0_10px_rgb(247_108_51/0.15),0_0_0_22px_rgb(247_108_51/0.07)] max-[900px]:w-auto max-[900px]:shadow-none">
+        <div className="qw-hub-center w-[220px] bg-ink px-[18px] py-[18px] text-center text-canvas shadow-[0_0_0_10px_rgb(247_108_51/0.15),0_0_0_22px_rgb(247_108_51/0.07)] max-[900px]:w-full max-[900px]:shadow-none">
           {!reduced ? <span className={withoutMotion(reduced, "qw-pulse pointer-events-none absolute -inset-2.5 border-2 border-[var(--orange)]")} /> : null}
           <Rings />
           <b className="qw-display mt-2.5 block text-2xl">{t.order}</b>
-          <small className="text-[#bdb5ab]">
-            <span dir="ltr">{t.meta}</span>
-          </small>
+          <small className="text-[#bdb5ab]">{t.meta}</small>
         </div>
         {FLOW_KEYS.map((key) => {
           const pos = NODE_POS[key];
@@ -359,8 +357,8 @@ function Hub({ locale }: { locale: LocaleCode }) {
           return (
             <div
               key={key}
-              className="qw-hub-node grid min-w-[170px] gap-0.5 border border-ink bg-white px-3.5 py-3 text-[13px] whitespace-nowrap shadow-[5px_5px_0_var(--c,var(--ink))] max-[900px]:w-auto max-[900px]:whitespace-normal"
-              style={{ left: pos.left, top: pos.top, ["--c" as string]: pos.color }}
+              className="qw-hub-node grid min-w-[170px] gap-0.5 border border-ink bg-white px-3.5 py-3 text-[13px] whitespace-nowrap shadow-[5px_5px_0_var(--c,var(--ink))] max-[900px]:w-full max-[900px]:min-w-0 max-[900px]:whitespace-normal"
+              style={{ ["--hub-x" as string]: pos.left, ["--hub-y" as string]: pos.top, ["--c" as string]: pos.color }}
             >
               <b className="flex items-center gap-2 text-[15px]">
                 <i aria-hidden className="inline-block size-2.5" style={{ background: pos.color }} />

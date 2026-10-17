@@ -70,17 +70,57 @@ function dropEndedSession() {
   useGuest.getState().setCashRequestedOrderId(null);
 }
 
+function sessionFromProfile(value: unknown): PresenceResponse | null {
+  const data = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+  if (!data || typeof data.session_id !== "string" || typeof data.branch_id !== "string") return null;
+  return {
+    accent_color: typeof data.accent_color === "string" ? data.accent_color : null,
+    branch_id: data.branch_id,
+    branch_name: typeof data.branch_name === "string" ? data.branch_name : "",
+    brand_logo_url: typeof data.brand_logo_url === "string" ? data.brand_logo_url : null,
+    brand_name: typeof data.brand_name === "string" ? data.brand_name : null,
+    expires_in: typeof data.expires_in === "number" ? data.expires_in : 0,
+    guest_id: typeof data.guest_id === "string" ? data.guest_id : "",
+    is_presence_verified: data.is_presence_verified === true,
+    session_id: data.session_id,
+    table_id: typeof data.table_id === "string" ? data.table_id : "",
+    table_number: typeof data.table_number === "string" ? data.table_number : "",
+    ...(typeof data.brand_id === "string" ? { brand_id: data.brand_id } : {}),
+  } as PresenceResponse;
+}
+
+/** Rebuild a cleared guest session from the still-valid httpOnly cookie. */
+async function restoreGuestSession(): Promise<boolean> {
+  try {
+    const response = await fetch("/api/guest/api/v1/sessions/me", {
+      method: "GET",
+      headers: { accept: "application/json", "accept-language": useGuest.getState().locale },
+      credentials: "include",
+    });
+    if (!response.ok) return false;
+    const profile = sessionFromProfile(await response.json());
+    if (!profile) return false;
+    const token = useGuest.getState().tableToken;
+    useGuest.getState().setSession(toGuestSession(profile));
+    if (token) useGuest.getState().setTableToken(token);
+    useGuest.getState().setBranding(mergeGuestBranding(useGuest.getState().branding, profile));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** True when the httpOnly guest cookie + stored session still talk to the API. */
 export async function sessionStillValid(): Promise<boolean> {
-  const session = useGuest.getState().session;
-  if (!session?.sessionId) return false;
   try {
     const response = await fetch("/api/guest/api/v1/sessions/ordering-status", {
       method: "GET",
       headers: { "accept-language": useGuest.getState().locale },
       credentials: "include",
     });
-    return response.ok;
+    if (!response.ok) return false;
+    if (useGuest.getState().session?.sessionId) return true;
+    return restoreGuestSession();
   } catch {
     return false;
   }

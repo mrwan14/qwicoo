@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -12,6 +13,7 @@ import { PageHeader } from "@/components/ops/page-header";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { occupancyTone, StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState, QueryErrorState } from "@/components/ops/states";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { pollUnlessRoleDenied, usePollingInterval } from "@/hooks/use-page-visible";
 import {
@@ -23,6 +25,8 @@ import {
 } from "@/hooks/use-floor-live";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import type { components } from "@/lib/api/schema";
+import type { UserRole } from "@/lib/auth/roles";
 import { getStaffOrder } from "@/lib/api/staff-order";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
@@ -34,6 +38,116 @@ import { useScope } from "@/stores/scope";
 
 const hint = "text-sm leading-6 text-muted-foreground";
 const control = "h-12 w-full rounded-xl border bg-background px-3 text-sm";
+const primaryButton =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+
+const ADD_TABLE_ROLES: ReadonlySet<UserRole> = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"]);
+
+function AddTableDialog({ branchId }: { branchId: string }) {
+  const t = useStaffSection(floorCopy);
+  const { locale } = useLocale();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [number, setNumber] = useState("");
+  const [capacity, setCapacity] = useState("4");
+  const [zone, setZone] = useState("Indoor");
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const seats = Number(capacity);
+      const body: components["schemas"]["TableCreateRequest"] = {
+        table_number: number.trim(),
+        capacity: Number.isFinite(seats) && seats >= 1 ? Math.floor(seats) : 4,
+        zone_name: zone.trim() || "Indoor",
+      };
+      const result = await browserApi.POST("/api/v1/branches/{branch_id}/tables", {
+        params: { path: { branch_id: branchId } },
+        body,
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotCreateTable, locale);
+    },
+    onSuccess: () => {
+      toast.success(t.tableCreated);
+      setNumber("");
+      setOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["floor-live"] });
+      void queryClient.invalidateQueries({ queryKey: ["tables", branchId] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  return (
+    <>
+      <button type="button" className={primaryButton} onClick={() => setOpen(true)}>
+        <Plus aria-hidden className="size-4" />
+        {t.addTable}
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.addTableTitle}</DialogTitle>
+            <DialogDescription>{t.addTableBody}</DialogDescription>
+          </DialogHeader>
+          <form
+            className="grid gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
+            }}
+          >
+            <label className="grid gap-1 text-sm">
+              {t.tableNumberLabel}
+              <input
+                className={control}
+                placeholder={t.tableNumberPlaceholder}
+                value={number}
+                onChange={(event) => setNumber(event.target.value)}
+                required
+                autoFocus
+              />
+            </label>
+            <label className="grid gap-1 text-sm">
+              {t.capacityLabel}
+              <input
+                className={control}
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                value={capacity}
+                onChange={(event) => setCapacity(event.target.value)}
+                required
+              />
+            </label>
+            <label className="grid gap-1 text-sm">
+              {t.zoneLabel}
+              <input
+                className={control}
+                placeholder={t.zonePlaceholder}
+                value={zone}
+                onChange={(event) => setZone(event.target.value)}
+                required
+              />
+            </label>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="min-h-11 rounded-xl border px-4 text-sm"
+                disabled={create.isPending}
+                onClick={() => setOpen(false)}
+              >
+                {t.cancel}
+              </button>
+              <button className={primaryButton} type="submit" disabled={create.isPending || !number.trim()}>
+                {create.isPending ? t.adding : t.addTable}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 function seatedFor(minutes: number, one: string, many: string): string {
   if (minutes <= 0) return "";
@@ -77,6 +191,7 @@ export function FloorScreen() {
 
   const selected = floor.data?.tables.find((table) => table.table_id === selectedId) ?? null;
   const canConfirm = Boolean(me && CONFIRM_ROLES.has(me.role));
+  const canAddTable = Boolean(me && branchId && ADD_TABLE_ROLES.has(me.role));
   const orderDetail = useQuery({
     queryKey: ["staff-order", selected?.active_order_id],
     enabled: Boolean(selected?.active_order_id) && !needsConfirmation(selected ?? { order_status: null }),
@@ -126,6 +241,7 @@ export function FloorScreen() {
     <div className="grid gap-4">
       <PageHeader
         title={t.title}
+        action={canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : undefined}
         detail={
           <>
             <LiveCount value={data.occupied_tables} /> {t.occupied}
@@ -146,7 +262,11 @@ export function FloorScreen() {
         <StatusChip tone="ready">{occupancyLabel("FOOD_SERVED")}</StatusChip>
       </div>
       {tables.length === 0 ? (
-        <EmptyState title={t.emptyTitle} body={t.emptyBody} />
+        <EmptyState
+          title={t.emptyTitle}
+          body={t.emptyBody}
+          action={canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : undefined}
+        />
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {tables.map((table) => {

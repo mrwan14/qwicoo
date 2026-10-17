@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -80,10 +80,21 @@ export function StoreTab({
   branchId: string;
   role: UserRole | null | undefined;
   categories: { id: string; name: string }[];
-  treeItems: { id: string; name: string; item_type?: string | null; scope?: string | null }[];
+  treeItems: { id: string; name: string; item_type?: string | null; scope?: string | null; price?: string | null }[];
 }) {
   const t = useStaffSection(menuCopy);
   const { locale } = useLocale();
+  const queryClient = useQueryClient();
+  const shelves = useQuery({
+    queryKey: ["store-stock", branchId],
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/staff/menu/branches/{branch_id}/store-stock", {
+        params: { path: { branch_id: branchId } },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.stockFailed);
+      return result.data;
+    },
+  });
   const [items, setItems] = useState<SessionStoreItem[]>(() => readSessionStoreItems());
   const [stock, setStock] = useState<Record<string, StockRow>>({});
   const [open, setOpen] = useState(false);
@@ -143,6 +154,7 @@ export function StoreTab({
     onSuccess: (saved) => {
       const rest = items.filter((item) => item.id !== saved.id);
       remember([saved, ...rest]);
+      void queryClient.invalidateQueries({ queryKey: ["menu-tree", branchId] });
       setOpen(false);
       setEditing(null);
       toast.success(t.storeSaved);
@@ -167,6 +179,7 @@ export function StoreTab({
         [data.item_id]: { onHand: data.stock_quantity, held: data.reserved_quantity },
       }));
       toast.success(t.stockSaved);
+      void queryClient.invalidateQueries({ queryKey: ["store-stock", branchId] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -191,7 +204,7 @@ export function StoreTab({
       nameAr: item.name,
       descriptionEn: "",
       descriptionAr: "",
-      price: "",
+      price: item.price ?? "",
       available: true,
       maxPerOrder: null,
       imageUrl: null,
@@ -278,7 +291,8 @@ export function StoreTab({
       {listed.length === 0 ? <p className="text-sm text-muted-foreground">{t.storeEmpty}</p> : (
         <ul className="grid gap-3">
           {listed.map((item) => {
-            const shelf = stock[item.id];
+            const loaded = shelves.data?.find((row) => row.item_id === item.id);
+            const shelf = stock[item.id] ?? (loaded ? { onHand: loaded.stock_quantity, held: loaded.reserved_quantity } : undefined);
             const onHand = shelf?.onHand == null ? null : Number(shelf.onHand);
             const held = shelf ? Number(shelf.held) : null;
             const view = onHand != null && held != null && Number.isFinite(onHand) && Number.isFinite(held) ? storeStockView(onHand, held) : null;

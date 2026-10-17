@@ -321,8 +321,9 @@ export function MenuAdmin() {
           treeItems={(categories.flatMap((category) => category.items ?? [])).map((item) => ({
             id: item.id,
             name: pickLocale(item.name, locale),
-            item_type: "item_type" in item && typeof item.item_type === "string" ? item.item_type : null,
+            item_type: item.item_type ?? null,
             scope: "scope" in item && typeof item.scope === "string" ? item.scope : null,
+            price: item.base_price,
           }))}
         />
       ) : tab === "stations" && showStations ? (

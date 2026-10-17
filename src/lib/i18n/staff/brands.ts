@@ -75,6 +75,14 @@ const en = {
   qwicooSaveFailed: "Could not update the Qwicoo app",
   qwicooOn: "Qwicoo app turned on",
   qwicooOff: "Qwicoo app turned off",
+  featured: "Featured",
+  sortOrder: "Sort order",
+  appLogo: "App logo",
+  appCover: "App cover",
+  logoFallback: "If no app logo or cover is set, the Qwicoo app uses the brand logo and cover.",
+  saveDirectory: "Save",
+  directorySaved: "Qwicoo app settings saved",
+  clearImage: "Clear",
 } as const;
 
 const ar = {
@@ -152,6 +160,14 @@ const ar = {
   qwicooSaveFailed: "تعذّر تحديث تطبيق كويكو",
   qwicooOn: "تم تشغيل تطبيق كويكو",
   qwicooOff: "تم إيقاف تطبيق كويكو",
+  featured: "مميز",
+  sortOrder: "ترتيب العرض",
+  appLogo: "شعار التطبيق",
+  appCover: "غلاف التطبيق",
+  logoFallback: "إذا لم يُضبط شعار أو غلاف للتطبيق، يستخدم تطبيق كويكو شعار العلامة وغلافها.",
+  saveDirectory: "حفظ",
+  directorySaved: "تم حفظ إعدادات تطبيق كويكو",
+  clearImage: "مسح",
 } as const;
 
 export const brandsCopy = defineDictionary(en, ar);

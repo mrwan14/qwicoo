@@ -100,7 +100,7 @@ export function deliveredCashCollected(isPaid: boolean): boolean {
 
 export function matchesOrderChannel(
   row: { order_source?: string | null; fulfillment_type?: string | null },
-  channel: "" | "mobile" | "delivery",
+  channel: "" | "mobile" | "delivery" | "store",
 ): boolean {
   if (channel === "mobile") return (row.order_source ?? "").toUpperCase() === "TAKE_A_WAY_APP";
   if (channel === "delivery") return isDeliveryFulfillment(row.fulfillment_type);

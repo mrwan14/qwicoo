@@ -65,6 +65,7 @@ const ICONS: Record<string, LucideIcon> = {
   "/app/payments": Wallet,
   "/app/offline-orders": CloudOff,
   "/app/menu": UtensilsCrossed,
+  "/app/mobile-customers": Users,
   "/app/inventory": Warehouse,
   "/app/qr": QrCode,
   "/app/brands": Store,

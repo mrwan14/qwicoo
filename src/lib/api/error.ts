@@ -156,6 +156,10 @@ const CATALOG: Record<string, Catalog> = {
     ar: "لا يوجد طلب نشط لهذه الطاولة",
     aliases: ["No active order found for this table"],
   },
+  MOBILE_APP_NOT_ENABLED_FOR_BRAND: {
+    en: "The Qwicoo app isn't turned on for this restaurant.",
+    ar: "تطبيق كويكو غير مفعّل لهذا المطعم.",
+  },
   RETAIL_MODULE_LOCKED: {
     en: "The Store isn't enabled for this brand.",
     ar: "المتجر غير مفعّل لهذه العلامة.",

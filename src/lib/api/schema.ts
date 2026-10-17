@@ -732,6 +732,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/branches/{branch_id}/mobile-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read mobile channel switches for a branch
+         * @description Branch admin of this branch, plus brand admins and super admins in scope. mobile_ordering, curbside, drive_thru, and mobile_delivery map to the is_*_enabled columns.
+         */
+        get: operations["get_branch_mobile_settings_api_v1_branches__branch_id__mobile_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Set mobile channel switches for a branch
+         * @description Branch admin of this branch, plus brand admins and super admins in scope. Turning mobile_ordering on requires MOBILE_APP on the brand.
+         */
+        patch: operations["update_branch_mobile_settings_api_v1_branches__branch_id__mobile_settings_patch"];
+        trace?: never;
+    };
     "/api/v1/branches/{branch_id}/offline-config": {
         parameters: {
             query?: never;
@@ -3054,7 +3078,7 @@ export interface paths {
         };
         /**
          * List my orders
-         * @description CustomerBearer. Newest first. Omit brand to include every restaurant. brand=<slug> keeps one restaurant; an unknown slug is 404 RESTAURANT_NOT_FOUND. scope=active is placed, preparing, and ready. scope=past is collected and cancelled. scope=all is both. limit defaults to 20 and cannot exceed 50. Pass next_cursor back as cursor to read the next page. The cursor is opaque. A cursor this server did not issue is 422 INVALID_CURSOR. Customer status (never the internal kitchen status):
+         * @description CustomerBearer. Newest first. Defaults to the restaurant in X-Qwicoo-Brand. brand=<slug> keeps one restaurant; an unknown slug is 404 RESTAURANT_NOT_FOUND. scope=active is placed, preparing, and ready at that restaurant. scope=past is collected and cancelled at that restaurant. scope=all is every restaurant this customer has ordered from. limit defaults to 20 and cannot exceed 50. Pass next_cursor back as cursor to read the next page. The cursor is opaque. A cursor this server did not issue is 422 INVALID_CURSOR. Customer status (never the internal kitchen status):
          *
          *     | What you see | When |
          *     | --- | --- |
@@ -3110,7 +3134,7 @@ export interface paths {
         };
         /**
          * List orders still in progress
-         * @description CustomerBearer. Orders that are placed, being prepared, or ready for pickup, newest first. Collected and cancelled orders are left out. Poll this, or poll one order, every 10–15 seconds while the customer is waiting if the realtime socket is down. The socket is documented on GET /mobile/orders/{order_id}. Customer status (never the internal kitchen status):
+         * @description CustomerBearer. Defaults to the restaurant in X-Qwicoo-Brand. scope=all is every restaurant. Orders that are placed, being prepared, or ready, newest first. Collected and cancelled orders are left out. Poll this, or poll one order, every 10–15 seconds while the customer is waiting if the realtime socket is down. The socket is documented on GET /mobile/orders/{order_id}. Customer status (never the internal kitchen status):
          *
          *     | What you see | When |
          *     | --- | --- |
@@ -3833,6 +3857,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/store-online": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Store online orders for this branch
+         * @description Cashier packing queue for mobile Store lines. Default status is new,packed. Cancelled orders are omitted. Newest first. Kitchen, waiter, and runner roles are 403.
+         */
+        get: operations["list_store_online_orders_api_v1_orders_store_online_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orders/{order_id}": {
         parameters: {
             query?: never;
@@ -3987,6 +4031,46 @@ export interface paths {
         get: operations["list_order_refunds_api_v1_orders__order_id__refunds_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{order_id}/store-online/handed-over": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hand over a Store-only order at the counter
+         * @description Store-only collection after packing. Kitchen lines must use Expo handover. Unpaid orders return 409 PAYMENT_REQUIRED. Unpacked orders return 409 STORE_NOT_PACKED.
+         */
+        post: operations["hand_over_store_online_order_api_v1_orders__order_id__store_online_handed_over_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{order_id}/store-online/packed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Store lines packed
+         * @description Move a Store order from new to packed. A second call is unchanged. Orders without Store lines return 409 NO_STORE_LINES.
+         */
+        post: operations["pack_store_online_order_api_v1_orders__order_id__store_online_packed_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4783,6 +4867,26 @@ export interface paths {
         patch: operations["update_kitchen_station_api_v1_staff_kitchen_stations__station_id__patch"];
         trace?: never;
     };
+    "/api/v1/staff/menu/branches/{branch_id}/store-stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List retail shelf counts for a branch
+         * @description Same roles as PATCH stock, plus cashiers may read. Each row is a retail item at this branch with stock_quantity and reserved_quantity.
+         */
+        get: operations["list_store_stock_api_v1_staff_menu_branches__branch_id__store_stock_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/menu/categories": {
         parameters: {
             query?: never;
@@ -5019,6 +5123,66 @@ export interface paths {
         patch: operations["toggle_option_availability_api_v1_staff_menu_modifier_options__option_id__availability_patch"];
         trace?: never;
     };
+    "/api/v1/staff/mobile-customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List mobile customers of this restaurant
+         * @description Brand admin. Members of this brand with order counts and membership status. A super admin passes brand_id. q matches name, email, or phone. Blocking never changes the global account.
+         */
+        get: operations["list_mobile_customers_api_v1_staff_mobile_customers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/mobile-customers/{customer_id}/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Block a customer at this restaurant
+         * @description Sets the brand membership to blocked. The global account is unchanged.
+         */
+        post: operations["block_mobile_customer_api_v1_staff_mobile_customers__customer_id__block_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/mobile-customers/{customer_id}/unblock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unblock a customer at this restaurant
+         * @description Sets the brand membership back to active. The global account is unchanged.
+         */
+        post: operations["unblock_mobile_customer_api_v1_staff_mobile_customers__customer_id__unblock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/push/public-key": {
         parameters: {
             query?: never;
@@ -5076,6 +5240,26 @@ export interface paths {
          * @description Update staff profile and shift settings with hierarchical authorization.
          */
         patch: operations["update_staff_member_api_v1_staff__staff_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/super-admin/brands/{brand_id}/mobile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Set app directory fields for a brand
+         * @description SUPER_ADMIN only. Writes brands.mobile_featured, mobile_sort_order, mobile_logo_url, and mobile_cover_url. logo_url and cover_url are optional.
+         */
+        patch: operations["update_brand_mobile_api_v1_super_admin_brands__brand_id__mobile_patch"];
         trace?: never;
     };
     "/api/v1/tables/{table_id}": {
@@ -6306,6 +6490,20 @@ export interface components {
             price_override?: number | string | null;
         };
         /**
+         * BranchMobileSettings
+         * @description Mobile channel switches for one branch.
+         */
+        BranchMobileSettings: {
+            /** Curbside */
+            curbside: boolean;
+            /** Drive Thru */
+            drive_thru: boolean;
+            /** Mobile Delivery */
+            mobile_delivery: boolean;
+            /** Mobile Ordering */
+            mobile_ordering: boolean;
+        };
+        /**
          * BranchOfflineConfig
          * @description Offline till settings plus the pricing rules a till needs to total a ticket without the API.
          */
@@ -6783,6 +6981,39 @@ export interface components {
             items: components["schemas"]["BrandResponse"][];
             /** Total */
             total: number;
+        };
+        /**
+         * BrandMobileResponse
+         * @description The app directory fields after a super-admin update.
+         */
+        BrandMobileResponse: {
+            /**
+             * Brand Id
+             * Format: uuid
+             */
+            brand_id: string;
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Featured */
+            featured: boolean;
+            /** Logo Url */
+            logo_url?: string | null;
+            /** Sort Order */
+            sort_order: number;
+        };
+        /**
+         * BrandMobileUpdate
+         * @description App directory fields on a brand. SUPER_ADMIN only.
+         */
+        BrandMobileUpdate: {
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Featured */
+            featured: boolean;
+            /** Logo Url */
+            logo_url?: string | null;
+            /** Sort Order */
+            sort_order: number;
         };
         /**
          * BrandResponse
@@ -9318,6 +9549,11 @@ export interface components {
             ready_ticket_items: number;
             /** Status */
             status: string;
+            /**
+             * Store Pack Status
+             * @description new, packed, or handed_over when the order has Store lines.
+             */
+            store_pack_status?: string | null;
             /** Ticket Items */
             ticket_items?: components["schemas"]["KitchenTicketItemResponse"][];
             /**
@@ -9795,6 +10031,17 @@ export interface components {
              */
             is_available: boolean;
             /**
+             * Item Type
+             * @description PREPARED, RETAIL, or COMBO
+             * @default PREPARED
+             */
+            item_type: string;
+            /**
+             * Max Per Order
+             * @description Most units of this item on one order
+             */
+            max_per_order?: number | null;
+            /**
              * Modifier Groups
              * @description Customization modifier groups
              */
@@ -9955,6 +10202,8 @@ export interface components {
          *             "name": "Zamalek",
          *             "phone": "+20227351234"
          *           },
+         *           "brand_name": "Mousa Cafe",
+         *           "brand_slug": "mousa-cafe",
          *           "can_cancel": true,
          *           "created_at": "2026-10-01T12:00:00Z",
          *           "customer_notes": "I'll be in a white car.",
@@ -10785,6 +11034,8 @@ export interface components {
          *       "items": [
          *         {
          *           "branch_name": "Zamalek",
+         *           "brand_name": "Mousa Cafe",
+         *           "brand_slug": "mousa-cafe",
          *           "created_at": "2026-10-01T12:00:00Z",
          *           "currency": "EGP",
          *           "display_number": "104",
@@ -10862,6 +11113,8 @@ export interface components {
          *         "name": "Zamalek",
          *         "phone": "+20227351234"
          *       },
+         *       "brand_name": "Mousa Cafe",
+         *       "brand_slug": "mousa-cafe",
          *       "can_cancel": true,
          *       "created_at": "2026-10-01T12:00:00Z",
          *       "customer_notes": "I'll be in a white car.",
@@ -10940,6 +11193,16 @@ export interface components {
             arrived_at?: string | null;
             /** @description Branch. */
             branch: components["schemas"]["MobileOrderBranch"];
+            /**
+             * Brand Name
+             * @description Brand Name.
+             */
+            brand_name: string;
+            /**
+             * Brand Slug
+             * @description Brand Slug.
+             */
+            brand_slug: string;
             /**
              * Can Cancel
              * @description Can Cancel.
@@ -11028,6 +11291,8 @@ export interface components {
          * @description A row in the order history list.
          * @example {
          *       "branch_name": "Zamalek",
+         *       "brand_name": "Mousa Cafe",
+         *       "brand_slug": "mousa-cafe",
          *       "created_at": "2026-10-01T12:00:00Z",
          *       "currency": "EGP",
          *       "display_number": "104",
@@ -11044,6 +11309,16 @@ export interface components {
              * @description Branch Name.
              */
             branch_name: string;
+            /**
+             * Brand Name
+             * @description Brand Name.
+             */
+            brand_name: string;
+            /**
+             * Brand Slug
+             * @description Brand Slug.
+             */
+            brand_slug: string;
             /**
              * Created At
              * Format: date-time
@@ -12149,6 +12424,12 @@ export interface components {
             id: string;
             /** Is Bumped */
             is_bumped: boolean;
+            /**
+             * Is Store
+             * @description True when this line is a Store (RETAIL) product.
+             * @default false
+             */
+            is_store: boolean;
             /**
              * Item Id
              * Format: uuid
@@ -14458,7 +14739,7 @@ export interface components {
             drive_thru: boolean;
             /**
              * Pickup
-             * @description True when at least one branch has mobile ordering on.
+             * @description Always false. Plain pickup is refused when ordering.
              */
             pickup: boolean;
         };
@@ -14475,7 +14756,7 @@ export interface components {
          *             "curbside": false,
          *             "delivery": false,
          *             "drive_thru": true,
-         *             "pickup": true
+         *             "pickup": false
          *           },
          *           "has_store": false,
          *           "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -14589,7 +14870,7 @@ export interface components {
          *         "curbside": false,
          *         "delivery": false,
          *         "drive_thru": true,
-         *         "pickup": true
+         *         "pickup": false
          *       },
          *       "has_store": false,
          *       "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -15340,6 +15621,52 @@ export interface components {
             total: number;
         };
         /**
+         * StaffMobileCustomer
+         * @description One membership of a customer at this restaurant.
+         * @example {
+         *       "customer_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+         *       "email": "guest@example.com",
+         *       "full_name": "Mona Ali",
+         *       "joined_at": "2026-10-01T09:00:00Z",
+         *       "last_order_at": "2026-10-16T12:00:00Z",
+         *       "order_count": 3,
+         *       "phone": "+201001234567",
+         *       "status": "active"
+         *     }
+         */
+        StaffMobileCustomer: {
+            /**
+             * Customer Id
+             * Format: uuid
+             */
+            customer_id: string;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Joined At
+             * Format: date-time
+             */
+            joined_at: string;
+            /** Last Order At */
+            last_order_at?: string | null;
+            /** Order Count */
+            order_count: number;
+            /** Phone */
+            phone: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "blocked";
+        };
+        /** StaffMobileCustomerList */
+        StaffMobileCustomerList: {
+            /** Items */
+            items?: components["schemas"]["StaffMobileCustomer"][];
+        };
+        /**
          * StaffModifierGroupCreate
          * @description Payload for creating a modifier group for an item.
          */
@@ -15732,6 +16059,21 @@ export interface components {
         StaffStockUpdate: {
             /** Stock Quantity */
             stock_quantity?: number | string | null;
+        };
+        /**
+         * StaffStoreStockRow
+         * @description Shelf count for one retail item at a branch.
+         */
+        StaffStoreStockRow: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Reserved Quantity */
+            reserved_quantity: string;
+            /** Stock Quantity */
+            stock_quantity: string | null;
         };
         /**
          * StaffUpdateRequest
@@ -17865,7 +18207,7 @@ export interface components {
             items?: components["schemas"]["MobileLineRequest"][];
             /**
              * Payment Method
-             * @description cash is pay at pickup. card opens the restaurant's own Paymob checkout and stays unpaid until Paymob confirms it. demo_wallet spends DEMO credit only when both MOBILE_WALLET_ENABLED and MOBILE_DEMO_WALLET_ENABLED are on. Keep both off in production. A demo wallet payment is stored as LOCAL_WALLET with a DEMO-WALLET- reference. The client cannot mark the order paid.
+             * @description cash is pay at pickup or on delivery. card opens the restaurant's own Paymob checkout and stays unpaid until Paymob confirms it. demo_wallet is not offered; sending it returns 409 PAYMENT_METHOD_NOT_AVAILABLE. The client cannot mark the order paid.
              * @default cash
              * @enum {string}
              */
@@ -17876,6 +18218,11 @@ export interface components {
              * @example WELCOME10
              */
             promo_code?: string | null;
+            /**
+             * Return Url
+             * @description Optional Paymob redirect after a card payment. Must start with qwicoo://. Omit this to keep today's web return page at /api/v1/payments/paymob/return, which still works if the app is not installed or the deep link fails.
+             */
+            return_url?: string | null;
             /**
              * Source
              * @description Source.
@@ -20278,6 +20625,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BranchLogoUploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_branch_mobile_settings_api_v1_branches__branch_id__mobile_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchMobileSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_branch_mobile_settings_api_v1_branches__branch_id__mobile_settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BranchMobileSettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchMobileSettings"];
                 };
             };
             /** @description Validation Error */
@@ -32701,9 +33114,9 @@ export interface operations {
     list_my_orders_api_v1_mobile_orders_get: {
         parameters: {
             query?: {
-                /** @description active, past, or all. */
-                scope?: "active" | "past" | "all";
-                /** @description Restaurant slug. Omit this to include every restaurant. */
+                /** @description active or past for this restaurant. all for every restaurant. */
+                scope?: ("active" | "past" | "all") | null;
+                /** @description Restaurant slug. Overrides the header restaurant. */
                 brand?: string | null;
                 /** @description Page size. Default 20, maximum 50. */
                 limit?: number;
@@ -32727,6 +33140,8 @@ export interface operations {
                      *       "items": [
                      *         {
                      *           "branch_name": "Zamalek",
+                     *           "brand_name": "Mousa Cafe",
+                     *           "brand_slug": "mousa-cafe",
                      *           "created_at": "2026-10-01T12:00:00Z",
                      *           "currency": "EGP",
                      *           "display_number": "104",
@@ -32877,6 +33292,8 @@ export interface operations {
                      *         "name": "Zamalek",
                      *         "phone": "+20227351234"
                      *       },
+                     *       "brand_name": "Mousa Cafe",
+                     *       "brand_slug": "mousa-cafe",
                      *       "can_cancel": true,
                      *       "created_at": "2026-10-01T12:00:00Z",
                      *       "customer_notes": "I'll be in a white car.",
@@ -32961,6 +33378,8 @@ export interface operations {
                      *         "name": "Zamalek",
                      *         "phone": "+20227351234"
                      *       },
+                     *       "brand_name": "Mousa Cafe",
+                     *       "brand_slug": "mousa-cafe",
                      *       "can_cancel": true,
                      *       "created_at": "2026-10-01T12:00:00Z",
                      *       "customer_notes": "I'll be in a white car.",
@@ -33148,7 +33567,10 @@ export interface operations {
     };
     list_active_api_v1_mobile_orders_active_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description all returns every restaurant. Omit this for the header restaurant. */
+                scope?: "all" | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -33173,6 +33595,8 @@ export interface operations {
                      *             "name": "Zamalek",
                      *             "phone": "+20227351234"
                      *           },
+                     *           "brand_name": "Mousa Cafe",
+                     *           "brand_slug": "mousa-cafe",
                      *           "can_cancel": true,
                      *           "created_at": "2026-10-01T12:00:00Z",
                      *           "customer_notes": "I'll be in a white car.",
@@ -33271,6 +33695,15 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
                 };
             };
         };
@@ -33503,6 +33936,8 @@ export interface operations {
                      *         "name": "Zamalek",
                      *         "phone": "+20227351234"
                      *       },
+                     *       "brand_name": "Mousa Cafe",
+                     *       "brand_slug": "mousa-cafe",
                      *       "can_cancel": true,
                      *       "created_at": "2026-10-01T12:00:00Z",
                      *       "customer_notes": "I'll be in a white car.",
@@ -33672,6 +34107,8 @@ export interface operations {
                      *         "name": "Zamalek",
                      *         "phone": "+20227351234"
                      *       },
+                     *       "brand_name": "Mousa Cafe",
+                     *       "brand_slug": "mousa-cafe",
                      *       "can_cancel": true,
                      *       "created_at": "2026-10-01T12:00:00Z",
                      *       "customer_notes": "I'll be in a white car.",
@@ -33878,6 +34315,8 @@ export interface operations {
                      *         "name": "Zamalek",
                      *         "phone": "+20227351234"
                      *       },
+                     *       "brand_name": "Mousa Cafe",
+                     *       "brand_slug": "mousa-cafe",
                      *       "can_cancel": false,
                      *       "created_at": "2026-10-01T12:00:00Z",
                      *       "customer_notes": "I'll be in a white car.",
@@ -34100,6 +34539,21 @@ export interface operations {
                     /**
                      * @example {
                      *       "code": "ORDER_NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: NOT_A_PICKUP_ORDER, PAYMENT_AWAITING, PAYMENT_EXPIRED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_A_PICKUP_ORDER",
                      *       "detail": "A short explanation of what went wrong."
                      *     }
                      */
@@ -35212,7 +35666,7 @@ export interface operations {
                      *             "curbside": false,
                      *             "delivery": false,
                      *             "drive_thru": true,
-                     *             "pickup": true
+                     *             "pickup": false
                      *           },
                      *           "has_store": false,
                      *           "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -35298,7 +35752,7 @@ export interface operations {
                      *         "curbside": false,
                      *         "delivery": false,
                      *         "drive_thru": true,
-                     *         "pickup": true
+                     *         "pickup": false
                      *       },
                      *       "has_store": false,
                      *       "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -37379,6 +37833,85 @@ export interface operations {
             };
         };
     };
+    list_store_online_orders_api_v1_orders_store_online_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation failed: INPUT_VALIDATION_FAILED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INPUT_VALIDATION_FAILED",
+                     *       "detail": "A short explanation of what went wrong.",
+                     *       "errors": [
+                     *         {
+                     *           "loc": [
+                     *             "body",
+                     *             "field"
+                     *           ],
+                     *           "msg": "Field required",
+                     *           "type": "missing"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
     get_staff_order_api_v1_orders__order_id__get: {
         parameters: {
             query?: never;
@@ -37690,6 +38223,188 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentRefundResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hand_over_store_online_order_api_v1_orders__order_id__store_online_handed_over_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: NO_STORE_LINES, ORDER_CANCELLED, STORE_NOT_PACKED, STORE_HAS_KITCHEN_ITEMS, PAYMENT_REQUIRED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NO_STORE_LINES",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pack_store_online_order_api_v1_orders__order_id__store_online_packed_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unauthorized: TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "TOKEN_INVALID",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: NO_STORE_LINES, ORDER_CANCELLED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NO_STORE_LINES",
+                     *       "detail": "A short explanation of what went wrong."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -39104,6 +39819,37 @@ export interface operations {
             };
         };
     };
+    list_store_stock_api_v1_staff_menu_branches__branch_id__store_stock_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffStoreStockRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_category_api_v1_staff_menu_categories_post: {
         parameters: {
             query?: never;
@@ -39624,6 +40370,104 @@ export interface operations {
             };
         };
     };
+    list_mobile_customers_api_v1_staff_mobile_customers_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                brand_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffMobileCustomerList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    block_mobile_customer_api_v1_staff_mobile_customers__customer_id__block_post: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+            };
+            header?: never;
+            path: {
+                customer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffMobileCustomer"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unblock_mobile_customer_api_v1_staff_mobile_customers__customer_id__unblock_post: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+            };
+            header?: never;
+            path: {
+                customer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffMobileCustomer"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_public_key_api_v1_staff_push_public_key_get: {
         parameters: {
             query?: never;
@@ -39765,6 +40609,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_brand_mobile_api_v1_super_admin_brands__brand_id__mobile_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandMobileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandMobileResponse"];
                 };
             };
             /** @description Validation Error */

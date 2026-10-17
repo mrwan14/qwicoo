@@ -67,6 +67,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...PLATFORM],
   },
   {
+    href: "/app/mobile-customers",
+    labelKey: "qwicooCustomers",
+    group: "brandOps",
+    shell: "admin",
+    phase: 5,
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN"],
+  },
+  {
     href: "/app/menu",
     labelKey: "menu",
     group: "brandOps",

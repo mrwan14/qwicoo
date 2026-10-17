@@ -421,6 +421,40 @@ function QwicooAppPanel({ brandId }: { brandId: string }) {
   });
   const enabled = (key: string) => features.data?.some((item) => item.feature_key === key && item.is_enabled_by_super_admin) ?? false;
   const mobileOn = enabled("MOBILE_APP");
+  const [featured, setFeatured] = useState(false);
+  const [sortOrder, setSortOrder] = useState("0");
+  const [logoUrl, setLogoUrl] = useState<string | null | undefined>(undefined);
+  const [coverUrl, setCoverUrl] = useState<string | null | undefined>(undefined);
+  const directory = useMutation({
+    mutationFn: async () => {
+      const body: components["schemas"]["BrandMobileUpdate"] = {
+        featured,
+        sort_order: Number(sortOrder) || 0,
+        ...(logoUrl !== undefined ? { logo_url: logoUrl } : {}),
+        ...(coverUrl !== undefined ? { cover_url: coverUrl } : {}),
+      };
+      const result = await browserApi.PATCH("/api/v1/super-admin/brands/{brand_id}/mobile", {
+        params: { path: { brand_id: brandId } },
+        body,
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.qwicooSaveFailed);
+      return result.data;
+    },
+    onSuccess: (saved) => {
+      setFeatured(saved.featured);
+      setSortOrder(String(saved.sort_order));
+      setLogoUrl(saved.logo_url ?? null);
+      setCoverUrl(saved.cover_url ?? null);
+      toast.success(t.directorySaved);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  async function pickAppImage(file: File, kind: "logo" | "cover") {
+    await uploadLogo(file, "brands", async (publicUrl) => {
+      if (kind === "logo") setLogoUrl(publicUrl);
+      else setCoverUrl(publicUrl);
+    }, { url: t.uploadUrlFailed, upload: t.uploadFailed });
+  }
 
   return (
     <section className="grid gap-3 border bg-card p-4">
@@ -453,6 +487,42 @@ function QwicooAppPanel({ brandId }: { brandId: string }) {
         ))}
       </ul>
       <Link href="/app/features" className="text-sm underline-offset-2 hover:underline">{t.featuresLink}</Link>
+      <form
+        className="grid gap-3 border p-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          directory.mutate();
+        }}
+      >
+        <p className="text-sm leading-6 text-muted-foreground">{t.logoFallback}</p>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={featured} onChange={(event) => setFeatured(event.target.checked)} />
+          {t.featured}
+        </label>
+        <label className="grid gap-1 text-sm">
+          {t.sortOrder}
+          <input className="h-11 border bg-background px-3 text-sm" inputMode="numeric" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} />
+        </label>
+        <label className="grid gap-1 text-sm">
+          {t.appLogo}
+          <input className="h-11 border bg-background px-3 text-sm" type="file" accept="image/*" onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            void pickAppImage(file, "logo").catch((error: unknown) => toast.error(error instanceof Error ? error.message : t.uploadFailed));
+          }} />
+          {logoUrl ? <button type="button" className="min-h-11 w-fit border px-3 text-sm" onClick={() => setLogoUrl(null)}>{t.clearImage}</button> : null}
+        </label>
+        <label className="grid gap-1 text-sm">
+          {t.appCover}
+          <input className="h-11 border bg-background px-3 text-sm" type="file" accept="image/*" onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            void pickAppImage(file, "cover").catch((error: unknown) => toast.error(error instanceof Error ? error.message : t.uploadFailed));
+          }} />
+          {coverUrl ? <button type="button" className="min-h-11 w-fit border px-3 text-sm" onClick={() => setCoverUrl(null)}>{t.clearImage}</button> : null}
+        </label>
+        <button type="submit" className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={directory.isPending}>{t.saveDirectory}</button>
+      </form>
     </section>
   );
 }

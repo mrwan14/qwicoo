@@ -53,7 +53,7 @@ export function OrdersScreen() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [source, setSource] = useState("");
-  const [channel, setChannel] = useState<"" | "mobile" | "delivery">("");
+  const [channel, setChannel] = useState<"" | "mobile" | "delivery" | "store">("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paid, setPaid] = useState<"" | "true" | "false">("");
   const [dateFrom, setDateFrom] = useState(today);
@@ -62,7 +62,7 @@ export function OrdersScreen() {
     search: "",
     status: "",
     source: "",
-    channel: "" as "" | "mobile" | "delivery",
+    channel: "" as "" | "mobile" | "delivery" | "store",
     paymentMethod: "",
     paid: "" as "" | "true" | "false",
     dateFrom: today,
@@ -89,8 +89,17 @@ export function OrdersScreen() {
           },
         },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data as StaffOrderListResponse;
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      const data = result.data as StaffOrderListResponse;
+      if (applied.channel !== "store") return data;
+      const flags = await Promise.all(data.items.map(async (row) => {
+        const detail = await browserApi.GET("/api/v1/orders/{order_id}", {
+          params: { path: { order_id: row.id } },
+        });
+        if (!detail.response.ok || !detail.data) return false;
+        return (detail.data.items ?? []).some((item) => item.is_store);
+      }));
+      return { ...data, items: data.items.filter((_, index) => flags[index]) };
     },
   });
 
@@ -204,10 +213,11 @@ export function OrdersScreen() {
         </label>
         <label className="grid gap-1 text-sm">
           {t.channel}
-          <select className={control} value={channel} onChange={(event) => setChannel(event.target.value as "" | "mobile" | "delivery")}>
+          <select className={control} value={channel} onChange={(event) => setChannel(event.target.value as "" | "mobile" | "delivery" | "store")}>
             <option value="">{t.any}</option>
             <option value="mobile">{t.mobile}</option>
             <option value="delivery">{t.delivery}</option>
+            <option value="store">{t.store}</option>
           </select>
         </label>
         <label className="grid gap-1 text-sm">

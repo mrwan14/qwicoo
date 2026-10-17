@@ -116,6 +116,63 @@ export function BranchScreen({ branchId }: { branchId: string }) {
 
 const square = "h-11 w-full border bg-background px-3 text-sm";
 
+function BranchMobileSwitches({ branchId }: { branchId: string }) {
+  const t = useStaffSection(branchCopy);
+  const queryClient = useQueryClient();
+  const settings = useQuery({
+    queryKey: ["mobile-settings", branchId],
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/branches/{branch_id}/mobile-settings", {
+        params: { path: { branch_id: branchId } },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.switchesFailed);
+      return result.data;
+    },
+  });
+  const save = useMutation({
+    mutationFn: async (next: components["schemas"]["BranchMobileSettings"]) => {
+      const result = await browserApi.PATCH("/api/v1/branches/{branch_id}/mobile-settings", {
+        params: { path: { branch_id: branchId } },
+        body: next,
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.switchesFailed);
+      return result.data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["mobile-settings", branchId], data);
+      toast.success(t.switchesSaved);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  if (settings.isLoading) return <p className={hint}>{t.checkingFee}</p>;
+  if (settings.isError || !settings.data) return <p className="text-sm text-destructive">{settings.error?.message ?? t.switchesFailed}</p>;
+  const current = settings.data;
+  const rows = [
+    ["mobile_ordering", t.mobileOrdering],
+    ["curbside", t.curbside],
+    ["drive_thru", t.driveThru],
+    ["mobile_delivery", t.mobileDelivery],
+  ] as const;
+  return (
+    <ul className="grid gap-2">
+      {rows.map(([key, label]) => (
+        <li key={key} className="flex items-center justify-between gap-3 border px-3 py-2 text-sm">
+          <span>{label}</span>
+          <button
+            type="button"
+            className="min-h-11 border px-3 disabled:opacity-50"
+            disabled={save.isPending}
+            aria-pressed={current[key]}
+            onClick={() => save.mutate({ ...current, [key]: !current[key] })}
+          >
+            {current[key] ? t.switchOn : t.switchOff}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function QwicooTab({ branchId }: { branchId: string }) {
   const t = useStaffSection(branchCopy);
   const { locale } = useLocale();
@@ -166,8 +223,8 @@ function QwicooTab({ branchId }: { branchId: string }) {
       <div className="grid gap-1">
         <h2 className="font-medium">{t.tabs.qwicoo}</h2>
         <p className={hint}>{t.qwicooHint}</p>
-        <p className={hint}>{t.switchesHidden}</p>
       </div>
+      <BranchMobileSwitches branchId={branchId} />
       <Link href="/app/delivery" className="text-sm underline-offset-2 hover:underline">{t.zones}</Link>
       <form
         className="grid gap-3"

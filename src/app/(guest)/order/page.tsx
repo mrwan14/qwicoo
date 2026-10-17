@@ -3,7 +3,7 @@ import { MenuScreen } from "@/features/guest/menu-screen";
 
 export default function OrderPage() {
   return (
-    <GuestShell>
+    <GuestShell menu>
       <MenuScreen />
     </GuestShell>
   );

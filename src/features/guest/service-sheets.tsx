@@ -18,7 +18,7 @@ import {
   waiterReasonTypes,
   type ServiceRequestType,
 } from "@/features/guest/service-request";
-import { guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
+import { guestField, guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
 
 export function WaiterSheet({
   open,
@@ -103,7 +103,7 @@ export function WaiterSheet({
       <label className="mt-4 grid gap-1.5 guest-title">
         {t.serviceNote}
         <textarea
-          className="min-h-20 w-full rounded-[var(--guest-radius-card)] border border-[var(--guest-line)] bg-white px-3 py-2.5 text-base font-normal shadow-[var(--guest-shadow-soft)] outline-none focus:border-[var(--guest-orange)]"
+          className={`${guestField} min-h-24 py-3`}
           value={note}
           disabled={sent}
           onChange={(event) => setNote(event.target.value)}

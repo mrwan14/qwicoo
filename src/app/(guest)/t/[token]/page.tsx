@@ -5,7 +5,7 @@ import { QwicooSplash } from "@/features/guest/qwicoo-splash";
 export default async function TablePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   return (
-    <GuestShell neutral>
+    <GuestShell neutral header={false}>
       <QwicooSplash sessionKey={token} />
       <PresenceForm token={token} />
     </GuestShell>

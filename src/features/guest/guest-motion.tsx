@@ -61,10 +61,10 @@ export function GuestMotionSkeleton({ label }: { label?: string }) {
 
   return (
     <div ref={root} role="status" className="grid gap-3" aria-live="polite">
-      <div className="guest-skel-bar h-8 w-36 rounded-[var(--guest-radius-btn)] bg-[var(--guest-muted)]" />
-      <div className="guest-skel-bar h-24 w-full rounded-[var(--guest-radius-card)] bg-[var(--guest-muted)]" />
-      <div className="guest-skel-bar h-14 w-full rounded-[var(--guest-radius-btn)] bg-[var(--guest-muted)]" />
-      <div className="guest-skel-bar h-14 w-3/4 rounded-[var(--guest-radius-btn)] bg-[var(--guest-muted)]" />
+      <div className="guest-skel-bar h-8 w-36" />
+      <div className="guest-skel-bar h-24 w-full" />
+      <div className="guest-skel-bar h-14 w-full" />
+      <div className="guest-skel-bar h-14 w-3/4" />
       {label ? <span className="sr-only">{label}</span> : null}
     </div>
   );
@@ -177,10 +177,10 @@ export function OrderWaitingScene({
           <span className="guest-wait-mark grid place-items-center">
             {mode === "preparing" ? (
               <svg className="guest-wait-spin size-9" viewBox="0 0 36 36" fill="none" aria-hidden>
-                <circle cx="18" cy="18" r="14" stroke="rgb(255 255 255 / 0.28)" strokeWidth="3" />
+                <circle cx="18" cy="18" r="14" stroke="color-mix(in srgb, var(--guest-on-accent) 28%, transparent)" strokeWidth="3" />
                 <path
                   d="M18 4a14 14 0 0 1 14 14"
-                  stroke="#fff"
+                  stroke="var(--guest-on-accent)"
                   strokeWidth="3"
                   strokeLinecap="round"
                 />
@@ -205,6 +205,101 @@ export function OrderWaitingScene({
       </div>
 
       {children ? <div className="guest-wait-actions grid gap-2">{children}</div> : null}
+    </div>
+  );
+}
+
+/** The host sets a place: the table draws, a card settles, then the menu button is ready. */
+export function GuestWelcome({
+  kicker,
+  title,
+  body,
+  badge,
+  children,
+}: {
+  kicker?: string;
+  title: string;
+  body?: string;
+  badge?: string;
+  children?: ReactNode;
+}) {
+  const root = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const strokes = root.current?.querySelectorAll<SVGGeometryElement>(".guest-hello-stroke") ?? [];
+      for (const shape of strokes) {
+        const length = shape.getTotalLength();
+        gsap.set(shape, { strokeDasharray: length, strokeDashoffset: length });
+      }
+
+      if (guestPrefersReducedMotion()) {
+        gsap.set(strokes, { strokeDashoffset: 0 });
+        gsap.set(".guest-hello-glow, .guest-hello-card, .guest-hello-copy > *, .guest-hello-actions", {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          rotateX: 0,
+          clearProps: "transform",
+        });
+        return;
+      }
+
+      const intro = gsap.timeline({ defaults: { ease: guestEase } });
+      intro
+        .from(".guest-hello-glow", { scale: 0.45, opacity: 0, duration: 0.9 })
+        .to(".guest-hello-table", { strokeDashoffset: 0, duration: 0.75 }, 0.05)
+        .to(".guest-hello-rim", { strokeDashoffset: 0, duration: 0.65 }, 0.28)
+        .to(".guest-hello-plate", { strokeDashoffset: 0, duration: 0.55 }, 0.45)
+        .from(
+          ".guest-hello-card",
+          { rotateX: 72, y: 28, opacity: 0, duration: 0.8, transformOrigin: "50% 130%" },
+          0.5,
+        )
+        .from(".guest-hello-copy > *", { y: 12, opacity: 0, duration: 0.4, stagger: 0.08 }, 0.85)
+        .from(".guest-hello-line", { scaleX: 0, duration: 0.45, transformOrigin: "50% 50%" }, 1.05)
+        .from(
+          ".guest-hello-badge",
+          { scale: 0.4, rotation: -12, opacity: 0, duration: 0.45, ease: "back.out(1.8)" },
+          1.15,
+        )
+        .from(".guest-hello-spark", { scale: 0, opacity: 0, duration: 0.25, stagger: 0.04 }, 1.05)
+        .to(".guest-hello-spark", { y: -36, opacity: 0, duration: 0.8, stagger: 0.05, ease: "power1.out" }, 1.25)
+        .from(".guest-hello-actions", { y: 22, opacity: 0, duration: 0.45 }, 1.15);
+    },
+    { scope: root },
+  );
+
+  return (
+    <div ref={root} className="flex min-h-0 flex-1 flex-col">
+      <div className="guest-hello-stage relative flex flex-1 items-center justify-center">
+        <div className="guest-hello-glow pointer-events-none absolute size-72 rounded-full" aria-hidden />
+        <svg className="guest-hello-setting pointer-events-none absolute" viewBox="0 0 320 260" aria-hidden>
+          <ellipse className="guest-hello-stroke guest-hello-table" cx="160" cy="168" rx="146" ry="38" />
+          <circle className="guest-hello-stroke guest-hello-rim" cx="160" cy="118" r="96" />
+          <circle className="guest-hello-stroke guest-hello-plate" cx="160" cy="118" r="74" />
+        </svg>
+        <svg className="guest-hello-utensil guest-hello-fork" viewBox="0 0 16 44" aria-hidden>
+          <path className="guest-hello-stroke guest-hello-plate" d="M8 6v32M4 6v10M12 6v10" />
+        </svg>
+        <svg className="guest-hello-utensil guest-hello-knife" viewBox="0 0 16 44" aria-hidden>
+          <path className="guest-hello-stroke guest-hello-plate" d="M8 6v32M4 6h8v10H4z" />
+        </svg>
+        <span className="guest-hello-spark pointer-events-none absolute start-[18%] top-[22%]" aria-hidden />
+        <span className="guest-hello-spark pointer-events-none absolute end-[16%] top-[18%]" aria-hidden />
+        <span className="guest-hello-spark guest-hello-spark-sage pointer-events-none absolute start-[12%] bottom-[28%]" aria-hidden />
+        <span className="guest-hello-spark pointer-events-none absolute end-[14%] bottom-[24%]" aria-hidden />
+        <div className="guest-hello-card relative z-[1] w-[15rem] max-w-[78%] px-5 py-6 text-center">
+          <div className="guest-hello-copy grid justify-items-center gap-3">
+            {kicker ? <p className="guest-caption">{kicker}</p> : null}
+            <h1 className="guest-display text-[1.75rem] leading-tight">{title}</h1>
+            <span className="guest-hello-line" aria-hidden />
+            {body ? <p className="guest-body">{body}</p> : null}
+            {badge ? <p className="guest-hello-badge guest-badge guest-badge-accent">{badge}</p> : null}
+          </div>
+        </div>
+      </div>
+      {children ? <div className="guest-hello-actions mt-auto grid gap-3">{children}</div> : null}
     </div>
   );
 }

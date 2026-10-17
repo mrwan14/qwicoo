@@ -52,7 +52,14 @@ export function useCategoryScrollSpy(categoryIds: readonly string[], stickyOffse
   useEffect(() => {
     if (!activeId) return;
     const tab = tabRefs.current.get(activeId);
-    tab?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    const strip = tab?.parentElement;
+    if (!tab || !strip) return;
+    const tabBox = tab.getBoundingClientRect();
+    const stripBox = strip.getBoundingClientRect();
+    const delta = tabBox.left + tabBox.width / 2 - (stripBox.left + stripBox.width / 2);
+    if (Math.abs(delta) < 8) return;
+    // Move the pill row only. A smooth scrollIntoView also drags the page and fights the finger.
+    strip.scrollLeft += delta;
   }, [activeId]);
 
   function registerTab(id: string, node: HTMLElement | null) {
@@ -63,9 +70,10 @@ export function useCategoryScrollSpy(categoryIds: readonly string[], stickyOffse
   function scrollToCategory(id: string) {
     const section = document.getElementById(`cat-${id}`);
     if (!section) return;
-    suppressUntil.current = Date.now() + 600;
+    suppressUntil.current = Date.now() + 700;
     setActiveId(id);
-    section.scrollIntoView({ behavior: "smooth", block: "start" });
+    const top = section.getBoundingClientRect().top + window.scrollY - stickyOffsetPx;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
   }
 
   return { activeId, registerTab, scrollToCategory };

@@ -1,16 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Coffee, Search, Users } from "lucide-react";
 import { Logo } from "@/components/ops/logo";
-import { ErrorState, LoadingState } from "@/components/ops/states";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { guestCopy } from "@/features/guest/copy";
 import { GuestAboutPanel, GuestDrawer, type GuestDrawerAction } from "@/features/guest/guest-drawer";
 import { BillSheet, WaiterSheet } from "@/features/guest/service-sheets";
-import { OrderingPausedNotice, isGuestUnreachable, useOrderingPaused } from "@/features/guest/ordering-status";
+import { GuestSkeleton, OrderingPausedNotice, isGuestUnreachable, useOrderingPaused } from "@/features/guest/ordering-status";
 import { guestTableToken, isGuestSessionGone, recoverGuestSession } from "@/features/guest/session";
-import { initials } from "@/lib/auth/scope";
-import { accentForeground, mergeGuestBranding, sameBranding } from "@/lib/guest/branding";
+import { mergeGuestBranding, sameBranding } from "@/lib/guest/branding";
 import { mediaUrl } from "@/lib/media";
 import { useGuest } from "@/stores/guest";
 
@@ -21,6 +20,64 @@ export const guestPrimaryButton = "guest-btn guest-btn-primary guest-motion";
 export const guestSecondaryButton = "guest-btn guest-btn-secondary guest-motion";
 export const guestGhostButton = "guest-btn guest-btn-ghost guest-motion";
 export const guestIconButton = "guest-btn guest-btn-icon guest-motion";
+
+const OpenDrawerContext = createContext<() => void>(() => {});
+
+export function useOpenGuestDrawer() {
+  return useContext(OpenDrawerContext);
+}
+
+const MenuChromeContext = createContext({ searchOpen: false, toggleSearch: () => {} });
+
+export function useMenuChrome() {
+  return useContext(MenuChromeContext);
+}
+
+function MenuTopBar() {
+  const { t } = useGuestCopy();
+  const openDrawer = useOpenGuestDrawer();
+  const { searchOpen, toggleSearch } = useMenuChrome();
+  const placeLabel = useGuestPlaceLabel();
+  const branding = useGuest((state) => state.branding);
+  const branchName = useGuest((state) => state.session?.branchName ?? null);
+  const tableNumber = useGuest((state) => state.session?.tableNumber);
+  const [logoFailed, setLogoFailed] = useState(false);
+  const logo = branding?.logoUrl && !logoFailed ? mediaUrl(branding.logoUrl) : null;
+
+  return (
+    <header className="flex items-center gap-3 px-5 py-2">
+      <button type="button" className="guest-menu-avatar guest-motion" aria-label={t.openMenu} onClick={openDrawer}>
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logo} alt="" className="size-full object-cover" onError={() => setLogoFailed(true)} />
+        ) : (
+          <Coffee className="size-5" aria-hidden />
+        )}
+      </button>
+      <div className="min-w-0 flex-1">
+        <p className="guest-menu-name truncate">{branding?.name || branchName || t.restaurant}</p>
+        {branchName && branding?.name && branchName !== branding.name ? (
+          <p className="truncate text-[11px] leading-[13px] text-[var(--guest-faint)]">{branchName}</p>
+        ) : null}
+      </div>
+      {tableNumber ? (
+        <span className="guest-badge guest-badge-place shrink-0 gap-1.5">
+          <Users className="size-3" aria-hidden />
+          {placeLabel}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        className="guest-menu-search guest-motion"
+        aria-label={t.searchMenu}
+        aria-pressed={searchOpen}
+        onClick={toggleSearch}
+      >
+        <Search className="size-[18px]" aria-hidden />
+      </button>
+    </header>
+  );
+}
 
 export function useGuestCopy() {
   const locale = useGuest((state) => state.locale);
@@ -80,34 +137,25 @@ export function LineDetails({ modifiers, note }: { modifiers: readonly string[];
 function BrandHeader() {
   const branding = useGuest((state) => state.branding);
   const branchName = useGuest((state) => state.session?.branchName ?? null);
-  const placeLabel = useGuestPlaceLabel();
   const [logoFailed, setLogoFailed] = useState(false);
   const name = branding?.name ?? branchName;
+  const branchCaption = branding?.name && branchName && branchName !== branding.name ? branchName : null;
   if (!name) {
-    return (
-      <span className="min-w-0">
-        <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-2xl" />
-        <p className="truncate text-sm text-[var(--guest-quiet)]">{placeLabel}</p>
-      </span>
-    );
+    return <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-2xl" />;
   }
 
   const logo = branding?.logoUrl && !logoFailed ? mediaUrl(branding.logoUrl) : null;
   return (
     <span className="inline-flex min-w-0 items-center gap-2.5">
-      <span className="guest-thumb flex size-9 shrink-0 items-center justify-center overflow-hidden bg-[var(--guest-muted)] text-xs font-bold text-[var(--guest-ink)]">
-        {logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt={name} className="size-full object-contain p-0.5" onError={() => setLogoFailed(true)} />
-        ) : (
-          <span aria-hidden>{initials(name)}</span>
-        )}
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-[15px] font-extrabold leading-tight text-[var(--guest-ink)]">{name}</span>
-        <span className="block truncate text-[11px] font-medium text-[var(--guest-quiet)]">
-          {[branchName && branding?.name ? branchName : null, placeLabel].filter(Boolean).join(" · ")}
+      {logo ? (
+        <span className="guest-thumb flex size-9 shrink-0 items-center justify-center overflow-hidden bg-[var(--guest-sunken)] text-xs font-bold text-[var(--guest-ink)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo} alt="" className="size-full object-contain p-0.5" onError={() => setLogoFailed(true)} />
         </span>
+      ) : null}
+      <span className="min-w-0">
+        <span className="guest-display block truncate text-[1.25rem]">{name}</span>
+        {branchCaption ? <span className="guest-caption block truncate">{branchCaption}</span> : null}
       </span>
     </span>
   );
@@ -166,7 +214,7 @@ export function GuestResume({ children }: { children: ReactNode }) {
     };
   }, [storedToken]);
 
-  if (!ready) return <LoadingState label={t.rejoining} />;
+  if (!ready) return <GuestSkeleton label={t.rejoining} />;
   if (session) return children;
   return <RejoinTable message={failed ? t.sessionGone : undefined} />;
 }
@@ -193,7 +241,7 @@ export function GuestQueryError({
   }, [gone, token, retried, onRetry]);
 
   if (gone) {
-    if (token && !retried) return <LoadingState label={t.rejoining} />;
+    if (token && !retried) return <GuestSkeleton label={t.rejoining} />;
     return <RejoinTable />;
   }
 
@@ -209,12 +257,13 @@ export function GuestQueryError({
   }
 
   return (
-    <ErrorState
-      title={t.oopsTitle}
-      body={error instanceof Error ? error.message : t.oops}
-      onRetry={onRetry}
-      retryLabel={t.retry}
-    />
+    <div role="alert" className="guest-alert guest-alert-error grid gap-3">
+      <h2 className="guest-display text-xl">{t.oopsTitle}</h2>
+      <p className="guest-body">{error instanceof Error ? error.message : t.oops}</p>
+      <button type="button" className={guestPrimaryButton} onClick={onRetry}>
+        {t.retry}
+      </button>
+    </div>
   );
 }
 
@@ -222,17 +271,24 @@ export function GuestShell({
   children,
   neutral = false,
   resume = !neutral,
+  header = true,
+  menu = false,
 }: {
   children: ReactNode;
   neutral?: boolean;
   /** Recover a dropped table session. Off for pickup and the join form. */
   resume?: boolean;
+  /** The join flow draws its own top bar. Menu and order keep this one. */
+  header?: boolean;
+  /** Menu screen draws the Palette F header itself. */
+  menu?: boolean;
 }) {
   const { t, locale, dir, setLocale } = useGuestCopy();
-  const accent = useGuest((state) => (neutral ? null : (state.branding?.accent ?? null)));
   const paused = useOrderingPaused();
   const placeLabel = useGuestPlaceLabel();
+  const tableNumber = useGuest((state) => state.session?.tableNumber);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [waiterOpen, setWaiterOpen] = useState(false);
   const [billOpen, setBillOpen] = useState(false);
@@ -240,15 +296,6 @@ export function GuestShell({
   useEffect(() => {
     void useGuest.persist.rehydrate();
   }, []);
-
-  const style = accent
-    ? ({
-        "--primary": accent,
-        "--guest-orange": accent,
-        "--primary-foreground": accentForeground(accent),
-        "--ring": accent,
-      } as CSSProperties)
-    : undefined;
 
   function onDrawerAction(action: GuestDrawerAction) {
     if (action === "about") {
@@ -266,14 +313,17 @@ export function GuestShell({
   }
 
   return (
-    <div dir={dir} lang={locale} style={style} className="guest-theme min-h-dvh overflow-x-hidden">
+    <MenuChromeContext.Provider value={{ searchOpen, toggleSearch: () => setSearchOpen((open) => !open) }}>
+    <OpenDrawerContext.Provider value={() => setDrawerOpen(true)}>
+    <div dir={dir} lang={locale} className="guest-theme min-h-dvh">
       <div className="guest-phone">
-        <header className="flex items-center justify-between gap-2.5 px-4 pb-1.5 pt-2.5">
+        {menu ? <MenuTopBar /> : null}
+        {header && !menu ? <header className="flex items-center justify-between gap-2.5 px-5 pb-1.5 pt-3">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {!neutral ? (
               <button
                 type="button"
-                className="guest-btn guest-motion !h-10 !w-10 !min-h-10 shrink-0 !rounded-[10px] !border-0 !bg-[var(--guest-orange-soft)] !p-0 !text-[var(--guest-orange)] !shadow-none"
+                className="guest-icon-btn guest-motion shrink-0"
                 aria-label={t.openMenu}
                 onClick={() => setDrawerOpen(true)}
               >
@@ -286,17 +336,30 @@ export function GuestShell({
             ) : null}
             {neutral ? <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-xl" /> : <BrandHeader />}
           </div>
+          {!neutral && tableNumber ? (
+            <span className="guest-badge guest-badge-place shrink-0">{placeLabel}</span>
+          ) : null}
           <button
             type="button"
-            className="guest-btn guest-motion !h-9 !min-h-9 !w-auto shrink-0 !rounded-full !border-0 !bg-[var(--guest-muted)] !px-3.5 !text-xs !font-bold !shadow-none"
+            className="guest-lang guest-motion shrink-0"
             onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
           >
             {t.language}
           </button>
-        </header>
-        <div className="grid gap-3 px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1">
+        </header> : null}
+        <div
+          className={
+            menu
+              ? "grid min-w-0 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
+              : header
+              ? "grid min-w-0 gap-3 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1"
+              : "flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4"
+          }
+        >
           {paused ? <OrderingPausedNotice /> : null}
-          <div>{resume ? <GuestResume>{children}</GuestResume> : children}</div>
+          <div className={header ? undefined : "flex min-h-0 flex-1 flex-col"}>
+            {resume ? <GuestResume>{children}</GuestResume> : children}
+          </div>
         </div>
       </div>
       {!neutral ? (
@@ -330,5 +393,7 @@ export function GuestShell({
         </>
       ) : null}
     </div>
+    </OpenDrawerContext.Provider>
+    </MenuChromeContext.Provider>
   );
 }

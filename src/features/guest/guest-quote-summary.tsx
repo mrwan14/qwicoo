@@ -34,9 +34,11 @@ export function GuestQuoteSummary({
           <Money amount={amount} currency={currency} locale={locale} />
         </p>
       ))}
-      <p className="flex justify-between gap-3 text-base font-semibold">
+      <p className="mt-2 flex justify-between gap-3 border-t border-[var(--guest-line)] pt-2 text-base font-semibold">
         <span>{labels.total}</span>
-        <Money amount={figures.total} currency={currency} locale={locale} />
+        <span className="guest-price" dir="ltr">
+          <Money amount={figures.total} currency={currency} locale={locale} />
+        </span>
       </p>
     </div>
   );

@@ -22,7 +22,7 @@ export function GuestDrawer({
   onAction: (action: GuestDrawerAction) => void;
   placeLabel: string;
 }) {
-  const { t, dir } = useGuestCopy();
+  const { t, dir, locale, setLocale } = useGuestCopy();
   const branding = useGuest((state) => state.branding);
   const [logoFailed, setLogoFailed] = useState(false);
   const logo = branding?.logoUrl && !logoFailed ? mediaUrl(branding.logoUrl) : null;
@@ -104,9 +104,18 @@ export function GuestDrawer({
           })}
         </nav>
 
-        <div className="mt-auto px-4 py-4 text-sm text-[var(--guest-quiet)]">
-          <p className="font-medium text-[var(--guest-ink)]">{placeLabel}</p>
-          <p className="mt-1">{t.poweredBy}</p>
+        <div className="mt-auto grid gap-3 px-4 py-4 text-sm text-[var(--guest-quiet)]">
+          <button
+            type="button"
+            className="guest-btn guest-btn-secondary guest-motion !h-11 !min-h-11"
+            onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
+          >
+            {t.language}
+          </button>
+          <div>
+            <p className="font-medium text-[var(--guest-ink)]">{placeLabel}</p>
+            <p className="mt-1">{t.poweredBy}</p>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

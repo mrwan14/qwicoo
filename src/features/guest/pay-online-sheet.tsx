@@ -114,12 +114,14 @@ export function PayOnlineSheet({
             pay.mutate();
           }}
         >
-          <p className="text-sm text-[var(--guest-quiet)]">
+          <p className="guest-body">
             {t.payRemaining.split("{amount}")[0]}
-            <Money amount={remaining} currency={order.payments?.[0]?.currency ?? "EGP"} locale={locale} />
+            <span className="guest-price guest-price-accent" dir="ltr">
+              <Money amount={remaining} currency={order.payments?.[0]?.currency ?? "EGP"} locale={locale} />
+            </span>
             {t.payRemaining.split("{amount}")[1]}
           </p>
-          <label className="grid gap-1 text-sm font-semibold">
+          <label className="grid gap-1.5 guest-title">
             {t.payAmount}
             <input
               className="guest-field"
@@ -131,7 +133,7 @@ export function PayOnlineSheet({
               }}
             />
           </label>
-          <label className="grid gap-1 text-sm font-semibold">
+          <label className="grid gap-1.5 guest-title">
             {t.payPhone}
             <input
               className="guest-field"
@@ -144,10 +146,10 @@ export function PayOnlineSheet({
                 setError(null);
               }}
             />
-            <span className="text-xs font-normal text-[var(--guest-quiet)]">{t.payPhoneHint}</span>
+            <span className="guest-caption font-normal">{t.payPhoneHint}</span>
           </label>
           {error ? (
-            <p role="alert" className="text-sm text-[var(--guest-orange)]">
+            <p role="alert" className="guest-alert guest-alert-error text-sm">
               {error}
             </p>
           ) : null}

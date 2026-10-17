@@ -11,7 +11,6 @@ import {
 } from "react";
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { guestEase, guestPrefersReducedMotion, gsap, useGSAP } from "@/features/guest/motion";
 import { useGuestCopy } from "@/features/guest/shell";
 
 type BottomSheetProps = {
@@ -41,24 +40,9 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const { t } = useGuestCopy();
   const titleId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
   const wasOpen = useRef(false);
   const [dragY, setDragY] = useState(0);
   const dragStart = useRef<number | null>(null);
-  const reducedMotion =
-    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  useGSAP(
-    () => {
-      if (!open || guestPrefersReducedMotion()) return;
-      gsap.fromTo(
-        panelRef.current,
-        { y: 28, opacity: 0.85 },
-        { y: 0, opacity: 1, duration: 0.38, ease: guestEase },
-      );
-    },
-    { dependencies: [open] },
-  );
 
   useEffect(() => {
     if (open) {
@@ -98,17 +82,14 @@ export function BottomSheet({
         side="bottom"
         showCloseButton={false}
         aria-labelledby={titleId}
-        className="guest-theme guest-sheet guest-phone mx-auto flex h-[min(92dvh,100%)] max-h-[92dvh] w-full flex-col gap-0 overflow-hidden border-0 p-0 data-[side=bottom]:inset-x-0"
-        style={
-          dragY
-            ? {
-                transform: `translateY(${dragY}px)`,
-                transition: reducedMotion || dragStart.current != null ? "none" : undefined,
-              }
-            : undefined
-        }
+        className="guest-theme guest-sheet guest-phone mx-auto flex h-[min(92dvh,100%)] max-h-[92dvh] w-full flex-col gap-0 overflow-hidden border-0 p-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:h-[min(92dvh,100%)]"
+        style={{
+          height: "min(92dvh, 100%)",
+          maxHeight: "min(92dvh, 100%)",
+          ...(dragY ? { transform: `translateY(${dragY}px)` } : {}),
+        }}
       >
-        <div ref={panelRef} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
           <div
             className="flex shrink-0 cursor-grab touch-none flex-col items-center px-4 pb-2 pt-2.5 active:cursor-grabbing"
             onPointerDown={onPointerDown}
@@ -126,7 +107,7 @@ export function BottomSheet({
               </SheetTitle>
               <button
                 type="button"
-                className="guest-btn guest-btn-secondary guest-motion !h-11 !w-11 !min-h-11 shrink-0 !p-0 text-xl leading-none"
+                className="guest-icon-btn guest-motion shrink-0 text-xl leading-none"
                 aria-label={t.close}
                 onClick={close}
               >
@@ -134,7 +115,10 @@ export function BottomSheet({
               </button>
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3 [-webkit-overflow-scrolling:touch]">
+          <div
+            data-guest-sheet-scroll
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3 [-webkit-overflow-scrolling:touch]"
+          >
             {children}
           </div>
           {footer ? <div className="guest-sheet-footer shrink-0">{footer}</div> : null}

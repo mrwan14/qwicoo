@@ -43,3 +43,8 @@ next-env.d.ts
 
 # Local QA screenshots
 /.qa-shots/
+
+# Local build output and design files (not source)
+/dist/
+/qwicoo-mobile.pen
+/store-online-frontend-prompt.md

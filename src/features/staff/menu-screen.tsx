@@ -35,6 +35,7 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import type { components } from "@/lib/api/schema";
 import { formatMoney } from "@/lib/format/money";
 import { mediaUrl, presignedUploadUrl } from "@/lib/media";
+import { StoreTab } from "@/features/staff/store-tab";
 import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
@@ -122,7 +123,7 @@ export function MenuAdmin() {
   const [itemScope, setItemScope] = useState<"ALL_BRANCHES" | "THIS_BRANCH">("THIS_BRANCH");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
-  const [tab, setTab] = useState<"items" | "stations">("items");
+  const [tab, setTab] = useState<"items" | "stations" | "store">("items");
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [itemOpen, setItemOpen] = useState(false);
   const [itemQuery, setItemQuery] = useState("");
@@ -310,8 +311,21 @@ export function MenuAdmin() {
         {showStations ? (
           <button type="button" className={`min-h-11 rounded-xl px-4 text-sm ${tab === "stations" ? "bg-primary text-primary-foreground" : "bg-card"}`} onClick={() => setTab("stations")}>{t.stationsTab}</button>
         ) : null}
+        <button type="button" className={`min-h-11 border px-4 text-sm ${tab === "store" ? "bg-primary text-primary-foreground" : "bg-card"}`} onClick={() => setTab("store")}>{t.storeTab}</button>
       </div>
-      {tab === "stations" && showStations ? (
+      {tab === "store" ? (
+        <StoreTab
+          branchId={branchId}
+          role={role}
+          categories={categories.map((category) => ({ id: category.id, name: pickLocale(category.name, locale) }))}
+          treeItems={(categories.flatMap((category) => category.items ?? [])).map((item) => ({
+            id: item.id,
+            name: pickLocale(item.name, locale),
+            item_type: "item_type" in item && typeof item.item_type === "string" ? item.item_type : null,
+            scope: "scope" in item && typeof item.scope === "string" ? item.scope : null,
+          }))}
+        />
+      ) : tab === "stations" && showStations ? (
         <section className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1">
           <p className="text-sm leading-6 text-muted-foreground">{t.stationIntro}</p>
           <StationForm onDone={() => void stations.refetch()} />

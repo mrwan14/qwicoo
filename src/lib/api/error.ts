@@ -156,6 +156,14 @@ const CATALOG: Record<string, Catalog> = {
     ar: "لا يوجد طلب نشط لهذه الطاولة",
     aliases: ["No active order found for this table"],
   },
+  RETAIL_MODULE_LOCKED: {
+    en: "The Store isn't enabled for this brand.",
+    ar: "المتجر غير مفعّل لهذه العلامة.",
+  },
+  STORE_STOCK_BELOW_RESERVED: {
+    en: "You can't set stock below what's held for open orders.",
+    ar: "لا يمكن ضبط المخزون أقل مما هو محجوز للطلبات المفتوحة.",
+  },
   CASH_DRAWER_NOT_OPEN: {
     en: "No cash drawer is open. Open the till before refunding collected cash.",
     ar: "لا يوجد درج نقدية مفتوح. افتح الصندوق قبل رد مبلغ تم قبضه.",

@@ -10,6 +10,7 @@ import { floorCopy } from "@/lib/i18n/staff/floor";
 import { handoverCopy } from "@/lib/i18n/staff/handover";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { kdsCopy } from "@/lib/i18n/staff/kds";
+import { kitCopy } from "@/lib/i18n/staff/kit";
 import { menuCopy } from "@/lib/i18n/staff/menu";
 import { navCopy } from "@/lib/i18n/staff/nav";
 import { offlineCopy } from "@/lib/i18n/staff/offline";
@@ -36,6 +37,7 @@ export const staffCopy = {
     handover: handoverCopy.en,
     inventory: inventoryCopy.en,
     kds: kdsCopy.en,
+    kit: kitCopy.en,
     menu: menuCopy.en,
     nav: navCopy.en,
     offline: offlineCopy.en,
@@ -61,6 +63,7 @@ export const staffCopy = {
     handover: handoverCopy.ar,
     inventory: inventoryCopy.ar,
     kds: kdsCopy.ar,
+    kit: kitCopy.ar,
     menu: menuCopy.ar,
     nav: navCopy.ar,
     offline: offlineCopy.ar,

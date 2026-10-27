@@ -1,0 +1,146 @@
+/* Staff dashboard tokens from qwicoo-dashboard.pen. Black, white and grey everywhere;
+   colour only in status dots and badges. Scoped to .staff-theme so guest and landing keep
+   their own look. Portaled panels, dialogs and toasts sit outside .staff-theme, so the
+   tokens also live on body while a staff screen is mounted. */
+
+@theme inline {
+  --color-ink-secondary: var(--ink-secondary);
+  --color-subtle: var(--subtle);
+  --color-on-ink: var(--on-ink);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-warning-bg: var(--warning-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-success-bg: var(--success-bg);
+  --color-disabled: var(--disabled);
+  --color-focus: var(--focus);
+  --color-scrim: var(--scrim);
+  --radius-staff: var(--staff-radius);
+  --font-title: var(--staff-font-title);
+  --shadow-panel: -12px 0 32px rgb(0 0 0 / 0.08);
+  --shadow-dialog: 0 8px 24px rgb(0 0 0 / 0.08);
+  --shadow-toast: 0 4px 12px rgb(0 0 0 / 0.1);
+}
+
+.staff-theme,
+body:has(.staff-theme) {
+  --ink: #111111;
+  --ink-secondary: #6b6b6b;
+  --canvas: #ffffff;
+  --subtle: #fafafa;
+  --border: #e5e5e5;
+  --on-ink: #ffffff;
+  --warning: #d97706;
+  --warning-bg: #fef3c7;
+  --danger: #dc2626;
+  --danger-bg: #fee2e2;
+  --info: #2563eb;
+  --info-bg: #dbeafe;
+  --success: #16a34a;
+  --success-bg: #dcfce7;
+  --disabled: #a3a3a3;
+  --focus: #111111;
+  --scrim: rgb(17 17 17 / 0.06);
+  --staff-radius: 2px;
+  --staff-font-title: var(--font-fraunces), Georgia, serif;
+
+  /* shadcn primitives (dialogs, menus, sheets) follow the same palette. */
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--canvas);
+  --card-foreground: var(--ink);
+  --popover: var(--canvas);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--on-ink);
+  --secondary: var(--subtle);
+  --secondary-foreground: var(--ink);
+  --muted: var(--subtle);
+  --muted-foreground: var(--ink-secondary);
+  --accent: var(--subtle);
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --input: var(--border);
+  --ring: var(--focus);
+  --radius: var(--staff-radius);
+  --success-foreground: var(--on-ink);
+  --warning-foreground: var(--on-ink);
+  --chart-1: #111111;
+  --chart-2: #6b6b6b;
+  --chart-3: #a3a3a3;
+  --chart-4: #d4d4d4;
+  --chart-5: #e5e5e5;
+  --sidebar: var(--canvas);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--on-ink);
+  --sidebar-accent: var(--subtle);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--focus);
+  --status-available: var(--success);
+  --status-available-bg: var(--success-bg);
+  --status-browsing: var(--warning);
+  --status-browsing-bg: var(--warning-bg);
+  --status-ordered: var(--info);
+  --status-ordered-bg: var(--info-bg);
+  --status-ready: var(--success);
+  --status-ready-bg: var(--success-bg);
+  --status-soldout: var(--danger);
+  --status-soldout-bg: var(--danger-bg);
+}
+
+.staff-theme,
+body:has(.staff-theme) {
+  color: var(--ink);
+  background: var(--canvas);
+  font-family: var(--font-staff-body), system-ui, sans-serif;
+}
+
+.staff-theme {
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+html[lang="ar"] .staff-theme,
+html[lang="ar"] body:has(.staff-theme) {
+  --staff-font-title: var(--font-plex-arabic), sans-serif;
+  font-family: var(--font-plex-arabic), sans-serif;
+}
+
+.staff-theme button,
+.staff-theme input,
+.staff-theme textarea,
+.staff-theme select {
+  font-family: inherit;
+}
+
+body:has(.staff-theme) [data-sonner-toast] {
+  gap: 10px !important;
+  padding: 12px 16px !important;
+  border: none !important;
+  border-radius: var(--staff-radius) !important;
+  background: var(--ink) !important;
+  color: var(--on-ink) !important;
+  box-shadow: var(--shadow-toast) !important;
+  font-family: inherit !important;
+  font-size: 0.875rem !important;
+  font-weight: 500;
+}
+
+body:has(.staff-theme) [data-sonner-toast] [data-description] {
+  color: var(--disabled) !important;
+}
+
+body:has(.staff-theme) [data-sonner-toast][data-type="error"] [data-icon] {
+  color: var(--danger);
+}
+
+body:has(.staff-theme) [data-sonner-toast][data-type="warning"] [data-icon] {
+  color: var(--warning);
+}
+
+html[dir="rtl"] body:has(.staff-theme) [data-sonner-toaster] {
+  direction: rtl;
+}

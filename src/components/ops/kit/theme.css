@@ -42,7 +42,7 @@ body:has(.staff-theme) {
   --disabled: #a3a3a3;
   --focus: #111111;
   --scrim: rgb(17 17 17 / 0.06);
-  --staff-radius: 2px;
+  --staff-radius: 5px;
   --staff-font-title: var(--font-fraunces), Georgia, serif;
 
   /* shadcn primitives (dialogs, menus, sheets) follow the same palette. */

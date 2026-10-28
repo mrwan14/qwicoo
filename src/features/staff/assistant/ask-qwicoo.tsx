@@ -24,7 +24,7 @@ import {
   type AssistantBranch,
   type StarterKey,
 } from "./access";
-import { useAssistantSession } from "./session";
+import { useAssistantLauncher, useAssistantSession } from "./session";
 
 const STARTER_ICON: Record<StarterKey, ReactNode> = {
   today: <TrendingUp aria-hidden className="size-4" />,
@@ -143,6 +143,13 @@ export function AskQwicoo({ autoFocus = false, className }: { autoFocus?: boolea
     }
   }
 
+  // A question typed into the Home box is sent once, when the panel opens.
+  useEffect(() => {
+    const prompt = useAssistantLauncher.getState().takePrompt();
+    if (prompt) void submit(prompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per mount
+  }, []);
+
   function askAgain() {
     const lastUser = [...useAssistantSession.getState().messages].reverse().find((message) => message.role === "user");
     if (lastUser?.role === "user") void submit(lastUser.content);
@@ -200,7 +207,8 @@ export function AskQwicooButton() {
   const { dir } = useLocale();
   const mobile = useMobileSheet();
   const mac = useMacShortcut();
-  const [open, setOpen] = useState(false);
+  const open = useAssistantLauncher((state) => state.open);
+  const setOpen = useAssistantLauncher((state) => state.setOpen);
   const button = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -213,7 +221,7 @@ export function AskQwicooButton() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [me]);
+  }, [me, setOpen]);
 
   if (!me || !canAskQwicoo(me.role)) return null;
 

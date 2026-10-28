@@ -14,6 +14,7 @@ import { useLocaleToggle, useLogOut } from "@/components/ops/shell/user-menu";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { AlertControls } from "@/features/staff/alerts/alert-controls";
 import { useMyAttendance } from "@/features/staff/attendance/clock";
+import { cairoTime } from "@/features/staff/home/numbers";
 import { roleLabel, type UserRole } from "@/lib/auth/roles";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
@@ -45,17 +46,6 @@ export function useScreenTitle() {
     if (key === "expo" && role === "RUNNER") return t.screens.ready;
     return key ? t.screens[key] : nav[item.labelKey];
   };
-}
-
-function cairoTime(value: string, locale: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", {
-    timeZone: "Africa/Cairo",
-    hour: "2-digit",
-    minute: "2-digit",
-    numberingSystem: "latn",
-  }).format(date);
 }
 
 /**

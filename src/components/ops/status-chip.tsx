@@ -1,3 +1,4 @@
+import { Badge, type Tone as BadgeTone } from "@/components/ops/kit/badge";
 import type { components } from "@/lib/api/schema";
 
 type Tone = "available" | "browsing" | "ordered" | "ready" | "soldout" | "neutral";
@@ -27,12 +28,18 @@ export function occupancyTone(state: components["schemas"]["TableOccupancyState"
   }
 }
 
+const BADGE: Record<Tone, BadgeTone> = {
+  available: "success",
+  browsing: "warning",
+  ordered: "info",
+  ready: "success",
+  soldout: "danger",
+  neutral: "neutral",
+};
+
+/** Older screens' status chip, drawn as the kit badge. */
 export function StatusChip({ tone, children }: { tone: Tone; children: string }) {
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium ${TONE_CLASS[tone]}`}>
-      {children}
-    </span>
-  );
+  return <Badge tone={BADGE[tone]}>{children}</Badge>;
 }
 
 export function toneSurface(tone: Tone): string {

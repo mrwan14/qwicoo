@@ -173,6 +173,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER"],
   },
   {
+    href: "/app/orders/history",
+    labelKey: "history",
+    group: "brandOps",
+    shell: "ops",
+    phase: 4,
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER"],
+  },
+  {
     href: "/app/orders/delivery",
     labelKey: "deliveryBoard",
     group: "brandOps",
@@ -197,7 +205,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "KITCHEN_STAFF", "RUNNER"],
   },
   {
-    href: "/app/payments",
+    href: "/app/orders/payments",
     labelKey: "payments",
     group: "brandOps",
     shell: "admin",
@@ -354,7 +362,8 @@ const BUSINESS_SIDEBAR: readonly SidebarDef[] = [
     members: [
       "/app/orders",
       "/app/orders/delivery",
-      "/app/payments",
+      "/app/orders/history",
+      "/app/orders/payments",
       "/app/floor",
       "/app/floor/requests",
       "/app/offline-orders",
@@ -434,9 +443,12 @@ export function isFrontlineRole(role: UserRole): boolean {
   return FRONTLINE_ROLES.includes(role);
 }
 
+/** Orders tabs: reached from the Orders page itself, not listed as separate screens. */
+export const ORDER_TABS: readonly string[] = ["/app/orders/delivery", "/app/orders/history", "/app/orders/payments"];
+
 /** Work screens a front-line role can switch between, their own home first. */
 export function frontlineScreens(me: UserProfile, activeBranchId: string | null): NavItem[] {
-  const items = navForUser(me, activeBranchId);
+  const items = navForUser(me, activeBranchId).filter((item) => !ORDER_TABS.includes(item.href));
   const home = roleHome(me.role);
   return [...items.filter((item) => item.href === home), ...items.filter((item) => item.href !== home)];
 }

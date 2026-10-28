@@ -12,6 +12,10 @@ const ADMINS: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MAN
 export const LEGACY_ROUTES: readonly LegacyRoute[] = [
   { from: "/app/dashboard", to: "/app/home" },
   { from: "/app/brands/:brandId", to: "/app/home", roles: ["BRAND_ADMIN"] },
+  { from: "/app/payments", to: "/app/orders/payments" },
+  // Waiters (and cashiers at the till) keep the floor as their own work screen.
+  { from: "/app/floor", to: "/app/orders?view=tables", roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"] },
+  { from: "/app/floor/requests", to: "/app/orders?view=tables", roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"] },
 ];
 
 export { ADMINS as LEGACY_ADMIN_ROLES };

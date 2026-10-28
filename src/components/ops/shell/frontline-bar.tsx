@@ -33,7 +33,7 @@ const SCREEN_TITLES: Record<string, ScreenKey> = {
   "/app/floor/requests": "requests",
   "/app/orders": "orders",
   "/app/orders/delivery": "delivery",
-  "/app/payments": "payments",
+  "/app/orders/payments": "payments",
   "/app/inventory": "stock",
   "/app/attendance": "attendance",
 };
@@ -65,7 +65,11 @@ export function FrontlineBar({ screens, badges = {} }: { screens: readonly NavIt
   if (!me) return null;
 
   const canClock = screens.some((item) => item.href === "/app/attendance");
-  const current = screens.find((item) => isNavActive(pathname, item.href)) ?? null;
+  // Orders tabs (delivery, history, payments) are not listed, so fall back to the parent screen.
+  const current =
+    screens.find((item) => isNavActive(pathname, item.href)) ??
+    screens.find((item) => pathname.startsWith(`${item.href}/`)) ??
+    null;
   const title = current ? titleOf(current, me.role) : null;
   const since = attendance.checkInAt ? fill(t.clockedIn, { time: cairoTime(attendance.checkInAt, locale) }) : null;
   const who = `${me.full_name} · ${roleLabel(me.role)}`;

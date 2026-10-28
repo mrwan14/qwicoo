@@ -31,6 +31,7 @@ const en = {
   branchSettings: "Branch settings",
   home: "Home",
   reports: "Reports",
+  history: "Order history",
   groups: {
     portfolio: "Portfolio",
     brandOps: "Brand ops",
@@ -69,6 +70,7 @@ const ar = {
   branchSettings: "إعدادات الفرع",
   home: "الرئيسية",
   reports: "التقارير",
+  history: "سجل الطلبات",
   groups: {
     portfolio: "المحفظة",
     brandOps: "تشغيل العلامة",

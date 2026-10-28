@@ -171,7 +171,8 @@ function NeedsConfirmationBadge() {
   );
 }
 
-export function FloorScreen() {
+/** `embedded` drops the page header when the floor sits inside Orders → Tables. */
+export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const t = useStaffSection(floorCopy);
   const { locale } = useLocale();
   const interval = usePollingInterval(7000);
@@ -239,7 +240,7 @@ export function FloorScreen() {
 
   return (
     <div className="grid gap-4">
-      <PageHeader
+      {embedded ? null : <PageHeader
         title={t.title}
         action={canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : undefined}
         detail={
@@ -253,8 +254,8 @@ export function FloorScreen() {
             ) : null}
           </>
         }
-      />
-      <p className={`max-w-2xl ${hint}`}>{t.hint}</p>
+      />}
+      {embedded ? null : <p className={`max-w-2xl ${hint}`}>{t.hint}</p>}
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <StatusChip tone="available">{occupancyLabel("AVAILABLE")}</StatusChip>
         <StatusChip tone="browsing">{occupancyLabel("SEATED")}</StatusChip>

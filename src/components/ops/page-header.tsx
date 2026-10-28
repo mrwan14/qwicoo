@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 
+import { PageHeader as KitPageHeader } from "@/components/ops/kit/page-header";
+
+/** Older screens' header, drawn as the kit page header (Fraunces title). */
 export function PageHeader({
   title,
   action,
@@ -9,13 +12,5 @@ export function PageHeader({
   action?: ReactNode;
   detail?: ReactNode;
 }) {
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold tracking-tight">{title}</h1>
-        {detail ? <div className="text-sm text-muted-foreground">{detail}</div> : null}
-      </div>
-      {action}
-    </div>
-  );
+  return <KitPageHeader title={title} subtitle={detail} actions={action} />;
 }

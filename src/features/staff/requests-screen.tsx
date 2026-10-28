@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { buttonClass } from "@/components/ops/kit/button";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -16,7 +17,8 @@ import { useScope } from "@/stores/scope";
 
 const STATUSES = ["ACKNOWLEDGED", "COMPLETED", "DISMISSED"] as const;
 
-export function RequestsScreen() {
+/** `embedded` shows a card heading instead of the page title (Orders → Tables). */
+export function RequestsScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const t = useStaffSection(requestsCopy);
   const { locale } = useLocale();
   const interval = usePollingInterval(7000);
@@ -63,22 +65,22 @@ export function RequestsScreen() {
   return (
     <div className="grid gap-3">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-        <button type="button" className="min-h-11 rounded-lg border px-3 text-sm" onClick={() => escalate.mutate()}>
+        {embedded ? <h2 className="text-sm font-semibold text-ink">{t.title}</h2> : <h1 className="font-title text-[28px] font-medium text-ink sm:text-[32px]">{t.title}</h1>}
+        <button type="button" className={buttonClass({ variant: "secondary", size: "sm" })} onClick={() => escalate.mutate()}>
           {t.escalate}
         </button>
       </div>
-      {(queue.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">{t.empty}</p> : null}
+      {(queue.data ?? []).length === 0 ? <p className="text-sm text-ink-secondary">{t.empty}</p> : null}
       <ul className="grid gap-3">
         {(queue.data ?? []).map((request) => (
-          <li key={request.id} className="grid gap-2 rounded-xl border p-3">
+          <li key={request.id} className="grid gap-2 rounded-staff border border-border bg-info-bg/40 p-3 text-ink">
             <p className="font-medium">
               {request.table_number ? fill(t.tableNumber, { number: request.table_number }) : t.table} · {t.type[request.request_type]}
             </p>
             <p className="text-sm">{t.status[request.status]}{request.note ? ` · ${request.note}` : ""}</p>
             <div className="flex flex-wrap gap-2">
               {STATUSES.map((status) => (
-                <button key={status} type="button" className="min-h-11 rounded-lg border px-3 text-sm" onClick={() => update.mutate({ id: request.id, status })}>
+                <button key={status} type="button" className={buttonClass({ variant: "secondary", size: "field" })} onClick={() => update.mutate({ id: request.id, status })}>
                   {t.action[status]}
                 </button>
               ))}

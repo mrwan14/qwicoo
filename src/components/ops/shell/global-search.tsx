@@ -15,7 +15,7 @@ type Result = { id: string; label: string; hint?: string; href: string; kind: "p
 
 /** Screens that read `?q=` into their own search box. */
 const SEARCHABLE = [
-  { href: "/app/orders", copy: "ordersFor" },
+  { href: "/app/orders/history", copy: "ordersFor" },
   { href: "/app/menu", copy: "itemsFor" },
   { href: "/app/staff", copy: "staffFor" },
 ] as const;

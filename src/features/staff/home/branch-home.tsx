@@ -186,7 +186,7 @@ export function BranchHome() {
   });
   const payments = useQuery({
     queryKey: ["payments-pending", branchId],
-    enabled: Boolean(branchId) && allowed.has("/app/payments"),
+    enabled: Boolean(branchId) && allowed.has("/app/orders/payments"),
     refetchInterval: LIVE,
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/payments/branch/pending");
@@ -266,7 +266,7 @@ export function BranchHome() {
       tone: "info",
       text: fill(copy, { table }),
       detail: minutes < 1 ? t.branch.attention.justNow : fill(t.branch.attention.minutesAgo, { minutes }),
-      action: { href: "/app/floor/requests", label: t.branch.attention.openCalls },
+      action: { href: "/app/orders?view=tables", label: t.branch.attention.openCalls },
     });
   }
   for (const payment of (payments.data ?? []).slice(0, 2)) {
@@ -275,7 +275,7 @@ export function BranchHome() {
       tone: "warning",
       text: fill(t.branch.attention.paymentWaiting, { method: paymentMethodLabel(payment.payment_method, locale) }),
       detail: money(payment.amount),
-      action: { href: "/app/payments", label: t.branch.attention.confirm },
+      action: { href: "/app/orders/payments", label: t.branch.attention.confirm },
     });
   }
   if (offline.data) {

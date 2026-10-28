@@ -23,7 +23,7 @@ const REPORTS: readonly { key: ReportKey; group: ReportGroup; href: string; icon
   { key: "stock", group: "stock", href: "/app/inventory/reports", icon: Package, nav: "/app/inventory" },
   { key: "attendance", group: "staff", href: "/app/attendance", icon: ClipboardList, nav: "/app/attendance" },
   { key: "till", group: "money", href: "/app/financials", icon: Wallet, nav: "/app/financials" },
-  { key: "payments", group: "money", href: "/app/payments", icon: CreditCard, nav: "/app/payments" },
+  { key: "payments", group: "money", href: "/app/orders/payments", icon: CreditCard, nav: "/app/orders/payments" },
 ];
 
 const GROUPS: readonly ReportGroup[] = ["sales", "menu", "stock", "staff", "money"];

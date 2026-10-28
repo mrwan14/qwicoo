@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ops/kit/badge";
+import { buttonClass } from "@/components/ops/kit/button";
 import { Money } from "@/components/ops/money";
-import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import {
   AlertDialog,
@@ -21,9 +22,9 @@ import {
   deliveredCashCollected,
   deliveryStatusLabel,
   mapLink,
-  parseDeliveryOrders,
   type DeliveryOrder,
 } from "@/features/staff/delivery";
+import { deliveryBoardQuery } from "@/features/staff/orders/queries";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatMoney } from "@/lib/format/money";
@@ -38,8 +39,8 @@ import { useScope } from "@/stores/scope";
 
 const COLUMNS = ["awaiting_dispatch", "on_the_way", "delivered"] as const;
 
-const button = "min-h-11 border-0 bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50";
-const quiet = "min-h-11 border bg-background px-3 text-sm";
+const button = buttonClass({ size: "field" });
+const quiet = buttonClass({ variant: "secondary", size: "field" });
 
 function addressLines(order: DeliveryOrder): string[] {
   const address = order.address;
@@ -57,16 +58,7 @@ export function DeliveryBoard() {
   const [cashChecked, setCashChecked] = useState(false);
   const [needsDrawer, setNeedsDrawer] = useState(false);
 
-  const board = useQuery({
-    queryKey: ["delivery-board", branchId],
-    enabled: Boolean(branchId),
-    refetchInterval: pollUnlessRoleDenied(interval),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/orders/delivery");
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return parseDeliveryOrders(result.data);
-    },
-  });
+  const board = useQuery({ ...deliveryBoardQuery(branchId, t.loadFailed, locale), refetchInterval: pollUnlessRoleDenied(interval) });
 
   const move = useMutation({
     mutationFn: async (input: { order: DeliveryOrder; step: "on-the-way" | "delivered"; cashCollected?: boolean }) => {
@@ -108,16 +100,10 @@ export function DeliveryBoard() {
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="grid gap-1">
-          <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.hint}</p>
-        </div>
-        <Link href="/app/orders" className="text-sm underline-offset-2 hover:underline">{t.orders}</Link>
-      </div>
+    <div className="grid grid-cols-1 gap-4">
+      <p className="text-sm text-ink-secondary">{t.hint}</p>
       {needsDrawer ? (
-        <p className="border bg-card px-4 py-3 text-sm">
+        <p className="rounded-staff border border-border bg-subtle px-4 py-3 text-sm">
           <Link href="/app/financials" className={`${button} inline-flex items-center`}>{t.openTill}</Link>
         </p>
       ) : null}
@@ -125,8 +111,11 @@ export function DeliveryBoard() {
         {COLUMNS.map((column) => {
           const cards = rows.filter((order) => order.deliveryStatus === column);
           return (
-            <section key={column} className="grid content-start gap-3 border bg-card p-3">
-              <h2 className="text-sm font-medium">{headings[column]}</h2>
+            <section key={column} className="grid content-start gap-3 rounded-staff border border-border bg-subtle p-3">
+              <h2 className="flex items-center justify-between text-sm font-semibold text-ink">
+                {headings[column]}
+                <span className="text-ink-secondary tabular-nums">{cards.length}</span>
+              </h2>
               {cards.length === 0 ? <EmptyState title={t.empty} body="" /> : cards.map((order) => {
                 const lines = addressLines(order);
                 const maps = mapLink(order.address);
@@ -134,12 +123,12 @@ export function DeliveryBoard() {
                 const label = deliveryStatusLabel(order.deliveryStatus, locale) ?? order.status;
                 const pending = move.isPending && move.variables?.order.id === order.id;
                 return (
-                  <article key={order.id} className="grid gap-2 border bg-background p-3">
+                  <article key={order.id} className="grid gap-2 rounded-staff border border-border bg-canvas p-3 text-ink">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <h3 className="font-semibold tabular-nums">{fill(t.order, { number: order.displayNumber || order.id.slice(0, 8) })}</h3>
-                      <StatusChip tone={order.isPaid ? "available" : "ordered"}>{order.isPaid ? t.paid : t.unpaid}</StatusChip>
+                      <Badge tone={order.isPaid ? "success" : "warning"}>{order.isPaid ? t.paid : t.unpaid}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{formatCairoDateTime(order.createdAt, locale)}</p>
+                    <p className="text-sm text-ink-secondary">{formatCairoDateTime(order.createdAt, locale)}</p>
                     <p className="text-sm font-medium"><Money amount={order.total} /></p>
                     <p className="text-sm">{label}</p>
                     {order.customerName ? <p className="text-sm">{t.customer}: {order.customerName}</p> : null}
@@ -164,7 +153,7 @@ export function DeliveryBoard() {
                         {order.items.map((item) => (
                           <li key={`${item.name}-${item.quantity}`} className="flex flex-wrap items-center gap-2">
                             <span className="tabular-nums">{item.quantity} ×</span> {item.name}
-                            {item.badge === "Store" ? <span className="border px-1.5 py-0.5 text-xs font-medium">{t.store}</span> : null}
+                            {item.badge === "Store" ? <Badge>{t.store}</Badge> : null}
                           </li>
                         ))}
                       </ul>
@@ -187,7 +176,7 @@ export function DeliveryBoard() {
         })}
       </div>
       <AlertDialog open={cashFor !== null} onOpenChange={(open) => { if (!open) { setCashFor(null); setCashChecked(false); } }}>
-        <AlertDialogContent className="rounded-none">
+        <AlertDialogContent className="rounded-staff">
           <AlertDialogHeader>
             <AlertDialogTitle>{cashFor ? fill(t.cashTitle, { total: formatMoney(cashFor.total, "EGP", locale) }) : ""}</AlertDialogTitle>
             <AlertDialogDescription>{t.cashCheck}</AlertDialogDescription>

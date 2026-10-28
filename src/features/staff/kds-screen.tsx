@@ -1,14 +1,16 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { cn } from "cn";
+import { Check, Clock, Play } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { ScreenTitle } from "@/components/ops/page-header";
+import { type Tone } from "@/components/ops/kit/badge";
+import { Button, buttonClass } from "@/components/ops/kit/button";
 import { latestTimestamp, LiveCount } from "@/components/ops/live-fact";
 import { formatCairoDateTime } from "@/lib/format/time";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
-import { StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { fill } from "@/lib/i18n/dictionary";
@@ -30,17 +32,6 @@ import { OfflineStage, OfflineTickets } from "./offline/offline-tickets";
 function asStation(value: string): components["schemas"]["KitchenStation"] | null {
   if (value === "HOT_KITCHEN" || value === "COLD_KITCHEN" || value === "BEVERAGE" || value === "DESSERT") return value;
   return null;
-}
-
-function waitingLabel(createdAt: string, copy: typeof kdsCopy.en): { text: string; tone: "neutral" | "ordered" | "soldout" } {
-  const minutes = Math.max(0, Math.round((Date.now() - new Date(createdAt).getTime()) / 60000));
-  const tone = minutes >= 60 ? "soldout" : minutes >= 15 ? "ordered" : "neutral";
-  if (minutes < 60) return { text: minutes === 1 ? copy.waitMinOne : fill(copy.waitMin, { minutes }), tone };
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  if (hours < 24) return { text: rest ? fill(copy.waitHoursMin, { hours, minutes: rest }) : fill(copy.waitHours, { hours }), tone };
-  const days = Math.floor(hours / 24);
-  return { text: days === 1 ? copy.waitDayOne : fill(copy.waitDays, { days }), tone };
 }
 
 function ticketTitle(
@@ -66,6 +57,11 @@ export function KdsScreen() {
   const branchId = useScope((state) => state.branchId);
   const [sound, setSound] = useSoundSetting();
   const [stationFilter, setStationFilter] = useState<string>("ALL");
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
   const queryClient = useQueryClient();
   const online = useNetwork((state) => state.online);
 
@@ -119,202 +115,233 @@ export function KdsScreen() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const start = useMutation({
+    mutationFn: async (orderId: string) => {
+      const result = await browserApi.POST("/api/v1/orders/{order_id}/transition", {
+        params: { path: { order_id: orderId } },
+        body: { target_status: "PREPARING", reason: null },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.board.startFailed, locale);
+    },
+    onSuccess: (_data, orderId) => {
+      acknowledgeOrder(orderId);
+      ignoreOwnChange(orderId, "PREPARING");
+      void queryClient.invalidateQueries({ queryKey: ["kds-tickets"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   if (!online) return <OfflineStage stage="kitchen" />;
   if (tickets.isLoading) return <LoadingState label={t.loading} />;
   if (tickets.isError) return <QueryErrorState error={tickets.error} screen={t.screen} onRetry={() => void tickets.refetch()} />;
-
-  const columns = stationFilter === "ALL" ? groupBy(visible, (ticket) => ticket.station) : new Map([[stationFilter, visible]]);
 
   const marking = bumpStation.isPending ? bumpStation.variables : null;
   const markingItem = bumpItem.isPending ? bumpItem.variables : null;
   const ticketCount = (tickets.data ?? []).length;
   const lastTicket = latestTimestamp((tickets.data ?? []).map((ticket) => ticket.created_at));
+  const lanes: Record<Lane, typeof visible> = { new: [], preparing: [], ready: [] };
+  for (const ticket of visible) lanes[laneOf(ticket)].push(ticket);
 
   return (
-    <div className="grid gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid gap-1">
-          <ScreenTitle>{t.title}</ScreenTitle>
-          <p className="text-sm text-ink-secondary">
+    <div className="grid grid-cols-1 gap-4">
+      <h1 className="sr-only">{t.title}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div role="group" aria-label={t.board.stations} className="flex gap-2 overflow-x-auto">
+          {stations.map((station) => {
+            const active = station === stationFilter;
+            return (
+              <button
+                key={station}
+                type="button"
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex min-h-12 shrink-0 items-center rounded-staff border px-4 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+                  active ? "border-ink bg-ink text-on-ink" : "border-border bg-canvas text-ink hover:bg-subtle",
+                )}
+                onClick={() => setStationFilter(station)}
+              >
+                {station === "ALL" ? t.board.allStations : stationLabel(station, locale)}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-[13px] text-ink-secondary">
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden className="size-2 rounded-full bg-warning" />
+            {t.board.over10}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden className="size-2 rounded-full bg-danger" />
+            {t.board.over15}
+          </span>
+          <span className="hidden md:inline">
             <LiveCount value={ticketCount} /> {ticketCount === 1 ? t.ticketOne : t.ticketMany}
             {lastTicket ? <> · {fill(t.lastOrder, { time: formatCairoDateTime(lastTicket, locale) })}</> : null}
-          </p>
-          <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.hint}</p>
+          </span>
+          <button
+            type="button"
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+            aria-pressed={sound}
+            title={t.soundHint}
+            onClick={() => {
+              const next = !sound;
+              setSound(next);
+              if (next) void unlockAudio().then(() => playTone("new"));
+            }}
+          >
+            {sound ? t.soundOn : t.soundOff}
+          </button>
         </div>
-        <button
-          type="button"
-          className="min-h-11 bg-secondary px-3 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-          aria-pressed={sound}
-          onClick={() => {
-            const next = !sound;
-            setSound(next);
-            if (next) void unlockAudio().then(() => playTone("new"));
-          }}
-        >
-          {sound ? t.soundOn : t.soundOff}
-        </button>
       </div>
-      <p className="text-sm text-ink-secondary">{t.soundHint}</p>
       <OfflineTickets stage="kitchen" />
-      <div className="flex gap-2 overflow-x-auto">
-        {[...stations].map((station) => {
-          const active = station === stationFilter;
-          const count = station === "ALL" ? (tickets.data ?? []).length : (tickets.data ?? []).filter((ticket) => ticket.station === station).length;
-          return (
-            <button
-              key={station}
-              type="button"
-              className={`min-h-11 shrink-0 px-3 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-secondary"}`}
-              onClick={() => setStationFilter(station)}
-            >
-              {station === "ALL" ? t.all : stationLabel(station, locale)} · {count}
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+        {LANES.map((lane) => (
+          <section key={lane} className="grid content-start gap-3 rounded-staff bg-subtle p-3">
+            <h2 className="flex items-center justify-between px-1 text-base font-semibold text-ink">
+              {t.board.columns[lane]}
+              <span className="text-ink-secondary tabular-nums">{lanes[lane].length}</span>
+            </h2>
+            {lanes[lane].length === 0 ? <p className="px-1 py-6 text-center text-sm text-ink-secondary">{ticketCount === 0 && lane === "new" ? t.empty : t.board.empty}</p> : null}
+            {lanes[lane].map((ticket) => (
+              <TicketCard
+                key={ticket.sub_ticket_id}
+                ticket={ticket}
+                lane={lane}
+                now={now}
+                markingItem={markingItem ?? null}
+                marking={marking?.orderId === ticket.order_id && marking.station === ticket.station}
+                starting={start.isPending && start.variables === ticket.order_id}
+                onItem={(id) => {
+                  acknowledgeItem(id);
+                  bumpItem.mutate(id);
+                }}
+                onStart={() => start.mutate(ticket.order_id)}
+                onReady={() => {
+                  const next = asStation(ticket.station);
+                  if (next) bumpStation.mutate({ orderId: ticket.order_id, station: next });
+                }}
+              />
+            ))}
+          </section>
+        ))}
       </div>
-      {(tickets.data ?? []).length === 0 ? (
-        <p className="text-sm text-ink-secondary">{t.empty}</p>
-      ) : (
-        <div className="grid gap-6">
-          {[...columns.entries()].map(([station, column]) => (
-            <TicketColumn
-              key={station}
-              station={station}
-              tickets={column}
-              markingItem={markingItem ?? null}
-              marking={marking ?? null}
-              onItem={(id) => {
-                acknowledgeItem(id);
-                bumpItem.mutate(id);
-              }}
-              onStation={(orderId, name) => {
-                const next = asStation(name);
-                if (next) bumpStation.mutate({ orderId, station: next });
-              }}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
 
-function TicketColumn({
-  station,
-  tickets,
+type Lane = "new" | "preparing" | "ready";
+const LANES: readonly Lane[] = ["new", "preparing", "ready"];
+type Ticket = components["schemas"]["KDSSubTicket"];
+
+function laneOf(ticket: Ticket): Lane {
+  if (ticket.is_fully_bumped || ticket.order_status === "READY") return "ready";
+  if (ticket.order_status === "PREPARING") return "preparing";
+  return "new";
+}
+
+/** Amber after 10 minutes, red after 15. */
+function timerTone(minutes: number): Tone {
+  if (minutes > 15) return "danger";
+  if (minutes > 10) return "warning";
+  return "neutral";
+}
+
+function elapsed(createdAt: string, now: number): { minutes: number; clock: string } {
+  const seconds = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 1000));
+  const minutes = Math.floor(seconds / 60);
+  if (minutes >= 60) return { minutes, clock: `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")} h` };
+  return { minutes, clock: `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}` };
+}
+
+function TicketCard({
+  ticket,
+  lane,
+  now,
   markingItem,
   marking,
+  starting,
   onItem,
-  onStation,
+  onStart,
+  onReady,
 }: {
-  station: string;
-  tickets: Array<{
-    sub_ticket_id: string;
-    order_id: string;
-    station: string;
-    order_type?: string | null;
-    order_channel?: string | null;
-    fulfillment_type?: string | null;
-    vehicle?: { [key: string]: unknown } | null;
-    table_number?: string | null;
-    pickup_number?: number | null;
-    customer_notes?: string | null;
-    created_at: string;
-    items?: Array<{
-      order_item_id: string;
-      name: string;
-      quantity: number;
-      is_bumped?: boolean | null;
-      special_instructions?: string | null;
-    }> | null;
-  }>;
+  ticket: Ticket;
+  lane: Lane;
+  now: number;
   markingItem: string | null;
-  marking: { orderId: string; station: string } | null;
+  marking: boolean;
+  starting: boolean;
   onItem: (orderItemId: string) => void;
-  onStation: (orderId: string, station: string) => void;
+  onStart: () => void;
+  onReady: () => void;
 }) {
   const t = useStaffSection(kdsCopy);
-  const { locale } = useLocale();
-  const heading = station === "ALL" ? t.all : stationLabel(station, locale);
+  const timer = elapsed(ticket.created_at, now);
+  const tone = timerTone(timer.minutes);
+  const kind = kindLabel(kitchenTicketKind(ticket), t);
+  const car = vehicleDetails(ticket.vehicle);
+  const canMark = Boolean(asStation(ticket.station));
+  const urgent = lane !== "ready" && tone !== "neutral";
   return (
-    <section className="grid content-start gap-3">
-      <div>
-        <h2 className="text-[length:var(--text-20)] font-semibold">{heading}</h2>
-        <p className="text-sm text-ink-secondary">{tickets.length === 1 ? t.waitingOne : fill(t.waitingMany, { count: tickets.length })}</p>
+    <article
+      onPointerDown={() => acknowledgeOrder(ticket.order_id)}
+      className={cn("grid content-start gap-3 rounded-staff border bg-canvas p-4 text-ink", urgent ? "border-ink" : "border-border")}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="grid gap-0.5">
+          <p className="text-xl font-semibold">{ticketTitle(ticket, t)}</p>
+          <p className="text-[13px] text-ink-secondary">{[kind, car].filter(Boolean).join(" · ")}</p>
+        </div>
+        <span
+          role="timer"
+          aria-label={fill(t.board.elapsed, { time: timer.clock })}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-staff px-2 py-1 text-[13px] font-semibold tabular-nums",
+            tone === "danger" ? "bg-danger-bg" : tone === "warning" ? "bg-warning-bg" : "border border-border bg-subtle",
+          )}
+        >
+          <Clock aria-hidden className={cn("size-3.5", tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-ink-secondary")} />
+          {timer.clock}
+        </span>
       </div>
-      {tickets.length === 0 ? <p className="text-sm text-ink-secondary">{t.nothingWaiting}</p> : null}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {tickets.map((ticket) => {
-          const waiting = waitingLabel(ticket.created_at, t);
-          const kind = kindLabel(kitchenTicketKind(ticket), t);
-          const car = vehicleDetails(ticket.vehicle);
-          const markingThis = marking?.orderId === ticket.order_id && marking.station === ticket.station;
-          const canMark = Boolean(asStation(ticket.station));
+      <ul className="grid gap-1.5">
+        {(ticket.items ?? []).map((item) => {
+          const markingLine = markingItem === item.order_item_id;
           return (
-            <article key={ticket.sub_ticket_id} onPointerDown={() => acknowledgeOrder(ticket.order_id)} className="grid content-start gap-3 bg-canvas p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[length:var(--text-20)] font-semibold">{ticketTitle(ticket, t)}</p>
-                  {kind ? <p className="text-sm text-ink-secondary">{kind}</p> : null}
-                  {car ? <p className="text-sm text-ink-secondary">{car}</p> : null}
-                </div>
-                <StatusChip tone={waiting.tone}>{waiting.text}</StatusChip>
-              </div>
-              {ticket.customer_notes?.trim() ? (
-                <p className={`rounded-md px-2 py-1 text-sm font-medium ${toneSurface("ordered")}`}>
-                  {t.orderNote} {ticket.customer_notes}
-                </p>
-              ) : null}
-              <ul className="grid gap-2">
-                {(ticket.items ?? []).map((item) => {
-                  const markingLine = markingItem === item.order_item_id;
-                  return (
-                    <li key={item.order_item_id}>
-                      <button
-                        type="button"
-                        className="grid min-h-14 w-full gap-0.5 rounded-staff border px-3 py-2 text-start text-base focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
-                        disabled={markingLine}
-                        onClick={() => onItem(item.order_item_id)}
-                      >
-                        <span>
-                          {item.quantity} × {item.name}
-                        </span>
-                        <span className="text-sm text-ink-secondary">
-                          {markingLine ? t.marking : item.is_bumped ? t.ready : t.tapReady}
-                        </span>
-                        {item.special_instructions?.trim() ? (
-                          <span className={`rounded-md px-2 py-1 text-sm font-medium ${toneSurface("ordered")}`}>
-                            {t.note} {item.special_instructions}
-                          </span>
-                        ) : null}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-              <p className="text-sm leading-6 text-ink-secondary">{t.markAllHint}</p>
+            <li key={item.order_item_id}>
               <button
                 type="button"
-                className="min-h-14 rounded-staff bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-                disabled={!canMark || markingThis}
-                onClick={() => onStation(ticket.order_id, ticket.station)}
+                className="grid w-full gap-0.5 rounded-staff px-1 py-1 text-start focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-60"
+                disabled={markingLine || lane === "ready"}
+                aria-label={`${item.quantity} × ${item.name}. ${item.is_bumped ? t.ready : t.tapReady}`}
+                onClick={() => onItem(item.order_item_id)}
               >
-                {markingThis ? t.marking : t.markReady}
+                <span className={cn("text-base font-medium", item.is_bumped && "text-ink-secondary line-through")}>
+                  <span className="tabular-nums">{item.quantity}</span> × {item.name}
+                </span>
+                {item.special_instructions?.trim() ? <span className="text-[13px] text-ink-secondary">{item.special_instructions}</span> : null}
               </button>
-            </article>
+            </li>
           );
         })}
-      </div>
-    </section>
+      </ul>
+      {ticket.customer_notes?.trim() ? (
+        <p className="rounded-staff bg-warning-bg px-3 py-2 text-[13px] text-ink">
+          <span className="font-medium">{t.orderNote}</span> {ticket.customer_notes}
+        </p>
+      ) : null}
+      {lane === "new" ? (
+        <Button size="touch" className="w-full" disabled={starting} onClick={onStart}>
+          <Play aria-hidden />
+          {starting ? t.board.starting : t.board.start}
+        </Button>
+      ) : lane === "preparing" ? (
+        <Button size="touch" className="w-full" disabled={!canMark || marking} onClick={onReady}>
+          <Check aria-hidden />
+          {marking ? t.marking : t.ready}
+        </Button>
+      ) : (
+        <p className="text-center text-[13px] text-ink-secondary">{t.board.waitingRunner}</p>
+      )}
+    </article>
   );
 }
-
-function groupBy<T>(items: T[], key: (item: T) => string) {
-  const map = new Map<string, T[]>();
-  for (const item of items) {
-    const name = key(item);
-    map.set(name, [...(map.get(name) ?? []), item]);
-  }
-  return map;
-}
-

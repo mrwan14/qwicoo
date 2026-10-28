@@ -1,17 +1,21 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { BellRing, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
 
 import { Money } from "@/components/ops/money";
-import { LiveCount } from "@/components/ops/live-fact";
-import { PageHeader } from "@/components/ops/page-header";
+import { Badge, type Tone } from "@/components/ops/kit/badge";
+import { Button } from "@/components/ops/kit/button";
+import { formatAmount } from "@/components/ops/kit/money";
+import { ScreenTitle } from "@/components/ops/page-header";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { occupancyTone, StatusChip, toneSurface } from "@/components/ops/status-chip";
+import { navForUser } from "@/lib/nav";
+import { requestsCopy } from "@/lib/i18n/staff/requests";
 import { EmptyState, ErrorState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -163,6 +167,15 @@ function modifierNames(modifiers: { [key: string]: unknown }[] | null | undefine
     .filter(Boolean);
 }
 
+/** The one coloured badge on a table card. */
+function tableBadge(table: FloorTable, t: (typeof floorCopy)["en"]): { tone: Tone; label: string } {
+  if (table.current_state === "BILL_REQUESTED") return { tone: "info", label: t.board.needsBill };
+  if (table.order_status === "READY") return { tone: "success", label: t.board.foodReady };
+  if (table.current_state === "AWAITING_FOOD") return { tone: "warning", label: t.board.waiting };
+  if (table.current_state === "FOOD_SERVED") return { tone: "neutral", label: t.board.eating };
+  return { tone: "neutral", label: t.board.ordering };
+}
+
 function NeedsConfirmationBadge() {
   return (
     <span className="inline-flex items-center bg-foreground px-2 py-0.5 text-xs font-semibold text-background">
@@ -188,6 +201,31 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
     queryFn: () => fetchFloorLive(branchId),
     refetchInterval: pollUnlessRoleDenied(interval),
     retry: false,
+  });
+
+  const [filter, setFilter] = useState<"all" | "needs" | "free">("all");
+  const requests = useStaffSection(requestsCopy);
+  const canAnswer = Boolean(me && navForUser(me, branchId).some((item) => item.href === "/app/floor/requests"));
+  const calls = useQuery({
+    queryKey: ["service-queue", branchId],
+    enabled: canAnswer,
+    refetchInterval: pollUnlessRoleDenied(interval),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/service-requests/active");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.board.callFailed, locale);
+      return result.data;
+    },
+  });
+  const answer = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await browserApi.PATCH("/api/v1/service-requests/{request_id}/status", {
+        params: { path: { request_id: id } },
+        body: { status: "ACKNOWLEDGED" },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.board.callFailed, locale);
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["service-queue"] }),
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const selected = floor.data?.tables.find((table) => table.table_id === selectedId) ?? null;
@@ -235,53 +273,79 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const data = floor.data;
   if (!data) return <ErrorState title={t.unavailable} body={t.unavailableBody} onRetry={() => void floor.refetch()} />;
 
-  const pendingCount = data.tables.filter(needsConfirmation).length;
-  const tables = [...data.tables].sort((a, b) => Number(needsConfirmation(b)) - Number(needsConfirmation(a)));
+  const needsYou = (table: FloorTable) =>
+    needsConfirmation(table) || table.current_state === "BILL_REQUESTED" || table.pending_service_requests_count > 0;
+  const counts = {
+    all: data.tables.length,
+    needs: data.tables.filter(needsYou).length,
+    free: data.tables.filter((table) => table.current_state === "AVAILABLE").length,
+  };
+  const tables = [...data.tables]
+    .filter((table) => (filter === "needs" ? needsYou(table) : filter === "free" ? table.current_state === "AVAILABLE" : true))
+    .sort((a, b) => Number(needsYou(b)) - Number(needsYou(a)) || Number(a.current_state === "AVAILABLE") - Number(b.current_state === "AVAILABLE"));
+  const call = (calls.data ?? []).find((request) => request.status === "PENDING") ?? null;
+  const callMinutes = call ? Math.max(0, Math.floor((Date.now() - new Date(call.created_at).getTime()) / 60000)) : 0;
 
   return (
-    <div className="grid gap-4">
-      {embedded ? null : <PageHeader
-        title={t.title}
-        action={canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : undefined}
-        detail={
-          <>
-            <LiveCount value={data.occupied_tables} /> {t.occupied}
-            {pendingCount > 0 ? (
-              <>
-                {" · "}
-                <LiveCount value={pendingCount} /> {t.toConfirm}
-              </>
-            ) : null}
-          </>
-        }
-      />}
-      {embedded ? null : <p className={`max-w-2xl ${hint}`}>{t.hint}</p>}
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <StatusChip tone="available">{occupancyLabel("AVAILABLE")}</StatusChip>
-        <StatusChip tone="browsing">{occupancyLabel("SEATED")}</StatusChip>
-        <StatusChip tone="ordered">{occupancyLabel("AWAITING_FOOD")}</StatusChip>
-        <StatusChip tone="ready">{occupancyLabel("FOOD_SERVED")}</StatusChip>
+    <div className="grid grid-cols-1 gap-3">
+      {embedded ? null : (
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <ScreenTitle>{t.board.title}</ScreenTitle>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-ink-secondary">{fill(t.board.inUse, { used: data.occupied_tables, total: data.total_tables })}</p>
+            {canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : null}
+          </div>
+        </div>
+      )}
+      {call ? (
+        <div role="status" className="flex items-center gap-3 rounded-staff bg-info-bg p-3.5 text-ink">
+          <BellRing aria-hidden className="size-[22px] shrink-0 text-info" />
+          <div className="grid min-w-0 flex-1">
+            <span className="truncate text-[15px] font-semibold">
+              {fill(t.board.calling, { table: call.table_number ? fill(t.tableNumber, { number: call.table_number }) : t.board.callBell })}
+            </span>
+            <span className="truncate text-[13px] text-ink-secondary">
+              {fill(callMinutes < 1 ? t.board.callNow : t.board.callAgo, { type: requests.type[call.request_type] ?? call.request_type, minutes: callMinutes })}
+            </span>
+          </div>
+          <Button size="sm" className="min-h-11 shrink-0 px-3.5 text-sm" disabled={answer.isPending} onClick={() => answer.mutate(call.id)}>
+            {t.board.onMyWay}
+          </Button>
+        </div>
+      ) : null}
+      <div role="group" aria-label={t.board.filters} className="flex gap-2 overflow-x-auto">
+        {(["all", "needs", "free"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={filter === key}
+            onClick={() => setFilter(key)}
+            className={`inline-flex h-11 shrink-0 items-center rounded-staff border px-3.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${filter === key ? "border-ink bg-ink text-on-ink" : "border-border bg-canvas text-ink"}`}
+          >
+            {fill(key === "all" ? t.board.all : key === "needs" ? t.board.needsYou : t.board.free, { count: counts[key] })}
+          </button>
+        ))}
       </div>
-      {tables.length === 0 ? (
+      {data.tables.length === 0 ? (
         <EmptyState
           title={t.emptyTitle}
           body={t.emptyBody}
           action={canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : undefined}
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
           {tables.map((table) => {
-            const tone = occupancyTone(table.current_state);
             const pending = needsConfirmation(table);
             const open = table.table_id === selectedId;
-            const seated = seatedFor(table.occupancy_duration_minutes, t.seatedOne, t.seatedMany);
-            const requestCount = table.pending_service_requests_count > 0 ? fill(t.requests, { count: table.pending_service_requests_count }) : "";
+            const free = table.current_state === "AVAILABLE";
+            const badge = tableBadge(table, t);
+            const calling = table.pending_service_requests_count > 0;
             return (
               <button
                 key={table.table_id}
                 type="button"
                 aria-pressed={open}
-                className={`grid min-h-36 content-between p-4 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${toneSurface(tone)} ${pending || open ? "ring-2 ring-foreground" : ""}`}
+                className={`grid min-h-[104px] content-between gap-2 rounded-staff p-3.5 text-start text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${free ? "border border-border bg-subtle" : needsYou(table) || open ? "border-2 border-ink bg-canvas" : "border border-border bg-canvas"}`}
                 onClick={() => {
                   setSelectedId(table.table_id);
                   setRejecting(false);
@@ -291,14 +355,24 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
                   if (options[0]) setStatus(options[0]);
                 }}
               >
-                <span className="block text-2xl font-semibold">{fill(t.tableNumber, { number: table.table_number })}</span>
-                <span className="mt-3 grid gap-1">
-                  <span className="block text-sm font-medium">{pending ? orderStatusLabel("PENDING_STAFF_CONFIRMATION") : occupancyLabel(table.current_state)}</span>
-                  {table.order_status && !pending ? <span className="block text-sm">{fill(t.orderStatus, { status: orderStatusLabel(table.order_status) })}</span> : null}
-                  <span className="block text-xs">
-                    {[`${table.capacity} ${table.capacity === 1 ? t.seat : t.seats}`, seated, requestCount].filter(Boolean).join(" · ")}
+                <span className="flex items-start justify-between gap-2">
+                  <span className={`text-2xl font-semibold ${free ? "text-ink-secondary" : ""}`}>
+                    <span aria-hidden>{fill(t.board.short, { number: table.table_number })}</span>
+                    <span className="sr-only">{fill(t.tableNumber, { number: table.table_number })}</span>
                   </span>
+                  {calling ? (
+                    <BellRing aria-label={fill(t.requests, { count: table.pending_service_requests_count })} className="size-5 shrink-0 text-info" />
+                  ) : table.order_total ? (
+                    <span className="shrink-0 text-[13px] text-ink-secondary tabular-nums">{formatAmount(String(table.order_total), undefined, locale)}</span>
+                  ) : null}
                 </span>
+                {free ? (
+                  <span className="text-[13px] text-ink-secondary">{t.board.freeTable}</span>
+                ) : (
+                  <Badge tone={pending ? "warning" : badge.tone} className="w-fit">
+                    {pending ? t.board.toConfirm : badge.label}
+                  </Badge>
+                )}
               </button>
             );
           })}

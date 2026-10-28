@@ -1,12 +1,16 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { MoreHorizontal } from "lucide-react";
+import { cn } from "cn";
+import { Banknote, CreditCard, MoreHorizontal, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
+import { Badge } from "@/components/ops/kit/badge";
+import { Button } from "@/components/ops/kit/button";
+import { Field, Input, Select } from "@/components/ops/kit/field";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +30,7 @@ import { PaymobPosCheckout } from "@/features/staff/paymob-pos";
 import type { StaffOrderReceipt } from "@/features/staff/orders/types";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import { formatMoney } from "@/lib/format/money";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -494,8 +499,14 @@ export function PosScreen() {
   const total = centsToMoney(lines.reduce((sum, line) => sum + moneyToCents(line.subtotal), 0));
   const sendDisabled = lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim());
 
+  const pill = (active: boolean) =>
+    cn(
+      "inline-flex min-h-12 shrink-0 items-center gap-2 rounded-staff border px-4 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:text-disabled",
+      active ? "border-ink bg-ink text-on-ink" : "border-border bg-canvas text-ink hover:bg-subtle",
+    );
+
   const ticket = (
-    <aside className="grid gap-3 bg-canvas p-4">
+    <aside className="grid content-start gap-4 rounded-staff border border-border bg-canvas p-4 text-ink">
       {confirmation ? (
         <OrderConfirmation
           confirmation={confirmation}
@@ -503,135 +514,179 @@ export function PosScreen() {
           onDismiss={() => setConfirmation(null)}
         />
       ) : null}
-      <div>
-        <h2 className="text-lg font-semibold">{t.ticket}</h2>
-        <p className="text-sm leading-6 text-ink-secondary">{t.ticketHint}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="grid gap-0.5">
+          <h2 className="text-xl font-semibold">{t.ticket}</h2>
+          <p className="text-[13px] text-ink-secondary">{t.ticketHint}</p>
+        </div>
       </div>
-      {lines.length === 0 ? <p className="text-sm text-ink-secondary">{t.noItems}</p> : null}
-      <ul className="grid gap-2">
-        {lines.map((line, index) => (
-          <li key={`${line.itemId}-${index}`} className="flex items-center justify-between gap-2 text-sm">
-            <span>{line.quantity > 1 ? `${line.quantity} × ` : ""}{line.name}</span>
-            <span className="flex items-center gap-2">
-              <Money amount={line.subtotal} />
-              <button type="button" className="min-h-11 rounded-staff px-2 text-sm text-ink-secondary hover:text-foreground" onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}>
-                {t.remove}
-              </button>
-            </span>
-          </li>
+      <div role="radiogroup" aria-label={t.orderType} className="grid grid-cols-2 gap-1 rounded-staff border border-border p-1">
+        {(["DINE_IN", "TAKEAWAY"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={orderType === value}
+            className={cn(
+              "min-h-12 rounded-staff text-[15px] font-medium focus-visible:outline-2 focus-visible:outline-focus",
+              orderType === value ? "bg-ink text-on-ink" : "text-ink hover:bg-subtle",
+            )}
+            onClick={() => setOrderType(value)}
+          >
+            {value === "DINE_IN" ? t.dineIn : t.takeaway}
+          </button>
         ))}
-      </ul>
-      {lines.length > 0 ? (
-        <p className="flex justify-between text-sm font-semibold">
-          <span>{t.total}</span>
-          <Money amount={total} />
-        </p>
-      ) : null}
-      <label className="grid gap-1 text-sm">
-        {t.orderType}
-        <span className="text-sm leading-6 text-ink-secondary">{orderType === "TAKEAWAY" ? t.takeawayHint : t.dineInHint}</span>
-        <select className="h-12 rounded-staff border bg-background px-3" value={orderType} onChange={(event) => setOrderType(event.target.value as typeof orderType)}>
-          <option value="TAKEAWAY">{t.takeaway}</option>
-          <option value="DINE_IN">{t.dineIn}</option>
-        </select>
-      </label>
+      </div>
+      <p className="-mt-2 text-[13px] text-ink-secondary">{orderType === "TAKEAWAY" ? t.takeawayHint : t.dineInHint}</p>
       {orderType === "DINE_IN" ? (
-        <label className="grid gap-1 text-sm">
-          {t.table}
-          <span className="text-sm leading-6 text-ink-secondary">{t.tableHint}</span>
-          <select className="h-12 rounded-staff border bg-background px-3" value={tableId} onChange={(event) => setTableId(event.target.value)}>
+        <Field label={t.table} hint={tables.isError ? undefined : t.tableHint} error={tables.isError ? (tables.error instanceof Error ? tables.error.message : t.tablesFailed) : undefined}>
+          <Select className="[&_select]:h-12 [&_select]:text-base" value={tableId} onChange={(event) => setTableId(event.target.value)}>
             <option value="">{tables.isFetching ? t.loadingTables : t.chooseTable}</option>
             {(tables.data ?? []).map((table) => (
-              <option key={table.id} value={table.id}>{fill(t.tableNumber, { number: table.table_number })}</option>
+              <option key={table.id} value={table.id}>
+                {fill(t.tableNumber, { number: table.table_number })}
+              </option>
             ))}
-          </select>
-          {tables.isError ? <span className="text-sm text-danger">{tables.error instanceof Error ? tables.error.message : t.tablesFailed}</span> : null}
-        </label>
+          </Select>
+        </Field>
       ) : null}
+      {lines.length === 0 ? (
+        <p className="rounded-staff bg-subtle px-3 py-6 text-center text-sm text-ink-secondary">{t.noItems}</p>
+      ) : (
+        <ul className="-my-1">
+          {lines.map((line, index) => (
+            <li key={`${line.itemId}-${index}`} className="flex min-h-14 items-center justify-between gap-3 border-b border-border py-2 last:border-b-0">
+              <span className="min-w-0 flex-1 text-[15px] font-medium">
+                {line.quantity > 1 ? <span className="tabular-nums">{line.quantity} × </span> : null}
+                {line.name}
+              </span>
+              <span className="shrink-0 text-[15px] tabular-nums">
+                <Money amount={line.subtotal} />
+              </span>
+              <button
+                type="button"
+                aria-label={`${t.remove} ${line.name}`}
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-staff text-ink-secondary hover:bg-subtle hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"
+                onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}
+              >
+                <X aria-hidden className="size-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {orderType === "DINE_IN" && tableId ? <PaymobPosCheckout tableId={tableId} online={online} /> : null}
-      <label className="grid gap-1 text-sm">
-        {t.tender}
-        <span className="text-sm leading-6 text-ink-secondary">{online ? t.tenderOnline : t.tenderOffline}</span>
-        <select className="h-12 rounded-staff border bg-background px-3" value={effectiveTender} onChange={(event) => setTender(event.target.value as typeof tender)}>
-          <option value="CASH">{paymentMethodLabel("CASH")}</option>
-          <option value="POS_TERMINAL" disabled={!online}>
-            {online ? paymentMethodLabel("POS_TERMINAL") : fill(t.methodOffline, { method: paymentMethodLabel("POS_TERMINAL") })}
-          </option>
-        </select>
-      </label>
-      <button type="button" className="min-h-14 rounded-staff bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={sendDisabled} onClick={() => checkout.mutate()}>
-        {checkout.isPending ? t.sending : t.sendOrder}
-      </button>
-      {lines.length === 0 ? <p className="text-sm text-ink-secondary">{t.addBeforeSend}</p> : null}
+      <div className="grid gap-2 border-t border-border pt-3">
+        <p className="flex items-baseline justify-between text-lg font-semibold">
+          <span>{t.total}</span>
+          <span className="tabular-nums">
+            <Money amount={total} />
+          </span>
+        </p>
+        <div role="radiogroup" aria-label={t.tender} className="grid grid-cols-2 gap-2">
+          {(["CASH", "POS_TERMINAL"] as const).map((value) => {
+            const disabled = value === "POS_TERMINAL" && !online;
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={effectiveTender === value}
+                disabled={disabled}
+                title={disabled ? fill(t.methodOffline, { method: paymentMethodLabel(value) }) : undefined}
+                className={pill(effectiveTender === value)}
+                onClick={() => setTender(value)}
+              >
+                {value === "CASH" ? <Banknote aria-hidden className="size-4" /> : <CreditCard aria-hidden className="size-4" />}
+                <span className="mx-auto">{paymentMethodLabel(value)}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[13px] text-ink-secondary">{online ? t.tenderOnline : t.tenderOffline}</p>
+      </div>
+      <Button size="touch" className="min-h-[60px] w-full text-[17px]" disabled={sendDisabled} onClick={() => checkout.mutate()}>
+        {checkout.isPending ? t.sending : lines.length > 0 ? `${t.sendOrder} · ${formatMoney(total, undefined, locale)}` : t.sendOrder}
+      </Button>
+      {lines.length === 0 ? <p className="-mt-2 text-[13px] text-ink-secondary">{t.addBeforeSend}</p> : null}
       <TillOfflineOrders />
     </aside>
   );
 
   const sale = (
-    <div className="grid gap-4 lg:grid-cols-[minmax(140px,20%)_minmax(0,1fr)_minmax(260px,32%)]">
-      <aside className="flex gap-2 overflow-x-auto lg:flex-col">
-        {categories.map((category) => {
-          const active = !itemSearch && category.id === activeCategory?.id;
-          const count = category.items?.length ?? 0;
-          const image = mediaUrl(category.image_url);
-          return (
-            <button
-              key={category.id}
-              type="button"
-              className={`flex min-h-14 shrink-0 items-center gap-2 px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "bg-primary font-medium text-primary-foreground" : "bg-secondary"}`}
-              onClick={() => {
-                setCategoryId(category.id);
-                setQuery("");
-              }}
-            >
-              {image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={image} alt="" className="size-10 shrink-0 rounded-staff bg-secondary object-contain" />
-              ) : null}
-              <span className="grid">
-              <span className="text-sm">{pickLocale(category.name, locale)}</span>
-              <span className={`text-xs ${active ? "text-primary-foreground/80" : "text-ink-secondary"}`}>{count === 1 ? t.oneItem : fill(t.manyItems, { count })}</span>
-              </span>
-            </button>
-          );
-        })}
-      </aside>
-      <div className="grid content-start gap-3">
-        <label className="grid gap-1 text-sm">
-          {t.searchItems}
-          <span className="text-sm leading-6 text-ink-secondary">{t.searchHint}</span>
-          <input className="h-12 rounded-staff border bg-canvas px-3" value={query} onChange={(event) => setQuery(event.target.value)} autoFocus />
-        </label>
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
+      <div className="grid min-w-0 content-start gap-3">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {categories.map((category) => {
+            const active = !itemSearch && category.id === activeCategory?.id;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                aria-pressed={active}
+                className={pill(active)}
+                onClick={() => {
+                  setCategoryId(category.id);
+                  setQuery("");
+                }}
+              >
+                {pickLocale(category.name, locale)}
+              </button>
+            );
+          })}
+        </div>
+        <Input
+          icon={Search}
+          type="search"
+          className="[&_input]:h-12 [&_input]:text-base"
+          aria-label={t.searchItems}
+          placeholder={t.searchItems}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          autoFocus
+        />
         {items.length === 0 ? <p className="text-sm text-ink-secondary">{itemSearch ? t.noSearch : t.noCategory}</p> : null}
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
           {items.map(({ item, categoryName }) => {
             const name = pickLocale(item.name, locale);
             const image = mediaUrl(item.image_url);
+            const choices = (item.modifier_groups ?? []).length;
             return (
-              <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden bg-canvas text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
+              <button
+                key={item.id}
+                type="button"
+                disabled={!item.is_available}
+                className="grid min-h-[112px] content-between gap-2 overflow-hidden rounded-staff border border-border bg-canvas p-3.5 text-start text-ink transition-colors hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:bg-subtle disabled:text-ink-secondary"
+                onClick={() => addItem(item)}
+              >
                 {image ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={image} alt="" className="h-24 w-full bg-secondary object-contain" />
-                ) : (
-                  <span className="flex h-14 items-center justify-center bg-secondary text-lg font-semibold text-primary">{name.trim().charAt(0).toUpperCase()}</span>
-                )}
-                <span className="block px-3 pt-2 font-medium">{name}</span>
-                {categoryName ? <span className="block px-3 text-xs text-ink-secondary">{categoryName}</span> : null}
-                <span className="block px-3 pb-3 text-sm text-ink-secondary">{item.is_available ? <Money amount={String(item.base_price)} /> : t.soldOut}</span>
+                  <img src={image} alt="" className="-mx-3.5 -mt-3.5 h-20 w-[calc(100%+1.75rem)] max-w-none bg-subtle object-cover" />
+                ) : null}
+                <span className="grid gap-0.5">
+                  <span className="text-base font-medium leading-snug">{name}</span>
+                  {categoryName ? <span className="text-xs text-ink-secondary">{categoryName}</span> : null}
+                </span>
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-ink-secondary tabular-nums">
+                    <Money amount={String(item.base_price)} />
+                  </span>
+                  {!item.is_available ? <Badge tone="danger">{t.soldOut}</Badge> : choices > 0 ? <Badge>+{choices}</Badge> : null}
+                </span>
               </button>
             );
           })}
         </div>
       </div>
-      <div className="hidden lg:sticky lg:top-4 lg:block lg:self-start">{ticket}</div>
-      <button type="button" className="fixed inset-x-4 bottom-20 z-30 min-h-14 rounded-staff bg-primary text-sm font-medium text-primary-foreground lg:hidden" onClick={() => setTicketOpen(true)}>
+      <div className="hidden lg:sticky lg:top-[76px] lg:block lg:self-start">{ticket}</div>
+      <Button size="touch" className="fixed inset-x-4 bottom-4 z-30 lg:hidden" onClick={() => setTicketOpen(true)}>
         {fill(t.ticketCount, { count: lines.length })}
-      </button>
+      </Button>
       {ticketOpen ? (
-        <div className="fixed inset-0 z-40 overflow-y-auto bg-background p-4 lg:hidden">
-          <button type="button" className="mb-3 min-h-11 text-sm underline" onClick={() => setTicketOpen(false)}>
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-canvas p-4 lg:hidden">
+          <Button variant="ghost" className="mb-3" onClick={() => setTicketOpen(false)}>
             {t.closeTicket}
-          </button>
+          </Button>
           {ticket}
         </div>
       ) : null}
@@ -669,9 +724,12 @@ export function PosScreen() {
     <div className="grid gap-4">
       {storeShown ? (
         <div className="flex gap-2 overflow-x-auto">
-          <button type="button" className={`min-h-11 shrink-0 px-3 text-sm ${viewingStore ? "bg-secondary" : "bg-primary font-medium text-primary-foreground"}`} onClick={() => openTab("sale")}>{t.newSale}</button>
-          <button type="button" className={`min-h-11 shrink-0 px-3 text-sm ${viewingStore ? "bg-primary font-medium text-primary-foreground" : "bg-secondary"}`} onClick={() => openTab("store-online")}>
-            {t.storeOnlineTab}{newStoreOrders.data ? ` ${newStoreOrders.data.length}` : ""}
+          <button type="button" aria-pressed={!viewingStore} className={pill(!viewingStore)} onClick={() => openTab("sale")}>
+            {t.newSale}
+          </button>
+          <button type="button" aria-pressed={viewingStore} className={pill(viewingStore)} onClick={() => openTab("store-online")}>
+            {t.storeOnlineTab}
+            {newStoreOrders.data ? <span className="tabular-nums">{newStoreOrders.data.length}</span> : null}
           </button>
         </div>
       ) : null}

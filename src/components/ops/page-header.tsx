@@ -33,3 +33,10 @@ export function PageHeader({
     </div>
   );
 }
+
+/** An older screen's own title: the Fraunces page title, or a section heading inside a hub. */
+export function ScreenTitle({ children }: { children: ReactNode }) {
+  const nested = useContext(Nested);
+  if (nested) return <h2 className="text-base font-semibold text-ink">{children}</h2>;
+  return <h1 className="font-title text-[28px] leading-tight font-medium text-ink sm:text-[32px]">{children}</h1>;
+}

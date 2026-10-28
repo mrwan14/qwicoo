@@ -21,6 +21,11 @@ const en = {
     audit: { title: "Audit log", body: "Who changed what, and when." },
   },
   nothing: "Nothing to set up for your role.",
+  back: "Settings",
+  listLabel: "Settings",
+  staffTabs: { staff: "Staff", invites: "Invites", attendance: "Attendance" },
+  branchTabs: { details: "Details", tables: "Tables", money: "Money", service: "Service" },
+  branchTabsLabel: "Branch settings",
 } as const;
 
 const ar = {
@@ -44,6 +49,11 @@ const ar = {
     audit: { title: "سجل التدقيق", body: "من غيّر ماذا ومتى." },
   },
   nothing: "لا توجد إعدادات لدورك.",
+  back: "الإعدادات",
+  listLabel: "الإعدادات",
+  staffTabs: { staff: "الفريق", invites: "الدعوات", attendance: "الحضور" },
+  branchTabs: { details: "البيانات", tables: "الطاولات", money: "المال", service: "الخدمة" },
+  branchTabsLabel: "إعدادات الفرع",
 } as const;
 
 export const settingsCopy = defineDictionary(en, ar);

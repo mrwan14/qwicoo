@@ -3,6 +3,7 @@
 import { CloudOff } from "lucide-react";
 import { toast } from "sonner";
 
+import { ScreenTitle } from "@/components/ops/page-header";
 import { Money } from "@/components/ops/money";
 import { StatusChip } from "@/components/ops/status-chip";
 import { fill } from "@/lib/i18n/dictionary";
@@ -41,7 +42,7 @@ export function OfflineTickets({ stage }: { stage: "kitchen" | "handover" }) {
   if (visible.length === 0) {
     if (online) return null;
     return (
-      <p className="rounded-xl border border-dashed bg-card px-4 py-3 text-sm text-muted-foreground">
+      <p className="rounded-staff border border-dashed bg-canvas px-4 py-3 text-sm text-ink-secondary">
         {stage === "kitchen" ? t.kitchenEmpty : t.handoverEmpty}
       </p>
     );
@@ -53,7 +54,7 @@ export function OfflineTickets({ stage }: { stage: "kitchen" | "handover" }) {
   return (
     <section className="grid gap-3" aria-label={t.aria}>
       <div className="flex items-center gap-2">
-        <CloudOff aria-hidden className="size-4 text-muted-foreground" />
+        <CloudOff aria-hidden className="size-4 text-ink-secondary" />
         <h2 className="text-base font-semibold">{t.title}</h2>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -61,11 +62,11 @@ export function OfflineTickets({ stage }: { stage: "kitchen" | "handover" }) {
           const steps: TransitionTarget[] =
             stage === "handover" ? ["DELIVERED"] : order.status === "SUBMITTED" ? ["PREPARING", "READY"] : ["READY"];
           return (
-            <article key={order.id} className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+            <article key={order.id} className="grid gap-3 rounded-staff bg-canvas p-4 border border-border">
               <div className="flex items-start justify-between gap-2">
                 <div className="grid gap-0.5">
                   <span className="text-[length:var(--text-28)] leading-none font-semibold tabular-nums">{displayNumber(order, t.table)}</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-ink-secondary">
                     {order.orderType === "DINE_IN" ? (order.tableLabel ?? t.dineIn) : t.takeaway} · {timeLabel(order.createdAt, locale)}
                   </span>
                 </div>
@@ -75,7 +76,7 @@ export function OfflineTickets({ stage }: { stage: "kitchen" | "handover" }) {
                 {order.lines.map((line, index) => (
                   <li key={`${line.item_id}-${index}`}>
                     <span className="font-medium">{line.quantity} × {line.name}</span>
-                    {line.modifiers.length ? <span className="block text-xs text-muted-foreground">{line.modifiers.map((mod) => mod.name).join(", ")}</span> : null}
+                    {line.modifiers.length ? <span className="block text-xs text-ink-secondary">{line.modifiers.map((mod) => mod.name).join(", ")}</span> : null}
                   </li>
                 ))}
               </ul>
@@ -90,7 +91,7 @@ export function OfflineTickets({ stage }: { stage: "kitchen" | "handover" }) {
                   <button
                     key={target}
                     type="button"
-                    className={`min-h-12 flex-1 rounded-xl text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${index === steps.length - 1 ? "bg-primary text-primary-foreground" : "border bg-background"}`}
+                    className={`min-h-12 flex-1 rounded-staff text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${index === steps.length - 1 ? "bg-primary text-primary-foreground" : "border bg-background"}`}
                     onClick={() => act(order, target)}
                   >
                     {t.steps[target]}
@@ -111,8 +112,8 @@ export function OfflineStage({ stage }: { stage: "kitchen" | "handover" }) {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{stage === "kitchen" ? t.kitchen : t.handover}</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.offlineIntro}</p>
+        <ScreenTitle>{stage === "kitchen" ? t.kitchen : t.handover}</ScreenTitle>
+        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.offlineIntro}</p>
       </div>
       <OfflineTickets stage={stage} />
     </div>
@@ -137,7 +138,7 @@ export function TillOfflineOrders() {
             <li key={order.id} className="flex items-center justify-between gap-2 text-sm">
               <span className="grid">
                 <span className="font-medium tabular-nums">{displayNumber(order, t.table)}</span>
-                {displayNumber(order, t.table) !== order.offlineNumber ? <span className="text-xs text-muted-foreground">{fill(t.was, { number: order.offlineNumber })}</span> : null}
+                {displayNumber(order, t.table) !== order.offlineNumber ? <span className="text-xs text-ink-secondary">{fill(t.was, { number: order.offlineNumber })}</span> : null}
               </span>
               <span className="flex items-center gap-2">
                 <Money amount={order.totals.total_amount} />

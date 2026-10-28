@@ -35,7 +35,7 @@ import { mediaUrl, presignedUploadUrl } from "@/lib/media";
 import { useDenyWhenMissing } from "@/lib/auth/session-client";
 import { useScope } from "@/stores/scope";
 
-const control = "h-11 w-full rounded-lg border px-3 text-sm";
+const control = "h-11 w-full rounded-staff border px-3 text-sm";
 const cardGrid = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3";
 
 function BrandMeta({ brand }: { brand: components["schemas"]["BrandResponse"] }) {
@@ -69,7 +69,7 @@ function BrandMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={t.actions}
-        className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="inline-flex size-8 items-center justify-center rounded-staff text-ink-secondary hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <MoreHorizontal aria-hidden className="size-4" />
       </DropdownMenuTrigger>
@@ -163,13 +163,13 @@ export function BrandsScreen() {
           ) : undefined
         }
         action={
-          <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>
+          <button type="button" className="min-h-11 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>
             {t.create}
           </button>
         }
       />
       {list.length === 0 ? (
-        <EmptyState title={t.emptyTitle} body={t.emptyBody} action={<button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>{t.create}</button>} />
+        <EmptyState title={t.emptyTitle} body={t.emptyBody} action={<button type="button" className="min-h-11 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>{t.create}</button>} />
       ) : (
         <ul className={cardGrid}>
           {list.map((brand) => (
@@ -204,7 +204,7 @@ export function BrandsScreen() {
           </DialogHeader>
           <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
             <input className={control} placeholder={t.namePlaceholder} value={name} onChange={(event) => setName(event.target.value)} required />
-            <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground" type="submit" disabled={create.isPending}>{t.create}</button>
+            <button className="min-h-11 rounded-staff bg-primary text-sm font-medium text-primary-foreground" type="submit" disabled={create.isPending}>{t.create}</button>
           </form>
         </DialogContent>
       </Dialog>
@@ -220,9 +220,10 @@ export function BrandDetailScreen({ brandId, apiOrigin }: { brandId: string; api
   return <BrandSetup brandId={brandId} apiOrigin={apiOrigin} backHref="/app/brands" backLabel={t.back} />;
 }
 
-export function BrandSettingsScreen({ brandId, apiOrigin }: { brandId: string; apiOrigin: string }) {
+/** `embedded` is Settings → Brand: the settings frame already has the back link. */
+export function BrandSettingsScreen({ brandId, apiOrigin, embedded = false }: { brandId: string; apiOrigin: string; embedded?: boolean }) {
   const t = useStaffSection(brandsCopy);
-  return <BrandSetup brandId={brandId} apiOrigin={apiOrigin} backHref={`/app/brands/${brandId}`} backLabel={t.dashboard} />;
+  return <BrandSetup brandId={brandId} apiOrigin={apiOrigin} backHref={embedded ? null : `/app/brands/${brandId}`} backLabel={t.dashboard} />;
 }
 
 function BrandOwnerDashboard({ brandId }: { brandId: string }) {
@@ -262,7 +263,7 @@ function BrandSetup({
 }: {
   brandId: string;
   apiOrigin: string;
-  backHref: string;
+  backHref: string | null;
   backLabel: string;
 }) {
   const t = useStaffSection(brandsCopy);
@@ -327,18 +328,20 @@ function BrandSetup({
 
   return (
     <div className="grid gap-4">
-      <Link
-        href={backHref}
-        className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        <ArrowLeft aria-hidden className="size-4 rtl:-scale-x-100" />
-        {backLabel}
-      </Link>
+      {backHref ? (
+        <Link
+          href={backHref}
+          className="inline-flex w-fit items-center gap-1.5 text-[13px] text-ink-secondary hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        >
+          <ArrowLeft aria-hidden className="size-4 rtl:-scale-x-100" />
+          {backLabel}
+        </Link>
+      ) : null}
       <PageHeader
         title={brand.data.name}
         action={
           isPlatform ? (
-            <Link href="/app/invitations" className="inline-flex min-h-11 items-center bg-secondary px-4 text-sm font-medium hover:bg-muted">
+            <Link href="/app/settings/staff/invites" className="inline-flex min-h-11 items-center bg-secondary px-4 text-sm font-medium hover:bg-muted">
               {t.inviteAdmin}
             </Link>
           ) : undefined
@@ -363,12 +366,12 @@ function BrandSetup({
         <div className="grid gap-0.5">
           <h2 className="text-lg font-semibold">{t.branchesTitle}</h2>
           {branches.isSuccess ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-ink-secondary">
               <LiveCount value={branches.data.length} /> {branches.data.length === 1 ? t.branch : t.branches}
             </p>
           ) : null}
         </div>
-        <button type="button" className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setBranchOpen(true)}>
+        <button type="button" className="min-h-11 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setBranchOpen(true)}>
           {t.addBranch}
         </button>
       </div>
@@ -493,12 +496,12 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
   }
 
   return (
-    <section className="grid gap-3 border bg-card p-4">
+    <section className="grid gap-3 border bg-canvas p-4">
       <div className="grid gap-1">
         <h2 className="font-semibold">{t.qwicooTitle}</h2>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.qwicooHint}</p>
+        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.qwicooHint}</p>
       </div>
-      {features.isError ? <p className="text-sm text-destructive">{features.error.message}</p> : null}
+      {features.isError ? <p className="text-sm text-danger">{features.error.message}</p> : null}
       <div className="flex flex-wrap items-center justify-between gap-3 border px-3 py-2">
         <span className="text-sm font-medium">{t.mobileApp}</span>
         <button
@@ -518,7 +521,7 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
         ].map(([key, label]) => (
           <li key={key} className="flex flex-wrap items-center justify-between gap-3 border px-3 py-2">
             <span>{label}</span>
-            <span className="text-muted-foreground">{enabled(key) ? t.featureOn : t.featureOff}</span>
+            <span className="text-ink-secondary">{enabled(key) ? t.featureOn : t.featureOff}</span>
           </li>
         ))}
       </ul>
@@ -530,7 +533,7 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
           directory.mutate();
         }}
       >
-        <p className="text-sm leading-6 text-muted-foreground">{t.logoFallback}</p>
+        <p className="text-sm leading-6 text-ink-secondary">{t.logoFallback}</p>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={featured} onChange={(event) => setFeatured(event.target.checked)} />
           {t.featured}
@@ -588,8 +591,8 @@ function BrandLogo({
   const mark = name.trim().charAt(0).toUpperCase() || "B";
   const shown = mediaUrl(logoUrl?.trim() ? logoUrl : null);
   return (
-    <section className="flex flex-col gap-4 bg-card p-4 sm:flex-row sm:items-center">
-      <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary">
+    <section className="flex flex-col gap-4 bg-canvas p-4 sm:flex-row sm:items-center">
+      <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-staff bg-secondary">
         {shown ? (
           // Logo files are stored on the upload host, which next/image is not set up to optimise.
           // eslint-disable-next-line @next/next/no-img-element
@@ -601,7 +604,7 @@ function BrandLogo({
       <div className="grid gap-2">
         <div>
           <h2 className="font-semibold">{t.logo}</h2>
-          <p id="brand-logo-hint" className="text-sm leading-6 text-muted-foreground">{t.logoHint}</p>
+          <p id="brand-logo-hint" className="text-sm leading-6 text-ink-secondary">{t.logoHint}</p>
         </div>
         <input
           ref={inputRef}
@@ -618,7 +621,7 @@ function BrandLogo({
         />
         <button
           type="button"
-          className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+          className="inline-flex min-h-11 w-fit items-center gap-2 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
           disabled={pending}
           onClick={() => inputRef.current?.click()}
         >
@@ -711,17 +714,17 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
             <span>{t.location}</span>
             <button
               type="button"
-              className="flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-start hover:border-primary/40"
+              className="flex min-h-11 items-center gap-3 rounded-staff border px-3 py-2 text-start hover:border-primary/40"
               onClick={() => setPickerOpen(true)}
             >
               <MapPin aria-hidden className="size-4 shrink-0 text-primary" />
               {location ? (
                 <span className="grid gap-0.5">
                   <span className="line-clamp-2">{location.address || t.pinned}</span>
-                  <span className="text-xs text-muted-foreground tabular-nums">{location.latitude}, {location.longitude}</span>
+                  <span className="text-xs text-ink-secondary tabular-nums">{location.latitude}, {location.longitude}</span>
                 </span>
               ) : (
-                <span className="text-muted-foreground">{t.chooseOnMap}</span>
+                <span className="text-ink-secondary">{t.chooseOnMap}</span>
               )}
               <span className="ms-auto text-xs text-primary">{location ? t.change : t.openMap}</span>
             </button>
@@ -742,7 +745,7 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
             </label>
           </div>
 
-          <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={create.isPending || !location}>
+          <button className="min-h-11 rounded-staff bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={create.isPending || !location}>
             {create.isPending ? t.creating : t.createBranch}
           </button>
         </form>

@@ -400,7 +400,7 @@ export function BranchHome() {
         <div className="grid grid-cols-1 gap-4">
           <Card
             title={t.branch.staff.title}
-            action={allowed.has("/app/attendance") ? <CardLink href="/app/attendance">{t.branch.staff.seeAll}</CardLink> : undefined}
+            action={allowed.has("/app/settings/staff/attendance") ? <CardLink href="/app/settings/staff/attendance">{t.branch.staff.seeAll}</CardLink> : undefined}
           >
             {staff.isLoading ? (
               <RowsSkeleton rows={2} />

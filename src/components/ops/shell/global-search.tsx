@@ -17,7 +17,7 @@ type Result = { id: string; label: string; hint?: string; href: string; kind: "p
 const SEARCHABLE = [
   { href: "/app/orders/history", copy: "ordersFor" },
   { href: "/app/menu", copy: "itemsFor" },
-  { href: "/app/staff", copy: "staffFor" },
+  { href: "/app/settings/staff", copy: "staffFor" },
 ] as const;
 
 /**

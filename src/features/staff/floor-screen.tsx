@@ -36,10 +36,10 @@ import { occupancyLabel, orderStatusLabel } from "@/lib/status-labels";
 import { floorStatusOptions, showAmountDue, type OrderStatus } from "@/features/staff/order-moves";
 import { useScope } from "@/stores/scope";
 
-const hint = "text-sm leading-6 text-muted-foreground";
-const control = "h-12 w-full rounded-xl border bg-background px-3 text-sm";
+const hint = "text-sm leading-6 text-ink-secondary";
+const control = "h-12 w-full rounded-staff border bg-background px-3 text-sm";
 const primaryButton =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 
 const ADD_TABLE_ROLES: ReadonlySet<UserRole> = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"]);
 
@@ -132,7 +132,7 @@ function AddTableDialog({ branchId }: { branchId: string }) {
             <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
-                className="min-h-11 rounded-xl border px-4 text-sm"
+                className="min-h-11 rounded-staff border px-4 text-sm"
                 disabled={create.isPending}
                 onClick={() => setOpen(false)}
               >
@@ -318,7 +318,7 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
                 <StatusChip tone={occupancyTone(selected.current_state)}>
                   {needsConfirmation(selected) ? orderStatusLabel("PENDING_STAFF_CONFIRMATION") : occupancyLabel(selected.current_state)}
                 </StatusChip>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-ink-secondary">
                   {[
                     `${selected.capacity} ${selected.capacity === 1 ? t.seat : t.seats}`,
                     seatedFor(selected.occupancy_duration_minutes, t.seatedOne, t.seatedMany),
@@ -371,7 +371,7 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
                       </label>
                       <button
                         type="submit"
-                        className="min-h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                        className="min-h-12 rounded-staff bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
                         disabled={transition.isPending || moveTo === selected.order_status}
                       >
                         {transition.isPending ? t.updating : t.updateOrder}
@@ -428,12 +428,12 @@ function PendingOrder({
     <div className="grid gap-3">
       <div>
         <NeedsConfirmationBadge />
-        <p className="mt-2 text-sm text-muted-foreground">{t.pendingBody}</p>
+        <p className="mt-2 text-sm text-ink-secondary">{t.pendingBody}</p>
       </div>
       {detail.isLoading ? (
         <LoadingState label={t.loadingOrder} />
       ) : detail.isError ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink-secondary">
           {detail.error instanceof Error ? detail.error.message : t.couldntLoadOrder}{" "}
           <button type="button" className="underline" onClick={() => void detail.refetch()}>
             {t.tryAgain}
@@ -445,11 +445,11 @@ function PendingOrder({
             const modifiers = modifierNames(item.selected_modifiers);
             const note = item.special_instructions?.trim();
             return (
-              <li key={item.id} className="rounded-lg bg-muted/70 p-3 text-sm">
+              <li key={item.id} className="rounded-staff bg-muted/70 p-3 text-sm">
                 <p className="font-medium">
                   {item.quantity} × {item.item_name}
                 </p>
-                {modifiers.length > 0 ? <p className="text-muted-foreground">+ {modifiers.join(", ")}</p> : null}
+                {modifiers.length > 0 ? <p className="text-ink-secondary">+ {modifiers.join(", ")}</p> : null}
                 {note ? (
                   <p className={`mt-1 rounded-md px-2 py-1 ${toneSurface("ordered")}`}>
                     <span className="font-medium">{t.note}</span> {note}
@@ -476,7 +476,7 @@ function PendingOrder({
             <label className="grid gap-1 text-sm font-medium">
               {t.rejectReason}
               <textarea
-                className="min-h-20 rounded-lg border px-3 py-2"
+                className="min-h-20 rounded-staff border px-3 py-2"
                 value={reason}
                 onChange={(event) => onReason(event.target.value)}
                 placeholder={t.rejectPlaceholder}
@@ -485,13 +485,13 @@ function PendingOrder({
             <div className="grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
-                className="min-h-12 rounded-lg bg-destructive text-sm font-medium text-white disabled:opacity-50"
+                className="min-h-12 rounded-staff bg-danger text-sm font-medium text-white disabled:opacity-50"
                 disabled={pending || !reason.trim()}
                 onClick={() => onReject(orderId)}
               >
                 {pending ? t.rejecting : t.rejectOrder}
               </button>
-              <button type="button" className="min-h-12 rounded-lg border text-sm" disabled={pending} onClick={onCancelReject}>
+              <button type="button" className="min-h-12 rounded-staff border text-sm" disabled={pending} onClick={onCancelReject}>
                 {t.back}
               </button>
             </div>
@@ -500,13 +500,13 @@ function PendingOrder({
           <div className="grid gap-2 sm:grid-cols-2">
             <button
               type="button"
-              className="min-h-12 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
+              className="min-h-12 rounded-staff bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
               disabled={pending}
               onClick={() => onConfirm(orderId)}
             >
               {pending ? t.confirming : t.confirmOrder}
             </button>
-            <button type="button" className="min-h-12 rounded-lg border text-sm font-medium" disabled={pending} onClick={onStartReject}>
+            <button type="button" className="min-h-12 rounded-staff border text-sm font-medium" disabled={pending} onClick={onStartReject}>
               {t.reject}
             </button>
           </div>

@@ -36,6 +36,15 @@ const OLD_ROUTES: readonly { path: string; role: UserRole; lands: string | null 
   { path: "/app/inventory/import", role: "BRAND_ADMIN", lands: "/app/settings/stock/import" },
   { path: "/app/inventory/jobs", role: "BRANCH_ADMIN", lands: "/app/settings/stock/jobs" },
   { path: "/app/inventory/reports", role: "BRANCH_ADMIN", lands: "/app/reports/stock" },
+  { path: "/app/staff", role: "BRANCH_ADMIN", lands: "/app/settings/staff" },
+  { path: "/app/team", role: "BRAND_ADMIN", lands: "/app/settings/staff/invites" },
+  { path: "/app/invitations", role: "SUPER_ADMIN", lands: "/app/settings/staff/invites" },
+  { path: "/app/qr", role: "BRANCH_ADMIN", lands: "/app/settings/tables-qr" },
+  { path: "/app/mobile-customers", role: "BRAND_ADMIN", lands: "/app/settings/customers" },
+  { path: "/app/attendance", role: "BRANCH_ADMIN", lands: "/app/settings/staff/attendance" },
+  { path: "/app/attendance", role: "CASHIER", lands: null },
+  { path: `/app/brands/${BRAND}/settings`, role: "BRAND_ADMIN", lands: "/app/settings/brand" },
+  { path: `/app/brands/${BRAND}/settings`, role: "SUPER_ADMIN", lands: null },
 ];
 
 test("every old route lands on its new home", () => {

@@ -152,17 +152,17 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
   };
 
   return (
-    <section className="grid w-full gap-5 border border-border bg-card p-4">
+    <section className="grid w-full gap-5 border border-border bg-canvas p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold">{t.title}</h2>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{t.intro}</p>
+          <p className="max-w-3xl text-sm leading-6 text-ink-secondary">{t.intro}</p>
         </div>
         <StatusChip tone={tone}>{statusLabel}</StatusChip>
       </div>
 
-      {gateway.isLoading ? <p className="text-sm text-muted-foreground">{t.loading}</p> : null}
-      {gateway.isError ? <p className="text-sm text-destructive">{gateway.error.message}</p> : null}
+      {gateway.isLoading ? <p className="text-sm text-ink-secondary">{t.loading}</p> : null}
+      {gateway.isError ? <p className="text-sm text-danger">{gateway.error.message}</p> : null}
 
       {gateway.isSuccess ? (
         <form
@@ -192,7 +192,7 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
               onChange={(hmacSecret) => setDraft((current) => ({ ...current, hmacSecret }))}
             />
           </div>
-          {gateway.data ? <p className="text-sm text-muted-foreground">{t.keepSecret}</p> : null}
+          {gateway.data ? <p className="text-sm text-ink-secondary">{t.keepSecret}</p> : null}
 
           <div className="grid gap-4 lg:grid-cols-3">
             <TextField label={t.cardId} value={draft.card} inputMode="numeric" onChange={(card) => setDraft((current) => ({ ...current, card }))} />
@@ -237,7 +237,7 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
               />
               <span className="grid">
                 <span className="font-medium">{t.active}</span>
-                <span className="text-muted-foreground">{t.activeHint}</span>
+                <span className="text-ink-secondary">{t.activeHint}</span>
               </span>
             </label>
           </div>
@@ -266,11 +266,11 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
                 {SETUP_CHECKS.map((id) => (
                   <li key={id} className="flex items-center justify-between gap-3 border-b border-border px-3 py-3 text-sm last:border-b-0">
                     <span>{checkLabel[id]}</span>
-                    <span className={checks[id] === "failed" ? "text-destructive" : "text-muted-foreground"}>{stateLabel[checks[id]]}</span>
+                    <span className={checks[id] === "failed" ? "text-danger" : "text-ink-secondary"}>{stateLabel[checks[id]]}</span>
                   </li>
                 ))}
               </ul>
-              {checkNote ? <p className="text-sm text-destructive">{checkNote}</p> : null}
+              {checkNote ? <p className="text-sm text-danger">{checkNote}</p> : null}
             </div>
           ) : null}
         </form>
@@ -279,7 +279,7 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
       <div className="grid w-full gap-3">
         <div className="grid gap-1">
           <h3 className="font-medium">{t.urlsHint}</h3>
-          <p className="text-sm leading-6 text-muted-foreground">{t.callbackNote}</p>
+          <p className="text-sm leading-6 text-ink-secondary">{t.callbackNote}</p>
         </div>
         <UrlRow label={t.callback} value={urls.callback} copyLabel={t.copy} copiedLabel={t.copied} failedLabel={t.copyFailed} />
         <UrlRow label={t.redirect} value={urls.redirect} copyLabel={t.copy} copiedLabel={t.copied} failedLabel={t.copyFailed} />
@@ -302,7 +302,7 @@ function SecretField({
   return (
     <label className="grid gap-1 text-sm">
       <span className="font-medium">{label}</span>
-      <span className="text-muted-foreground">{hint}</span>
+      <span className="text-ink-secondary">{hint}</span>
       <input
         className={field}
         type="password"

@@ -134,21 +134,21 @@ function OrderConfirmation({
   }
 
   return (
-    <section role="status" aria-live="polite" className="grid gap-3 rounded-xl bg-muted/70 p-4">
+    <section role="status" aria-live="polite" className="grid gap-3 rounded-staff bg-muted/70 p-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">{offline ? (waiting ? t.savedOnTill : t.orderSynced) : t.orderSent}</p>
         <StatusChip tone={confirmation.paid ? "available" : "ordered"}>{paymentLabel(confirmation, t)}</StatusChip>
       </div>
       {number ? (
         <p className="grid gap-0.5">
-          <span className="text-xs text-muted-foreground">{realNumber ? (confirmation.orderType === "DINE_IN" ? t.orderFor : t.pickupNumber) : t.offlineNumber}</span>
+          <span className="text-xs text-ink-secondary">{realNumber ? (confirmation.orderType === "DINE_IN" ? t.orderFor : t.pickupNumber) : t.offlineNumber}</span>
           <span className="text-[length:var(--text-28)] leading-none font-semibold tabular-nums">{number}</span>
         </p>
       ) : null}
       {offline && waiting ? (
-        <p className="text-sm leading-6 text-muted-foreground">{t.giveGuestNumber}</p>
+        <p className="text-sm leading-6 text-ink-secondary">{t.giveGuestNumber}</p>
       ) : null}
-      {queued?.status === "CANCELLED" ? <p className="text-sm text-muted-foreground">{t.cancelledOnTill}</p> : null}
+      {queued?.status === "CANCELLED" ? <p className="text-sm text-ink-secondary">{t.cancelledOnTill}</p> : null}
       <p className="flex justify-between text-sm">
         <span>{confirmation.paid ? t.collected : t.total}</span>
         <span className="font-semibold">
@@ -168,24 +168,24 @@ function OrderConfirmation({
           />
           <span>
             {t.autoPrint}
-            <span className="ms-1 text-muted-foreground">{t.autoPrintHint}</span>
+            <span className="ms-1 text-ink-secondary">{t.autoPrintHint}</span>
           </span>
         </label>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         {canPrint ? (
-          <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm font-medium disabled:opacity-50" disabled={printing} onClick={() => void handlePrint()}>
+          <button type="button" className="min-h-11 flex-1 rounded-staff border text-sm font-medium disabled:opacity-50" disabled={printing} onClick={() => void handlePrint()}>
             {printing ? t.printingReceipt : t.printReceipt}
           </button>
         ) : null}
-        <button type="button" className="min-h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onClick={onDismiss}>
+        <button type="button" className="min-h-11 flex-1 rounded-staff bg-primary text-sm font-medium text-primary-foreground" onClick={onDismiss}>
           {t.newOrder}
         </button>
         {queued?.status === "CANCELLED" ? null : (
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label={t.orderActions}
-              className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="inline-flex size-11 items-center justify-center rounded-staff text-ink-secondary hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <MoreHorizontal aria-hidden className="size-4" />
             </DropdownMenuTrigger>
@@ -495,7 +495,7 @@ export function PosScreen() {
   const sendDisabled = lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim());
 
   const ticket = (
-    <aside className="grid gap-3 bg-card p-4">
+    <aside className="grid gap-3 bg-canvas p-4">
       {confirmation ? (
         <OrderConfirmation
           confirmation={confirmation}
@@ -505,16 +505,16 @@ export function PosScreen() {
       ) : null}
       <div>
         <h2 className="text-lg font-semibold">{t.ticket}</h2>
-        <p className="text-sm leading-6 text-muted-foreground">{t.ticketHint}</p>
+        <p className="text-sm leading-6 text-ink-secondary">{t.ticketHint}</p>
       </div>
-      {lines.length === 0 ? <p className="text-sm text-muted-foreground">{t.noItems}</p> : null}
+      {lines.length === 0 ? <p className="text-sm text-ink-secondary">{t.noItems}</p> : null}
       <ul className="grid gap-2">
         {lines.map((line, index) => (
           <li key={`${line.itemId}-${index}`} className="flex items-center justify-between gap-2 text-sm">
             <span>{line.quantity > 1 ? `${line.quantity} × ` : ""}{line.name}</span>
             <span className="flex items-center gap-2">
               <Money amount={line.subtotal} />
-              <button type="button" className="min-h-11 rounded-lg px-2 text-sm text-muted-foreground hover:text-foreground" onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}>
+              <button type="button" className="min-h-11 rounded-staff px-2 text-sm text-ink-secondary hover:text-foreground" onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}>
                 {t.remove}
               </button>
             </span>
@@ -529,8 +529,8 @@ export function PosScreen() {
       ) : null}
       <label className="grid gap-1 text-sm">
         {t.orderType}
-        <span className="text-sm leading-6 text-muted-foreground">{orderType === "TAKEAWAY" ? t.takeawayHint : t.dineInHint}</span>
-        <select className="h-12 rounded-xl border bg-background px-3" value={orderType} onChange={(event) => setOrderType(event.target.value as typeof orderType)}>
+        <span className="text-sm leading-6 text-ink-secondary">{orderType === "TAKEAWAY" ? t.takeawayHint : t.dineInHint}</span>
+        <select className="h-12 rounded-staff border bg-background px-3" value={orderType} onChange={(event) => setOrderType(event.target.value as typeof orderType)}>
           <option value="TAKEAWAY">{t.takeaway}</option>
           <option value="DINE_IN">{t.dineIn}</option>
         </select>
@@ -538,31 +538,31 @@ export function PosScreen() {
       {orderType === "DINE_IN" ? (
         <label className="grid gap-1 text-sm">
           {t.table}
-          <span className="text-sm leading-6 text-muted-foreground">{t.tableHint}</span>
-          <select className="h-12 rounded-xl border bg-background px-3" value={tableId} onChange={(event) => setTableId(event.target.value)}>
+          <span className="text-sm leading-6 text-ink-secondary">{t.tableHint}</span>
+          <select className="h-12 rounded-staff border bg-background px-3" value={tableId} onChange={(event) => setTableId(event.target.value)}>
             <option value="">{tables.isFetching ? t.loadingTables : t.chooseTable}</option>
             {(tables.data ?? []).map((table) => (
               <option key={table.id} value={table.id}>{fill(t.tableNumber, { number: table.table_number })}</option>
             ))}
           </select>
-          {tables.isError ? <span className="text-sm text-destructive">{tables.error instanceof Error ? tables.error.message : t.tablesFailed}</span> : null}
+          {tables.isError ? <span className="text-sm text-danger">{tables.error instanceof Error ? tables.error.message : t.tablesFailed}</span> : null}
         </label>
       ) : null}
       {orderType === "DINE_IN" && tableId ? <PaymobPosCheckout tableId={tableId} online={online} /> : null}
       <label className="grid gap-1 text-sm">
         {t.tender}
-        <span className="text-sm leading-6 text-muted-foreground">{online ? t.tenderOnline : t.tenderOffline}</span>
-        <select className="h-12 rounded-xl border bg-background px-3" value={effectiveTender} onChange={(event) => setTender(event.target.value as typeof tender)}>
+        <span className="text-sm leading-6 text-ink-secondary">{online ? t.tenderOnline : t.tenderOffline}</span>
+        <select className="h-12 rounded-staff border bg-background px-3" value={effectiveTender} onChange={(event) => setTender(event.target.value as typeof tender)}>
           <option value="CASH">{paymentMethodLabel("CASH")}</option>
           <option value="POS_TERMINAL" disabled={!online}>
             {online ? paymentMethodLabel("POS_TERMINAL") : fill(t.methodOffline, { method: paymentMethodLabel("POS_TERMINAL") })}
           </option>
         </select>
       </label>
-      <button type="button" className="min-h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={sendDisabled} onClick={() => checkout.mutate()}>
+      <button type="button" className="min-h-14 rounded-staff bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={sendDisabled} onClick={() => checkout.mutate()}>
         {checkout.isPending ? t.sending : t.sendOrder}
       </button>
-      {lines.length === 0 ? <p className="text-sm text-muted-foreground">{t.addBeforeSend}</p> : null}
+      {lines.length === 0 ? <p className="text-sm text-ink-secondary">{t.addBeforeSend}</p> : null}
       <TillOfflineOrders />
     </aside>
   );
@@ -586,11 +586,11 @@ export function PosScreen() {
             >
               {image ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={image} alt="" className="size-10 shrink-0 rounded-lg bg-secondary object-contain" />
+                <img src={image} alt="" className="size-10 shrink-0 rounded-staff bg-secondary object-contain" />
               ) : null}
               <span className="grid">
               <span className="text-sm">{pickLocale(category.name, locale)}</span>
-              <span className={`text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{count === 1 ? t.oneItem : fill(t.manyItems, { count })}</span>
+              <span className={`text-xs ${active ? "text-primary-foreground/80" : "text-ink-secondary"}`}>{count === 1 ? t.oneItem : fill(t.manyItems, { count })}</span>
               </span>
             </button>
           );
@@ -599,16 +599,16 @@ export function PosScreen() {
       <div className="grid content-start gap-3">
         <label className="grid gap-1 text-sm">
           {t.searchItems}
-          <span className="text-sm leading-6 text-muted-foreground">{t.searchHint}</span>
-          <input className="h-12 rounded-xl border bg-card px-3" value={query} onChange={(event) => setQuery(event.target.value)} autoFocus />
+          <span className="text-sm leading-6 text-ink-secondary">{t.searchHint}</span>
+          <input className="h-12 rounded-staff border bg-canvas px-3" value={query} onChange={(event) => setQuery(event.target.value)} autoFocus />
         </label>
-        {items.length === 0 ? <p className="text-sm text-muted-foreground">{itemSearch ? t.noSearch : t.noCategory}</p> : null}
+        {items.length === 0 ? <p className="text-sm text-ink-secondary">{itemSearch ? t.noSearch : t.noCategory}</p> : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {items.map(({ item, categoryName }) => {
             const name = pickLocale(item.name, locale);
             const image = mediaUrl(item.image_url);
             return (
-              <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden bg-card text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
+              <button key={item.id} type="button" disabled={!item.is_available} className="grid min-h-28 overflow-hidden bg-canvas text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60" onClick={() => addItem(item)}>
                 {image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={image} alt="" className="h-24 w-full bg-secondary object-contain" />
@@ -616,15 +616,15 @@ export function PosScreen() {
                   <span className="flex h-14 items-center justify-center bg-secondary text-lg font-semibold text-primary">{name.trim().charAt(0).toUpperCase()}</span>
                 )}
                 <span className="block px-3 pt-2 font-medium">{name}</span>
-                {categoryName ? <span className="block px-3 text-xs text-muted-foreground">{categoryName}</span> : null}
-                <span className="block px-3 pb-3 text-sm text-muted-foreground">{item.is_available ? <Money amount={String(item.base_price)} /> : t.soldOut}</span>
+                {categoryName ? <span className="block px-3 text-xs text-ink-secondary">{categoryName}</span> : null}
+                <span className="block px-3 pb-3 text-sm text-ink-secondary">{item.is_available ? <Money amount={String(item.base_price)} /> : t.soldOut}</span>
               </button>
             );
           })}
         </div>
       </div>
       <div className="hidden lg:sticky lg:top-4 lg:block lg:self-start">{ticket}</div>
-      <button type="button" className="fixed inset-x-4 bottom-20 z-30 min-h-14 rounded-lg bg-primary text-sm font-medium text-primary-foreground lg:hidden" onClick={() => setTicketOpen(true)}>
+      <button type="button" className="fixed inset-x-4 bottom-20 z-30 min-h-14 rounded-staff bg-primary text-sm font-medium text-primary-foreground lg:hidden" onClick={() => setTicketOpen(true)}>
         {fill(t.ticketCount, { count: lines.length })}
       </button>
       {ticketOpen ? (
@@ -731,19 +731,19 @@ function ModifierSheet({
                     onChange={() => toggle(group, option.id)}
                   />
                   <span className="flex-1">{pickLocale(option.name, locale)}{option.is_available ? "" : ` · ${t.soldOut}`}</span>
-                  <span className="text-muted-foreground">{option.price_delta}</span>
+                  <span className="text-ink-secondary">{option.price_delta}</span>
                 </label>
               ))}
             </fieldset>
           ))}
           <label className="grid gap-1 text-sm font-medium">
             {t.quantity}
-            <input type="number" min={1} className="h-12 rounded-lg border px-3" value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} />
+            <input type="number" min={1} className="h-12 rounded-staff border px-3" value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} />
           </label>
           <p className="text-sm font-medium">
             <Money amount={previewSubtotal(item, quantity, selected)} />
           </p>
-          <button type="button" className="min-h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={!ready} onClick={() => onAdd(quantity, optionIds)}>
+          <button type="button" className="min-h-12 rounded-staff bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={!ready} onClick={() => onAdd(quantity, optionIds)}>
             {t.addToTicket}
           </button>
         </div>

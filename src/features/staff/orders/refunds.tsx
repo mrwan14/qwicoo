@@ -30,18 +30,18 @@ export function OrderRefunds({ orderId }: { orderId: string }) {
     <section className="grid gap-2 border p-3">
       <h2 className="text-sm font-medium">{t.refunds}</h2>
       {refunds.isLoading ? <LoadingState label={t.refundsLoading} /> : null}
-      {refunds.isError ? <p className="text-sm text-destructive">{refunds.error.message}</p> : null}
-      {refunds.data && refunds.data.length === 0 ? <p className="text-sm text-muted-foreground">{t.noRefunds}</p> : null}
+      {refunds.isError ? <p className="text-sm text-danger">{refunds.error.message}</p> : null}
+      {refunds.data && refunds.data.length === 0 ? <p className="text-sm text-ink-secondary">{t.noRefunds}</p> : null}
       {refunds.data && refunds.data.length > 0 ? (
         <ul className="grid gap-2 text-sm">
           {refunds.data.map((row) => (
             <li key={row.id} className="grid gap-1 border-b pb-2 last:border-b-0">
               <p className="font-medium tabular-nums"><Money amount={row.amount} /> · {paymentMethodLabel(row.method, locale)}</p>
               <p>{row.reason?.trim() || "—"}</p>
-              <p className="text-muted-foreground">
+              <p className="text-ink-secondary">
                 {row.actor_type}{row.actor_id ? ` · ${row.actor_id.slice(0, 8)}` : ""} · {formatCairoDateTime(row.created_at, locale)}
               </p>
-              <p className="text-muted-foreground">{t.drawer}: {row.cash_drawer_session_id ? row.cash_drawer_session_id.slice(0, 8) : "—"}</p>
+              <p className="text-ink-secondary">{t.drawer}: {row.cash_drawer_session_id ? row.cash_drawer_session_id.slice(0, 8) : "—"}</p>
             </li>
           ))}
         </ul>

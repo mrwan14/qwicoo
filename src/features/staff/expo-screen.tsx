@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
 import { isDeliveryFulfillment, optionalRecordString, staffOrderStatus } from "@/features/staff/delivery";
 
+import { ScreenTitle } from "@/components/ops/page-header";
 import { StatusChip, toneSurface } from "@/components/ops/status-chip";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
@@ -205,13 +206,13 @@ export function ExpoScreen() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{runnerOnly ? t.runnerTitle : t.title}</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{runnerOnly ? t.runnerHint : t.hint}</p>
+        <ScreenTitle>{runnerOnly ? t.runnerTitle : t.title}</ScreenTitle>
+        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{runnerOnly ? t.runnerHint : t.hint}</p>
       </div>
       <OfflineTickets stage="handover" />
       {runnerOnly ? null : (
       <form
-        className="grid gap-2 bg-card p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+        className="grid gap-2 bg-canvas p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
         onSubmit={(event) => {
           event.preventDefault();
           if (token.trim()) verify.mutate();
@@ -219,20 +220,20 @@ export function ExpoScreen() {
       >
         <label className="grid gap-1 text-sm sm:col-span-2">
           {t.guestCode}
-          <span className="text-sm leading-6 text-muted-foreground">{t.guestCodeHint}</span>
+          <span className="text-sm leading-6 text-ink-secondary">{t.guestCodeHint}</span>
         </label>
-        <input className="h-12 rounded-xl border bg-background px-3" value={token} onChange={(event) => setToken(event.target.value)} />
-        <button className="min-h-12 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" type="submit" disabled={!token.trim() || verify.isPending}>
+        <input className="h-12 rounded-staff border bg-background px-3" value={token} onChange={(event) => setToken(event.target.value)} />
+        <button className="min-h-12 rounded-staff border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" type="submit" disabled={!token.trim() || verify.isPending}>
           {verify.isPending ? t.checking : t.checkCode}
         </button>
       </form>
       )}
       {cards.length === 0 ? <EmptyState title={t.emptyTitle} body={t.emptyBody} /> : (
-      <div className="overflow-x-auto bg-card">
+      <div className="overflow-x-auto bg-canvas">
         <table className="w-full min-w-[760px] border-collapse text-sm">
-          <caption className="px-4 py-3 text-start text-sm text-muted-foreground">{t.caption}</caption>
+          <caption className="px-4 py-3 text-start text-sm text-ink-secondary">{t.caption}</caption>
           <thead>
-            <tr className="border-b text-muted-foreground">
+            <tr className="border-b text-ink-secondary">
               <th scope="col" className="px-4 py-3 text-start font-medium">{t.order}</th>
               <th scope="col" className="px-4 py-3 text-start font-medium">{t.dishes}</th>
               <th scope="col" className="px-4 py-3 text-start font-medium">{t.status}</th>
@@ -262,7 +263,7 @@ export function ExpoScreen() {
                 </p>
               ) : null}
               {lines.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t.noItems}</p>
+                <p className="text-sm text-ink-secondary">{t.noItems}</p>
               ) : (
                 <div className="grid gap-3">
                 {[
@@ -280,7 +281,7 @@ export function ExpoScreen() {
                           {line.badge === "Store" ? <span className="ms-2 border px-1.5 py-0.5 text-xs font-medium">{t.store}</span> : null}
                         </span>
                         {line.modifiers.length > 0 ? (
-                          <span className="text-sm text-muted-foreground">+ {line.modifiers.join(", ")}</span>
+                          <span className="text-sm text-ink-secondary">+ {line.modifiers.join(", ")}</span>
                         ) : null}
                         {line.note ? (
                           <span className={`mt-1 rounded-md px-2 py-1 text-sm font-medium ${toneSurface("ordered")}`}>{t.itemNote} {line.note}</span>
@@ -297,7 +298,7 @@ export function ExpoScreen() {
                             onClick={() => line.ticketItemId && ticketBump.mutate(line.ticketItemId)}
                           >
                             {body}
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-sm text-ink-secondary">
                               {ticketBump.isPending && ticketBump.variables === line.ticketItemId ? t.marking : t.tapReady}
                             </span>
                           </button>
@@ -337,27 +338,27 @@ export function ExpoScreen() {
                   </p>
                 ) : null}
                 {dishesLeft ? (
-                  <p className="mt-2 text-sm text-muted-foreground">{fill(t.dishesReady, { ready: order.ready_ticket_items, total: order.total_ticket_items })}</p>
+                  <p className="mt-2 text-sm text-ink-secondary">{fill(t.dishesReady, { ready: order.ready_ticket_items, total: order.total_ticket_items })}</p>
                 ) : null}
               </td>
               <td className="px-4 py-4">
               {runnerOnly ? (
-                savedNote ? <p className="text-sm">{savedNote}</p> : <span className="text-sm text-muted-foreground">—</span>
+                savedNote ? <p className="text-sm">{savedNote}</p> : <span className="text-sm text-ink-secondary">—</span>
               ) : editingNote ? (
                 <label className="grid gap-1 text-sm">
                   {t.noteForHandover}
                   <textarea
-                    className="min-h-20 rounded-xl border bg-background px-3 py-2"
+                    className="min-h-20 rounded-staff border bg-background px-3 py-2"
                     value={notes[order.order_id] ?? order.expo_notes ?? ""}
                     onChange={(event) => setNotes((current) => ({ ...current, [order.order_id]: event.target.value }))}
                   />
                   <span className="flex gap-2">
                     {noteChanged ? (
-                      <button type="button" className="min-h-11 rounded-xl bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={savingNote} onClick={() => saveNotes.mutate(order.order_id)}>
+                      <button type="button" className="min-h-11 rounded-staff bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={savingNote} onClick={() => saveNotes.mutate(order.order_id)}>
                         {savingNote ? t.saving : t.saveNote}
                       </button>
                     ) : null}
-                    <button type="button" className="min-h-11 rounded-xl px-3 text-sm text-muted-foreground" onClick={() => setNoteEditor(null)}>
+                    <button type="button" className="min-h-11 rounded-staff px-3 text-sm text-ink-secondary" onClick={() => setNoteEditor(null)}>
                       {t.cancel}
                     </button>
                   </span>
@@ -367,7 +368,7 @@ export function ExpoScreen() {
                   {savedNote ? <p className="text-sm">{savedNote}</p> : null}
                   <button
                     type="button"
-                    className="min-h-11 justify-self-start text-sm text-muted-foreground underline-offset-2 hover:underline"
+                    className="min-h-11 justify-self-start text-sm text-ink-secondary underline-offset-2 hover:underline"
                     onClick={() => {
                       setNotes((current) => ({ ...current, [order.order_id]: current[order.order_id] ?? order.expo_notes ?? "" }));
                       setNoteEditor(order.order_id);
@@ -380,11 +381,11 @@ export function ExpoScreen() {
               </td>
               <td className="px-4 py-4">
               {unpaid ? (
-                <p className="max-w-48 text-sm text-muted-foreground">Payment is still due at the counter.</p>
+                <p className="max-w-48 text-sm text-ink-secondary">Payment is still due at the counter.</p>
               ) : ready ? (
                 <button
                     type="button"
-                    className="min-h-11 rounded-xl bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                    className="min-h-11 rounded-staff bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
                     disabled={handingOver}
                     onClick={() => handOver.mutate(order.order_id)}
                   >
@@ -393,7 +394,7 @@ export function ExpoScreen() {
               ) : runnerOnly ? null : (
                 <button
                   type="button"
-                  className="min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                  className="min-h-11 rounded-staff border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
                   disabled={bumping}
                   onClick={() => bump.mutate(order.order_id)}
                 >

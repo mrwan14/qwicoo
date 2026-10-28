@@ -32,6 +32,8 @@ const en = {
   home: "Home",
   reports: "Reports",
   history: "Order history",
+  brandSettings: "Brand settings",
+  cardPayments: "Card payments",
   groups: {
     portfolio: "Portfolio",
     brandOps: "Brand ops",
@@ -71,6 +73,8 @@ const ar = {
   home: "الرئيسية",
   reports: "التقارير",
   history: "سجل الطلبات",
+  brandSettings: "إعدادات العلامة",
+  cardPayments: "الدفع بالبطاقة",
   groups: {
     portfolio: "المحفظة",
     brandOps: "تشغيل العلامة",

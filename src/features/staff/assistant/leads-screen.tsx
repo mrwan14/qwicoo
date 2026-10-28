@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ScreenTitle } from "@/components/ops/page-header";
 import { ErrorState, LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -26,10 +27,10 @@ export function PartnerLeadsScreen() {
 
   return (
     <div className="grid gap-4">
-      <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
+      <ScreenTitle>{t.title}</ScreenTitle>
       {leads.isLoading ? <LoadingState label={t.loading} /> : null}
       {leads.isError ? <ErrorState body={leads.error.message} onRetry={() => void leads.refetch()} /> : null}
-      {leads.data && leads.data.length === 0 ? <p className="text-sm text-muted-foreground">{t.empty}</p> : null}
+      {leads.data && leads.data.length === 0 ? <p className="text-sm text-ink-secondary">{t.empty}</p> : null}
       {leads.data && leads.data.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-start text-sm">
@@ -48,7 +49,7 @@ export function PartnerLeadsScreen() {
                   <td className="border border-border px-2 py-1 whitespace-nowrap">{formatCairoDateTime(lead.created_at, locale)}</td>
                   <td className="border border-border px-2 py-1">
                     <span className="block font-medium">{lead.restaurant_name}</span>
-                    <span className="block text-muted-foreground">{lead.name}</span>
+                    <span className="block text-ink-secondary">{lead.name}</span>
                   </td>
                   <td className="border border-border px-2 py-1">{lead.city}</td>
                   <td className="border border-border px-2 py-1 tabular-nums">{formatCount(lead.branches_count, locale)}</td>
@@ -77,7 +78,7 @@ export function AssistantUsage() {
   });
   if (usage.isLoading || usage.isError || !usage.data) return null;
   return (
-    <p className="text-sm text-muted-foreground">
+    <p className="text-sm text-ink-secondary">
       {fill(t.usage, { questions: formatCount(usage.data.questions, locale), limit: formatCount(usage.data.limit, locale) })}
     </p>
   );

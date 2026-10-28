@@ -13,6 +13,7 @@ import { PageHeader as KitPageHeader } from "@/components/ops/kit/page-header";
 import { SegmentedControl } from "@/components/ops/kit/segmented";
 import { Tabs } from "@/components/ops/kit/tabs";
 import { NestedHeaders } from "@/components/ops/page-header";
+import { SettingsFrame } from "@/features/staff/settings/frame";
 import { RoleGate } from "@/components/ops/screen";
 import { LoadingState } from "@/components/ops/states";
 import { useStaffSession } from "@/components/ops/staff-session";
@@ -51,7 +52,12 @@ const STOCK_TABS: readonly { tab: StockTab; views: readonly InventoryPage[] }[] 
 ];
 const SETTINGS_VIEWS: readonly InventoryPage[] = ["settings", "units", "import", "jobs"];
 
-function placeOf(page: InventoryPage): { kind: "stock"; tab: StockTab; views: readonly InventoryPage[] } | { kind: "settings" | "reports"; views: readonly InventoryPage[] } {
+type Place =
+  | { kind: "stock"; tab: StockTab; views: readonly InventoryPage[] }
+  | { kind: "settings"; views: readonly InventoryPage[] }
+  | { kind: "reports"; views: readonly InventoryPage[] };
+
+function placeOf(page: InventoryPage): Place {
   if (page === "overview") return { kind: "stock", tab: "stock", views: STOCK_TABS[0].views };
   if (page === "reports") return { kind: "reports", views: ["reports"] };
   if (SETTINGS_VIEWS.includes(page)) return { kind: "settings", views: SETTINGS_VIEWS };
@@ -169,16 +175,23 @@ export function InventoryFrame({ page, children }: { page: InventoryPage; childr
   const place = placeOf(page);
   const views = place.views.filter((view) => canOpenInventoryPage(me.role, view));
 
-  if (place.kind !== "stock") {
-    const settings = place.kind === "settings";
+  if (place.kind === "settings") {
+    return (
+      <SettingsFrame
+        item="stock"
+        title={t.hub.settingsTitle}
+        subtitle={t.hub.settingsSubtitle}
+        tab={page}
+        tabs={views.map((view) => ({ value: view, label: t.hub.views[view], href: INVENTORY_HREFS[view] }))}
+      >
+        {children}
+      </SettingsFrame>
+    );
+  }
+  if (place.kind === "reports") {
     return (
       <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-5">
-        <KitPageHeader
-          back={settings ? { href: "/app/settings", label: t.hub.backSettings } : { href: "/app/reports", label: t.hub.backReports }}
-          title={settings ? t.hub.settingsTitle : t.hub.reportsTitle}
-          subtitle={settings ? t.hub.settingsSubtitle : t.hub.reportsSubtitle}
-        />
-        <ViewSwitch views={views} page={page} />
+        <KitPageHeader back={{ href: "/app/reports", label: t.hub.backReports }} title={t.hub.reportsTitle} subtitle={t.hub.reportsSubtitle} />
         <NestedHeaders>{children}</NestedHeaders>
       </div>
     );

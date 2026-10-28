@@ -119,8 +119,8 @@ export function PlatformHome() {
         subtitle={fill(t.platform.subtitle, { date: cairoLongDate(now, locale) })}
         actions={
           <>
-            {allowed.has("/app/invitations") ? (
-              <Link href="/app/invitations" className={buttonClass({ variant: "secondary" })}>
+            {allowed.has("/app/settings/staff/invites") ? (
+              <Link href="/app/settings/staff/invites" className={buttonClass({ variant: "secondary" })}>
                 <UserPlus aria-hidden />
                 {t.platform.invite}
               </Link>

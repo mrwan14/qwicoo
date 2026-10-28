@@ -66,7 +66,8 @@ test("the deepest matching page picks the active entry", () => {
   const me = person("BRAND_ADMIN", "brand");
   const items = navForUser(me, BRANCH);
   const entries = sidebarForUser(me, BRANCH);
-  assert.equal(activeSidebarKey(`/app/brands/${BRAND}/settings`, entries, items), "settings");
+  assert.equal(activeSidebarKey("/app/settings/brand", entries, items), "settings");
+  assert.equal(activeSidebarKey("/app/settings/staff/invites", entries, items), "settings");
   assert.equal(activeSidebarKey(`/app/brands/${BRAND}`, entries, items), "home");
   assert.equal(activeSidebarKey("/app/orders/delivery", entries, items), "orders");
   assert.equal(activeSidebarKey("/app/kds/expo", entries, items), "orders");

@@ -61,12 +61,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...PLATFORM],
   },
   {
-    href: "/app/invitations",
+    href: "/app/settings/staff/invites",
     labelKey: "people",
     group: "portfolio",
     shell: "admin",
     phase: 7,
-    roles: [...PLATFORM],
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"],
   },
   {
     href: "/app/features",
@@ -93,7 +93,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...PLATFORM],
   },
   {
-    href: "/app/mobile-customers",
+    href: "/app/settings/customers",
     labelKey: "qwicooCustomers",
     group: "brandOps",
     shell: "admin",
@@ -117,7 +117,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...INVENTORY],
   },
   {
-    href: "/app/qr",
+    href: "/app/settings/tables-qr",
     labelKey: "qr",
     group: "brandOps",
     shell: "admin",
@@ -125,20 +125,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"],
   },
   {
-    href: "/app/staff",
+    href: "/app/settings/staff",
     labelKey: "staff",
     group: "brandOps",
     shell: "admin",
     phase: 5,
     roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"],
-  },
-  {
-    href: "/app/team",
-    labelKey: "team",
-    group: "brandOps",
-    shell: "admin",
-    phase: 7,
-    roles: ["BRAND_ADMIN", "BRANCH_ADMIN"],
   },
   {
     href: "/app/floor",
@@ -253,6 +245,30 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ["SUPER_ADMIN", "BRANCH_ADMIN"],
   },
   {
+    href: "/app/settings/staff/attendance",
+    labelKey: "attendance",
+    group: "insight",
+    shell: "admin",
+    phase: 7,
+    roles: ["BRANCH_ADMIN"],
+  },
+  {
+    href: "/app/settings/brand",
+    labelKey: "brandSettings",
+    group: "portfolio",
+    shell: "admin",
+    phase: 7,
+    roles: ["BRAND_ADMIN"],
+  },
+  {
+    href: "/app/settings/payments",
+    labelKey: "cardPayments",
+    group: "portfolio",
+    shell: "admin",
+    phase: 7,
+    roles: ["BRAND_ADMIN"],
+  },
+  {
     href: "/app/attendance",
     labelKey: "attendance",
     group: "insight",
@@ -284,15 +300,6 @@ export function navForUser(me: UserProfile, activeBranchId: string | null): NavI
       key: "brand-dashboard",
       href: `/app/brands/${me.brand_id}`,
       labelKey: "dashboard",
-      group: "portfolio",
-      shell: "admin",
-      phase: 5,
-      roles: ["BRAND_ADMIN"],
-    });
-    extra.push({
-      key: "brand-settings",
-      href: `/app/brands/${me.brand_id}/settings`,
-      labelKey: "settings",
       group: "portfolio",
       shell: "admin",
       phase: 5,
@@ -380,13 +387,14 @@ const BUSINESS_SIDEBAR: readonly SidebarDef[] = [
     bottom: true,
     members: [
       "/app/settings",
-      "brand-settings",
+      "/app/settings/brand",
       "branch-settings",
-      "/app/staff",
-      "/app/team",
-      "/app/qr",
-      "/app/mobile-customers",
-      "/app/attendance",
+      "/app/settings/staff",
+      "/app/settings/staff/invites",
+      "/app/settings/staff/attendance",
+      "/app/settings/tables-qr",
+      "/app/settings/customers",
+      "/app/settings/payments",
     ],
   },
 ];
@@ -394,12 +402,12 @@ const BUSINESS_SIDEBAR: readonly SidebarDef[] = [
 const PLATFORM_SIDEBAR: readonly SidebarDef[] = [
   { key: "home", members: ["/app/home"] },
   { key: "brands", members: ["/app/brands"] },
-  { key: "people", members: ["/app/invitations"] },
+  { key: "people", members: ["/app/settings/staff/invites"] },
   { key: "features", members: ["/app/features"] },
   { key: "leads", members: ["/app/partner-leads"] },
   { key: "delivery", members: ["/app/delivery"] },
   { key: "audit", members: ["/app/audit"] },
-  { key: "settings", bottom: true, members: ["/app/settings", "/app/mobile-customers"] },
+  { key: "settings", bottom: true, members: ["/app/settings", "/app/settings/customers"] },
 ];
 
 /**

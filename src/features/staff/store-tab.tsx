@@ -246,7 +246,7 @@ export function StoreTab({
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.storeHint}</p>
+        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.storeHint}</p>
         <div className="flex gap-2">
           <Link href="/app/stock/recipes" className="inline-flex min-h-11 items-center border px-4 text-sm">{t.recipes}</Link>
           {canEditStructure(role, false) ? (
@@ -256,7 +256,7 @@ export function StoreTab({
       </div>
       {open ? (
         <form
-          className="grid max-w-xl gap-3 border bg-card p-4"
+          className="grid max-w-xl gap-3 border bg-canvas p-4"
           onSubmit={(event) => {
             event.preventDefault();
             save.mutate();
@@ -277,7 +277,7 @@ export function StoreTab({
           <label className="grid gap-1 text-sm">{t.priceEgp}<input className={field} inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} required /></label>
           <label className="grid gap-1 text-sm">
             {t.maxPerOrder}
-            <span className="text-sm text-muted-foreground">{t.maxPerOrderHint}</span>
+            <span className="text-sm text-ink-secondary">{t.maxPerOrderHint}</span>
             <input className={field} inputMode="numeric" value={maxPerOrder} onChange={(event) => setMaxPerOrder(event.target.value)} />
           </label>
           <label className="grid gap-1 text-sm">{t.image}<input className={field} type="file" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] ?? null)} /></label>
@@ -288,7 +288,7 @@ export function StoreTab({
           <button type="submit" className={button} disabled={save.isPending || (!editing && !categoryId)}>{save.isPending ? t.creating : editing ? t.saveStoreItem : t.addStoreItem}</button>
         </form>
       ) : null}
-      {listed.length === 0 ? <p className="text-sm text-muted-foreground">{t.storeEmpty}</p> : (
+      {listed.length === 0 ? <p className="text-sm text-ink-secondary">{t.storeEmpty}</p> : (
         <ul className="grid gap-3">
           {listed.map((item) => {
             const loaded = shelves.data?.find((row) => row.item_id === item.id);
@@ -299,12 +299,12 @@ export function StoreTab({
             const name = locale === "ar" ? item.nameAr || item.nameEn : item.nameEn;
             const editable = canEditStructure(role, item.brandWide);
             return (
-              <li key={item.id} className="grid gap-3 border bg-card p-4">
+              <li key={item.id} className="grid gap-3 border bg-canvas p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="grid gap-1">
                     <h2 className="font-medium">{name}</h2>
                     {item.price ? <p className="text-sm tabular-nums"><Money amount={item.price} /></p> : null}
-                    {item.brandWide && role === "BRANCH_ADMIN" ? <p className="text-sm text-muted-foreground">{t.readOnlyBrand}</p> : null}
+                    {item.brandWide && role === "BRANCH_ADMIN" ? <p className="text-sm text-ink-secondary">{t.readOnlyBrand}</p> : null}
                   </div>
                     {item.imageUrl ? (
                       // Stored photos are on the upload host, which next/image is not set up to optimise.
@@ -320,7 +320,7 @@ export function StoreTab({
                     {view.badge === "low" ? <StatusChip tone="ordered">{t.low}</StatusChip> : null}
                     {view.badge === "out" ? <StatusChip tone="soldout">{t.out}</StatusChip> : null}
                   </p>
-                ) : <p className="text-sm text-muted-foreground">{t.notTracked}</p>}
+                ) : <p className="text-sm text-ink-secondary">{t.notTracked}</p>}
                 {editable ? (
                   <button type="button" className="min-h-11 w-fit border px-3 text-sm" onClick={() => startEdit(item)}>{t.changePrice}</button>
                 ) : null}

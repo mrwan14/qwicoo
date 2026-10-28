@@ -22,10 +22,10 @@ function useChartReady(): boolean {
 
 function ChartFrame({ title, caption, children }: { title: string; caption: string; children: ReactNode }) {
   return (
-    <section className="grid gap-3 bg-card p-4" aria-label={title}>
+    <section className="grid gap-3 bg-canvas p-4" aria-label={title}>
       <div>
         <h2 className="font-medium">{title}</h2>
-        <p className="text-sm leading-6 text-muted-foreground">{caption}</p>
+        <p className="text-sm leading-6 text-ink-secondary">{caption}</p>
       </div>
       {children}
     </section>
@@ -34,7 +34,7 @@ function ChartFrame({ title, caption, children }: { title: string; caption: stri
 
 function EmptyPeriod() {
   const charts = useStaffSection(analyticsCopy).charts;
-  return <p className="text-sm text-muted-foreground">{charts.empty}</p>;
+  return <p className="text-sm text-ink-secondary">{charts.empty}</p>;
 }
 
 function axisTick(value: string): string {
@@ -42,7 +42,7 @@ function axisTick(value: string): string {
 }
 
 function Tip({ children }: { children: ReactNode }) {
-  return <div className="grid gap-0.5 rounded-lg bg-card px-3 py-2 text-sm text-card-foreground shadow-elev-1">{children}</div>;
+  return <div className="grid gap-0.5 rounded-staff bg-canvas px-3 py-2 text-sm text-card-foreground border border-border">{children}</div>;
 }
 
 export type ItemChartRow = {
@@ -139,7 +139,7 @@ export function CategoryDonut({ rows }: { rows: CategoryChartRow[] }) {
                 <span className="mt-1 size-3 shrink-0 rounded-full" style={{ background: SLICES[index % SLICES.length] }} aria-hidden="true" />
                 <span>
                   <span className="font-medium">{row.label}</span>
-                  <span className="block tabular-nums text-muted-foreground">{formatMoney(row.revenue, undefined, locale)} · {row.shareLabel}</span>
+                  <span className="block tabular-nums text-ink-secondary">{formatMoney(row.revenue, undefined, locale)} · {row.shareLabel}</span>
                 </span>
               </li>
             ))}

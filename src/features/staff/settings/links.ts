@@ -18,18 +18,17 @@ export function settingsLinks(me: UserProfile, activeBranchId: string | null): S
     if (href) links.push({ item, group, href });
   };
 
-  const brandSettings = allowed.get("brand-settings");
-  add("brand", "business", brandSettings);
+  add("brand", "business", allowed.get("/app/settings/brand"));
   add(
     "branch",
     "business",
     allowed.get("branch-settings") ??
       (activeBranchId && me.role !== "SUPER_ADMIN" && canOpenBranch(me, activeBranchId) ? `/app/branches/${activeBranchId}` : null),
   );
-  add("tablesQr", "business", allowed.get("/app/qr"));
-  add("staff", "people", allowed.get("/app/staff"));
-  add("customers", "people", allowed.get("/app/mobile-customers"));
-  add("payments", "money", brandSettings ? `${brandSettings}#payments` : null);
+  add("tablesQr", "business", allowed.get("/app/settings/tables-qr"));
+  add("staff", "people", allowed.get("/app/settings/staff"));
+  add("customers", "people", allowed.get("/app/settings/customers"));
+  add("payments", "money", allowed.get("/app/settings/payments"));
   add("delivery", "money", allowed.get("/app/delivery"));
   add("stock", "money", canOpenInventoryPage(me.role, "settings") ? "/app/settings/stock" : null);
   add("audit", "security", allowed.get("/app/audit"));

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { ScreenTitle } from "@/components/ops/page-header";
 import { latestTimestamp, LiveCount } from "@/components/ops/live-fact";
 import { formatCairoDateTime } from "@/lib/format/time";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
@@ -133,12 +134,12 @@ export function KdsScreen() {
     <div className="grid gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
-          <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-          <p className="text-sm text-muted-foreground">
+          <ScreenTitle>{t.title}</ScreenTitle>
+          <p className="text-sm text-ink-secondary">
             <LiveCount value={ticketCount} /> {ticketCount === 1 ? t.ticketOne : t.ticketMany}
             {lastTicket ? <> · {fill(t.lastOrder, { time: formatCairoDateTime(lastTicket, locale) })}</> : null}
           </p>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.hint}</p>
+          <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.hint}</p>
         </div>
         <button
           type="button"
@@ -153,7 +154,7 @@ export function KdsScreen() {
           {sound ? t.soundOn : t.soundOff}
         </button>
       </div>
-      <p className="text-sm text-muted-foreground">{t.soundHint}</p>
+      <p className="text-sm text-ink-secondary">{t.soundHint}</p>
       <OfflineTickets stage="kitchen" />
       <div className="flex gap-2 overflow-x-auto">
         {[...stations].map((station) => {
@@ -172,7 +173,7 @@ export function KdsScreen() {
         })}
       </div>
       {(tickets.data ?? []).length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t.empty}</p>
+        <p className="text-sm text-ink-secondary">{t.empty}</p>
       ) : (
         <div className="grid gap-6">
           {[...columns.entries()].map(([station, column]) => (
@@ -239,9 +240,9 @@ function TicketColumn({
     <section className="grid content-start gap-3">
       <div>
         <h2 className="text-[length:var(--text-20)] font-semibold">{heading}</h2>
-        <p className="text-sm text-muted-foreground">{tickets.length === 1 ? t.waitingOne : fill(t.waitingMany, { count: tickets.length })}</p>
+        <p className="text-sm text-ink-secondary">{tickets.length === 1 ? t.waitingOne : fill(t.waitingMany, { count: tickets.length })}</p>
       </div>
-      {tickets.length === 0 ? <p className="text-sm text-muted-foreground">{t.nothingWaiting}</p> : null}
+      {tickets.length === 0 ? <p className="text-sm text-ink-secondary">{t.nothingWaiting}</p> : null}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {tickets.map((ticket) => {
           const waiting = waitingLabel(ticket.created_at, t);
@@ -250,12 +251,12 @@ function TicketColumn({
           const markingThis = marking?.orderId === ticket.order_id && marking.station === ticket.station;
           const canMark = Boolean(asStation(ticket.station));
           return (
-            <article key={ticket.sub_ticket_id} onPointerDown={() => acknowledgeOrder(ticket.order_id)} className="grid content-start gap-3 bg-card p-4">
+            <article key={ticket.sub_ticket_id} onPointerDown={() => acknowledgeOrder(ticket.order_id)} className="grid content-start gap-3 bg-canvas p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-[length:var(--text-20)] font-semibold">{ticketTitle(ticket, t)}</p>
-                  {kind ? <p className="text-sm text-muted-foreground">{kind}</p> : null}
-                  {car ? <p className="text-sm text-muted-foreground">{car}</p> : null}
+                  {kind ? <p className="text-sm text-ink-secondary">{kind}</p> : null}
+                  {car ? <p className="text-sm text-ink-secondary">{car}</p> : null}
                 </div>
                 <StatusChip tone={waiting.tone}>{waiting.text}</StatusChip>
               </div>
@@ -271,14 +272,14 @@ function TicketColumn({
                     <li key={item.order_item_id}>
                       <button
                         type="button"
-                        className="grid min-h-14 w-full gap-0.5 rounded-xl border px-3 py-2 text-start text-base focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                        className="grid min-h-14 w-full gap-0.5 rounded-staff border px-3 py-2 text-start text-base focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
                         disabled={markingLine}
                         onClick={() => onItem(item.order_item_id)}
                       >
                         <span>
                           {item.quantity} × {item.name}
                         </span>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-ink-secondary">
                           {markingLine ? t.marking : item.is_bumped ? t.ready : t.tapReady}
                         </span>
                         {item.special_instructions?.trim() ? (
@@ -291,10 +292,10 @@ function TicketColumn({
                   );
                 })}
               </ul>
-              <p className="text-sm leading-6 text-muted-foreground">{t.markAllHint}</p>
+              <p className="text-sm leading-6 text-ink-secondary">{t.markAllHint}</p>
               <button
                 type="button"
-                className="min-h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                className="min-h-14 rounded-staff bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
                 disabled={!canMark || markingThis}
                 onClick={() => onStation(ticket.order_id, ticket.station)}
               >

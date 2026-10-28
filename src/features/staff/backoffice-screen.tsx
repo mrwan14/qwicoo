@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ScreenTitle } from "@/components/ops/page-header";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { BranchesBarChart, CategoryDonut, ItemsBarChart } from "@/features/staff/analytics-charts";
 import { AssistantUsage } from "@/features/staff/assistant/leads-screen";
@@ -32,7 +33,7 @@ import type { components } from "@/lib/api/schema";
 import { drawerCloseFigures } from "@/features/staff/till";
 import { useScope } from "@/stores/scope";
 
-const control = "h-11 w-full rounded-lg border px-3 text-sm";
+const control = "h-11 w-full rounded-staff border px-3 text-sm";
 const square = "h-11 w-full border px-3 text-sm";
 
 function attendanceStatusLabel(status: string | null | undefined, labels: {
@@ -64,22 +65,22 @@ const CAIRO_WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as cons
 
 function TodayHoursNote({ hours, branchId }: { hours: components["schemas"]["OpeningHours"] | null | undefined; branchId: string | null }) {
   const t = useStaffSection(attendanceCopy);
-  if (!branchId) return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.chooseBranch}</p>;
+  if (!branchId) return <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.chooseBranch}</p>;
   const settings = (
     <Link href={`/app/branches/${branchId}`} className="font-medium text-foreground underline-offset-2 hover:underline">
       {t.branchSettings}
     </Link>
   );
   if (!hours) {
-    return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.noHoursBefore} {settings} {t.noHoursAfter}</p>;
+    return <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.noHoursBefore} {settings} {t.noHoursAfter}</p>;
   }
   const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "Africa/Cairo", weekday: "short" }).format(new Date()).slice(0, 3).toLowerCase();
   const key = CAIRO_WEEKDAYS.find((day) => day.startsWith(weekday)) ?? "mon";
   const range = hours[key]?.[0];
   if (!range) {
-    return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.closedToday} {settings}.</p>;
+    return <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.closedToday} {settings}.</p>;
   }
-  return <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{fill(t.opensToday, { open: range.open.slice(0, 5), close: range.close.slice(0, 5) })} {settings}.</p>;
+  return <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{fill(t.opensToday, { open: range.open.slice(0, 5), close: range.close.slice(0, 5) })} {settings}.</p>;
 }
 
 export function FinancialsScreen() {
@@ -151,17 +152,17 @@ export function FinancialsScreen() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.intro}</p>
+        <ScreenTitle>{t.title}</ScreenTitle>
+        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.intro}</p>
       </div>
       {drawer.isLoading ? <LoadingState label={t.loading} /> : null}
       {drawer.isError ? <QueryErrorState error={drawer.error} screen={t.drawerScreen} onRetry={() => void drawer.refetch()} /> : null}
       {reports.isError ? <QueryErrorState error={reports.error} screen={t.reportsScreen} onRetry={() => void reports.refetch()} /> : null}
-      <section className="grid gap-4 border bg-card p-4">
+      <section className="grid gap-4 border bg-canvas p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-medium">{t.drawerTitle}</h2>
-            <p className="text-sm leading-6 text-muted-foreground">{t.drawerHint}</p>
+            <p className="text-sm leading-6 text-ink-secondary">{t.drawerHint}</p>
           </div>
           <StatusChip tone={shiftOpen ? "ready" : "neutral"}>{shiftOpen ? t.shiftOpen : t.noShift}</StatusChip>
         </div>
@@ -174,16 +175,16 @@ export function FinancialsScreen() {
         <div className="grid gap-4 lg:grid-cols-2">
           <label className="grid gap-1 text-sm">
             {t.opening}
-            <span className="text-sm leading-6 text-muted-foreground">{t.openingHint}</span>
+            <span className="text-sm leading-6 text-ink-secondary">{t.openingHint}</span>
             <input className={square} inputMode="decimal" value={opening} onChange={(event) => setOpening(event.target.value)} />
             <button type="button" className="mt-2 min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={shiftOpen || open.isPending} onClick={() => open.mutate()}>
               {open.isPending ? t.starting : t.startShift}
             </button>
-            {shiftOpen ? <span className="text-sm text-muted-foreground">{t.shiftAlready}</span> : null}
+            {shiftOpen ? <span className="text-sm text-ink-secondary">{t.shiftAlready}</span> : null}
           </label>
           <label className="grid gap-1 text-sm">
             {t.counted}
-            <span className="text-sm leading-6 text-muted-foreground">{t.countedHint}</span>
+            <span className="text-sm leading-6 text-ink-secondary">{t.countedHint}</span>
             <input className={square} inputMode="decimal" value={counted} onChange={(event) => setCounted(event.target.value)} />
             <button type="button" className="mt-2 min-h-11 border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={!shiftOpen || close.isPending} onClick={() => setCloseOpen(true)}>
               {t.endShift}
@@ -193,11 +194,11 @@ export function FinancialsScreen() {
         {closedFigures ? (
           <dl className="grid gap-2 border-t pt-3 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-muted-foreground">{t.calculated}</dt>
+              <dt className="text-ink-secondary">{t.calculated}</dt>
               <dd className="font-semibold tabular-nums">{closedFigures.calculated ? <Money amount={closedFigures.calculated} /> : "—"}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">{t.variance}</dt>
+              <dt className="text-ink-secondary">{t.variance}</dt>
               <dd className="font-semibold tabular-nums">{closedFigures.variance ? <Money amount={closedFigures.variance} /> : "—"}</dd>
             </div>
           </dl>
@@ -207,7 +208,7 @@ export function FinancialsScreen() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-medium">{t.reportTitle}</h2>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.reportHint}</p>
+            <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.reportHint}</p>
           </div>
           {closedShift?.status === "CLOSED" ? (
             <button type="button" className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" disabled={generate.isPending} onClick={() => generate.mutate(closedShift.id)}>
@@ -215,11 +216,11 @@ export function FinancialsScreen() {
             </button>
           ) : null}
         </div>
-        {reportRows.length === 0 ? <p className="text-sm text-muted-foreground">{t.noReports}</p> : (
-          <div className="overflow-x-auto border bg-card">
+        {reportRows.length === 0 ? <p className="text-sm text-ink-secondary">{t.noReports}</p> : (
+          <div className="overflow-x-auto border bg-canvas">
             <table className="w-full min-w-[760px] border-collapse text-sm">
               <thead>
-                <tr className="border-b text-muted-foreground">
+                <tr className="border-b text-ink-secondary">
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.report}</th>
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.day}</th>
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.period}</th>
@@ -234,7 +235,7 @@ export function FinancialsScreen() {
                       <Link className="underline-offset-2 hover:underline" href={`/app/financials/z/${report.id}`}>{report.report_number}</Link>
                     </th>
                     <td className="px-4 py-3 tabular-nums">{report.business_date}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatCairoDateTime(report.period_start, locale)} – {formatCairoDateTime(report.period_end, locale)}</td>
+                    <td className="px-4 py-3 text-ink-secondary">{formatCairoDateTime(report.period_start, locale)} – {formatCairoDateTime(report.period_end, locale)}</td>
                     <td className="px-4 py-3 font-mono text-xs">{report.drawer_session_id ? report.drawer_session_id.slice(0, 8) : "—"}</td>
                     <td className="px-4 py-3"><Money amount={report.gross_sales} /></td>
                   </tr>
@@ -267,46 +268,46 @@ export function ZReportScreen({ reportId }: { reportId: string }) {
   return (
     <article className="grid gap-4">
       <div className="grid gap-1">
-        <Link href="/app/financials" className="text-sm text-muted-foreground underline-offset-2 hover:underline print:hidden">{t.back}</Link>
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-        <p className="text-sm text-muted-foreground">{data.report_number} · {data.business_date}</p>
-        <p className="text-sm text-muted-foreground">{t.period}: {formatCairoDateTime(data.period_start, locale)} – {formatCairoDateTime(data.period_end, locale)}</p>
-        <p className="text-sm text-muted-foreground">{t.drawer}: {data.drawer_session_id ?? "—"}</p>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.codNote}</p>
+        <Link href="/app/financials" className="text-sm text-ink-secondary underline-offset-2 hover:underline print:hidden">{t.back}</Link>
+        <ScreenTitle>{t.title}</ScreenTitle>
+        <p className="text-sm text-ink-secondary">{data.report_number} · {data.business_date}</p>
+        <p className="text-sm text-ink-secondary">{t.period}: {formatCairoDateTime(data.period_start, locale)} – {formatCairoDateTime(data.period_end, locale)}</p>
+        <p className="text-sm text-ink-secondary">{t.drawer}: {data.drawer_session_id ?? "—"}</p>
+        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.codNote}</p>
       </div>
       <dl className="grid gap-3 sm:grid-cols-3">
-        <div className="border bg-card p-4">
-          <dt className="text-sm text-muted-foreground">{t.gross}</dt>
+        <div className="border bg-canvas p-4">
+          <dt className="text-sm text-ink-secondary">{t.gross}</dt>
           <dd className="text-lg font-semibold"><Money amount={data.gross_sales} /></dd>
         </div>
-        <div className="border bg-card p-4">
-          <dt className="text-sm text-muted-foreground">{t.net}</dt>
+        <div className="border bg-canvas p-4">
+          <dt className="text-sm text-ink-secondary">{t.net}</dt>
           <dd className="text-lg font-semibold"><Money amount={data.net_sales} /></dd>
         </div>
-        <div className="border bg-card p-4">
-          <dt className="text-sm text-muted-foreground">{t.tax}</dt>
+        <div className="border bg-canvas p-4">
+          <dt className="text-sm text-ink-secondary">{t.tax}</dt>
           <dd className="text-lg font-semibold"><Money amount={data.total_tax} /></dd>
         </div>
       </dl>
       <dl className="grid w-full border">
         <div className="flex items-center justify-between gap-4 border-b px-4 py-3">
-          <dt className="text-sm text-muted-foreground">{t.cash}</dt>
+          <dt className="text-sm text-ink-secondary">{t.cash}</dt>
           <dd className="font-semibold"><Money amount={data.payment_channels.cash} /></dd>
         </div>
         <div className="flex items-center justify-between gap-4 border-b px-4 py-3">
-          <dt className="text-sm text-muted-foreground">{t.card}</dt>
+          <dt className="text-sm text-ink-secondary">{t.card}</dt>
           <dd className="font-semibold"><Money amount={data.payment_channels.card_pos} /></dd>
         </div>
         <div className="flex items-center justify-between gap-4 border-b px-4 py-3">
-          <dt className="text-sm text-muted-foreground">{t.online}</dt>
+          <dt className="text-sm text-ink-secondary">{t.online}</dt>
           <dd className="font-semibold"><Money amount={data.payment_channels.online} /></dd>
         </div>
         <div className="flex items-center justify-between gap-4 border-b px-4 py-3">
-          <dt className="text-sm text-muted-foreground">{t.deliveryFees}</dt>
+          <dt className="text-sm text-ink-secondary">{t.deliveryFees}</dt>
           <dd className="font-semibold"><Money amount={data.delivery_fees} /></dd>
         </div>
         <div className="flex items-center justify-between gap-4 px-4 py-3">
-          <dt className="text-sm text-muted-foreground">{t.refunds}</dt>
+          <dt className="text-sm text-ink-secondary">{t.refunds}</dt>
           <dd className="font-semibold"><Money amount={data.total_refunds} /></dd>
         </div>
       </dl>
@@ -387,8 +388,8 @@ export function AttendanceScreen() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+        <ScreenTitle>{t.title}</ScreenTitle>
+        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">
           {t.intro}
           {canReviewStaff ? ` ${t.introReview}` : ""}
         </p>
@@ -406,8 +407,8 @@ export function AttendanceScreen() {
         </p>
       )}
       <div className="flex gap-2">
-        <button type="button" className="min-h-12 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => void punch("in")}>{t.checkIn}</button>
-        <button type="button" className="min-h-12 rounded-lg border px-4 text-sm" onClick={() => void punch("out")}>{t.checkOut}</button>
+        <button type="button" className="min-h-12 rounded-staff bg-primary px-4 text-sm text-primary-foreground" onClick={() => void punch("in")}>{t.checkIn}</button>
+        <button type="button" className="min-h-12 rounded-staff border px-4 text-sm" onClick={() => void punch("out")}>{t.checkOut}</button>
       </div>
       {canReviewStaff ? (
       <>
@@ -421,15 +422,15 @@ export function AttendanceScreen() {
             </select>
           </label>
         </div>
-        {logs.isLoading ? <p className="text-sm text-muted-foreground">{t.loadingLogs}</p> : null}
+        {logs.isLoading ? <p className="text-sm text-ink-secondary">{t.loadingLogs}</p> : null}
         {logs.isError ? <ErrorState body={logs.error instanceof Error ? logs.error.message : t.logsFailed} onRetry={() => void logs.refetch()} /> : null}
-        {!logs.isLoading && !logs.isError && watchedBranchIds.length === 0 ? <p className="text-sm text-muted-foreground">{t.chooseBranchLogs}</p> : null}
-        {!logs.isLoading && !logs.isError && watchedBranchIds.length > 0 && (logs.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">{t.nobody}</p> : null}
+        {!logs.isLoading && !logs.isError && watchedBranchIds.length === 0 ? <p className="text-sm text-ink-secondary">{t.chooseBranchLogs}</p> : null}
+        {!logs.isLoading && !logs.isError && watchedBranchIds.length > 0 && (logs.data ?? []).length === 0 ? <p className="text-sm text-ink-secondary">{t.nobody}</p> : null}
         {(logs.data ?? []).length > 0 ? (
-          <div className="overflow-x-auto rounded-2xl border bg-card">
+          <div className="overflow-x-auto rounded-staff border bg-canvas">
             <table className="w-full min-w-[720px] border-collapse text-sm">
               <thead>
-                <tr className="border-b text-muted-foreground">
+                <tr className="border-b text-ink-secondary">
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.person}</th>
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.branch}</th>
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.day}</th>
@@ -463,16 +464,16 @@ export function AttendanceScreen() {
       <section className="grid gap-3">
         <div>
           <h2 className="font-medium">{t.paymentsTitle}</h2>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.paymentsHint}</p>
+          <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.paymentsHint}</p>
         </div>
-        {txns.isLoading ? <p className="text-sm text-muted-foreground">{t.loadingPayments}</p> : null}
+        {txns.isLoading ? <p className="text-sm text-ink-secondary">{t.loadingPayments}</p> : null}
         {txns.isError ? <QueryErrorState error={txns.error} screen={t.paymentsScreen} onRetry={() => void txns.refetch()} /> : null}
-        {!txns.isLoading && !txns.isError && (txns.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">{t.noPayments}</p> : null}
+        {!txns.isLoading && !txns.isError && (txns.data ?? []).length === 0 ? <p className="text-sm text-ink-secondary">{t.noPayments}</p> : null}
         {(txns.data ?? []).length > 0 ? (
-          <div className="overflow-x-auto rounded-2xl border bg-card">
+          <div className="overflow-x-auto rounded-staff border bg-canvas">
             <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead>
-                <tr className="border-b text-muted-foreground">
+                <tr className="border-b text-ink-secondary">
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.when}</th>
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.method}</th>
                   <th scope="col" className="px-4 py-3 text-start font-medium">{t.status}</th>
@@ -485,7 +486,7 @@ export function AttendanceScreen() {
                     <th scope="row" className="px-4 py-4 text-start font-medium">{formatCairoDateTime(txn.created_at, locale)}</th>
                     <td className="px-4 py-4">
                       {paymentMethodLabel(txn.payment_method)}
-                      {txn.transaction_reference ? <span className="mt-1 block text-muted-foreground">{txn.transaction_reference}</span> : null}
+                      {txn.transaction_reference ? <span className="mt-1 block text-ink-secondary">{txn.transaction_reference}</span> : null}
                     </td>
                     <td className="px-4 py-4">{paymentStatusLabel(txn.status)}</td>
                     <td className="px-4 py-4 font-medium"><Money amount={String(txn.amount)} currency={txn.currency} /></td>
@@ -501,7 +502,7 @@ export function AttendanceScreen() {
       {canOverride ? (
         <>
           <ConfirmDialog open={Boolean(logId)} onOpenChange={(open) => !open && setLogId(null)} title={t.correctTitle} description={t.correctBody} confirmLabel={t.correct} onConfirm={() => override.mutate()} />
-          {logId ? <textarea className="min-h-20 rounded-lg border px-3 py-2" placeholder={t.reason} value={reason} onChange={(event) => setReason(event.target.value)} /> : null}
+          {logId ? <textarea className="min-h-20 rounded-staff border px-3 py-2" placeholder={t.reason} value={reason} onChange={(event) => setReason(event.target.value)} /> : null}
         </>
       ) : null}
     </div>
@@ -560,15 +561,15 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
   return (
     <div className="grid gap-4">
       {embedded && orders != null ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink-secondary">
           <LiveCount value={orders} /> {orders === 1 ? t.oneOrder : t.orders}
         </p>
       ) : null}
       {embedded ? null : (
         <>
           <div className="grid gap-1">
-            <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.intro}</p>
+            <ScreenTitle>{t.title}</ScreenTitle>
+            <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.intro}</p>
             {me && canSeeAssistantUsage(me.role) ? <AssistantUsage /> : null}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -589,8 +590,8 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
       {data.data && "kpis" in data.data && data.data.kpis && typeof data.data.kpis === "object" ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {Object.entries(data.data.kpis as Record<string, unknown>).map(([key, value]) => (
-            <article key={key} className="bg-card p-4">
-              <p className="text-sm text-muted-foreground">{key in t.kpis ? t.kpis[key as keyof typeof t.kpis] : key.replaceAll("_", " ")}</p>
+            <article key={key} className="bg-canvas p-4">
+              <p className="text-sm text-ink-secondary">{key in t.kpis ? t.kpis[key as keyof typeof t.kpis] : key.replaceAll("_", " ")}</p>
               <p className="text-lg font-semibold tabular-nums">{typeof value === "string" && MONEY_KPIS.has(key) ? formatMoney(value, undefined, locale) : String(value ?? "")}</p>
             </article>
           ))}
@@ -695,7 +696,7 @@ export function AuditScreen() {
   });
   return (
     <div className="grid gap-3">
-      <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
+      <ScreenTitle>{t.title}</ScreenTitle>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
           {t.what}
@@ -708,10 +709,10 @@ export function AuditScreen() {
       </div>
       {logs.isLoading ? <LoadingState label={t.loading} /> : null}
       {logs.isError ? <ErrorState body={logs.error.message} onRetry={() => void logs.refetch()} /> : null}
-      {!logs.isLoading && !logs.isError && rows.length === 0 ? <p className="text-sm text-muted-foreground">{t.empty}</p> : null}
+      {!logs.isLoading && !logs.isError && rows.length === 0 ? <p className="text-sm text-ink-secondary">{t.empty}</p> : null}
       <ul className="grid gap-2 lg:hidden">
         {rows.map((item) => (
-          <li key={item.id} className="rounded-lg border p-3 text-sm">
+          <li key={item.id} className="rounded-staff border p-3 text-sm">
             <p className="font-medium">{auditActionLabel(item.action)}</p>
             <p>{auditRoleLabel(item.actor_role, t.notSignedIn)} · {formatCairoDateTime(item.created_at, locale)} · {auditStatusLabel(item.status)}</p>
           </li>

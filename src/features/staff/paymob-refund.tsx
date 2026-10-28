@@ -102,7 +102,7 @@ export function PaymobRefunds({ orderId }: { orderId: string }) {
           <label className="grid gap-1 text-sm">
             {t.refundAmount}
             <input className={field} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
-            <span className="text-muted-foreground">{t.refundFull}</span>
+            <span className="text-ink-secondary">{t.refundFull}</span>
           </label>
           <button
             type="button"

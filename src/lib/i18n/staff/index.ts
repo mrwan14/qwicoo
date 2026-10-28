@@ -20,7 +20,10 @@ import { paymobCopy } from "@/lib/i18n/staff/paymob";
 import { peopleCopy } from "@/lib/i18n/staff/people";
 import { posCopy } from "@/lib/i18n/staff/pos";
 import { qrCopy } from "@/lib/i18n/staff/qr";
+import { reportsCopy } from "@/lib/i18n/staff/reports";
 import { requestsCopy } from "@/lib/i18n/staff/requests";
+import { settingsCopy } from "@/lib/i18n/staff/settings";
+import { shellCopy } from "@/lib/i18n/staff/shell";
 import { statusCopy } from "@/lib/i18n/staff/status";
 
 export const staffCopy = {
@@ -47,7 +50,10 @@ export const staffCopy = {
     people: peopleCopy.en,
     pos: posCopy.en,
     qr: qrCopy.en,
+    reports: reportsCopy.en,
     requests: requestsCopy.en,
+    settings: settingsCopy.en,
+    shell: shellCopy.en,
     status: statusCopy.en,
   },
   ar: {
@@ -73,7 +79,10 @@ export const staffCopy = {
     people: peopleCopy.ar,
     pos: posCopy.ar,
     qr: qrCopy.ar,
+    reports: reportsCopy.ar,
     requests: requestsCopy.ar,
+    settings: settingsCopy.ar,
+    shell: shellCopy.ar,
     status: statusCopy.ar,
   },
 };

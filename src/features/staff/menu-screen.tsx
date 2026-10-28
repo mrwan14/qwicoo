@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -126,7 +127,12 @@ export function MenuAdmin() {
   const [tab, setTab] = useState<"items" | "stations" | "store">("items");
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [itemOpen, setItemOpen] = useState(false);
-  const [itemQuery, setItemQuery] = useState("");
+  const searchParam = useSearchParams().get("q");
+  const [itemQuery, setItemQuery] = useState(searchParam ?? "");
+  // `?q=` comes from the top-bar search.
+  useEffect(() => {
+    if (searchParam !== null) setItemQuery(searchParam);
+  }, [searchParam]);
   const [categoryImage, setCategoryImage] = useState<File | null>(null);
   const [itemImage, setItemImage] = useState<File | null>(null);
   const showStations = canSeeStationsTab(role);

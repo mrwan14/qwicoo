@@ -54,7 +54,7 @@ export function ConnectionBanner({
 
   if (!online || query.isError) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-warning/20 px-4 py-2 text-sm text-foreground" role="alert">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border bg-warning-bg px-4 py-2 text-sm text-ink" role="alert">
         <span className="flex items-center gap-2">
           <WifiOff aria-hidden className="size-4 shrink-0" />
           <span>
@@ -63,7 +63,7 @@ export function ConnectionBanner({
             {offlineDetail ? <> {offlineDetail}</> : null}
           </span>
         </span>
-        <button type="button" className="min-h-11 underline" onClick={() => void query.refetch()}>
+        <button type="button" className="min-h-11 font-medium underline underline-offset-4" onClick={() => void query.refetch()}>
           {t.tryAgain}
         </button>
       </div>
@@ -72,7 +72,7 @@ export function ConnectionBanner({
 
   if (syncDetail) {
     return (
-      <p className="bg-muted px-4 py-1.5 text-sm" role="status">
+      <p className="border-b border-border bg-subtle px-4 py-1.5 text-sm text-ink" role="status">
         {syncDetail}
       </p>
     );
@@ -80,15 +80,16 @@ export function ConnectionBanner({
 
   if (!visible) {
     return (
-      <p className="bg-muted px-4 py-2 text-xs text-muted-foreground" role="status">
+      <p className="border-b border-border bg-subtle px-4 py-1.5 text-xs text-ink-secondary" role="status">
         {t.updatesPaused}
       </p>
     );
   }
 
+  // Checking and connected are announced but not drawn: the design keeps the bar clear when all is well.
   if (query.isPending) {
     return (
-      <p className="bg-muted px-4 py-1 text-xs text-muted-foreground" role="status">
+      <p className="sr-only" role="status">
         {t.checking}
       </p>
     );
@@ -96,15 +97,14 @@ export function ConnectionBanner({
 
   if (query.data?.status === "ready") {
     return (
-      <p className="px-4 py-1 text-xs text-muted-foreground" role="status">
-        <span className="me-2 inline-block size-2 rounded-full bg-success align-middle" aria-hidden />
+      <p className="sr-only" role="status">
         {t.connected}
       </p>
     );
   }
 
   return (
-    <p className="bg-muted px-4 py-1 text-xs text-muted-foreground" role="status">
+    <p className="border-b border-border bg-subtle px-4 py-1.5 text-xs text-ink-secondary" role="status">
       {t.serviceNotReady}
     </p>
   );

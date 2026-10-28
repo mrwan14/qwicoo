@@ -29,6 +29,8 @@ const en = {
   leads: "Partner leads",
   settings: "Settings",
   branchSettings: "Branch settings",
+  home: "Home",
+  reports: "Reports",
   groups: {
     portfolio: "Portfolio",
     brandOps: "Brand ops",
@@ -65,6 +67,8 @@ const ar = {
   leads: "طلبات الشراكة",
   settings: "الإعدادات",
   branchSettings: "إعدادات الفرع",
+  home: "الرئيسية",
+  reports: "التقارير",
   groups: {
     portfolio: "المحفظة",
     brandOps: "تشغيل العلامة",

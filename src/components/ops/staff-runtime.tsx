@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Fragment, Suspense, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 
+import { StaffTheme } from "@/components/ops/kit/theme";
 import { RoleChrome } from "@/components/ops/shells";
 import { StaffSessionProvider } from "@/components/ops/staff-session";
 import { OrderAlerts } from "@/features/staff/alerts/order-alerts";
@@ -19,6 +20,14 @@ import { useScope } from "@/stores/scope";
 import { useWorkspace } from "@/stores/workspace";
 
 export function StaffRuntime({ children }: { children: ReactNode }) {
+  return (
+    <StaffTheme>
+      <Runtime>{children}</Runtime>
+    </StaffTheme>
+  );
+}
+
+function Runtime({ children }: { children: ReactNode }) {
   const t = useStaffSection(commonCopy);
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
@@ -67,8 +76,8 @@ export function StaffRuntime({ children }: { children: ReactNode }) {
 
   if (me.isError || !me.data) {
     return (
-      <main className="grid min-h-dvh place-items-center p-6">
-        <p className="text-sm" role="alert">
+      <main className="grid min-h-dvh place-items-center bg-subtle p-6">
+        <p className="text-sm text-ink" role="alert">
           {t.sessionFailed}{" "}
           <button type="button" className="underline" onClick={() => void endStaffSession()}>
             {t.signInAgain}

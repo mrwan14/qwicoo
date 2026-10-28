@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -46,7 +47,12 @@ export function StaffScreen() {
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<(typeof ROLES)[number]>("CASHIER");
   const [removeId, setRemoveId] = useState<string | null>(null);
-  const [staffQuery, setStaffQuery] = useState("");
+  const searchParam = useSearchParams().get("q");
+  const [staffQuery, setStaffQuery] = useState(searchParam ?? "");
+  // `?q=` comes from the top-bar search.
+  useEffect(() => {
+    if (searchParam !== null) setStaffQuery(searchParam);
+  }, [searchParam]);
   const staff = useQuery({
     queryKey: ["staff", branchId],
     enabled: Boolean(branchId),

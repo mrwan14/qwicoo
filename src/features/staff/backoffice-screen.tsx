@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { BranchesBarChart, CategoryDonut, ItemsBarChart } from "@/features/staff/analytics-charts";
 import { AssistantUsage } from "@/features/staff/assistant/leads-screen";
+import { useMyAttendance } from "@/features/staff/attendance/clock";
 import { canSeeAssistantUsage } from "@/features/staff/assistant/access";
 import { LiveCount } from "@/components/ops/live-fact";
 import { Money } from "@/components/ops/money";
@@ -339,14 +340,7 @@ export function AttendanceScreen() {
       return result.data;
     },
   });
-  const status = useQuery({
-    queryKey: ["attendance-me"],
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/attendance/my-status");
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.statusFailed);
-      return result.data;
-    },
-  });
+  const { status, punch: punchClock } = useMyAttendance();
   const logs = useQuery({
     queryKey: ["attendance-logs", watchedBranchIds.join(","), range],
     enabled: canReviewStaff && watchedBranchIds.length > 0,
@@ -371,28 +365,7 @@ export function AttendanceScreen() {
     },
   });
   async function punch(kind: "in" | "out") {
-    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 8000 });
-    }).catch(() => null);
-    if (!position) {
-      toast.error(t.locationNeeded);
-      return;
-    }
-    const body: components["schemas"]["CheckInRequest"] = {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-    };
-    const result = kind === "in"
-      ? await browserApi.POST("/api/v1/attendance/check-in", { body })
-      : await browserApi.POST("/api/v1/attendance/check-out", { body });
-    if (!result.response.ok) {
-      const error = asApiError(result.error, result.response, t.attendanceFailed);
-      toast.error(error.code === "OUT_OF_GEOFENCE" ? t.outsideBranch : error.message);
-      return;
-    }
-    toast.success(kind === "in" ? t.checkedIn : t.checkedOut);
-    void status.refetch();
-    void logs.refetch();
+    if (await punchClock(kind)) void logs.refetch();
   }
   const override = useMutation({
     mutationFn: async () => {

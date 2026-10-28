@@ -1,54 +1,17 @@
 "use client";
 
 import { useIsMutating } from "@tanstack/react-query";
+import { cn } from "cn";
 import { Check, ChevronDown, Store } from "lucide-react";
 import { useState } from "react";
 
-import { ConfirmDialog } from "@/components/ops/confirm-dialog";
-import { Logo } from "@/components/ops/logo";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ConfirmDialog } from "@/components/ops/kit/confirm-dialog";
+import { Menu, MenuContent, MenuHeading, MenuItem, MenuTrigger } from "@/components/ops/kit/menu";
 import { fill } from "@/lib/i18n/dictionary";
 import { commonCopy } from "@/lib/i18n/staff/common";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
-import { initials } from "@/lib/auth/scope";
 import { switchBranch } from "@/lib/auth/session-client";
-import { mediaUrl } from "@/lib/media";
 import { useScope } from "@/stores/scope";
-
-/** Brand identity for brand and branch scope; Qwicoo platform branding for App Admin. */
-export function ScopeBadge({ compact = false }: { compact?: boolean }) {
-  const t = useStaffSection(commonCopy);
-  const homeScope = useScope((state) => state.homeScope);
-  const brandName = useScope((state) => state.brandName);
-  const brandLogoUrl = useScope((state) => state.brandLogoUrl);
-  const [logoFailed, setLogoFailed] = useState(false);
-
-  if (homeScope === "platform" || !homeScope) {
-    return (
-      <Logo
-        className="min-w-0"
-        markClassName="size-6 shrink-0 text-primary"
-        wordClassName={compact ? "sr-only" : "truncate text-base"}
-      />
-    );
-  }
-
-  const name = brandName ?? t.yourBrand;
-  const logo = brandLogoUrl && !logoFailed ? mediaUrl(brandLogoUrl) : null;
-  return (
-    <span className="inline-flex min-w-0 items-center gap-2">
-      <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 text-xs font-semibold text-primary">
-        {logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt={name} className="size-full object-contain" onError={() => setLogoFailed(true)} />
-        ) : (
-          <span aria-hidden>{initials(name)}</span>
-        )}
-      </span>
-      <span className={compact ? "sr-only" : "truncate font-display text-base font-semibold"}>{name}</span>
-    </span>
-  );
-}
 
 function useBranchChoice() {
   const t = useStaffSection(commonCopy);
@@ -70,9 +33,8 @@ function useBranchChoice() {
       open={Boolean(pendingId)}
       onOpenChange={(open) => !open && setPendingId(null)}
       title={t.switchBranchTitle}
-      description={fill(t.switchBranchBody, { count: pendingItems, items: pendingItems === 1 ? t.item : t.items })}
+      body={fill(t.switchBranchBody, { count: pendingItems, items: pendingItems === 1 ? t.item : t.items })}
       confirmLabel={t.clearAndSwitch}
-      destructive
       onConfirm={() => {
         const target = pendingId;
         setPendingId(null);
@@ -84,73 +46,61 @@ function useBranchChoice() {
   return { choose, confirm };
 }
 
-/** Only the caller's own branches. Hidden when there is nothing to switch between. */
-export function BranchSwitcher() {
+/**
+ * Only the caller's own branches. With one branch it shows the name without a menu;
+ * `hideSingle` drops it entirely (the front-line bar already names the branch).
+ */
+export function BranchSwitcher({ hideSingle = false, className }: { hideSingle?: boolean; className?: string }) {
   const branches = useScope((state) => state.branches);
   const branchId = useScope((state) => state.branchId);
   const t = useStaffSection(commonCopy);
   const busy = useIsMutating() > 0;
-  const [sheetOpen, setSheetOpen] = useState(false);
   const { choose, confirm } = useBranchChoice();
 
-  if (branches.length < 2) return null;
+  if (branches.length === 0 || (hideSingle && branches.length < 2)) return null;
   const current = branches.find((branch) => branch.id === branchId) ?? branches[0];
+  const face = "flex h-[38px] max-w-56 items-center gap-2 rounded-staff border border-border bg-canvas px-3 text-sm font-medium text-ink";
+
+  if (branches.length < 2) {
+    return (
+      <span className={cn(face, className)}>
+        <Store aria-hidden className="size-4 shrink-0" />
+        <span className="sr-only">{t.branch}: </span>
+        <span className="truncate">{current.name}</span>
+      </span>
+    );
+  }
 
   return (
     <>
-      <label className="hidden min-w-0 items-center gap-2 text-sm lg:flex">
-        <Store aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        <span className="sr-only">{t.branch}</span>
-        <select
-          className="h-10 max-w-56 rounded-lg border border-input bg-background px-3 text-sm disabled:opacity-60"
-          value={current.id}
+      <Menu>
+        <MenuTrigger
           disabled={busy}
           title={busy ? t.finishAction : undefined}
-          onChange={(event) => choose(event.target.value)}
+          aria-label={`${t.switchBranch}: ${current.name}`}
+          className={cn(
+            face,
+            "outline-none hover:border-ink-secondary/50 focus-visible:border-focus disabled:cursor-not-allowed disabled:text-disabled",
+            className,
+          )}
         >
-          {branches.map((branch) => (
-            <option key={branch.id} value={branch.id}>
-              {branch.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetTrigger
-          disabled={busy}
-          className="inline-flex h-10 max-w-[11rem] items-center gap-1.5 rounded-lg border px-3 text-sm disabled:opacity-60 lg:hidden"
-        >
-          <Store aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+          <Store aria-hidden className="size-4 shrink-0" />
           <span className="truncate">{current.name}</span>
-          <ChevronDown aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        </SheetTrigger>
-        <SheetContent side="bottom" className="max-h-[80dvh]">
-          <SheetHeader>
-            <SheetTitle>{t.switchBranch}</SheetTitle>
-          </SheetHeader>
-          <ul className="grid gap-1 px-4 pb-6">
-            {branches.map((branch) => {
-              const active = branch.id === current.id;
-              return (
-                <li key={branch.id}>
-                  <button
-                    type="button"
-                    aria-current={active ? "true" : undefined}
-                    className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-3 text-start text-sm ${active ? "bg-secondary font-medium" : "hover:bg-muted"}`}
-                    onClick={() => {
-                      setSheetOpen(false);
-                      choose(branch.id);
-                    }}
-                  >
-                    {branch.name}
-                    {active ? <Check aria-hidden className="size-4 text-primary" /> : null}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </SheetContent>
-      </Sheet>
+          <ChevronDown aria-hidden className="size-3.5 shrink-0 text-ink-secondary" />
+        </MenuTrigger>
+        <MenuContent align="end">
+          <MenuHeading>{t.switchBranch}</MenuHeading>
+          {branches.map((branch) => {
+            const active = branch.id === current.id;
+            return (
+              <MenuItem key={branch.id} aria-current={active ? "true" : undefined} onClick={() => !active && choose(branch.id)}>
+                <span className={cn("min-w-0 flex-1 truncate", active && "font-semibold")}>{branch.name}</span>
+                {active ? <Check aria-hidden className="text-ink!" /> : null}
+              </MenuItem>
+            );
+          })}
+        </MenuContent>
+      </Menu>
       {confirm}
     </>
   );

@@ -1,4 +1,4 @@
-import { ASSISTANT_ROLES, type UserProfile, type UserRole } from "@/lib/auth/roles";
+import { ASSISTANT_ROLES, roleHome, type UserProfile, type UserRole } from "@/lib/auth/roles";
 import { homeScopeOf } from "@/lib/auth/scope";
 import type { NavLabelKey } from "@/lib/i18n/staff/nav";
 
@@ -25,7 +25,33 @@ const BRAND_SCOPE = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER"] as const 
 const BRANCH_OPS = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"] as const satisfies readonly UserRole[];
 const INVENTORY = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN", "KITCHEN_STAFF", "CASHIER"] as const satisfies readonly UserRole[];
 
+const HOME = ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"] as const satisfies readonly UserRole[];
+
 export const NAV_ITEMS: readonly NavItem[] = [
+  {
+    href: "/app/home",
+    labelKey: "home",
+    group: "insight",
+    shell: "admin",
+    phase: 3,
+    roles: [...HOME],
+  },
+  {
+    href: "/app/reports",
+    labelKey: "reports",
+    group: "insight",
+    shell: "admin",
+    phase: 9,
+    roles: [...BRANCH_OPS],
+  },
+  {
+    href: "/app/settings",
+    labelKey: "settings",
+    group: "brandOps",
+    shell: "admin",
+    phase: 7,
+    roles: [...HOME],
+  },
   {
     href: "/app/brands",
     labelKey: "brands",
@@ -236,17 +262,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
 ];
 
-const BOTTOM_PRIORITY: Record<UserRole, readonly string[]> = {
-  SUPER_ADMIN: ["/app/brands", "/app/menu", "/app/floor", "/app/analytics"],
-  BRAND_ADMIN: ["brand-dashboard", "/app/menu", "/app/staff", "brand-settings"],
-  REGIONAL_MANAGER: ["/app/menu", "/app/analytics", "/app/offline-orders", "/app/pos"],
-  BRANCH_ADMIN: ["/app/dashboard", "/app/floor", "/app/pos", "/app/orders"],
-  CASHIER: ["/app/pos", "/app/orders", "/app/payments", "/app/floor"],
-  WAITER: ["/app/floor", "/app/floor/requests", "/app/attendance"],
-  KITCHEN_STAFF: ["/app/kds", "/app/kds/expo", "/app/attendance"],
-  RUNNER: ["/app/kds/expo", "/app/floor/requests", "/app/attendance"],
-};
-
 /**
  * Nav for this user in this scope. Brand admins get their own brand's
  * dashboard instead of the all-brands grid; branch admins get a link to
@@ -294,16 +309,6 @@ export function getNavItem(href: string): NavItem | undefined {
   return NAV_ITEMS.find((item) => item.href === href);
 }
 
-export function splitBottomNav(role: UserRole, items: readonly NavItem[]) {
-  const byKey = new Map(items.map((item) => [navKey(item), item]));
-  const primary = BOTTOM_PRIORITY[role]
-    .map((key) => byKey.get(key))
-    .filter((item): item is NavItem => Boolean(item));
-  const primaryKeys = new Set(primary.map(navKey));
-  const overflow = items.filter((item) => !primaryKeys.has(navKey(item)));
-  return { primary, overflow };
-}
-
 export function isNavActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
   if (!pathname.startsWith(`${href}/`)) return false;
@@ -314,4 +319,124 @@ export function isNavActive(pathname: string, href: string): boolean {
       item.href.startsWith(`${href}/`) &&
       (pathname === item.href || pathname.startsWith(`${item.href}/`)),
   );
+}
+
+/** Admin sidebar entries. Each one opens the first page in `members` the user may see. */
+export type SidebarKey =
+  | "home"
+  | "orders"
+  | "menu"
+  | "stock"
+  | "reports"
+  | "settings"
+  | "brands"
+  | "people"
+  | "features"
+  | "leads"
+  | "delivery"
+  | "audit";
+
+export type SidebarEntry = {
+  key: SidebarKey;
+  href: string;
+  /** Pinned to the bottom of the sidebar. */
+  bottom: boolean;
+  /** Nav keys that light this entry up. */
+  members: readonly string[];
+};
+
+type SidebarDef = { key: SidebarKey; members: readonly string[]; bottom?: boolean };
+
+const BUSINESS_SIDEBAR: readonly SidebarDef[] = [
+  { key: "home", members: ["/app/home", "/app/dashboard", "brand-dashboard"] },
+  {
+    key: "orders",
+    members: [
+      "/app/orders",
+      "/app/orders/delivery",
+      "/app/payments",
+      "/app/floor",
+      "/app/floor/requests",
+      "/app/offline-orders",
+      "/app/pos",
+      "/app/kds",
+      "/app/kds/expo",
+    ],
+  },
+  { key: "menu", members: ["/app/menu"] },
+  { key: "stock", members: ["/app/inventory"] },
+  { key: "reports", members: ["/app/reports", "/app/analytics", "/app/financials"] },
+  {
+    key: "settings",
+    bottom: true,
+    members: [
+      "/app/settings",
+      "brand-settings",
+      "branch-settings",
+      "/app/staff",
+      "/app/team",
+      "/app/qr",
+      "/app/mobile-customers",
+      "/app/attendance",
+    ],
+  },
+];
+
+const PLATFORM_SIDEBAR: readonly SidebarDef[] = [
+  { key: "home", members: ["/app/home"] },
+  { key: "brands", members: ["/app/brands"] },
+  { key: "people", members: ["/app/invitations"] },
+  { key: "features", members: ["/app/features"] },
+  { key: "leads", members: ["/app/partner-leads"] },
+  { key: "delivery", members: ["/app/delivery"] },
+  { key: "audit", members: ["/app/audit"] },
+  { key: "settings", bottom: true, members: ["/app/settings", "/app/mobile-customers"] },
+];
+
+/**
+ * Sidebar for an admin. Built from `navForUser`, so an entry appears only when
+ * the role may open at least one of its pages. App Admin gets the platform list.
+ */
+export function sidebarForUser(me: UserProfile, activeBranchId: string | null): SidebarEntry[] {
+  const allowed = new Map(navForUser(me, activeBranchId).map((item) => [navKey(item), item]));
+  const defs = homeScopeOf(me) === "platform" ? PLATFORM_SIDEBAR : BUSINESS_SIDEBAR;
+  return defs.flatMap((def) => {
+    const members = def.members.filter((key) => allowed.has(key));
+    const first = members[0];
+    if (!first) return [];
+    return [{ key: def.key, href: allowed.get(first)!.href, bottom: def.bottom ?? false, members }];
+  });
+}
+
+/** The entry whose page best matches `pathname` (longest matching href wins). */
+export function activeSidebarKey(
+  pathname: string,
+  entries: readonly SidebarEntry[],
+  items: readonly NavItem[],
+): SidebarKey | null {
+  const hrefs = new Map(items.map((item) => [navKey(item), item.href]));
+  let best: { key: SidebarKey; length: number } | null = null;
+  for (const entry of entries) {
+    for (const member of entry.members) {
+      const href = hrefs.get(member);
+      if (!href) continue;
+      if (pathname !== href && !pathname.startsWith(`${href}/`)) continue;
+      if (!best || href.length > best.length) best = { key: entry.key, length: href.length };
+    }
+  }
+  return best?.key ?? null;
+}
+
+/** Roles that work from one screen at a time with a slim top bar and no sidebar. */
+const FRONTLINE_ROLES: readonly UserRole[] = ["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER"];
+
+export function isFrontlineRole(role: UserRole): boolean {
+  return FRONTLINE_ROLES.includes(role);
+}
+
+/** Work screens a front-line role can switch between, their own home first. */
+export function frontlineScreens(me: UserProfile, activeBranchId: string | null): NavItem[] {
+  const items = navForUser(me, activeBranchId);
+  const home = roleHome(me.role);
+  return [...items.filter((item) => item.href === home), ...items.filter((item) => item.href !== home)];
 }

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
@@ -50,7 +50,10 @@ export function OrdersScreen() {
   const queryClient = useQueryClient();
   const branchId = useScope((state) => state.branchId);
   const today = useMemo(() => cairoToday(), []);
-  const [search, setSearch] = useState("");
+  const params = useSearchParams();
+  // `?q=` comes from the top-bar search.
+  const initialSearch = params.get("q") ?? "";
+  const [search, setSearch] = useState(initialSearch);
   const [status, setStatus] = useState("");
   const [source, setSource] = useState("");
   const [channel, setChannel] = useState<"" | "mobile" | "delivery" | "store">("");
@@ -59,7 +62,7 @@ export function OrdersScreen() {
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
   const [applied, setApplied] = useState({
-    search: "",
+    search: initialSearch,
     status: "",
     source: "",
     channel: "" as "" | "mobile" | "delivery" | "store",
@@ -68,7 +71,13 @@ export function OrdersScreen() {
     dateFrom: today,
     dateTo: today,
   });
-  const [selectedId, setSelectedId] = useState<string | null>(useSearchParams().get("order"));
+  const [selectedId, setSelectedId] = useState<string | null>(params.get("order"));
+  const q = params.get("q");
+  useEffect(() => {
+    if (q === null) return;
+    setSearch(q);
+    setApplied((current) => ({ ...current, search: q }));
+  }, [q]);
   const [cancelReason, setCancelReason] = useState("");
 
   const list = useQuery({

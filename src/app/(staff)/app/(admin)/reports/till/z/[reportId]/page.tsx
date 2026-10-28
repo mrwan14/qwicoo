@@ -4,7 +4,7 @@ import { ZReportScreen } from "@/features/staff/backoffice-screen";
 export default async function Page({ params }: { params: Promise<{ reportId: string }> }) {
   const { reportId } = await params;
   return (
-    <RoleGate href="/app/financials">
+    <RoleGate href="/app/reports/till">
       <ZReportScreen reportId={reportId} />
     </RoleGate>
   );

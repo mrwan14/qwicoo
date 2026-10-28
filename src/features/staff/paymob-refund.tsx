@@ -78,7 +78,7 @@ export function PaymobRefunds({ orderId }: { orderId: string }) {
 
   return (
     <div className="grid w-full gap-2">
-      {needsDrawer ? <Link href="/app/financials" className="text-sm underline-offset-2 hover:underline">{orders.openTill}</Link> : null}
+      {needsDrawer ? <Link href="/app/reports/till" className="text-sm underline-offset-2 hover:underline">{orders.openTill}</Link> : null}
       {captures.map(({ payment }) => (
         <button
           key={payment.id}

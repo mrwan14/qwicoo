@@ -45,6 +45,11 @@ const OLD_ROUTES: readonly { path: string; role: UserRole; lands: string | null 
   { path: "/app/attendance", role: "CASHIER", lands: null },
   { path: `/app/brands/${BRAND}/settings`, role: "BRAND_ADMIN", lands: "/app/settings/brand" },
   { path: `/app/brands/${BRAND}/settings`, role: "SUPER_ADMIN", lands: null },
+  { path: "/app/analytics", role: "BRAND_ADMIN", lands: "/app/reports/sales" },
+  { path: "/app/analytics/branches", role: "BRAND_ADMIN", lands: "/app/reports/branches" },
+  { path: "/app/analytics/menu", role: "BRAND_ADMIN", lands: "/app/reports/menu" },
+  { path: "/app/financials", role: "BRANCH_ADMIN", lands: "/app/reports/till" },
+  { path: "/app/financials/z/z-123", role: "BRANCH_ADMIN", lands: "/app/reports/till/z/z-123" },
 ];
 
 test("every old route lands on its new home", () => {

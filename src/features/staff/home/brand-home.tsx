@@ -98,7 +98,7 @@ export function BrandHome() {
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <Card
           title={t.brand.branches.title}
-          action={allowed.has("/app/analytics") ? <CardLink href="/app/analytics/branches">{t.brand.branches.link}</CardLink> : undefined}
+          action={allowed.has("/app/reports/sales") ? <CardLink href="/app/reports/branches">{t.brand.branches.link}</CardLink> : undefined}
         >
           <DataTable
             caption={t.brand.branches.title}
@@ -113,7 +113,7 @@ export function BrandHome() {
         <div className="grid grid-cols-1 gap-4">
           <Card
             title={t.brand.menu.title}
-            action={allowed.has("/app/analytics") ? <CardLink href="/app/analytics/menu">{t.brand.menu.link}</CardLink> : undefined}
+            action={allowed.has("/app/reports/sales") ? <CardLink href="/app/reports/menu">{t.brand.menu.link}</CardLink> : undefined}
           >
             {data.isLoading ? (
               <Skeleton className="h-40 rounded-staff" />

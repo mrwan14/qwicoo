@@ -37,6 +37,11 @@ export const LEGACY_ROUTES: readonly LegacyRoute[] = [
   // Front-line roles keep Attendance as their own clock-in screen.
   { from: "/app/attendance", to: "/app/settings/staff/attendance", roles: ["BRANCH_ADMIN"] },
   { from: "/app/brands/:brandId/settings", to: "/app/settings/brand", roles: ["BRAND_ADMIN"] },
+  { from: "/app/analytics", to: "/app/reports/sales" },
+  { from: "/app/analytics/branches", to: "/app/reports/branches" },
+  { from: "/app/analytics/menu", to: "/app/reports/menu" },
+  { from: "/app/financials", to: "/app/reports/till" },
+  { from: "/app/financials/z/:reportId", to: "/app/reports/till/z/:reportId" },
 ];
 
 export { ADMINS as LEGACY_ADMIN_ROLES };

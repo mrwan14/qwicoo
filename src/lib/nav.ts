@@ -221,7 +221,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ["BRANCH_ADMIN"],
   },
   {
-    href: "/app/analytics",
+    href: "/app/reports/sales",
     labelKey: "analytics",
     group: "insight",
     shell: "admin",
@@ -237,12 +237,28 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...ASSISTANT_ROLES],
   },
   {
-    href: "/app/financials",
+    href: "/app/reports/till",
     labelKey: "till",
     group: "insight",
     shell: "admin",
     phase: 6,
     roles: ["SUPER_ADMIN", "BRANCH_ADMIN"],
+  },
+  {
+    href: "/app/reports/attendance",
+    labelKey: "attendance",
+    group: "insight",
+    shell: "admin",
+    phase: 9,
+    roles: ["BRANCH_ADMIN"],
+  },
+  {
+    href: "/app/reports/payments",
+    labelKey: "payments",
+    group: "insight",
+    shell: "admin",
+    phase: 9,
+    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"],
   },
   {
     href: "/app/settings/staff/attendance",
@@ -381,7 +397,7 @@ const BUSINESS_SIDEBAR: readonly SidebarDef[] = [
   },
   { key: "menu", members: ["/app/menu"] },
   { key: "stock", members: ["/app/stock"] },
-  { key: "reports", members: ["/app/reports", "/app/analytics", "/app/financials"] },
+  { key: "reports", members: ["/app/reports", "/app/reports/sales", "/app/reports/till", "/app/reports/attendance", "/app/reports/payments"] },
   {
     key: "settings",
     bottom: true,

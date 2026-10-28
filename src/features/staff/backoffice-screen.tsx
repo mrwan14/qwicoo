@@ -232,7 +232,7 @@ export function FinancialsScreen() {
                 {reportRows.map((report) => (
                   <tr key={report.id} className="border-b last:border-b-0">
                     <th scope="row" className="px-4 py-3 text-start font-medium">
-                      <Link className="underline-offset-2 hover:underline" href={`/app/financials/z/${report.id}`}>{report.report_number}</Link>
+                      <Link className="underline-offset-2 hover:underline" href={`/app/reports/till/z/${report.id}`}>{report.report_number}</Link>
                     </th>
                     <td className="px-4 py-3 tabular-nums">{report.business_date}</td>
                     <td className="px-4 py-3 text-ink-secondary">{formatCairoDateTime(report.period_start, locale)} – {formatCairoDateTime(report.period_end, locale)}</td>
@@ -268,7 +268,7 @@ export function ZReportScreen({ reportId }: { reportId: string }) {
   return (
     <article className="grid gap-4">
       <div className="grid gap-1">
-        <Link href="/app/financials" className="text-sm text-ink-secondary underline-offset-2 hover:underline print:hidden">{t.back}</Link>
+        <Link href="/app/reports/till" className="text-sm text-ink-secondary underline-offset-2 hover:underline print:hidden">{t.back}</Link>
         <ScreenTitle>{t.title}</ScreenTitle>
         <p className="text-sm text-ink-secondary">{data.report_number} · {data.business_date}</p>
         <p className="text-sm text-ink-secondary">{t.period}: {formatCairoDateTime(data.period_start, locale)} – {formatCairoDateTime(data.period_end, locale)}</p>
@@ -551,9 +551,9 @@ export function AnalyticsScreen({ view, embedded = false, branchId }: { view: "d
     },
   });
   const tabs = [
-    { id: "dashboard", href: "/app/analytics", label: t.tabs.dashboard },
-    { id: "menu", href: "/app/analytics/menu", label: t.tabs.menu },
-    { id: "branches", href: "/app/analytics/branches", label: t.tabs.branches },
+    { id: "dashboard", href: "/app/reports/sales", label: t.tabs.dashboard },
+    { id: "menu", href: "/app/reports/menu", label: t.tabs.menu },
+    { id: "branches", href: "/app/reports/branches", label: t.tabs.branches },
   ] as const;
 
   const orders = view === "dashboard" ? dashboardOrderCount(data.data) : null;

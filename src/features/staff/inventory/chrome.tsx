@@ -26,6 +26,7 @@ import { useLocale } from "@/lib/i18n/locale-store";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { navCopy } from "@/lib/i18n/staff/nav";
+import { reportsCopy } from "@/lib/i18n/staff/reports";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
@@ -165,6 +166,7 @@ function ViewSwitch({ views, page }: { views: readonly InventoryPage[]; page: In
  */
 export function InventoryFrame({ page, children }: { page: InventoryPage; children: ReactNode }) {
   const t = useStaffSection(inventoryCopy);
+  const reports = useStaffSection(reportsCopy);
   const me = useStaffSession();
   const allowed = Boolean(me && canOpenInventoryPage(me.role, page));
   useEffect(() => {
@@ -191,7 +193,7 @@ export function InventoryFrame({ page, children }: { page: InventoryPage; childr
   if (place.kind === "reports") {
     return (
       <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-5">
-        <KitPageHeader back={{ href: "/app/reports", label: t.hub.backReports }} title={t.hub.reportsTitle} subtitle={t.hub.reportsSubtitle} />
+        <KitPageHeader back={{ href: "/app/reports", label: fill(reports.backTo, { group: reports.groups.stock }) }} title={t.hub.reportsTitle} subtitle={t.hub.reportsSubtitle} />
         <NestedHeaders>{children}</NestedHeaders>
       </div>
     );

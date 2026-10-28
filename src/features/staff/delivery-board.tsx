@@ -104,7 +104,7 @@ export function DeliveryBoard() {
       <p className="text-sm text-ink-secondary">{t.hint}</p>
       {needsDrawer ? (
         <p className="rounded-staff border border-border bg-subtle px-4 py-3 text-sm">
-          <Link href="/app/financials" className={`${button} inline-flex items-center`}>{t.openTill}</Link>
+          <Link href="/app/reports/till" className={`${button} inline-flex items-center`}>{t.openTill}</Link>
         </p>
       ) : null}
       <div className="grid gap-4 lg:grid-cols-3">

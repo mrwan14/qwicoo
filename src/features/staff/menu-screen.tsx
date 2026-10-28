@@ -1,112 +1,55 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { cn } from "cn";
+import { BookOpen, Plus, Search, Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { ConfirmDialog } from "@/components/ops/confirm-dialog";
-import { LocaleText } from "@/components/ops/locale-text";
-import { PageHeader } from "@/components/ops/page-header";
+import { Badge } from "@/components/ops/kit/badge";
+import { Button } from "@/components/ops/kit/button";
+import { ConfirmDialog } from "@/components/ops/kit/confirm-dialog";
+import { DataTable, type Column } from "@/components/ops/kit/data-table";
+import { EmptyState } from "@/components/ops/kit/empty-state";
+import { Field, Input, Select, Switch } from "@/components/ops/kit/field";
+import { formatAmount } from "@/components/ops/kit/money";
+import { SidePanel } from "@/components/ops/kit/side-panel";
 import { useStaffSession } from "@/components/ops/staff-session";
-import { StatusChip } from "@/components/ops/status-chip";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ErrorState } from "@/components/ops/states";
 import {
   canAddCategory,
   canAddItem,
-  canChooseItemScope,
   canDeleteCategory,
-  canDeleteItem,
   canEditItemStructure,
-  canEditModifiers,
-  canSeeStationsTab,
   canToggleAvailability,
-  type MenuItemFlags,
 } from "@/features/staff/menu-permissions";
+import { MenuHub } from "@/features/staff/menu/hub";
+import { ItemPanel } from "@/features/staff/menu/item-panel";
+import {
+  STATIONS,
+  flagsForItem,
+  names,
+  readKnownBrandCatalogIds,
+  uploadMenuImage,
+  useMenuTree,
+  type MenuItem,
+  type Station,
+} from "@/features/staff/menu/shared";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
-import type { UserRole } from "@/lib/auth/roles";
+import type { components } from "@/lib/api/schema";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { menuCopy } from "@/lib/i18n/staff/menu";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
-import type { components } from "@/lib/api/schema";
-import { formatMoney } from "@/lib/format/money";
-import { mediaUrl, presignedUploadUrl } from "@/lib/media";
-import { StoreTab } from "@/features/staff/store-tab";
+import { mediaUrl } from "@/lib/media";
 import { useScope } from "@/stores/scope";
 
-const control = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
-const hint = "text-sm leading-6 text-muted-foreground";
-const quietButton = "inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
-const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
-const STATIONS = ["HOT_KITCHEN", "COLD_KITCHEN", "BEVERAGE", "DESSERT"] as const;
+type Row = { item: MenuItem; categoryName: string };
 
-type Item = components["schemas"]["MenuItemResponse"] & {
-  scope?: components["schemas"]["MenuItemScope"] | null;
-  brand_id?: string | null;
-};
-type MenuText = (typeof menuCopy)["en"];
-
-const BRAND_CATALOG_KEY = "qwicoo-brand-catalog-items";
-
-function readKnownBrandCatalogIds(): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const raw = window.sessionStorage.getItem(BRAND_CATALOG_KEY);
-    const list = raw ? (JSON.parse(raw) as unknown) : [];
-    return new Set(Array.isArray(list) ? list.filter((id): id is string => typeof id === "string") : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function rememberBrandCatalogId(id: string) {
-  if (typeof window === "undefined") return;
-  const next = readKnownBrandCatalogIds();
-  next.add(id);
-  window.sessionStorage.setItem(BRAND_CATALOG_KEY, JSON.stringify([...next]));
-}
-
-function flagsForItem(item: Item, knownBrandIds: Set<string>): MenuItemFlags {
-  const brandCatalog =
-    knownBrandIds.has(item.id) ||
-    (typeof item.brand_id === "string" && item.brand_id.length > 0) ||
-    item.scope === "ALL_BRANCHES";
-  return { scope: item.scope, brandCatalog };
-}
-
-function names(en: string, ar: string) {
-  return { en, ar };
-}
-
-async function uploadMenuImage(file: File, folder: "items" | "general", errors: Pick<MenuText, "imageBadType" | "imageTooBig" | "imageUpload">): Promise<string> {
-  if (!IMAGE_TYPES.includes(file.type)) throw new Error(errors.imageBadType);
-  if (file.size > 5 * 1024 * 1024) throw new Error(errors.imageTooBig);
-  const body: components["schemas"]["PresignedUrlRequest"] = {
-    filename: file.name || "image.png",
-    content_type: file.type,
-    folder,
-  };
-  const signed = await browserApi.POST("/api/v1/media/presigned-url", { body });
-  if (!signed.response.ok || !signed.data) throw asApiError(signed.error, signed.response, errors.imageUpload);
-  const uploaded = await fetch(presignedUploadUrl(signed.data.upload_url), {
-    method: "PUT",
-    body: file,
-    headers: { "content-type": file.type },
-  });
-  if (!uploaded.ok) throw new Error(errors.imageUpload);
-  return signed.data.public_url;
-}
-
-function stationCode(name: string): string | null {
-  const code = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 50);
-  return /^[A-Z0-9_]{2,50}$/.test(code) ? code : null;
-}
-
+/** Menu → Items: categories as the left list, the category's items in a table, add and edit in the side panel. */
 export function MenuAdmin() {
   const t = useStaffSection(menuCopy);
   const { locale } = useLocale();
@@ -114,141 +57,32 @@ export function MenuAdmin() {
   const role = me?.role;
   const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
-  const [en, setEn] = useState("");
-  const [ar, setAr] = useState("");
-  const [station, setStation] = useState<(typeof STATIONS)[number]>("HOT_KITCHEN");
-  const [categoryId, setCategoryId] = useState("");
-  const [price, setPrice] = useState("10.00");
-  const [itemEn, setItemEn] = useState("");
-  const [itemAr, setItemAr] = useState("");
-  const [itemScope, setItemScope] = useState<"ALL_BRANCHES" | "THIS_BRANCH">("THIS_BRANCH");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
-  const [tab, setTab] = useState<"items" | "stations" | "store">("items");
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [itemOpen, setItemOpen] = useState(false);
+  const menu = useMenuTree(t.menuFailed);
   const searchParam = useSearchParams().get("q");
-  const [itemQuery, setItemQuery] = useState(searchParam ?? "");
+  const [query, setQuery] = useState(searchParam ?? "");
   // `?q=` comes from the top-bar search.
   useEffect(() => {
-    if (searchParam !== null) setItemQuery(searchParam);
+    if (searchParam !== null) setQuery(searchParam);
   }, [searchParam]);
-  const [categoryImage, setCategoryImage] = useState<File | null>(null);
-  const [itemImage, setItemImage] = useState<File | null>(null);
-  const showStations = canSeeStationsTab(role);
-  const showAddCategory = canAddCategory(role);
-  const showAddItem = canAddItem(role);
-  const chooseScope = canChooseItemScope(role);
-
-  const menu = useQuery({
-    queryKey: ["menu-tree", branchId],
-    enabled: Boolean(branchId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/menu/tree", { params: { query: { branch_id: branchId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.menuFailed);
-      return result.data;
-    },
-  });
-
-  const stations = useQuery({
-    queryKey: ["stations", branchId],
-    enabled: Boolean(branchId) && showStations,
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/staff/kitchen-stations");
-      if (!result.response.ok || !result.data) return [];
-      return result.data;
-    },
-  });
-
+  const [categoryId, setCategoryId] = useState("");
+  const [panel, setPanel] = useState<{ itemId: string | null } | null>(null);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const knownBrandIds = readKnownBrandCatalogIds();
-
-  function itemFlags(item: Item): MenuItemFlags {
-    return flagsForItem(item, knownBrandIds);
-  }
 
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ["menu-tree"] });
   }
 
-  const createCategory = useMutation({
-    mutationFn: async () => {
-      const imageUrl = categoryImage ? await uploadMenuImage(categoryImage, "general", t) : null;
-      const body: components["schemas"]["StaffCategoryCreate"] = {
-        name: names(en, ar),
-        station,
-        display_order: 1,
-        is_active: true,
-        ...(imageUrl ? { image_url: imageUrl } : {}),
-      };
-      const result = await browserApi.POST("/api/v1/staff/menu/categories", { body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotCreateCategory);
+  const availability = useMutation({
+    mutationFn: async ({ item, available }: { item: MenuItem; available: boolean }) => {
+      const body: components["schemas"]["StaffItemAvailabilityUpdate"] = { is_available: available };
+      const result = await browserApi.PATCH("/api/v1/staff/menu/items/{item_id}/availability", { params: { path: { item_id: item.id } }, body });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotUpdateAvailability);
+      return available;
     },
-    onSuccess: () => {
-      toast.success(t.categorySaved);
-      setCategoryOpen(false);
-      setEn("");
-      setAr("");
-      setCategoryImage(null);
-      refresh();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
-  const createItem = useMutation({
-    mutationFn: async () => {
-      const imageUrl = itemImage ? await uploadMenuImage(itemImage, "items", t) : null;
-      const useCatalog = chooseScope && itemScope === "ALL_BRANCHES";
-      if (useCatalog) {
-        const body: components["schemas"]["ScopedItemCreateRequest"] = {
-          name: names(itemEn || "Item", itemAr || "صنف"),
-          base_price: price,
-          category_id: categoryId,
-          scope: "ALL_BRANCHES",
-          ...(imageUrl ? { image_url: imageUrl } : {}),
-        };
-        const result = await browserApi.POST("/api/v1/menu/catalog-items", { body });
-        if (result.response.status === 500) throw new Error(t.catalogUnavailable);
-        if (!result.response.ok) throw asApiError(result.error, result.response, t.catalogCreateFailed);
-        const createdId = (result.data as { id?: string } | undefined)?.id;
-        if (createdId) rememberBrandCatalogId(createdId);
-        return;
-      }
-      if (chooseScope && itemScope === "THIS_BRANCH") {
-        const body: components["schemas"]["ScopedItemCreateRequest"] = {
-          name: names(itemEn || "Item", itemAr || "صنف"),
-          base_price: price,
-          category_id: categoryId,
-          scope: "SPECIFIC_BRANCHES",
-          target_branch_ids: branchId ? [branchId] : [],
-          ...(imageUrl ? { image_url: imageUrl } : {}),
-        };
-        const result = await browserApi.POST("/api/v1/menu/catalog-items", { body });
-        if (result.response.ok) {
-          const createdId = (result.data as { id?: string } | undefined)?.id;
-          if (createdId) rememberBrandCatalogId(createdId);
-          return;
-        }
-        // Fall back to staff branch item when catalog scope path is unavailable.
-      }
-      const body: components["schemas"]["StaffItemCreate"] = {
-        category_id: categoryId,
-        name: names(itemEn, itemAr),
-        base_price: price,
-        station,
-        is_available: true,
-        item_type: "PREPARED",
-        ...(imageUrl ? { image_url: imageUrl } : {}),
-      };
-      const result = await browserApi.POST("/api/v1/staff/menu/items", { body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotCreateItem);
-    },
-    onSuccess: () => {
-      toast.success(t.itemSaved);
-      setItemEn("");
-      setItemAr("");
-      setItemImage(null);
-      setItemScope(chooseScope ? "ALL_BRANCHES" : "THIS_BRANCH");
-      setItemOpen(false);
+    onSuccess: (available) => {
+      toast.success(available ? t.available : t.soldOut);
       refresh();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -256,9 +90,7 @@ export function MenuAdmin() {
 
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
-      const result = await browserApi.DELETE("/api/v1/staff/menu/categories/{category_id}", {
-        params: { path: { category_id: id } },
-      });
+      const result = await browserApi.DELETE("/api/v1/staff/menu/categories/{category_id}", { params: { path: { category_id: id } } });
       if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotDeleteCategory);
     },
     onSuccess: () => {
@@ -271,712 +103,272 @@ export function MenuAdmin() {
   });
 
   if (!branchId) return null;
-  if (menu.isLoading) return <LoadingState label={t.loading} />;
-  if (menu.isError || !menu.data) return <ErrorState body={menu.error?.message ?? t.missing} onRetry={() => void menu.refetch()} />;
-
-  const categories = menu.data.categories ?? [];
+  const categories = menu.data?.categories ?? [];
   const active = categories.find((category) => category.id === categoryId) ?? categories[0];
-  const itemSearch = itemQuery.trim().toLowerCase();
-  const searchedItems = itemSearch
+  const needle = query.trim().toLocaleLowerCase();
+  const rows: Row[] = needle
     ? categories.flatMap((category) =>
         (category.items ?? [])
-          .filter((item) => pickLocale(item.name, locale).toLowerCase().includes(itemSearch))
-          .map((item) => ({ item, categoryName: pickLocale(category.name, locale) })),
+          .filter((item) => pickLocale(item.name, locale).toLocaleLowerCase().includes(needle))
+          .map((item) => ({ item: item as MenuItem, categoryName: pickLocale(category.name, locale) })),
       )
-    : [];
+    : (active?.items ?? []).map((item) => ({ item: item as MenuItem, categoryName: pickLocale(active?.name, locale) }));
+  const allItems = categories.flatMap((category) => (category.items ?? []) as MenuItem[]);
+  const editing = panel?.itemId ? (allItems.find((item) => item.id === panel.itemId) ?? null) : null;
+
+  const columns: Column<Row>[] = [
+    {
+      key: "item",
+      header: t.hub.item,
+      strong: true,
+      cell: ({ item }) => {
+        const image = mediaUrl(item.image_url);
+        const structure = canEditItemStructure(role, flagsForItem(item, knownBrandIds));
+        return (
+          <span className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-staff border border-border bg-subtle">
+              {image ? (
+                // Stored photos are on the upload host, which next/image is not set up to optimise.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={image} alt="" className="size-full object-cover" />
+              ) : (
+                <BookOpen aria-hidden className="size-4 text-ink-secondary" />
+              )}
+            </span>
+            <span className="grid min-w-0">
+              <span className="truncate">{pickLocale(item.name, locale)}</span>
+              {!structure ? <span className="truncate text-xs font-normal text-ink-secondary">{t.brandCatalogReadOnly}</span> : null}
+            </span>
+          </span>
+        );
+      },
+    },
+    ...(needle ? [{ key: "category", header: t.category, cell: (row: Row) => row.categoryName } satisfies Column<Row>] : []),
+    { key: "price", header: t.price, width: 120, align: "end", cell: ({ item }) => formatAmount(String(item.base_price), undefined, locale) },
+    {
+      key: "choices",
+      header: t.hub.choices,
+      width: 120,
+      cell: ({ item }) => {
+        const count = (item.modifier_groups ?? []).reduce((sum, group) => sum + (group.options?.length ?? 0), 0);
+        return count ? fill(t.hub.choiceCount, { count }) : t.hub.none;
+      },
+    },
+    { key: "station", header: t.station, width: 140, cell: ({ item }) => (item.station ? t.stations[item.station as Station] ?? item.station : t.hub.none) },
+    {
+      key: "available",
+      header: t.available,
+      width: 120,
+      cell: ({ item }) =>
+        canToggleAvailability(role) ? (
+          <span className="inline-flex items-center gap-2" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+            <Switch
+              checked={item.is_available}
+              disabled={availability.isPending && availability.variables?.item.id === item.id}
+              onCheckedChange={(next) => availability.mutate({ item, available: next })}
+              aria-label={`${pickLocale(item.name, locale)}: ${t.available}`}
+            />
+            {!item.is_available ? <Badge tone="danger">{t.soldOut}</Badge> : null}
+          </span>
+        ) : (
+          <Badge tone={item.is_available ? "success" : "danger"}>{item.is_available ? t.available : t.soldOut}</Badge>
+        ),
+    },
+  ];
 
   return (
-    <div className="grid gap-4">
-      <PageHeader
-        title={t.title}
-        action={
-          tab === "items" && (showAddCategory || showAddItem) ? (
-            <div className="flex gap-2">
-              {showAddCategory ? (
-                <button type="button" className="min-h-11 rounded-xl border bg-card px-4 text-sm" onClick={() => setCategoryOpen(true)}>{t.addCategory}</button>
-              ) : null}
-              {showAddItem ? (
-                <button
-                  type="button"
-                  className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
-                  onClick={() => {
-                    if (!categoryId && active) setCategoryId(active.id);
-                    setItemScope(chooseScope ? "ALL_BRANCHES" : "THIS_BRANCH");
-                    setItemOpen(true);
-                  }}
-                >
-                  {t.addItem}
-                </button>
-              ) : null}
-            </div>
-          ) : null
-        }
-      />
-      <div className="flex gap-2">
-        <button type="button" className={`min-h-11 rounded-xl px-4 text-sm ${tab === "items" ? "bg-primary text-primary-foreground" : "bg-card"}`} onClick={() => setTab("items")}>{t.items}</button>
-        {showStations ? (
-          <button type="button" className={`min-h-11 rounded-xl px-4 text-sm ${tab === "stations" ? "bg-primary text-primary-foreground" : "bg-card"}`} onClick={() => setTab("stations")}>{t.stationsTab}</button>
-        ) : null}
-        <button type="button" className={`min-h-11 border px-4 text-sm ${tab === "store" ? "bg-primary text-primary-foreground" : "bg-card"}`} onClick={() => setTab("store")}>{t.storeTab}</button>
-      </div>
-      {tab === "store" ? (
-        <StoreTab
-          branchId={branchId}
-          role={role}
-          categories={categories.map((category) => ({ id: category.id, name: pickLocale(category.name, locale) }))}
-          treeItems={(categories.flatMap((category) => category.items ?? [])).map((item) => ({
-            id: item.id,
-            name: pickLocale(item.name, locale),
-            item_type: item.item_type ?? null,
-            scope: "scope" in item && typeof item.scope === "string" ? item.scope : null,
-            price: item.base_price,
-          }))}
-        />
-      ) : tab === "stations" && showStations ? (
-        <section className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1">
-          <p className="text-sm leading-6 text-muted-foreground">{t.stationIntro}</p>
-          <StationForm onDone={() => void stations.refetch()} />
-          <ul className="grid gap-2">
-            {(stations.data ?? []).map((stationItem) => (
-              <li key={stationItem.id} className="rounded-xl bg-secondary px-3 py-3 text-sm">
-                <LocaleText value={stationItem.name} /> · {stationItem.code}
-              </li>
-            ))}
-          </ul>
-        </section>
+    <MenuHub
+      tab="items"
+      actions={
+        <>
+          {canAddCategory(role) ? (
+            <Button variant="secondary" onClick={() => setCategoryOpen(true)}>
+              {t.addCategory}
+            </Button>
+          ) : null}
+          {canAddItem(role) ? (
+            <Button onClick={() => setPanel({ itemId: null })}>
+              <Plus aria-hidden />
+              {t.addItem}
+            </Button>
+          ) : null}
+        </>
+      }
+    >
+      {menu.isError ? (
+        <ErrorState body={menu.error?.message ?? t.missing} onRetry={() => void menu.refetch()} />
+      ) : !menu.isLoading && categories.length === 0 ? (
+        <EmptyState icon={BookOpen} title={t.emptyCategoriesTitle} body={t.emptyCategoriesBody} />
       ) : (
-        <div className="grid gap-4">
-          <label className="grid max-w-xl gap-1 text-sm">
-            {t.searchItems}
-            <span className={hint}>{t.searchHint}</span>
-            <span className="relative">
-              <Search aria-hidden className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                className={`${control} ps-9`}
-                value={itemQuery}
-                onChange={(event) => setItemQuery(event.target.value)}
-                placeholder={t.searchPlaceholder}
-              />
-            </span>
-          </label>
-        <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <aside className="grid gap-2">
-            <p className="text-sm font-medium">{t.categories}</p>
-            <div className="flex gap-2 overflow-x-auto lg:flex-col">
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[232px_minmax(0,1fr)]">
+          <nav aria-label={t.categories} className="grid gap-1">
+            <p className="px-3 pb-1 text-xs font-semibold tracking-wide text-ink-secondary uppercase">{t.categories}</p>
+            <div className="flex gap-1 overflow-x-auto lg:flex-col">
               {categories.map((category) => {
-                const selected = !itemSearch && category.id === active?.id;
-                const count = category.items?.length ?? 0;
-                const image = mediaUrl(category.image_url);
+                const selected = !needle && category.id === active?.id;
                 return (
                   <button
                     key={category.id}
                     type="button"
-                    className={`flex min-h-14 shrink-0 items-center gap-2 rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${selected ? "bg-primary text-primary-foreground" : "bg-card shadow-elev-1 ring-1 ring-foreground/5"}`}
+                    aria-current={selected ? "true" : undefined}
                     onClick={() => {
                       setCategoryId(category.id);
-                      setItemQuery("");
+                      setQuery("");
                     }}
+                    className={cn(
+                      "flex min-h-10 shrink-0 items-center justify-between gap-3 rounded-staff border px-3 py-2 text-start text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus",
+                      selected ? "border-border bg-subtle font-semibold text-ink" : "border-transparent text-ink-secondary hover:bg-subtle hover:text-ink",
+                    )}
                   >
-                    {image ? (
-                      // Stored photos are on the upload host, which next/image is not set up to optimise.
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={image} alt="" className="size-10 shrink-0 rounded-lg bg-secondary object-contain" />
-                    ) : null}
-                    <span className="grid">
-                    <span className="text-sm font-medium">{pickLocale(category.name, locale)}</span>
-                    <span className={`text-xs ${selected ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                      {count === 1 ? t.oneItem : fill(t.manyItems, { count })}
-                    </span>
-                    </span>
+                    <span className="truncate">{pickLocale(category.name, locale)}</span>
+                    <span className="text-xs text-ink-secondary tabular-nums">{category.items?.length ?? 0}</span>
                   </button>
                 );
               })}
             </div>
-          </aside>
-          {itemSearch ? (
-            <div className="grid gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">{t.searchResults}</h2>
-                <p className={hint}>{searchedItems.length === 1 ? t.oneMatch : fill(t.manyMatch, { count: searchedItems.length })}</p>
-              </div>
-              {searchedItems.length === 0 ? (
-                <EmptyState title={t.noMatchTitle} body={t.noMatchBody} />
-              ) : (
-                <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {searchedItems.map(({ item, categoryName }) => (
-                    <MenuItemBlock
-                      key={item.id}
-                      item={item}
-                      categoryName={categoryName}
-                      flags={itemFlags(item)}
-                      role={role}
-                      onOptions={() => setSelectedId(item.id)}
-                      onDone={refresh}
-                    />
-                  ))}
-                </ul>
-              )}
+          </nav>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Input
+                icon={Search}
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t.searchPlaceholder}
+                aria-label={t.searchItems}
+                className="min-w-52 flex-1"
+              />
+              {!needle && active && canDeleteCategory(role) ? (
+                <Button variant="dangerGhost" size="field" onClick={() => setCategoryToDelete(active.id)}>
+                  <Trash2 aria-hidden />
+                  {t.deleteCategory}
+                </Button>
+              ) : null}
             </div>
-          ) : active ? (
-            <div className="grid gap-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold">{pickLocale(active.name, locale)}</h2>
-                  {mediaUrl(active.image_url) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={mediaUrl(active.image_url) ?? ""} alt="" className="mt-2 h-36 w-full max-w-sm rounded-xl bg-secondary object-contain" />
-                  ) : null}
-                  <p className={hint}>
-                    {fill(t.categorySummaryStation, {
-                      count: (active.items?.length ?? 0) === 1 ? t.oneItem : fill(t.manyItems, { count: active.items?.length ?? 0 }),
-                      station: t.stations[active.station],
-                    })}
-                  </p>
-                </div>
-                {canDeleteCategory(role) ? (
-                  <button
-                    type="button"
-                    className="min-h-11 rounded-xl border border-destructive/30 px-4 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                    onClick={() => setCategoryToDelete(active.id)}
-                  >
-                    {t.deleteCategory}
-                  </button>
-                ) : null}
-              </div>
-              {(active.items ?? []).length === 0 ? (
-                <EmptyState title={t.emptyCategoryTitle} body={t.emptyCategoryBody} />
-              ) : (
-                <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {(active.items ?? []).map((item) => (
-                    <MenuItemBlock
-                      key={item.id}
-                      item={item}
-                      flags={itemFlags(item)}
-                      role={role}
-                      onOptions={() => setSelectedId(item.id)}
-                      onDone={refresh}
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : (
-            <EmptyState title={t.emptyCategoriesTitle} body={t.emptyCategoriesBody} />
-          )}
-        </div>
+            {needle ? (
+              <p className="text-[13px] text-ink-secondary">{rows.length === 1 ? t.oneMatch : fill(t.manyMatch, { count: rows.length })}</p>
+            ) : active ? (
+              <p className="text-[13px] text-ink-secondary">
+                {fill(t.categorySummaryStation, {
+                  count: (active.items?.length ?? 0) === 1 ? t.oneItem : fill(t.manyItems, { count: active.items?.length ?? 0 }),
+                  station: t.stations[active.station as Station] ?? active.station,
+                })}
+              </p>
+            ) : null}
+            <DataTable
+              caption={needle ? t.searchResults : pickLocale(active?.name, locale)}
+              columns={columns}
+              rows={rows}
+              loading={menu.isLoading}
+              rowKey={({ item }) => item.id}
+              selectedKey={panel?.itemId ?? null}
+              onRowClick={({ item }) => setPanel({ itemId: item.id })}
+              empty={needle ? t.noMatchTitle : t.emptyCategoryTitle}
+            />
+          </div>
         </div>
       )}
-      <Sheet open={categoryOpen} onOpenChange={setCategoryOpen}>
-        <SheetContent side="right">
-          <SheetHeader>
-            <SheetTitle>{t.addCategory}</SheetTitle>
-          </SheetHeader>
-          <form className="grid gap-3 px-4 pb-6" onSubmit={(event) => { event.preventDefault(); createCategory.mutate(); }}>
-            <input className={control} placeholder={t.englishName} value={en} onChange={(event) => setEn(event.target.value)} required />
-            <input className={control} dir="rtl" placeholder={t.arabicName} value={ar} onChange={(event) => setAr(event.target.value)} required />
-            <select className={control} value={station} onChange={(event) => setStation(event.target.value as typeof station)}>
-              {STATIONS.map((value) => (
-                <option key={value} value={value}>{t.stations[value]}</option>
-              ))}
-            </select>
-            <OptionalImageField file={categoryImage} onChange={setCategoryImage} />
-            <button className="min-h-11 rounded-xl bg-primary text-sm text-primary-foreground" type="submit">{t.saveCategory}</button>
-          </form>
-        </SheetContent>
-      </Sheet>
-      <Sheet open={itemOpen} onOpenChange={setItemOpen}>
-        <SheetContent side="right" className="overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{t.addItem}</SheetTitle>
-            <SheetDescription>{t.addItemBody}</SheetDescription>
-          </SheetHeader>
-          <form className="grid gap-4 px-4 pb-6" onSubmit={(event) => { event.preventDefault(); createItem.mutate(); }}>
-            <label className="grid gap-1 text-sm">
-              {t.category}
-              <span className={hint}>{t.categoryHint}</span>
-              <select className={control} value={categoryId} onChange={(event) => setCategoryId(event.target.value)} required>
-                <option value="">{categories.length === 0 ? t.addCategoryFirst : t.chooseCategory}</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>{pickLocale(category.name, locale)}</option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm">
-              {t.priceEgp}
-              <span className={hint}>{t.priceHint}</span>
-              <input className={control} inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} required />
-              <span className={hint}>{formatMoney(price || "0", undefined, locale)}</span>
-            </label>
-            <label className="grid gap-1 text-sm">
-              {t.englishName}
-              <span className={hint}>{t.englishNameHint}</span>
-              <input className={control} value={itemEn} onChange={(event) => setItemEn(event.target.value)} required />
-            </label>
-            <label className="grid gap-1 text-sm">
-              {t.arabicName}
-              <span className={hint}>{t.arabicNameHint}</span>
-              <input className={control} dir="rtl" value={itemAr} onChange={(event) => setItemAr(event.target.value)} required />
-            </label>
-            <label className="grid gap-1 text-sm">
-              {t.station}
-              <span className={hint}>{t.stationHint}</span>
-              <select className={control} value={station} onChange={(event) => setStation(event.target.value as typeof station)}>
-                {STATIONS.map((value) => (
-                  <option key={value} value={value}>{t.stations[value]}</option>
-                ))}
-              </select>
-            </label>
-            <OptionalImageField file={itemImage} onChange={setItemImage} />
-            {chooseScope ? (
-              <fieldset className="grid gap-2">
-                <legend className="text-sm font-medium">{t.itemScope}</legend>
-                <p className={hint}>{t.itemScopeHint}</p>
-                <label className="flex min-h-11 items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="item-scope"
-                    checked={itemScope === "ALL_BRANCHES"}
-                    onChange={() => setItemScope("ALL_BRANCHES")}
-                  />
-                  {t.scopeAllBranches}
-                </label>
-                <label className="flex min-h-11 items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="item-scope"
-                    checked={itemScope === "THIS_BRANCH"}
-                    onChange={() => setItemScope("THIS_BRANCH")}
-                  />
-                  {t.scopeThisBranch}
-                </label>
-              </fieldset>
-            ) : null}
-            <button className="min-h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={!categoryId || createItem.isPending}>
-              {createItem.isPending ? t.saving : t.saveItem}
-            </button>
-            <p className={hint}>{chooseScope && itemScope === "ALL_BRANCHES" ? t.addEveryBranchHint : t.saveItemHint}</p>
-          </form>
-        </SheetContent>
-      </Sheet>
-      {(() => {
-        const selected = categories.flatMap((category) => category.items ?? []).find((item) => item.id === selectedId) ?? null;
-        if (!selected || !canEditModifiers(role, itemFlags(selected))) return null;
-        return <ModifierEditor item={selected} onClose={() => setSelectedId(null)} onDone={refresh} />;
-      })()}
+
+      <ItemPanel
+        open={panel !== null}
+        item={editing}
+        flags={editing ? flagsForItem(editing, knownBrandIds) : null}
+        categories={categories}
+        defaultCategoryId={active?.id ?? ""}
+        onClose={() => setPanel(null)}
+        onCreated={(itemId) => setPanel(itemId ? { itemId } : null)}
+      />
+      <CategoryPanel open={categoryOpen} onClose={() => setCategoryOpen(false)} onSaved={refresh} />
       <ConfirmDialog
         open={categoryToDelete !== null}
-        onOpenChange={(open) => { if (!open) setCategoryToDelete(null); }}
+        onOpenChange={(open) => !open && setCategoryToDelete(null)}
         title={t.deleteCategoryTitle}
-        description={t.deleteCategoryBody}
-        confirmLabel={t.delete}
-        destructive
-        onConfirm={() => { if (categoryToDelete) deleteCategory.mutate(categoryToDelete); }}
+        body={t.deleteCategoryBody}
+        pending={deleteCategory.isPending}
+        onConfirm={() => categoryToDelete && deleteCategory.mutate(categoryToDelete)}
       />
-    </div>
+    </MenuHub>
   );
 }
 
-function AvailabilityToggle({ item, onDone }: { item: Item; onDone: () => void }) {
-  const t = useStaffSection(menuCopy);
-  const [open, setOpen] = useState(false);
-  const update = useMutation({
-    mutationFn: async (isAvailable: boolean) => {
-      const body: components["schemas"]["StaffItemAvailabilityUpdate"] = { is_available: isAvailable };
-      const result = await browserApi.PATCH("/api/v1/staff/menu/items/{item_id}/availability", {
-        params: { path: { item_id: item.id } },
-        body,
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotUpdateAvailability);
-    },
-    onSuccess: () => {
-      onDone();
-      setOpen(false);
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-  return (
-    <>
-      <button type="button" className={quietButton} onClick={() => setOpen(true)}>
-        {item.is_available ? t.markSoldOut : t.makeAvailable}
-      </button>
-      <ConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
-        title={item.is_available ? t.mark86Title : t.makeAvailableTitle}
-        description={t.availabilityBody}
-        confirmLabel={t.confirm}
-        destructive={item.is_available}
-        onConfirm={() => update.mutate(!item.is_available)}
-      />
-    </>
-  );
-}
-
-function ModifierEditor({ item, onClose, onDone }: { item: Item; onClose: () => void; onDone: () => void }) {
-  const t = useStaffSection(menuCopy);
-  const [en, setEn] = useState("Options");
-  const [ar, setAr] = useState("خيارات");
-  const [optionEn, setOptionEn] = useState("");
-  const [optionDelta, setOptionDelta] = useState("0.00");
-  const groups = item.modifier_groups ?? [];
-  const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
-  const queryClient = useQueryClient();
-
-  const createGroup = useMutation({
-    mutationFn: async () => {
-      const body: components["schemas"]["StaffModifierGroupCreate"] = {
-        name: names(en, ar),
-        min_choices: 0,
-        max_choices: 1,
-        is_required: false,
-      };
-      const result = await browserApi.POST("/api/v1/staff/menu/items/{item_id}/modifier-groups", {
-        params: { path: { item_id: item.id } },
-        body,
-      });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.couldNotAddGroup);
-      setGroupId(result.data.id);
-    },
-    onSuccess: () => {
-      toast.success(t.modifierGroupAdded);
-      void queryClient.invalidateQueries({ queryKey: ["menu-tree"] });
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
-  const createOption = useMutation({
-    mutationFn: async () => {
-      const body: components["schemas"]["StaffModifierOptionCreate"] = {
-        name: names(optionEn, optionEn),
-        price_delta: optionDelta || "0.00",
-        is_available: true,
-      };
-      const result = await browserApi.POST("/api/v1/staff/menu/modifier-groups/{group_id}/options", {
-        params: { path: { group_id: groupId } },
-        body,
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotAddOption);
-    },
-    onSuccess: () => {
-      toast.success(t.optionAdded);
-      setOptionEn("");
-      void queryClient.invalidateQueries({ queryKey: ["menu-tree"] });
-      onDone();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
-  return (
-    <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right">
-        <SheetHeader>
-          <SheetTitle>{t.modifiers}</SheetTitle>
-        </SheetHeader>
-        <div className="grid gap-3 overflow-y-auto px-4 pb-6">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <input className={control} aria-label={t.englishName} value={en} onChange={(event) => setEn(event.target.value)} />
-        <input className={control} aria-label={t.arabicName} dir="rtl" value={ar} onChange={(event) => setAr(event.target.value)} />
-      </div>
-      <button type="button" className="min-h-11 rounded-lg border" onClick={() => createGroup.mutate()}>
-        {t.addModifierGroup}
-      </button>
-      {groups.length > 0 ? (
-        <ul className="grid gap-3">
-          {groups.map((group) => (
-            <li key={group.id} className="grid gap-2 rounded-lg border p-3">
-              <p className="text-sm font-medium">{group.name}</p>
-              {(group.options ?? []).map((option) => (
-                <OptionPriceField key={option.id} option={option} onDone={onDone} />
-              ))}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <label className="grid gap-1 text-sm">
-        {t.modifierGroup}
-        <select className={control} value={groupId} onChange={(event) => setGroupId(event.target.value)}>
-          <option value="">{t.chooseGroup}</option>
-          {groups.map((group) => (
-            <option key={group.id} value={group.id}>{group.name}</option>
-          ))}
-        </select>
-      </label>
-      <input className={control} placeholder={t.optionName} value={optionEn} onChange={(event) => setOptionEn(event.target.value)} />
-      <input className={control} placeholder={t.priceChange} value={optionDelta} onChange={(event) => setOptionDelta(event.target.value)} inputMode="decimal" />
-      <button type="button" className="min-h-11 rounded-lg border" onClick={() => createOption.mutate()} disabled={!groupId || !optionEn}>
-        {t.addOption}
-      </button>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-
-function MenuItemBlock({
-  item,
-  categoryName,
-  flags,
-  role,
-  onOptions,
-  onDone,
-}: {
-  item: Item;
-  categoryName?: string;
-  flags: MenuItemFlags;
-  role: UserRole | null | undefined;
-  onOptions: () => void;
-  onDone: () => void;
-}) {
-  const t = useStaffSection(menuCopy);
-  const image = mediaUrl(item.image_url);
-  const structure = canEditItemStructure(role, flags);
-  const modifiers = canEditModifiers(role, flags);
-  const availability = canToggleAvailability(role);
-  const canDelete = canDeleteItem(role, flags);
-  return (
-    <li className="grid content-start gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
-      {image ? (
-        // Stored photos are on the upload host, which next/image is not set up to optimise.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt="" className="h-36 w-full rounded-xl bg-secondary object-contain" />
-      ) : null}
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="grid gap-1">
-          <p className="font-semibold"><LocaleText value={item.name} /></p>
-          {categoryName ? <p className="text-sm text-muted-foreground">{categoryName}</p> : null}
-          {!structure ? <p className="text-sm text-muted-foreground">{t.brandCatalogReadOnly}</p> : null}
-        </div>
-        <StatusChip tone={item.is_available ? "available" : "soldout"}>{item.is_available ? t.available : t.soldOut}</StatusChip>
-      </div>
-      {structure ? <PriceField item={item} onDone={onDone} /> : (
-        <p className="text-sm font-medium"><MoneyOrPlain price={item.base_price} /></p>
-      )}
-      <div className="flex flex-wrap gap-2">
-        {availability ? <AvailabilityToggle item={item} onDone={onDone} /> : null}
-        {modifiers ? <button type="button" className={quietButton} onClick={onOptions}>{t.options}</button> : null}
-        {canDelete ? <DeleteItemButton item={item} onDone={onDone} /> : null}
-      </div>
-    </li>
-  );
-}
-
-function MoneyOrPlain({ price }: { price: string }) {
-  const { locale } = useLocale();
-  return <>{formatMoney(price, undefined, locale)}</>;
-}
-
-function priceEdited(next: string, saved: string): boolean {
-  const typed = next.trim();
-  const current = String(saved).trim();
-  if (typed === current) return false;
-  const typedValue = Number(typed);
-  const currentValue = Number(current);
-  if (Number.isFinite(typedValue) && Number.isFinite(currentValue)) return typedValue !== currentValue;
-  return true;
-}
-
-function PriceField({ item, onDone }: { item: Item; onDone: () => void }) {
-  const t = useStaffSection(menuCopy);
-  const { locale } = useLocale();
-  const saved = String(item.base_price);
-  const [editing, setEditing] = useState(false);
-  const [price, setPrice] = useState(saved);
-  const edited = priceEdited(price, saved);
-  const save = useMutation({
-    mutationFn: async () => {
-      const body: components["schemas"]["StaffItemUpdate"] = { base_price: price };
-      const result = await browserApi.PATCH("/api/v1/staff/menu/items/{item_id}", {
-        params: { path: { item_id: item.id } },
-        body,
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotSavePrice);
-    },
-    onSuccess: () => {
-      toast.success(t.priceSaved);
-      setEditing(false);
-      onDone();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-  if (!editing) {
-    return (
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="text-sm font-medium">{formatMoney(saved, undefined, locale)}</p>
-        <button type="button" className={quietButton} onClick={() => { setPrice(saved); setEditing(true); }}>
-          {t.changePrice}
-        </button>
-      </div>
-    );
-  }
-  return (
-    <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); if (edited) save.mutate(); }}>
-      <label className="grid gap-1 text-sm">
-        {t.priceEgp}
-        <input className="h-11 w-28 rounded-lg border bg-background px-3 text-sm" value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" autoFocus />
-      </label>
-      {edited ? (
-        <button className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" type="submit" disabled={save.isPending}>
-          {save.isPending ? t.saving : t.savePrice}
-        </button>
-      ) : null}
-      <button
-        type="button"
-        className={quietButton}
-        onClick={() => {
-          setPrice(saved);
-          setEditing(false);
-        }}
-      >
-        {t.cancel}
-      </button>
-    </form>
-  );
-}
-
-function DeleteItemButton({ item, onDone }: { item: Item; onDone: () => void }) {
-  const t = useStaffSection(menuCopy);
-  const [open, setOpen] = useState(false);
-  const remove = useMutation({
-    mutationFn: async () => {
-      const result = await browserApi.DELETE("/api/v1/staff/menu/items/{item_id}", {
-        params: { path: { item_id: item.id } },
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotDeleteItem);
-    },
-    onSuccess: () => {
-      toast.success(t.itemDeleted);
-      setOpen(false);
-      onDone();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-  return (
-    <>
-      <button type="button" className="min-h-11 rounded-xl border border-destructive/30 px-4 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" onClick={() => setOpen(true)}>{t.delete}</button>
-      <ConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
-        title={t.deleteItemTitle}
-        description={t.deleteItemBody}
-        confirmLabel={t.delete}
-        destructive
-        onConfirm={() => remove.mutate()}
-      />
-    </>
-  );
-}
-
-function OptionPriceField({
-  option,
-  onDone,
-}: {
-  option: components["schemas"]["ModifierOptionResponse"];
-  onDone: () => void;
-}) {
-  const t = useStaffSection(menuCopy);
-  const { locale } = useLocale();
-  const [delta, setDelta] = useState(option.price_delta);
-  const edited = priceEdited(delta, option.price_delta);
-  const save = useMutation({
-    mutationFn: async () => {
-      const body: components["schemas"]["StaffModifierOptionUpdate"] = { price_delta: delta };
-      const result = await browserApi.PATCH("/api/v1/staff/menu/modifier-options/{option_id}", {
-        params: { path: { option_id: option.id } },
-        body,
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotSaveOption);
-    },
-    onSuccess: () => {
-      toast.success(t.optionSaved);
-      onDone();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-  return (
-    <form className="flex flex-wrap items-center gap-2 text-sm" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
-      <span className="min-w-24">{option.name}</span>
-      <input className="h-11 w-28 rounded-lg border px-3 text-sm" aria-label={fill(t.priceChangeFor, { name: option.name })} value={delta} onChange={(event) => setDelta(event.target.value)} inputMode="decimal" />
-      <span className="text-muted-foreground">{formatMoney(delta || "0", undefined, locale)}</span>
-      {edited ? (
-        <button className="min-h-11 rounded-lg border px-3 text-sm" type="submit" disabled={save.isPending}>
-          {save.isPending ? t.saving : t.saveOption}
-        </button>
-      ) : null}
-    </form>
-  );
-}
-
-function OptionalImageField({ file, onChange }: { file: File | null; onChange: (file: File | null) => void }) {
-  const t = useStaffSection(menuCopy);
-  const [preview, setPreview] = useState<string | null>(null);
-  useEffect(() => {
-    if (!file) {
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
-  return (
-    <label className="grid gap-1 text-sm">
-      {t.image}
-      <span className={hint}>{t.imageHint}</span>
-      <input
-        className="block w-full text-sm file:me-3 file:min-h-11 file:rounded-lg file:border file:bg-card file:px-3 file:text-sm"
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/svg+xml"
-        onChange={(event) => onChange(event.target.files?.[0] ?? null)}
-      />
-      {preview ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="" className="h-32 w-full rounded-xl bg-secondary object-contain" />
-      ) : null}
-    </label>
-  );
-}
-
-function StationForm({ onDone }: { onDone: () => void }) {
+function CategoryPanel({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
   const t = useStaffSection(menuCopy);
   const [en, setEn] = useState("");
-  const code = stationCode(en);
+  const [ar, setAr] = useState("");
+  const [station, setStation] = useState<Station>("HOT_KITCHEN");
+  const [image, setImage] = useState<File | null>(null);
   const create = useMutation({
     mutationFn: async () => {
-      if (!code) throw new Error(t.stationLetters);
-      const body: components["schemas"]["CreateKitchenStationRequest"] = {
-        name: names(en, en),
-        code,
+      const imageUrl = image ? await uploadMenuImage(image, "general", t) : null;
+      const body: components["schemas"]["StaffCategoryCreate"] = {
+        name: names(en, ar),
+        station,
+        display_order: 1,
         is_active: true,
+        ...(imageUrl ? { image_url: imageUrl } : {}),
       };
-      const result = await browserApi.POST("/api/v1/staff/kitchen-stations", { body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotCreateStation);
+      const result = await browserApi.POST("/api/v1/staff/menu/categories", { body });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotCreateCategory);
     },
     onSuccess: () => {
-      toast.success(t.stationSaved);
+      toast.success(t.categorySaved);
       setEn("");
-      onDone();
+      setAr("");
+      setImage(null);
+      onSaved();
+      onClose();
     },
     onError: (error: Error) => toast.error(error.message),
   });
   return (
-    <form
-      className="grid gap-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        create.mutate();
-      }}
+    <SidePanel
+      open={open}
+      onOpenChange={(next) => !next && onClose()}
+      title={t.addCategory}
+      footer={
+        <>
+          <Button variant="secondary" size="field" onClick={onClose}>
+            {t.cancel}
+          </Button>
+          <Button size="field" type="submit" form="category-panel-form" disabled={create.isPending || !en.trim() || !ar.trim()}>
+            {create.isPending ? t.saving : t.saveCategory}
+          </Button>
+        </>
+      }
     >
-      <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-        <label className="grid gap-1 text-sm">
-          {t.stationName}
-          <input className={control} placeholder={t.stationPlaceholder} value={en} onChange={(event) => setEn(event.target.value)} required />
-        </label>
-        <button className="min-h-11 self-end rounded-lg bg-primary px-4 text-sm text-primary-foreground disabled:opacity-50" type="submit" disabled={!code || create.isPending}>
-          {create.isPending ? t.adding : t.addStation}
-        </button>
-      </div>
-      <p className="text-sm text-muted-foreground">{code ? fill(t.codeSaved, { code }) : t.codeHint}</p>
-    </form>
+      <form
+        id="category-panel-form"
+        className="grid gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          create.mutate();
+        }}
+      >
+        <Field label={t.englishName}>
+          <Input value={en} onChange={(event) => setEn(event.target.value)} required />
+        </Field>
+        <Field label={t.arabicName}>
+          <Input dir="rtl" value={ar} onChange={(event) => setAr(event.target.value)} required />
+        </Field>
+        <Field label={t.station} hint={t.stationHint}>
+          <Select value={station} onChange={(event) => setStation(event.target.value as Station)}>
+            {STATIONS.map((value) => (
+              <option key={value} value={value}>
+                {t.stations[value]}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label={t.image} hint={t.imageHint}>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/svg+xml"
+            onChange={(event) => setImage(event.target.files?.[0] ?? null)}
+            className="block w-full text-[13px] text-ink-secondary file:me-3 file:h-[42px] file:rounded-staff file:border file:border-border file:bg-canvas file:px-3 file:text-sm file:text-ink"
+          />
+        </Field>
+      </form>
+    </SidePanel>
   );
 }

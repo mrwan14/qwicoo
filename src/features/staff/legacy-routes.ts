@@ -16,6 +16,8 @@ export const LEGACY_ROUTES: readonly LegacyRoute[] = [
   // Waiters (and cashiers at the till) keep the floor as their own work screen.
   { from: "/app/floor", to: "/app/orders?view=tables", roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"] },
   { from: "/app/floor/requests", to: "/app/orders?view=tables", roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"] },
+  // Branch prices now live in the item panel (Per branch).
+  { from: "/app/menu/overrides", to: "/app/menu" },
 ];
 
 export { ADMINS as LEGACY_ADMIN_ROLES };

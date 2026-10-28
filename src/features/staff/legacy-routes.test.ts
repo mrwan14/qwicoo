@@ -19,6 +19,7 @@ const OLD_ROUTES: readonly { path: string; role: UserRole; lands: string | null 
   { path: "/app/floor", role: "CASHIER", lands: null },
   { path: "/app/floor/requests", role: "BRAND_ADMIN", lands: "/app/orders?view=tables" },
   { path: "/app/floor/requests", role: "RUNNER", lands: null },
+  { path: "/app/menu/overrides", role: "BRANCH_ADMIN", lands: "/app/menu" },
 ];
 
 test("every old route lands on its new home", () => {

@@ -146,7 +146,7 @@ function WasteHistory({
   return (
     <section className="grid gap-2">
       <h2 className="font-medium">{t.waste.history}</h2>
-      <div className="overflow-x-auto bg-card">
+      <div className="overflow-x-auto bg-canvas">
         <table className="w-full min-w-[720px] border-collapse text-sm">
           <thead>
             <tr className="border-b">

@@ -18,6 +18,17 @@ export const LEGACY_ROUTES: readonly LegacyRoute[] = [
   { from: "/app/floor/requests", to: "/app/orders?view=tables", roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"] },
   // Branch prices now live in the item panel (Per branch).
   { from: "/app/menu/overrides", to: "/app/menu" },
+  { from: "/app/inventory", to: "/app/stock" },
+  { from: "/app/inventory/stock", to: "/app/stock" },
+  ...["movements", "recipes", "ingredients", "prep", "suppliers", "purchase-orders", "transfers", "counts", "waste"].map((page) => ({
+    from: `/app/inventory/${page}`,
+    to: `/app/stock/${page}`,
+  })),
+  { from: "/app/inventory/settings", to: "/app/settings/stock" },
+  { from: "/app/inventory/units", to: "/app/settings/stock/units" },
+  { from: "/app/inventory/import", to: "/app/settings/stock/import" },
+  { from: "/app/inventory/jobs", to: "/app/settings/stock/jobs" },
+  { from: "/app/inventory/reports", to: "/app/reports/stock" },
 ];
 
 export { ADMINS as LEGACY_ADMIN_ROLES };

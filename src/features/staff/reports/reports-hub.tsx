@@ -20,7 +20,7 @@ const REPORTS: readonly { key: ReportKey; group: ReportGroup; href: string; icon
   { key: "overview", group: "sales", href: "/app/analytics", icon: BarChart3, nav: "/app/analytics" },
   { key: "branches", group: "sales", href: "/app/analytics/branches", icon: Building2, nav: "/app/analytics" },
   { key: "menu", group: "menu", href: "/app/analytics/menu", icon: UtensilsCrossed, nav: "/app/analytics" },
-  { key: "stock", group: "stock", href: "/app/inventory/reports", icon: Package, nav: "/app/inventory" },
+  { key: "stock", group: "stock", href: "/app/reports/stock", icon: Package, nav: "/app/stock" },
   { key: "attendance", group: "staff", href: "/app/attendance", icon: ClipboardList, nav: "/app/attendance" },
   { key: "till", group: "money", href: "/app/financials", icon: Wallet, nav: "/app/financials" },
   { key: "payments", group: "money", href: "/app/orders/payments", icon: CreditCard, nav: "/app/orders/payments" },

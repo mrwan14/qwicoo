@@ -31,7 +31,7 @@ export function settingsLinks(me: UserProfile, activeBranchId: string | null): S
   add("customers", "people", allowed.get("/app/mobile-customers"));
   add("payments", "money", brandSettings ? `${brandSettings}#payments` : null);
   add("delivery", "money", allowed.get("/app/delivery"));
-  add("stock", "money", canOpenInventoryPage(me.role, "settings") ? "/app/inventory/settings" : null);
+  add("stock", "money", canOpenInventoryPage(me.role, "settings") ? "/app/settings/stock" : null);
   add("audit", "security", allowed.get("/app/audit"));
   return links;
 }

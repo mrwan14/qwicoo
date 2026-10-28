@@ -294,7 +294,7 @@ export function BranchHome() {
       text: fill(row.status === "low" ? t.branch.attention.lowStock : t.branch.attention.outOfStock, { item: name }),
       detail: fill(t.branch.attention.left, { qty: formatQty(row.on_hand, locale), unit: row.base_unit_code }),
       action: canOpenInventoryPage(me?.role, "purchaseOrders")
-        ? { href: "/app/inventory/purchase-orders", label: t.branch.attention.buyMore }
+        ? { href: "/app/stock/purchase-orders", label: t.branch.attention.buyMore }
         : undefined,
     });
   }

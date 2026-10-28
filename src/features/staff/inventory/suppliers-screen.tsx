@@ -60,7 +60,7 @@ export function SuppliersScreen() {
       {suppliers.isError ? <QueryErrorState error={suppliers.error} screen={t.tabs.suppliers} onRetry={() => void suppliers.refetch()} /> : null}
       {suppliers.data && suppliers.data.length === 0 ? <EmptyState title={t.suppliers.empty} body={t.suppliers.detail} /> : null}
       {suppliers.data && suppliers.data.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full min-w-[720px] border-collapse text-sm">
             <thead>
               <tr className="border-b">
@@ -300,7 +300,7 @@ function Packs({
         <h2 className="font-medium">{t.suppliers.packs}</h2>
         {canWrite ? <button type="button" className={secondaryButton} onClick={() => setEditing("new")}>{t.suppliers.addPack}</button> : null}
       </div>
-      {packs.length === 0 ? <p className="text-sm text-muted-foreground">{t.suppliers.noPacks}</p> : null}
+      {packs.length === 0 ? <p className="text-sm text-ink-secondary">{t.suppliers.noPacks}</p> : null}
       {packs.map((pack) => {
         const ingredient = byIngredient.get(pack.ingredient_id);
         const unit = byUnit.get(pack.pack_unit_id);
@@ -310,7 +310,7 @@ function Packs({
               <span>{ingredient ? pickLocale(ingredient.name, locale) : pack.ingredient_sku ?? pack.ingredient_id.slice(0, 8)}</span>
               <Money amount={pack.last_price} currency={currency} />
             </div>
-            <span className="text-muted-foreground">{formatQty(pack.pack_size, locale)} {unit ? pickLocale(unit.name, locale) : ""}</span>
+            <span className="text-ink-secondary">{formatQty(pack.pack_size, locale)} {unit ? pickLocale(unit.name, locale) : ""}</span>
             {canWrite ? (
               <div className="flex gap-2">
                 <button type="button" className={secondaryButton} onClick={() => setEditing(pack.id)}>{t.suppliers.edit}</button>

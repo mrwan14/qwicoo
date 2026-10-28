@@ -105,7 +105,7 @@ export function RecipesScreen() {
       {recipes.isError ? <QueryErrorState error={recipes.error} screen={t.tabs.recipes} onRetry={() => void recipes.refetch()} /> : null}
       {recipes.data && recipes.data.length === 0 ? <EmptyState title={t.recipes.empty} body={t.recipes.detail} /> : null}
       {recipes.data && recipes.data.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="border-b">
@@ -131,7 +131,7 @@ export function RecipesScreen() {
       ) : null}
       <section className="grid gap-2">
         <h2 className="font-medium">{t.recipes.untracked}</h2>
-        <p className="text-sm text-muted-foreground">{t.recipes.untrackedDetail}</p>
+        <p className="text-sm text-ink-secondary">{t.recipes.untrackedDetail}</p>
         <ul className="grid gap-1 text-sm">
           {missing.items.map((item) => <li key={item.id}>{item.name}</li>)}
           {missing.options.map((option) => <li key={option.id}>{option.itemName} · {option.name}</li>)}

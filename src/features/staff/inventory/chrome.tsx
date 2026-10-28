@@ -2,10 +2,17 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
 import { BranchGate } from "@/components/ops/branch-gate";
+import { buttonClass } from "@/components/ops/kit/button";
+import { KpiCard } from "@/components/ops/kit/card";
+import { formatAmount } from "@/components/ops/kit/money";
+import { PageHeader as KitPageHeader } from "@/components/ops/kit/page-header";
+import { SegmentedControl } from "@/components/ops/kit/segmented";
+import { Tabs } from "@/components/ops/kit/tabs";
+import { NestedHeaders } from "@/components/ops/page-header";
 import { RoleGate } from "@/components/ops/screen";
 import { LoadingState } from "@/components/ops/states";
 import { useStaffSession } from "@/components/ops/staff-session";
@@ -13,6 +20,7 @@ import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
 import { denyAccess } from "@/lib/auth/session-client";
+import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
@@ -20,77 +28,179 @@ import { navCopy } from "@/lib/i18n/staff/nav";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
-import { canListBranches, canListStaff, canOpenInventoryPage, INVENTORY_HREFS, type InventoryPage } from "./access";
+import { canListBranches, canListStaff, canOpenInventoryPage, canSeeReports, INVENTORY_HREFS, type InventoryPage } from "./access";
+import { formatQty, lineValue } from "./qty";
 import { warehouseLabel } from "./transfers";
 
-export const control = "h-11 w-full border border-input bg-background px-3 text-sm";
-export const primaryButton =
-  "inline-flex h-11 items-center justify-center border border-foreground bg-foreground px-4 text-sm font-medium text-background disabled:opacity-50";
-export const secondaryButton =
-  "inline-flex h-11 items-center justify-center border border-input bg-background px-4 text-sm font-medium disabled:opacity-50";
+/** Shared by every inventory screen, so they all take the kit look. */
+export const control =
+  "h-[42px] w-full rounded-staff border border-border bg-canvas px-3 text-sm text-ink outline-none placeholder:text-disabled focus-visible:border-focus disabled:bg-subtle disabled:text-disabled";
+export const primaryButton = buttonClass({ size: "field" });
+export const secondaryButton = buttonClass({ variant: "secondary", size: "field" });
 
 export { INVENTORY_HREFS };
 
-const TAB_ORDER: InventoryPage[] = [
-  "overview",
-  "stock",
-  "movements",
-  "ingredients",
-  "units",
-  "import",
-  "recipes",
-  "suppliers",
-  "purchaseOrders",
-  "counts",
-  "transfers",
-  "waste",
-  "prep",
-  "reports",
-  "settings",
-  "jobs",
+type StockTab = "stock" | "recipes" | "buying" | "counts";
+
+/** The four Stock tabs, each a small set of the existing inventory pages. */
+const STOCK_TABS: readonly { tab: StockTab; views: readonly InventoryPage[] }[] = [
+  { tab: "stock", views: ["stock", "movements"] },
+  { tab: "recipes", views: ["recipes", "ingredients", "prep"] },
+  { tab: "buying", views: ["suppliers", "purchaseOrders", "transfers"] },
+  { tab: "counts", views: ["counts", "waste"] },
 ];
+const SETTINGS_VIEWS: readonly InventoryPage[] = ["settings", "units", "import", "jobs"];
+
+function placeOf(page: InventoryPage): { kind: "stock"; tab: StockTab; views: readonly InventoryPage[] } | { kind: "settings" | "reports"; views: readonly InventoryPage[] } {
+  if (page === "overview") return { kind: "stock", tab: "stock", views: STOCK_TABS[0].views };
+  if (page === "reports") return { kind: "reports", views: ["reports"] };
+  if (SETTINGS_VIEWS.includes(page)) return { kind: "settings", views: SETTINGS_VIEWS };
+  const found = STOCK_TABS.find((entry) => entry.views.includes(page)) ?? STOCK_TABS[0];
+  return { kind: "stock", tab: found.tab, views: found.views };
+}
 
 export function InventorySection({ children }: { children: ReactNode }) {
   const nav = useStaffSection(navCopy);
   return (
-    <RoleGate href="/app/inventory">
+    <RoleGate href="/app/stock">
       <BranchGate screen={nav.inventory}>{children}</BranchGate>
     </RoleGate>
   );
 }
 
+/** Stock value, low and out counts from the branch store, and open purchase orders. */
+function StockKpis() {
+  const t = useStaffSection(inventoryCopy);
+  const { locale } = useLocale();
+  const branchId = useScope((state) => state.branchId);
+  const currency = useBranchCurrency();
+  const warehouses = useWarehouses();
+  const selected = warehouses.data?.[0]?.id ?? "";
+  const stock = useQuery({
+    queryKey: ["inventory", "stock", selected],
+    enabled: Boolean(selected),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/warehouses/{warehouse_id}/stock", { params: { path: { warehouse_id: selected } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      // Same key and shape as the Stock screen, so the two share one request.
+      return result.data.items;
+    },
+  });
+  const overview = useQuery({
+    queryKey: ["inventory", "branch-overview", branchId],
+    enabled: Boolean(branchId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/branches/{branch_id}/overview", {
+        params: { path: { branch_id: branchId ?? "" } as unknown as undefined },
+      });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data;
+    },
+  });
+  const me = useStaffSession();
+  const reports = Boolean(me && canSeeReports(me.role));
+  const jobs = useQuery({
+    queryKey: ["inventory", "jobs", "FAILED", branchId],
+    enabled: reports && Boolean(branchId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/deduction-jobs", { params: { query: { status: "FAILED", branch_id: branchId } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data.items;
+    },
+  });
+  const rows = stock.data ?? [];
+  const value = rows.reduce((sum, row) => sum + Number(lineValue(row.on_hand, row.avg_cost)), 0);
+  const low = rows.filter((row) => row.status === "low").length;
+  const out = rows.filter((row) => row.status === "out" || row.status === "negative").length;
+  const loading = warehouses.isLoading || stock.isLoading;
+  return (
+    <div className="grid grid-cols-1 gap-3">
+      {jobs.data && jobs.data.length > 0 ? (
+        <p className="flex flex-wrap items-center gap-2 rounded-staff bg-danger-bg px-3 py-2.5 text-sm text-ink" role="status">
+          <span aria-hidden className="size-2 rounded-full bg-danger" />
+          <span className="font-medium">{t.overview.failedJobs}</span> {formatQty(jobs.data.length, locale)}
+          <Link href={INVENTORY_HREFS.jobs} className="font-medium underline underline-offset-4">
+            {t.overview.jobsLink}
+          </Link>
+        </p>
+      ) : null}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label={t.hub.kpis.value} value={stock.data ? formatAmount(value, currency, locale) : "—"} loading={loading} />
+        <KpiCard label={t.hub.kpis.low} value={stock.data ? formatQty(low, locale) : "—"} loading={loading} />
+        <KpiCard label={t.hub.kpis.out} value={stock.data ? formatQty(out, locale) : "—"} loading={loading} />
+        <KpiCard
+          label={t.hub.kpis.openOrders}
+          value={overview.data ? formatQty(overview.data.pending_purchase_orders, locale) : "—"}
+          loading={overview.isLoading}
+          note={overview.data?.transfers_to_receive ? fill(t.hub.kpis.toReceive, { count: overview.data.transfers_to_receive }) : undefined}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ViewSwitch({ views, page }: { views: readonly InventoryPage[]; page: InventoryPage }) {
+  const t = useStaffSection(inventoryCopy);
+  const router = useRouter();
+  if (views.length < 2) return null;
+  return (
+    <SegmentedControl
+      label={t.hub.viewLabel}
+      value={page === "overview" ? "stock" : page}
+      onValueChange={(next) => router.push(INVENTORY_HREFS[next])}
+      items={views.map((view) => ({ value: view, label: t.hub.views[view] }))}
+    />
+  );
+}
+
+/**
+ * Frame for every inventory page. Stock pages get the four Stock tabs with a view switch;
+ * units, import, jobs and rules sit under Settings → Stock; usage under Reports.
+ */
 export function InventoryFrame({ page, children }: { page: InventoryPage; children: ReactNode }) {
   const t = useStaffSection(inventoryCopy);
   const me = useStaffSession();
-  const pathname = usePathname();
   const allowed = Boolean(me && canOpenInventoryPage(me.role, page));
   useEffect(() => {
     if (me && !allowed) denyAccess();
   }, [me, allowed]);
   if (!me) return null;
   if (!allowed) return <LoadingState label={t.loading} />;
-  const tabs = TAB_ORDER.filter((item) => canOpenInventoryPage(me.role, item));
+  const place = placeOf(page);
+  const views = place.views.filter((view) => canOpenInventoryPage(me.role, view));
+
+  if (place.kind !== "stock") {
+    const settings = place.kind === "settings";
+    return (
+      <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-5">
+        <KitPageHeader
+          back={settings ? { href: "/app/settings", label: t.hub.backSettings } : { href: "/app/reports", label: t.hub.backReports }}
+          title={settings ? t.hub.settingsTitle : t.hub.reportsTitle}
+          subtitle={settings ? t.hub.settingsSubtitle : t.hub.reportsSubtitle}
+        />
+        <ViewSwitch views={views} page={page} />
+        <NestedHeaders>{children}</NestedHeaders>
+      </div>
+    );
+  }
+
+  const tabs = STOCK_TABS.map((entry) => ({ ...entry, views: entry.views.filter((view) => canOpenInventoryPage(me.role, view)) })).filter(
+    (entry) => entry.views.length > 0,
+  );
   return (
-    <div className="grid gap-4">
-      <nav aria-label={t.tabs.overview} className="flex gap-0 overflow-x-auto border-b">
-        {tabs.map((item) => {
-          const href = INVENTORY_HREFS[item];
-          const active = pathname === href;
-          return (
-            <Link
-              key={item}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={`shrink-0 border-b-2 px-3 py-2 text-sm ${
-                active ? "border-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.tabs[item]}
-            </Link>
-          );
-        })}
-      </nav>
-      {children}
+    <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-5">
+      <KitPageHeader title={t.hub.title} />
+      <div className="flex flex-wrap items-end gap-4">
+        <Tabs
+          label={t.hub.tabsLabel}
+          value={place.tab}
+          className="min-w-0 flex-1"
+          items={tabs.map((entry) => ({ value: entry.tab, label: t.hub.tabs[entry.tab], href: INVENTORY_HREFS[entry.views[0]] }))}
+        />
+        <ViewSwitch views={views} page={page} />
+      </div>
+      {place.tab === "stock" ? <StockKpis /> : null}
+      <NestedHeaders>{children}</NestedHeaders>
     </div>
   );
 }
@@ -249,7 +359,7 @@ export function WarehouseSelect({
   const { locale } = useLocale();
   return (
     <label className="grid gap-1 text-sm">
-      <span className="text-muted-foreground">{t.warehouse}</span>
+      <span className="text-ink-secondary">{t.warehouse}</span>
       <select className={control} value={value} onChange={(event) => onChange(event.target.value)}>
         {warehouses.map((warehouse) => (
           <option key={warehouse.id} value={warehouse.id}>

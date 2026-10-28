@@ -117,7 +117,7 @@ export function MovementsScreen() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <WarehouseSelect warehouses={warehouses.data} value={selected} onChange={setWarehouseId} />
           <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{t.ingredient}</span>
+            <span className="text-ink-secondary">{t.ingredient}</span>
             <select className={control} value={ingredientId} onChange={(event) => setIngredientId(event.target.value)}>
               <option value="">{t.all}</option>
               {(ingredients.data ?? []).map((item) => (
@@ -126,7 +126,7 @@ export function MovementsScreen() {
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{t.movements.type}</span>
+            <span className="text-ink-secondary">{t.movements.type}</span>
             <select className={control} value={movementType} onChange={(event) => setMovementType(event.target.value)}>
               <option value="">{t.all}</option>
               {TYPES.map((type) => (
@@ -135,15 +135,15 @@ export function MovementsScreen() {
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{t.movements.from}</span>
+            <span className="text-ink-secondary">{t.movements.from}</span>
             <input className={control} type="datetime-local" value={from} onChange={(event) => setFrom(event.target.value)} />
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{t.movements.to}</span>
+            <span className="text-ink-secondary">{t.movements.to}</span>
             <input className={control} type="datetime-local" value={to} onChange={(event) => setTo(event.target.value)} />
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{t.displayUnit}</span>
+            <span className="text-ink-secondary">{t.displayUnit}</span>
             <select className={control} value={displayUnitId} onChange={(event) => setDisplayUnitId(event.target.value)}>
               <option value="">{t.baseUnit}</option>
               {(units.data ?? []).map((unit) => (
@@ -155,7 +155,7 @@ export function MovementsScreen() {
       ) : null}
       {movements.data && movements.data.length === 0 ? <EmptyState title={t.movements.empty} body={t.movements.detail} /> : null}
       {movements.data && movements.data.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full min-w-[960px] border-collapse text-sm">
             <thead>
               <tr className="border-b">

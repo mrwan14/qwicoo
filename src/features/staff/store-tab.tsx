@@ -248,7 +248,7 @@ export function StoreTab({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.storeHint}</p>
         <div className="flex gap-2">
-          <Link href="/app/inventory/recipes" className="inline-flex min-h-11 items-center border px-4 text-sm">{t.recipes}</Link>
+          <Link href="/app/stock/recipes" className="inline-flex min-h-11 items-center border px-4 text-sm">{t.recipes}</Link>
           {canEditStructure(role, false) ? (
             <button type="button" className={button} onClick={startCreate}>{t.addStoreItem}</button>
           ) : null}

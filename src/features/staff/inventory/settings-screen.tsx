@@ -82,11 +82,11 @@ export function SettingsScreen() {
         <form className="grid max-w-xl gap-4" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
           <label className="grid gap-1 text-sm">
             <span className="flex items-center gap-2"><input type="checkbox" checked={negative} onChange={(event) => setNegative(event.target.checked)} />{t.settings.negative}</span>
-            <span className="text-muted-foreground">{t.settings.negativeHint}</span>
+            <span className="text-ink-secondary">{t.settings.negativeHint}</span>
           </label>
           <label className="grid gap-1 text-sm">
             <span className="flex items-center gap-2"><input type="checkbox" checked={soldOut} onChange={(event) => setSoldOut(event.target.checked)} />{t.settings.soldOut}</span>
-            <span className="text-muted-foreground">{t.settings.soldOutHint}</span>
+            <span className="text-ink-secondary">{t.settings.soldOutHint}</span>
           </label>
           <fieldset className="grid gap-2">
             <legend className="text-sm">{t.settings.alerts}</legend>
@@ -114,7 +114,7 @@ export function SettingsScreen() {
             {soldOutItems.data.map((item) => (
               <li key={item.menu_item_id} className="flex items-center justify-between gap-3 border-b py-2">
                 <span>{pickLocale(item.name, locale)}</span>
-                <span className="text-muted-foreground">{t.settings.since} {formatCairoDateTime(item.since, locale)}</span>
+                <span className="text-ink-secondary">{t.settings.since} {formatCairoDateTime(item.since, locale)}</span>
               </li>
             ))}
           </ul>

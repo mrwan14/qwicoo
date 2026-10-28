@@ -34,7 +34,7 @@ const SCREEN_TITLES: Record<string, ScreenKey> = {
   "/app/orders": "orders",
   "/app/orders/delivery": "delivery",
   "/app/orders/payments": "payments",
-  "/app/inventory": "stock",
+  "/app/stock": "stock",
   "/app/attendance": "attendance",
 };
 

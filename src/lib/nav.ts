@@ -109,7 +109,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: [...BRANCH_OPS],
   },
   {
-    href: "/app/inventory",
+    href: "/app/stock",
     labelKey: "inventory",
     group: "brandOps",
     shell: "admin",
@@ -373,7 +373,7 @@ const BUSINESS_SIDEBAR: readonly SidebarDef[] = [
     ],
   },
   { key: "menu", members: ["/app/menu"] },
-  { key: "stock", members: ["/app/inventory"] },
+  { key: "stock", members: ["/app/stock"] },
   { key: "reports", members: ["/app/reports", "/app/analytics", "/app/financials"] },
   {
     key: "settings",

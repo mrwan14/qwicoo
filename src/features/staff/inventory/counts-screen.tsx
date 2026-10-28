@@ -63,7 +63,7 @@ export function CountsScreen() {
       <div className="grid gap-3 sm:grid-cols-2">
         {warehouses.data ? <WarehouseSelect warehouses={warehouses.data} value={selectedWarehouse} onChange={setWarehouseId} /> : null}
         <label className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">{t.purchaseOrders.status}</span>
+          <span className="text-ink-secondary">{t.purchaseOrders.status}</span>
           <select className={control} value={status} onChange={(event) => setStatus(event.target.value)}>
             <option value="">{t.all}</option>
             {STATUSES.map((item) => <option key={item} value={item}>{t.counts.statuses[item]}</option>)}
@@ -74,7 +74,7 @@ export function CountsScreen() {
       {counts.isError ? <QueryErrorState error={counts.error} screen={t.tabs.counts} onRetry={() => void counts.refetch()} /> : null}
       {counts.data && counts.data.length === 0 ? <EmptyState title={t.counts.empty} body={t.counts.detail} /> : null}
       {counts.data && counts.data.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b">

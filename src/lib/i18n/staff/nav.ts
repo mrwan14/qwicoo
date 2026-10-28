@@ -7,7 +7,7 @@ const en = {
   delivery: "Delivery",
   menu: "Menu",
   qwicooCustomers: "Qwicoo app customers",
-  inventory: "Inventory",
+  inventory: "Stock",
   qr: "QR",
   staff: "Staff",
   team: "Team",

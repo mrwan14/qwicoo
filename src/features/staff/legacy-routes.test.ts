@@ -20,6 +20,22 @@ const OLD_ROUTES: readonly { path: string; role: UserRole; lands: string | null 
   { path: "/app/floor/requests", role: "BRAND_ADMIN", lands: "/app/orders?view=tables" },
   { path: "/app/floor/requests", role: "RUNNER", lands: null },
   { path: "/app/menu/overrides", role: "BRANCH_ADMIN", lands: "/app/menu" },
+  { path: "/app/inventory", role: "CASHIER", lands: "/app/stock" },
+  { path: "/app/inventory/stock", role: "KITCHEN_STAFF", lands: "/app/stock" },
+  { path: "/app/inventory/movements", role: "BRANCH_ADMIN", lands: "/app/stock/movements" },
+  { path: "/app/inventory/recipes", role: "BRANCH_ADMIN", lands: "/app/stock/recipes" },
+  { path: "/app/inventory/ingredients", role: "BRANCH_ADMIN", lands: "/app/stock/ingredients" },
+  { path: "/app/inventory/prep", role: "BRANCH_ADMIN", lands: "/app/stock/prep" },
+  { path: "/app/inventory/suppliers", role: "BRANCH_ADMIN", lands: "/app/stock/suppliers" },
+  { path: "/app/inventory/purchase-orders", role: "BRANCH_ADMIN", lands: "/app/stock/purchase-orders" },
+  { path: "/app/inventory/transfers", role: "BRANCH_ADMIN", lands: "/app/stock/transfers" },
+  { path: "/app/inventory/counts", role: "CASHIER", lands: "/app/stock/counts" },
+  { path: "/app/inventory/waste", role: "KITCHEN_STAFF", lands: "/app/stock/waste" },
+  { path: "/app/inventory/settings", role: "BRANCH_ADMIN", lands: "/app/settings/stock" },
+  { path: "/app/inventory/units", role: "BRANCH_ADMIN", lands: "/app/settings/stock/units" },
+  { path: "/app/inventory/import", role: "BRAND_ADMIN", lands: "/app/settings/stock/import" },
+  { path: "/app/inventory/jobs", role: "BRANCH_ADMIN", lands: "/app/settings/stock/jobs" },
+  { path: "/app/inventory/reports", role: "BRANCH_ADMIN", lands: "/app/reports/stock" },
 ];
 
 test("every old route lands on its new home", () => {

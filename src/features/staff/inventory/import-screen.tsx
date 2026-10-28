@@ -62,7 +62,7 @@ export function ImportScreen() {
   return (
     <InventoryFrame page="import">
       <PageHeader title={t.import.title} detail={t.import.detail} />
-      <p className="text-sm text-muted-foreground">{t.import.columns}</p>
+      <p className="text-sm text-ink-secondary">{t.import.columns}</p>
       {warehouses.data && warehouses.data.length > 0 ? (
         <WarehouseSelect warehouses={warehouses.data} value={selected} onChange={setWarehouseId} />
       ) : null}
@@ -86,9 +86,9 @@ export function ImportScreen() {
         <button type="button" className={secondaryButton} disabled={!csvText || preview.isPending} onClick={() => preview.mutate()}>{t.import.preview}</button>
         <button type="button" className={primaryButton} disabled={!allowed || commit.isPending} onClick={() => commit.mutate()}>{t.import.commit}</button>
       </div>
-      {rows && !allowed ? <p className="text-sm text-destructive">{t.import.blocked}</p> : null}
+      {rows && !allowed ? <p className="text-sm text-danger">{t.import.blocked}</p> : null}
       {rows && rows.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="border-b">
@@ -110,7 +110,7 @@ export function ImportScreen() {
           </table>
         </div>
       ) : null}
-      {!rows ? <p className="text-sm text-muted-foreground">{t.import.empty}</p> : null}
+      {!rows ? <p className="text-sm text-ink-secondary">{t.import.empty}</p> : null}
     </InventoryFrame>
   );
 }

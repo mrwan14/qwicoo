@@ -89,7 +89,7 @@ export function TransfersScreen() {
       <div className="grid gap-3 sm:grid-cols-3">
         {warehouses.data && direction !== "brand" ? <WarehouseSelect warehouses={warehouses.data} value={selectedWarehouse} onChange={(id) => { setWarehouseId(id); setOffset(0); }} /> : null}
         <label className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">{t.transfers.direction}</span>
+          <span className="text-ink-secondary">{t.transfers.direction}</span>
           <select className={control} value={direction} onChange={(event) => { setDirection(event.target.value as "from" | "to" | "brand"); setOffset(0); }}>
             <option value="from">{t.transfers.outgoing}</option>
             <option value="to">{t.transfers.incoming}</option>
@@ -97,7 +97,7 @@ export function TransfersScreen() {
           </select>
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">{t.purchaseOrders.status}</span>
+          <span className="text-ink-secondary">{t.purchaseOrders.status}</span>
           <select className={control} value={status} onChange={(event) => { setStatus(event.target.value); setOffset(0); }}>
             <option value="">{t.all}</option>
             {STATUSES.map((item) => <option key={item} value={item}>{t.transfers.statuses[item]}</option>)}
@@ -108,7 +108,7 @@ export function TransfersScreen() {
       {transfers.isError ? <QueryErrorState error={transfers.error} screen={t.tabs.transfers} onRetry={() => void transfers.refetch()} /> : null}
       {transfers.data && rows.length === 0 ? <EmptyState title={t.transfers.empty} body={t.transfers.detail} /> : null}
       {rows.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b">
@@ -361,7 +361,7 @@ function TransferDetail({
             <input type="checkbox" checked={closeShort} onChange={(event) => setCloseShort(event.target.checked)} />
             {t.transfers.closeShort}
           </label>
-          <p className="text-sm text-muted-foreground">{t.transfers.closeShortHint}</p>
+          <p className="text-sm text-ink-secondary">{t.transfers.closeShortHint}</p>
           <button type="button" className={primaryButton} disabled={act.isPending} onClick={() => act.mutate("receive")}>{t.transfers.receive}</button>
         </div>
       ) : null}
@@ -371,7 +371,7 @@ function TransferDetail({
           {transfer.events.map((event) => (
             <li key={event.id}>
               <span className="font-medium">{statusLabel(event.to_status)}</span>
-              <span className="text-muted-foreground"> · {formatCairoDateTime(event.created_at, locale)} · {event.actor_name ?? ""}</span>
+              <span className="text-ink-secondary"> · {formatCairoDateTime(event.created_at, locale)} · {event.actor_name ?? ""}</span>
               {event.note ? <p>{event.note === "close_short" ? t.transfers.closeShortNote : event.note}</p> : null}
             </li>
           ))}

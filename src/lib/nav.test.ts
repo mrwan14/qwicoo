@@ -70,7 +70,7 @@ test("the deepest matching page picks the active entry", () => {
   assert.equal(activeSidebarKey(`/app/brands/${BRAND}`, entries, items), "home");
   assert.equal(activeSidebarKey("/app/orders/delivery", entries, items), "orders");
   assert.equal(activeSidebarKey("/app/kds/expo", entries, items), "orders");
-  assert.equal(activeSidebarKey("/app/inventory/counts", entries, items), "stock");
+  assert.equal(activeSidebarKey("/app/stock/counts", entries, items), "stock");
   assert.equal(activeSidebarKey("/app/no-such-page", entries, items), null);
 });
 

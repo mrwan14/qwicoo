@@ -2,15 +2,17 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { cn } from "cn";
-import { Banknote, CreditCard, MoreHorizontal, Search, X } from "lucide-react";
+import { Banknote, Check, CreditCard, Minus, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Badge } from "@/components/ops/kit/badge";
 import { Button } from "@/components/ops/kit/button";
 import { Field, Input, Select } from "@/components/ops/kit/field";
+import { moveInRow } from "@/components/ops/kit/roving";
+import { SidePanel } from "@/components/ops/kit/side-panel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,17 +23,28 @@ import { Money } from "@/components/ops/money";
 import { LoadingState, QueryErrorState } from "@/components/ops/states";
 import { StatusChip } from "@/components/ops/status-chip";
 import { useStaffSession } from "@/components/ops/staff-session";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { fetchStoreOnlineNew, storeOnlineKey } from "@/features/staff/alerts/queries";
 import { printReceipt } from "@/features/staff/orders/receipt";
 import { storeOnlineAvailable } from "@/features/staff/pos/store-online-api";
 import { StoreOnlineTab } from "@/features/staff/pos/store-online-tab";
+import {
+  ALL_CATEGORIES,
+  choiceRule,
+  firstMissing,
+  groupMax,
+  groupMin,
+  groupRequired,
+  menuSections,
+  needsChoices,
+  toggleChoice,
+} from "@/features/staff/pos/item-choices";
 import { PaymobPosCheckout } from "@/features/staff/paymob-pos";
 import type { StaffOrderReceipt } from "@/features/staff/orders/types";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatMoney } from "@/lib/format/money";
 import { fill } from "@/lib/i18n/dictionary";
+import { formatCount } from "@/lib/i18n/format";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { ordersCopy } from "@/lib/i18n/staff/orders";
@@ -86,6 +99,8 @@ type Line = {
   name: string;
   quantity: number;
   optionIds: string[];
+  /** Names of the chosen options, shown under the item on the ticket. */
+  options: string[];
   subtotal: string;
 };
 
@@ -219,19 +234,6 @@ function centsToMoney(cents: number): string {
   return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
 }
 
-function groupRequired(group: ModifierGroup): boolean {
-  return group.is_required || group.min_choices > 0;
-}
-
-function needsModifiers(item: MenuItem): boolean {
-  return (item.modifier_groups ?? []).some(groupRequired);
-}
-
-function groupMin(group: ModifierGroup): number {
-  if (group.is_required) return Math.max(1, group.min_choices);
-  return group.min_choices;
-}
-
 function previewSubtotal(item: MenuItem, quantity: number, selected: Record<string, string[]>): string {
   const groups = item.modifier_groups ?? [];
   let cents = moneyToCents(item.base_price);
@@ -270,7 +272,7 @@ export function PosScreen() {
     queryFn: () => fetchStoreOnlineNew(locale),
   });
   const [query, setQuery] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [categoryId, setCategoryId] = useState(ALL_CATEGORIES);
   const [lines, setLines] = useState<Line[]>([]);
   const [orderType, setOrderType] = useState<components["schemas"]["OrderType"]>("TAKEAWAY");
   const [tableId, setTableId] = useState("");
@@ -316,35 +318,39 @@ export function PosScreen() {
   // Card and online payments need the network; offline the till takes cash only.
   const effectiveTender: components["schemas"]["PaymentMethod"] = online ? tender : "CASH";
 
-  const categories = menu.data?.categories ?? [];
-  const activeCategory = categories.find((category) => category.id === categoryId) ?? categories[0];
+  const categories = useMemo(() => menu.data?.categories ?? [], [menu.data]);
+  // A category that left the menu (branch switch, menu edit) falls back to All.
+  const selectedCategory = categories.some((category) => category.id === categoryId) ? categoryId : ALL_CATEGORIES;
   const itemSearch = query.trim().toLowerCase();
-  const items = useMemo(() => {
-    if (!itemSearch) {
-      return (activeCategory?.items ?? []).map((item) => ({ item, categoryName: "" }));
-    }
-    return categories.flatMap((category) =>
-      (category.items ?? [])
-        .filter((item) => pickLocale(item.name, locale).toLowerCase().includes(itemSearch))
-        .map((item) => ({ item, categoryName: pickLocale(category.name, locale) })),
-    );
-  }, [activeCategory, categories, itemSearch, locale]);
+  const sections = useMemo(
+    () => menuSections(categories, selectedCategory, itemSearch, (item) => pickLocale(item.name, locale)),
+    [categories, selectedCategory, itemSearch, locale],
+  );
+  const grouped = Boolean(itemSearch) || selectedCategory === ALL_CATEGORIES;
 
   function appendLine(item: MenuItem, quantity: number, optionIds: string[]) {
     const selected: Record<string, string[]> = {};
+    const options: string[] = [];
     for (const group of item.modifier_groups ?? []) {
-      selected[group.id] = (group.options ?? []).filter((option) => optionIds.includes(option.id)).map((option) => option.id);
+      const picked = (group.options ?? []).filter((option) => optionIds.includes(option.id));
+      selected[group.id] = picked.map((option) => option.id);
+      options.push(...picked.map((option) => pickLocale(option.name, locale)));
     }
-    setLines((current) => [
-      ...current,
-      {
-        itemId: item.id,
-        name: pickLocale(item.name, locale),
-        quantity,
-        optionIds,
-        subtotal: previewSubtotal(item, quantity, selected),
-      },
-    ]);
+    const key = [...optionIds].sort().join(",");
+    setLines((current) => {
+      // The same item with the same choices stacks on one line.
+      const index = current.findIndex((line) => line.itemId === item.id && [...line.optionIds].sort().join(",") === key);
+      if (index === -1) {
+        return [
+          ...current,
+          { itemId: item.id, name: pickLocale(item.name, locale), quantity, optionIds, options, subtotal: previewSubtotal(item, quantity, selected) },
+        ];
+      }
+      const next = [...current];
+      const stacked = next[index].quantity + quantity;
+      next[index] = { ...next[index], quantity: stacked, subtotal: previewSubtotal(item, stacked, selected) };
+      return next;
+    });
   }
 
   function addItem(item: MenuItem) {
@@ -352,14 +358,14 @@ export function PosScreen() {
       toast.error(t.soldOutToast);
       return;
     }
-    if (needsModifiers(item)) {
+    if (needsChoices(item)) {
       setConfiguring(item);
       return;
     }
     setLines((current) => {
       const index = current.findIndex((line) => line.itemId === item.id && line.optionIds.length === 0);
       if (index === -1) {
-        return [...current, { itemId: item.id, name: pickLocale(item.name, locale), quantity: 1, optionIds: [], subtotal: previewSubtotal(item, 1, {}) }];
+        return [...current, { itemId: item.id, name: pickLocale(item.name, locale), quantity: 1, optionIds: [], options: [], subtotal: previewSubtotal(item, 1, {}) }];
       }
       const next = [...current];
       const quantity = next[index].quantity + 1;
@@ -556,9 +562,14 @@ export function PosScreen() {
         <ul className="-my-1">
           {lines.map((line, index) => (
             <li key={`${line.itemId}-${index}`} className="flex min-h-14 items-center justify-between gap-3 border-b border-border py-2 last:border-b-0">
-              <span className="min-w-0 flex-1 text-[15px] font-medium">
-                {line.quantity > 1 ? <span className="tabular-nums">{line.quantity} × </span> : null}
-                {line.name}
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="text-[15px] font-medium">
+                  {line.quantity > 1 ? <span className="tabular-nums">{line.quantity} × </span> : null}
+                  {line.name}
+                </span>
+                {line.options.length > 0 ? (
+                  <span className="text-[13px] text-ink-secondary">{line.options.join(locale === "ar" ? "، " : ", ")}</span>
+                ) : null}
               </span>
               <span className="shrink-0 text-[15px] tabular-nums">
                 <Money amount={line.subtotal} />
@@ -617,23 +628,25 @@ export function PosScreen() {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
       <div className="grid min-w-0 content-start gap-3">
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {categories.map((category) => {
-            const active = !itemSearch && category.id === activeCategory?.id;
-            return (
-              <button
-                key={category.id}
-                type="button"
-                aria-pressed={active}
-                className={pill(active)}
-                onClick={() => {
-                  setCategoryId(category.id);
-                  setQuery("");
-                }}
-              >
-                {pickLocale(category.name, locale)}
-              </button>
-            );
-          })}
+          {[{ id: ALL_CATEGORIES, name: t.allItems }, ...categories.map((category) => ({ id: category.id, name: pickLocale(category.name, locale) }))].map(
+            (category) => {
+              const active = !itemSearch && category.id === selectedCategory;
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  aria-pressed={active}
+                  className={pill(active)}
+                  onClick={() => {
+                    setCategoryId(category.id);
+                    setQuery("");
+                  }}
+                >
+                  {category.name}
+                </button>
+              );
+            },
+          )}
         </div>
         <Input
           icon={Search}
@@ -645,38 +658,23 @@ export function PosScreen() {
           onChange={(event) => setQuery(event.target.value)}
           autoFocus
         />
-        {items.length === 0 ? <p className="text-sm text-ink-secondary">{itemSearch ? t.noSearch : t.noCategory}</p> : null}
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
-          {items.map(({ item, categoryName }) => {
-            const name = pickLocale(item.name, locale);
-            const image = mediaUrl(item.image_url);
-            const choices = (item.modifier_groups ?? []).length;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                disabled={!item.is_available}
-                className="grid min-h-[112px] content-between gap-2 overflow-hidden rounded-staff border border-border bg-canvas p-3.5 text-start text-ink transition-colors hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:bg-subtle disabled:text-ink-secondary"
-                onClick={() => addItem(item)}
-              >
-                {image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={image} alt="" className="-mx-3.5 -mt-3.5 h-20 w-[calc(100%+1.75rem)] max-w-none bg-subtle object-cover" />
-                ) : null}
-                <span className="grid gap-0.5">
-                  <span className="text-base font-medium leading-snug">{name}</span>
-                  {categoryName ? <span className="text-xs text-ink-secondary">{categoryName}</span> : null}
-                </span>
-                <span className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-ink-secondary tabular-nums">
-                    <Money amount={String(item.base_price)} />
-                  </span>
-                  {!item.is_available ? <Badge tone="danger">{t.soldOut}</Badge> : choices > 0 ? <Badge>+{choices}</Badge> : null}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {sections.length === 0 ? (
+          <p className="text-sm text-ink-secondary">{itemSearch ? t.noSearch : selectedCategory === ALL_CATEGORIES ? t.noMenu : t.noCategory}</p>
+        ) : grouped ? (
+          <div className="grid gap-6">
+            {sections.map(({ category, items }) => (
+              <section key={category.id} aria-labelledby={`pos-category-${category.id}`} className="grid gap-2.5">
+                <h2 id={`pos-category-${category.id}`} className="flex items-baseline gap-2 text-[15px] font-semibold text-ink">
+                  {pickLocale(category.name, locale)}
+                  <span className="text-[13px] font-normal text-ink-secondary tabular-nums">{formatCount(items.length, locale)}</span>
+                </h2>
+                <ItemGrid items={items} onAdd={addItem} />
+              </section>
+            ))}
+          </div>
+        ) : (
+          <ItemGrid items={sections[0].items} onAdd={addItem} />
+        )}
       </div>
       <div className="hidden lg:sticky lg:top-[76px] lg:block lg:self-start">{ticket}</div>
       <Button size="touch" className="fixed inset-x-4 bottom-4 z-30 lg:hidden" onClick={() => setTicketOpen(true)}>
@@ -691,7 +689,7 @@ export function PosScreen() {
         </div>
       ) : null}
       {configuring ? (
-        <ModifierSheet
+        <ItemChoicesPanel
           item={configuring}
           onClose={() => setConfiguring(null)}
           onAdd={(quantity, optionIds) => {
@@ -738,7 +736,42 @@ export function PosScreen() {
   );
 }
 
-function ModifierSheet({
+function ItemGrid({ items, onAdd }: { items: MenuItem[]; onAdd: (item: MenuItem) => void }) {
+  const t = useStaffSection(posCopy);
+  const { locale } = useLocale();
+  return (
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
+      {items.map((item) => {
+        const image = mediaUrl(item.image_url);
+        const choices = (item.modifier_groups ?? []).length;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            disabled={!item.is_available}
+            className="grid min-h-[112px] content-between gap-2 overflow-hidden rounded-staff border border-border bg-canvas p-3.5 text-start text-ink transition-colors hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:bg-subtle disabled:text-ink-secondary"
+            onClick={() => onAdd(item)}
+          >
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={image} alt="" className="-mx-3.5 -mt-3.5 h-20 w-[calc(100%+1.75rem)] max-w-none bg-subtle object-cover" />
+            ) : null}
+            <span className="text-base font-medium leading-snug">{pickLocale(item.name, locale)}</span>
+            <span className="flex items-center justify-between gap-2">
+              <span className="text-sm text-ink-secondary tabular-nums">
+                <Money amount={String(item.base_price)} />
+              </span>
+              {!item.is_available ? <Badge tone="danger">{t.soldOut}</Badge> : choices > 0 ? <Badge>+{choices}</Badge> : null}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The item's choices, quantity and price before it goes on the ticket. */
+function ItemChoicesPanel({
   item,
   onClose,
   onAdd,
@@ -751,61 +784,240 @@ function ModifierSheet({
   const { locale } = useLocale();
   const [quantity, setQuantity] = useState(1);
   const [selected, setSelected] = useState<Record<string, string[]>>({});
+  // Set by the first tap on Add with a choice still missing; the missing group then shows red.
+  const [tried, setTried] = useState(false);
+  const groupNodes = useRef(new Map<string, HTMLElement>());
   const groups = item.modifier_groups ?? [];
+  const image = mediaUrl(item.image_url);
+  const maxQuantity = item.max_per_order && item.max_per_order > 0 ? item.max_per_order : null;
+  const missing = firstMissing(groups, selected);
+  const money = (amount: string) => formatMoney(amount, undefined, locale);
 
-  function toggle(group: ModifierGroup, optionId: string) {
-    setSelected((current) => {
-      const existing = current[group.id] ?? [];
-      const max = group.max_choices ?? 1;
-      const has = existing.includes(optionId);
-      const next = has ? existing.filter((id) => id !== optionId) : max <= 1 ? [optionId] : [...existing, optionId].slice(-max);
-      return { ...current, [group.id]: next };
-    });
+  function add() {
+    if (!missing) {
+      onAdd(quantity, groups.flatMap((group) => selected[group.id] ?? []));
+      return;
+    }
+    setTried(true);
+    const node = groupNodes.current.get(missing.id);
+    node?.scrollIntoView({ behavior: "smooth", block: "center" });
+    node?.querySelector<HTMLElement>('[role="radio"]:not(:disabled), [role="checkbox"]:not(:disabled)')?.focus({ preventScroll: true });
   }
 
-  const ready = groups.every((group) => (selected[group.id] ?? []).length >= groupMin(group));
-  const optionIds = groups.flatMap((group) => selected[group.id] ?? []);
+  return (
+    <SidePanel
+      open
+      onOpenChange={(open) => !open && onClose()}
+      size="lg"
+      title={pickLocale(item.name, locale)}
+      description={item.description ? pickLocale(item.description, locale) : undefined}
+      meta={<span className="text-[15px] font-medium text-ink tabular-nums">{money(item.base_price)}</span>}
+      footer={
+        <div className="grid w-full gap-3">
+          {missing ? (
+            <p role={tried ? "alert" : undefined} className={cn("text-[13px]", tried ? "text-danger" : "text-ink-secondary")}>
+              {fill(t.missingChoice, { group: pickLocale(missing.name, locale) })}
+            </p>
+          ) : null}
+          <div className="flex items-center justify-between gap-3">
+            <span className="grid gap-0.5">
+              <span className="text-sm font-medium text-ink">{t.quantity}</span>
+              {maxQuantity ? <span className="text-xs text-ink-secondary">{fill(t.maxPerOrder, { count: maxQuantity })}</span> : null}
+            </span>
+            <QuantityStepper value={quantity} max={maxQuantity} onChange={setQuantity} />
+          </div>
+          <Button
+            size="touch"
+            className={cn("w-full justify-between px-5", missing && "opacity-60")}
+            aria-disabled={missing ? true : undefined}
+            onClick={add}
+          >
+            <span>{t.addToTicket}</span>
+            <span className="tabular-nums">{money(previewSubtotal(item, quantity, selected))}</span>
+          </Button>
+        </div>
+      }
+    >
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt="" className="-mx-5 -mt-5 h-44 w-[calc(100%+2.5rem)] max-w-none bg-subtle object-cover" />
+      ) : null}
+      {groups.map((group) => (
+        <ChoiceGroup
+          key={group.id}
+          group={group}
+          picked={selected[group.id] ?? []}
+          flagged={tried && missing?.id === group.id}
+          onToggle={(optionId) =>
+            setSelected((current) => ({ ...current, [group.id]: toggleChoice(current[group.id] ?? [], group, optionId) }))
+          }
+          nodeRef={(node) => {
+            if (node) groupNodes.current.set(group.id, node);
+            else groupNodes.current.delete(group.id);
+          }}
+        />
+      ))}
+    </SidePanel>
+  );
+}
+
+function ChoiceGroup({
+  group,
+  picked,
+  flagged,
+  onToggle,
+  nodeRef,
+}: {
+  group: ModifierGroup;
+  picked: string[];
+  /** The cashier tried to add while this group was short. */
+  flagged: boolean;
+  onToggle: (optionId: string) => void;
+  nodeRef: (node: HTMLElement | null) => void;
+}) {
+  const t = useStaffSection(posCopy);
+  const { locale } = useLocale();
+  const id = useId();
+  const single = groupMax(group) === 1;
+  const required = groupRequired(group);
+  const short = picked.length < groupMin(group);
+  const full = !single && picked.length >= groupMax(group);
+  const options = group.options ?? [];
+  const rule = choiceRule(group);
+  const ruleText =
+    rule.kind === "exactly"
+      ? fill(t.chooseExactly, { count: rule.count })
+      : rule.kind === "between"
+        ? fill(t.chooseBetween, { min: rule.min, max: rule.max })
+        : fill(t.chooseUpTo, { count: rule.count });
+  // One tab stop per radio group: the picked option, or the first one that can be picked.
+  const tabStop = options.find((option) => picked.includes(option.id))?.id ?? options.find((option) => option.is_available)?.id;
 
   return (
-    <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right">
-        <SheetHeader>
-          <SheetTitle>{pickLocale(item.name, locale)}</SheetTitle>
-        </SheetHeader>
-        <div className="grid gap-4 overflow-y-auto px-4 pb-6">
-          {groups.map((group) => (
-            <fieldset key={group.id} className="grid gap-2">
-              <legend className="text-sm font-medium">
-                {pickLocale(group.name, locale)}
-                {groupRequired(group) ? ` · ${t.required}` : ""}
-              </legend>
-              {(group.options ?? []).map((option) => (
-                <label key={option.id} className="flex min-h-12 items-center gap-3 text-sm">
-                  <input
-                    type={group.max_choices === 1 ? "radio" : "checkbox"}
-                    name={group.id}
-                    checked={(selected[group.id] ?? []).includes(option.id)}
-                    disabled={!option.is_available}
-                    onChange={() => toggle(group, option.id)}
-                  />
-                  <span className="flex-1">{pickLocale(option.name, locale)}{option.is_available ? "" : ` · ${t.soldOut}`}</span>
-                  <span className="text-ink-secondary">{option.price_delta}</span>
-                </label>
-              ))}
-            </fieldset>
-          ))}
-          <label className="grid gap-1 text-sm font-medium">
-            {t.quantity}
-            <input type="number" min={1} className="h-12 rounded-staff border px-3" value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} />
-          </label>
-          <p className="text-sm font-medium">
-            <Money amount={previewSubtotal(item, quantity, selected)} />
+    <section ref={nodeRef} aria-labelledby={`${id}-title`} className="grid gap-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="grid gap-0.5">
+          <h3 id={`${id}-title`} className="text-[15px] font-semibold text-ink">
+            {pickLocale(group.name, locale)}
+          </h3>
+          <p id={`${id}-rule`} className={cn("text-[13px]", flagged ? "text-danger" : "text-ink-secondary")}>
+            {ruleText}
+            {!single && picked.length > 0 ? ` · ${fill(t.chosenCount, { count: picked.length })}` : ""}
           </p>
-          <button type="button" className="min-h-12 rounded-staff bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={!ready} onClick={() => onAdd(quantity, optionIds)}>
-            {t.addToTicket}
-          </button>
         </div>
-      </SheetContent>
-    </Sheet>
+        {required ? (
+          short ? (
+            <Badge tone={flagged ? "danger" : "warning"}>{t.required}</Badge>
+          ) : (
+            <Badge tone="success">{t.done}</Badge>
+          )
+        ) : (
+          <span className="pt-0.5 text-[13px] text-ink-secondary">{t.optional}</span>
+        )}
+      </div>
+      <div
+        role={single ? "radiogroup" : "group"}
+        aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-rule`}
+        aria-required={single && required ? true : undefined}
+        className="grid gap-2"
+      >
+        {options.map((option) => {
+          const checked = picked.includes(option.id);
+          const blocked = !option.is_available || (full && !checked);
+          const delta = moneyToCents(option.price_delta);
+          return (
+            <button
+              key={option.id}
+              type="button"
+              role={single ? "radio" : "checkbox"}
+              aria-checked={checked}
+              data-option={option.id}
+              disabled={blocked}
+              tabIndex={single ? (option.id === tabStop ? 0 : -1) : undefined}
+              onClick={() => onToggle(option.id)}
+              onKeyDown={
+                single
+                  ? (event) => {
+                      if (moveInRow(event, "radio") === null) return;
+                      const next = (document.activeElement as HTMLElement | null)?.dataset.option;
+                      if (next && !picked.includes(next)) onToggle(next);
+                    }
+                  : undefined
+              }
+              className={cn(
+                "flex min-h-14 w-full items-center gap-3 rounded-staff border px-3.5 py-2 text-start transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed",
+                checked ? "border-ink bg-subtle" : "border-border bg-canvas",
+                blocked ? "text-disabled" : !checked && "hover:border-ink-secondary",
+              )}
+            >
+              <ChoiceMark single={single} checked={checked} blocked={blocked} />
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="text-[15px] font-medium">{pickLocale(option.name, locale)}</span>
+                {!option.is_available ? <span className="text-xs text-ink-secondary">{t.soldOut}</span> : null}
+              </span>
+              {delta !== 0 ? (
+                <span className={cn("shrink-0 text-sm tabular-nums", blocked ? "text-disabled" : "text-ink-secondary")}>
+                  {delta > 0 ? "+" : "−"} {formatMoney(centsToMoney(Math.abs(delta)), undefined, locale)}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ChoiceMark({ single, checked, blocked }: { single: boolean; checked: boolean; blocked: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "inline-flex size-5 shrink-0 items-center justify-center border-[1.5px]",
+        single ? "rounded-full" : "rounded-[4px]",
+        checked ? "border-ink bg-ink text-on-ink" : blocked ? "border-border bg-subtle" : "border-disabled bg-canvas",
+      )}
+    >
+      {checked ? single ? <span className="size-2 rounded-full bg-on-ink" /> : <Check className="size-3.5" strokeWidth={3} /> : null}
+    </span>
+  );
+}
+
+/** Big minus and plus for touch; the number in between can also be typed. */
+function QuantityStepper({ value, max, onChange }: { value: number; max: number | null; onChange: (value: number) => void }) {
+  const t = useStaffSection(posCopy);
+  const [draft, setDraft] = useState<string | null>(null);
+  const clamp = (next: number) => Math.max(1, max ? Math.min(max, next) : next);
+  const step = "inline-flex size-12 items-center justify-center text-ink transition-colors hover:bg-subtle focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus disabled:text-disabled disabled:hover:bg-transparent";
+  return (
+    <div className="flex shrink-0 items-center rounded-staff border border-border">
+      <button type="button" aria-label={t.lessQuantity} disabled={value <= 1} className={cn(step, "rounded-s-staff")} onClick={() => onChange(clamp(value - 1))}>
+        <Minus aria-hidden className="size-5" />
+      </button>
+      <input
+        type="text"
+        inputMode="numeric"
+        aria-label={t.quantity}
+        className="h-12 w-12 border-x border-border bg-canvas text-center text-base font-semibold text-ink tabular-nums focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+        value={draft ?? String(value)}
+        onFocus={(event) => event.target.select()}
+        onChange={(event) => {
+          const digits = event.target.value.replace(/\D/g, "").slice(0, 3);
+          setDraft(digits);
+          if (Number(digits) >= 1) onChange(clamp(Number(digits)));
+        }}
+        onBlur={() => setDraft(null)}
+      />
+      <button
+        type="button"
+        aria-label={t.moreQuantity}
+        disabled={max !== null && value >= max}
+        className={cn(step, "rounded-e-staff")}
+        onClick={() => onChange(clamp(value + 1))}
+      >
+        <Plus aria-hidden className="size-5" />
+      </button>
+    </div>
   );
 }

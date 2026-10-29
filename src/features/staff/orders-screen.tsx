@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -39,8 +39,19 @@ type Filters = {
 const STATUSES = ["SUBMITTED", "PREPARING", "READY", "DELIVERED", "PAID", "CLOSED", "CANCELLED", "PENDING_STAFF_CONFIRMATION"] as const;
 const SOURCES = ["POS", "QR", "DRIVE_THRU", "PICKUP"] as const;
 const METHODS = ["CASH", "CARD", "POS_TERMINAL", "ONLINE"] as const;
+/** Typing pauses this long before the search runs, so one word is one request. */
+const SEARCH_DELAY = 300;
 
-/** History tab: every order at this branch, filtered on the server, opened in the order panel. */
+function useDebounced<T>(value: T, delay: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const id = window.setTimeout(() => setSettled(value), delay);
+    return () => window.clearTimeout(id);
+  }, [value, delay]);
+  return settled;
+}
+
+/** History tab: every order at this branch, filtered on the server as the filters change, opened in the order panel. */
 export function OrdersScreen() {
   const t = useStaffSection(ordersCopy);
   const { locale } = useLocale();
@@ -48,7 +59,7 @@ export function OrdersScreen() {
   const params = useSearchParams();
   // `?q=` comes from the top-bar search; `?order=` opens one order.
   const q = params.get("q");
-  const [draft, setDraft] = useState<Filters>(() => ({
+  const [filters, setFilters] = useState<Filters>(() => ({
     search: q ?? "",
     status: "",
     source: "",
@@ -57,18 +68,21 @@ export function OrdersScreen() {
     paid: "",
     range: dateFilter("today"),
   }));
-  const [applied, setApplied] = useState<Filters>(draft);
   const [selectedId, setSelectedId] = useState<string | null>(params.get("order"));
   useEffect(() => {
     if (q === null) return;
-    setDraft((current) => ({ ...current, search: q }));
-    setApplied((current) => ({ ...current, search: q }));
+    setFilters((current) => ({ ...current, search: q }));
   }, [q]);
-  const set = <K extends keyof Filters>(key: K, value: Filters[K]) => setDraft((current) => ({ ...current, [key]: value }));
+  const set = <K extends keyof Filters>(key: K, value: Filters[K]) => setFilters((current) => ({ ...current, [key]: value }));
+  // Dropdowns and dates apply at once; the search box waits for a pause in typing.
+  const search = useDebounced(filters.search.trim(), SEARCH_DELAY);
+  const applied = { ...filters, search };
 
   const list = useQuery({
     queryKey: ["staff-orders", branchId, applied],
     enabled: Boolean(branchId),
+    // Keep the current rows on screen while the next filter loads.
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const result = await browserApi.GET("/api/v1/orders", {
         params: {
@@ -124,26 +138,20 @@ export function OrdersScreen() {
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      <form
-        className="grid grid-cols-1 gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setApplied(draft);
-        }}
-      >
+      <div className="grid grid-cols-1 gap-3">
         <FilterBar
-          search={{ value: draft.search, onChange: (value) => set("search", value), placeholder: t.searchPlaceholder }}
-          date={{ value: draft.range, onChange: (value) => set("range", value), variant: "select" }}
+          search={{ value: filters.search, onChange: (value) => set("search", value), placeholder: t.searchPlaceholder }}
+          date={{ value: filters.range, onChange: (value) => set("range", value), variant: "select" }}
           dropdowns={[
             {
               label: t.status,
-              value: draft.status,
+              value: filters.status,
               onChange: (value) => set("status", value),
               options: [{ value: "", label: t.live.allStatuses }, ...STATUSES.map((value) => ({ value, label: orderStatusLabel(value, locale) }))],
             },
             {
               label: t.paidFilter,
-              value: draft.paid,
+              value: filters.paid,
               onChange: (value) => set("paid", value as Filters["paid"]),
               options: [
                 { value: "", label: `${t.paidFilter}: ${t.any}` },
@@ -152,12 +160,11 @@ export function OrdersScreen() {
               ],
             },
           ]}
-          onApply={() => setApplied(draft)}
         />
         <MoreOptions label={t.history.moreFilters} summary={t.history.moreSummary}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label={t.source}>
-              <Select value={draft.source} onChange={(event) => set("source", event.target.value)}>
+              <Select value={filters.source} onChange={(event) => set("source", event.target.value)}>
                 <option value="">{t.any}</option>
                 {SOURCES.map((value) => (
                   <option key={value} value={value}>
@@ -167,7 +174,7 @@ export function OrdersScreen() {
               </Select>
             </Field>
             <Field label={t.channel}>
-              <Select value={draft.channel} onChange={(event) => set("channel", event.target.value as Channel)}>
+              <Select value={filters.channel} onChange={(event) => set("channel", event.target.value as Channel)}>
                 <option value="">{t.any}</option>
                 <option value="mobile">{t.mobile}</option>
                 <option value="delivery">{t.delivery}</option>
@@ -175,7 +182,7 @@ export function OrdersScreen() {
               </Select>
             </Field>
             <Field label={t.payment}>
-              <Select value={draft.paymentMethod} onChange={(event) => set("paymentMethod", event.target.value)}>
+              <Select value={filters.paymentMethod} onChange={(event) => set("paymentMethod", event.target.value)}>
                 <option value="">{t.any}</option>
                 {METHODS.map((value) => (
                   <option key={value} value={value}>
@@ -186,7 +193,7 @@ export function OrdersScreen() {
             </Field>
           </div>
         </MoreOptions>
-      </form>
+      </div>
       {list.isError ? (
         <QueryErrorState error={list.error} screen={t.screen} onRetry={() => void list.refetch()} />
       ) : (

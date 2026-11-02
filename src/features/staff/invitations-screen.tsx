@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
+import { ScreenTitle } from "@/components/ops/page-header";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
@@ -38,7 +39,7 @@ const STATUS_TONE: Record<InvitationStatus, "ordered" | "available" | "neutral" 
   REVOKED: "soldout",
 };
 
-const select = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
+const select = "h-11 w-full rounded-staff border border-input bg-background px-3 text-sm";
 
 function formatDate(iso: string | null | undefined, locale: string): string {
   if (!iso) return "";
@@ -211,8 +212,8 @@ export function InvitationsScreen({ title }: { title: string }) {
   return (
     <div className="mx-auto grid max-w-4xl gap-6">
       <header>
-        <h1 className="text-[length:var(--text-28)] font-semibold">{title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t.intro}</p>
+        <ScreenTitle>{title}</ScreenTitle>
+        <p className="mt-1 text-sm text-ink-secondary">{t.intro}</p>
       </header>
 
       {noBrandsYet ? (
@@ -220,13 +221,13 @@ export function InvitationsScreen({ title }: { title: string }) {
           title={t.createBrandTitle}
           body={t.createBrandBody}
           action={
-            <Link href="/app/brands" className="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">
+            <Link href="/app/brands" className="inline-flex min-h-11 items-center rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground">
               {common.goToBrands}
             </Link>
           }
         />
       ) : (
-        <form onSubmit={onSubmit} className="grid gap-4 rounded-xl border bg-card p-4 shadow-elev-1">
+        <form onSubmit={onSubmit} className="grid gap-4 rounded-staff border bg-canvas p-4 border border-border">
           <h2 className="text-[length:var(--text-20)] font-semibold">{t.sendTitle}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
@@ -288,7 +289,7 @@ export function InvitationsScreen({ title }: { title: string }) {
                   ))}
                 </select>
                 {isSuper && brandId && brandBranches.isSuccess && branchOptions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-ink-secondary">
                     {t.noBranches}{" "}
                     <Link href={`/app/brands/${brandId}`} className="underline">
                       {common.addOne}
@@ -307,7 +308,7 @@ export function InvitationsScreen({ title }: { title: string }) {
             <Button type="submit" className="min-h-11 px-5" disabled={!canSubmit}>
               {create.isPending ? t.sending : t.send}
             </Button>
-            <p className="text-xs text-muted-foreground">{t.linkHint}</p>
+            <p className="text-xs text-ink-secondary">{t.linkHint}</p>
           </div>
         </form>
       )}
@@ -356,16 +357,16 @@ export function InvitationsScreen({ title }: { title: string }) {
                     ? fill(t.revokedWhen, { when: formatDate(invitation.revoked_at, locale) })
                     : fill(t.expiresWhen, { when: formatDate(invitation.expires_at, locale) });
               return (
-                <li key={invitation.id} className="grid gap-3 rounded-xl border bg-card p-4 shadow-elev-1 sm:grid-cols-[1fr_auto] sm:items-center">
+                <li key={invitation.id} className="grid gap-3 rounded-staff border bg-canvas p-4 border border-border sm:grid-cols-[1fr_auto] sm:items-center">
                   <div className="grid gap-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium break-all">{invitation.email}</p>
                       <StatusChip tone={STATUS_TONE[invitation.status]}>{t.status[invitation.status]}</StatusChip>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-ink-secondary">
                       {[invitation.full_name, roleLabel(invitation.role), scope].filter(Boolean).join(" · ")}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-ink-secondary">
                       {when}
                       {invitation.send_count > 1 ? fill(t.sentTimes, { count: invitation.send_count }) : ""}
                     </p>

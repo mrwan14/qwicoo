@@ -65,14 +65,14 @@ export function IngredientsScreen() {
         action={canWrite ? <button type="button" className={primaryButton} onClick={() => setSelected("new")}>{t.ingredients.add}</button> : null}
       />
       <label className="grid max-w-sm gap-1 text-sm">
-        <span className="text-muted-foreground">{t.search}</span>
+        <span className="text-ink-secondary">{t.search}</span>
         <input className={control} value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
       {ingredients.isLoading ? <LoadingState label={t.loading} /> : null}
       {ingredients.isError ? <QueryErrorState error={ingredients.error} screen={t.tabs.ingredients} onRetry={() => void ingredients.refetch()} /> : null}
       {ingredients.data && rows.length === 0 ? <EmptyState title={t.ingredients.empty} body={t.ingredients.detail} /> : null}
       {rows.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full min-w-[880px] border-collapse text-sm">
             <thead>
               <tr className="border-b">
@@ -259,7 +259,7 @@ function IngredientDrawer({
                   <input type="checkbox" className="size-4 shrink-0" checked={deductAsPrep} onChange={(event) => setDeductAsPrep(event.target.checked)} />
                   <span>{t.ingredients.stockedPrep}</span>
                 </label>
-                <p className="text-start text-muted-foreground">{t.ingredients.stockedPrepHint}</p>
+                <p className="text-start text-ink-secondary">{t.ingredients.stockedPrepHint}</p>
               </div>
             ) : null}
             <label className="grid gap-1 text-sm"><span>{t.ingredients.reorder}</span><input className={control} inputMode="decimal" value={reorder} onChange={(event) => setReorder(event.target.value)} /></label>

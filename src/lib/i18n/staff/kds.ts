@@ -39,6 +39,20 @@ const en = {
   waitHoursMin: "Waiting {hours} h {minutes} min",
   waitDayOne: "Waiting 1 day",
   waitDays: "Waiting {days} days",
+  board: {
+    columns: { new: "New", preparing: "Preparing", ready: "Ready" },
+    allStations: "All stations",
+    stations: "Stations",
+    over10: "Over 10 min",
+    over15: "Over 15 min",
+    start: "Start",
+    starting: "Starting…",
+    startFailed: "Could not start this order",
+    started: "Started",
+    waitingRunner: "Waiting for the runner",
+    empty: "Nothing here.",
+    elapsed: "Waiting {time}",
+  },
 } as const;
 
 const ar = {
@@ -80,6 +94,20 @@ const ar = {
   waitHoursMin: "انتظار {hours} س {minutes} د",
   waitDayOne: "انتظار يوم",
   waitDays: "انتظار {days} أيام",
+  board: {
+    columns: { new: "جديد", preparing: "قيد التحضير", ready: "جاهز" },
+    allStations: "كل المحطات",
+    stations: "المحطات",
+    over10: "أكثر من 10 دقائق",
+    over15: "أكثر من 15 دقيقة",
+    start: "ابدأ",
+    starting: "جارٍ البدء…",
+    startFailed: "تعذّر بدء هذا الطلب",
+    started: "بدأ التحضير",
+    waitingRunner: "بانتظار المقدّم",
+    empty: "لا شيء هنا.",
+    elapsed: "ينتظر منذ {time}",
+  },
 } as const;
 
 export const kdsCopy = defineDictionary(en, ar);

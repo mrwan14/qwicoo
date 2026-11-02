@@ -1,17 +1,21 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { BellRing, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
 
 import { Money } from "@/components/ops/money";
-import { LiveCount } from "@/components/ops/live-fact";
-import { PageHeader } from "@/components/ops/page-header";
+import { Badge, type Tone } from "@/components/ops/kit/badge";
+import { Button } from "@/components/ops/kit/button";
+import { formatAmount } from "@/components/ops/kit/money";
+import { ScreenTitle } from "@/components/ops/page-header";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { occupancyTone, StatusChip, toneSurface } from "@/components/ops/status-chip";
+import { navForUser } from "@/lib/nav";
+import { requestsCopy } from "@/lib/i18n/staff/requests";
 import { EmptyState, ErrorState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -36,10 +40,10 @@ import { occupancyLabel, orderStatusLabel } from "@/lib/status-labels";
 import { floorStatusOptions, showAmountDue, type OrderStatus } from "@/features/staff/order-moves";
 import { useScope } from "@/stores/scope";
 
-const hint = "text-sm leading-6 text-muted-foreground";
-const control = "h-12 w-full rounded-xl border bg-background px-3 text-sm";
+const hint = "text-sm leading-6 text-ink-secondary";
+const control = "h-12 w-full rounded-staff border bg-background px-3 text-sm";
 const primaryButton =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 
 const ADD_TABLE_ROLES: ReadonlySet<UserRole> = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"]);
 
@@ -132,7 +136,7 @@ function AddTableDialog({ branchId }: { branchId: string }) {
             <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
-                className="min-h-11 rounded-xl border px-4 text-sm"
+                className="min-h-11 rounded-staff border px-4 text-sm"
                 disabled={create.isPending}
                 onClick={() => setOpen(false)}
               >
@@ -163,6 +167,15 @@ function modifierNames(modifiers: { [key: string]: unknown }[] | null | undefine
     .filter(Boolean);
 }
 
+/** The one coloured badge on a table card. */
+function tableBadge(table: FloorTable, t: (typeof floorCopy)["en"]): { tone: Tone; label: string } {
+  if (table.current_state === "BILL_REQUESTED") return { tone: "info", label: t.board.needsBill };
+  if (table.order_status === "READY") return { tone: "success", label: t.board.foodReady };
+  if (table.current_state === "AWAITING_FOOD") return { tone: "warning", label: t.board.waiting };
+  if (table.current_state === "FOOD_SERVED") return { tone: "neutral", label: t.board.eating };
+  return { tone: "neutral", label: t.board.ordering };
+}
+
 function NeedsConfirmationBadge() {
   return (
     <span className="inline-flex items-center bg-foreground px-2 py-0.5 text-xs font-semibold text-background">
@@ -171,7 +184,8 @@ function NeedsConfirmationBadge() {
   );
 }
 
-export function FloorScreen() {
+/** `embedded` drops the page header when the floor sits inside Orders → Tables. */
+export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const t = useStaffSection(floorCopy);
   const { locale } = useLocale();
   const interval = usePollingInterval(7000);
@@ -187,6 +201,31 @@ export function FloorScreen() {
     queryFn: () => fetchFloorLive(branchId),
     refetchInterval: pollUnlessRoleDenied(interval),
     retry: false,
+  });
+
+  const [filter, setFilter] = useState<"all" | "needs" | "free">("all");
+  const requests = useStaffSection(requestsCopy);
+  const canAnswer = Boolean(me && navForUser(me, branchId).some((item) => item.href === "/app/floor/requests"));
+  const calls = useQuery({
+    queryKey: ["service-queue", branchId],
+    enabled: canAnswer,
+    refetchInterval: pollUnlessRoleDenied(interval),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/service-requests/active");
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.board.callFailed, locale);
+      return result.data;
+    },
+  });
+  const answer = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await browserApi.PATCH("/api/v1/service-requests/{request_id}/status", {
+        params: { path: { request_id: id } },
+        body: { status: "ACKNOWLEDGED" },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.board.callFailed, locale);
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["service-queue"] }),
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const selected = floor.data?.tables.find((table) => table.table_id === selectedId) ?? null;
@@ -234,53 +273,79 @@ export function FloorScreen() {
   const data = floor.data;
   if (!data) return <ErrorState title={t.unavailable} body={t.unavailableBody} onRetry={() => void floor.refetch()} />;
 
-  const pendingCount = data.tables.filter(needsConfirmation).length;
-  const tables = [...data.tables].sort((a, b) => Number(needsConfirmation(b)) - Number(needsConfirmation(a)));
+  const needsYou = (table: FloorTable) =>
+    needsConfirmation(table) || table.current_state === "BILL_REQUESTED" || table.pending_service_requests_count > 0;
+  const counts = {
+    all: data.tables.length,
+    needs: data.tables.filter(needsYou).length,
+    free: data.tables.filter((table) => table.current_state === "AVAILABLE").length,
+  };
+  const tables = [...data.tables]
+    .filter((table) => (filter === "needs" ? needsYou(table) : filter === "free" ? table.current_state === "AVAILABLE" : true))
+    .sort((a, b) => Number(needsYou(b)) - Number(needsYou(a)) || Number(a.current_state === "AVAILABLE") - Number(b.current_state === "AVAILABLE"));
+  const call = (calls.data ?? []).find((request) => request.status === "PENDING") ?? null;
+  const callMinutes = call ? Math.max(0, Math.floor((Date.now() - new Date(call.created_at).getTime()) / 60000)) : 0;
 
   return (
-    <div className="grid gap-4">
-      <PageHeader
-        title={t.title}
-        action={canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : undefined}
-        detail={
-          <>
-            <LiveCount value={data.occupied_tables} /> {t.occupied}
-            {pendingCount > 0 ? (
-              <>
-                {" · "}
-                <LiveCount value={pendingCount} /> {t.toConfirm}
-              </>
-            ) : null}
-          </>
-        }
-      />
-      <p className={`max-w-2xl ${hint}`}>{t.hint}</p>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <StatusChip tone="available">{occupancyLabel("AVAILABLE")}</StatusChip>
-        <StatusChip tone="browsing">{occupancyLabel("SEATED")}</StatusChip>
-        <StatusChip tone="ordered">{occupancyLabel("AWAITING_FOOD")}</StatusChip>
-        <StatusChip tone="ready">{occupancyLabel("FOOD_SERVED")}</StatusChip>
+    <div className="grid grid-cols-1 gap-3">
+      {embedded ? null : (
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <ScreenTitle>{t.board.title}</ScreenTitle>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-ink-secondary">{fill(t.board.inUse, { used: data.occupied_tables, total: data.total_tables })}</p>
+            {canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : null}
+          </div>
+        </div>
+      )}
+      {call ? (
+        <div role="status" className="flex items-center gap-3 rounded-staff bg-info-bg p-3.5 text-ink">
+          <BellRing aria-hidden className="size-[22px] shrink-0 text-info" />
+          <div className="grid min-w-0 flex-1">
+            <span className="truncate text-[15px] font-semibold">
+              {fill(t.board.calling, { table: call.table_number ? fill(t.tableNumber, { number: call.table_number }) : t.board.callBell })}
+            </span>
+            <span className="truncate text-[13px] text-ink-secondary">
+              {fill(callMinutes < 1 ? t.board.callNow : t.board.callAgo, { type: requests.type[call.request_type] ?? call.request_type, minutes: callMinutes })}
+            </span>
+          </div>
+          <Button size="sm" className="min-h-11 shrink-0 px-3.5 text-sm" disabled={answer.isPending} onClick={() => answer.mutate(call.id)}>
+            {t.board.onMyWay}
+          </Button>
+        </div>
+      ) : null}
+      <div role="group" aria-label={t.board.filters} className="flex gap-2 overflow-x-auto">
+        {(["all", "needs", "free"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={filter === key}
+            onClick={() => setFilter(key)}
+            className={`inline-flex h-11 shrink-0 items-center rounded-staff border px-3.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${filter === key ? "border-ink bg-ink text-on-ink" : "border-border bg-canvas text-ink"}`}
+          >
+            {fill(key === "all" ? t.board.all : key === "needs" ? t.board.needsYou : t.board.free, { count: counts[key] })}
+          </button>
+        ))}
       </div>
-      {tables.length === 0 ? (
+      {data.tables.length === 0 ? (
         <EmptyState
           title={t.emptyTitle}
           body={t.emptyBody}
           action={canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : undefined}
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
           {tables.map((table) => {
-            const tone = occupancyTone(table.current_state);
             const pending = needsConfirmation(table);
             const open = table.table_id === selectedId;
-            const seated = seatedFor(table.occupancy_duration_minutes, t.seatedOne, t.seatedMany);
-            const requestCount = table.pending_service_requests_count > 0 ? fill(t.requests, { count: table.pending_service_requests_count }) : "";
+            const free = table.current_state === "AVAILABLE";
+            const badge = tableBadge(table, t);
+            const calling = table.pending_service_requests_count > 0;
             return (
               <button
                 key={table.table_id}
                 type="button"
                 aria-pressed={open}
-                className={`grid min-h-36 content-between p-4 text-start focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${toneSurface(tone)} ${pending || open ? "ring-2 ring-foreground" : ""}`}
+                className={`grid min-h-[104px] content-between gap-2 rounded-staff p-3.5 text-start text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${free ? "border border-border bg-subtle" : needsYou(table) || open ? "border-2 border-ink bg-canvas" : "border border-border bg-canvas"}`}
                 onClick={() => {
                   setSelectedId(table.table_id);
                   setRejecting(false);
@@ -290,14 +355,24 @@ export function FloorScreen() {
                   if (options[0]) setStatus(options[0]);
                 }}
               >
-                <span className="block text-2xl font-semibold">{fill(t.tableNumber, { number: table.table_number })}</span>
-                <span className="mt-3 grid gap-1">
-                  <span className="block text-sm font-medium">{pending ? orderStatusLabel("PENDING_STAFF_CONFIRMATION") : occupancyLabel(table.current_state)}</span>
-                  {table.order_status && !pending ? <span className="block text-sm">{fill(t.orderStatus, { status: orderStatusLabel(table.order_status) })}</span> : null}
-                  <span className="block text-xs">
-                    {[`${table.capacity} ${table.capacity === 1 ? t.seat : t.seats}`, seated, requestCount].filter(Boolean).join(" · ")}
+                <span className="flex items-start justify-between gap-2">
+                  <span className={`text-2xl font-semibold ${free ? "text-ink-secondary" : ""}`}>
+                    <span aria-hidden>{fill(t.board.short, { number: table.table_number })}</span>
+                    <span className="sr-only">{fill(t.tableNumber, { number: table.table_number })}</span>
                   </span>
+                  {calling ? (
+                    <BellRing aria-label={fill(t.requests, { count: table.pending_service_requests_count })} className="size-5 shrink-0 text-info" />
+                  ) : table.order_total ? (
+                    <span className="shrink-0 text-[13px] text-ink-secondary tabular-nums">{formatAmount(String(table.order_total), undefined, locale)}</span>
+                  ) : null}
                 </span>
+                {free ? (
+                  <span className="text-[13px] text-ink-secondary">{t.board.freeTable}</span>
+                ) : (
+                  <Badge tone={pending ? "warning" : badge.tone} className="w-fit">
+                    {pending ? t.board.toConfirm : badge.label}
+                  </Badge>
+                )}
               </button>
             );
           })}
@@ -317,7 +392,7 @@ export function FloorScreen() {
                 <StatusChip tone={occupancyTone(selected.current_state)}>
                   {needsConfirmation(selected) ? orderStatusLabel("PENDING_STAFF_CONFIRMATION") : occupancyLabel(selected.current_state)}
                 </StatusChip>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-ink-secondary">
                   {[
                     `${selected.capacity} ${selected.capacity === 1 ? t.seat : t.seats}`,
                     seatedFor(selected.occupancy_duration_minutes, t.seatedOne, t.seatedMany),
@@ -370,7 +445,7 @@ export function FloorScreen() {
                       </label>
                       <button
                         type="submit"
-                        className="min-h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                        className="min-h-12 rounded-staff bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
                         disabled={transition.isPending || moveTo === selected.order_status}
                       >
                         {transition.isPending ? t.updating : t.updateOrder}
@@ -427,12 +502,12 @@ function PendingOrder({
     <div className="grid gap-3">
       <div>
         <NeedsConfirmationBadge />
-        <p className="mt-2 text-sm text-muted-foreground">{t.pendingBody}</p>
+        <p className="mt-2 text-sm text-ink-secondary">{t.pendingBody}</p>
       </div>
       {detail.isLoading ? (
         <LoadingState label={t.loadingOrder} />
       ) : detail.isError ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink-secondary">
           {detail.error instanceof Error ? detail.error.message : t.couldntLoadOrder}{" "}
           <button type="button" className="underline" onClick={() => void detail.refetch()}>
             {t.tryAgain}
@@ -444,11 +519,11 @@ function PendingOrder({
             const modifiers = modifierNames(item.selected_modifiers);
             const note = item.special_instructions?.trim();
             return (
-              <li key={item.id} className="rounded-lg bg-muted/70 p-3 text-sm">
+              <li key={item.id} className="rounded-staff bg-muted/70 p-3 text-sm">
                 <p className="font-medium">
                   {item.quantity} × {item.item_name}
                 </p>
-                {modifiers.length > 0 ? <p className="text-muted-foreground">+ {modifiers.join(", ")}</p> : null}
+                {modifiers.length > 0 ? <p className="text-ink-secondary">+ {modifiers.join(", ")}</p> : null}
                 {note ? (
                   <p className={`mt-1 rounded-md px-2 py-1 ${toneSurface("ordered")}`}>
                     <span className="font-medium">{t.note}</span> {note}
@@ -475,7 +550,7 @@ function PendingOrder({
             <label className="grid gap-1 text-sm font-medium">
               {t.rejectReason}
               <textarea
-                className="min-h-20 rounded-lg border px-3 py-2"
+                className="min-h-20 rounded-staff border px-3 py-2"
                 value={reason}
                 onChange={(event) => onReason(event.target.value)}
                 placeholder={t.rejectPlaceholder}
@@ -484,13 +559,13 @@ function PendingOrder({
             <div className="grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
-                className="min-h-12 rounded-lg bg-destructive text-sm font-medium text-white disabled:opacity-50"
+                className="min-h-12 rounded-staff bg-danger text-sm font-medium text-white disabled:opacity-50"
                 disabled={pending || !reason.trim()}
                 onClick={() => onReject(orderId)}
               >
                 {pending ? t.rejecting : t.rejectOrder}
               </button>
-              <button type="button" className="min-h-12 rounded-lg border text-sm" disabled={pending} onClick={onCancelReject}>
+              <button type="button" className="min-h-12 rounded-staff border text-sm" disabled={pending} onClick={onCancelReject}>
                 {t.back}
               </button>
             </div>
@@ -499,13 +574,13 @@ function PendingOrder({
           <div className="grid gap-2 sm:grid-cols-2">
             <button
               type="button"
-              className="min-h-12 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
+              className="min-h-12 rounded-staff bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
               disabled={pending}
               onClick={() => onConfirm(orderId)}
             >
               {pending ? t.confirming : t.confirmOrder}
             </button>
-            <button type="button" className="min-h-12 rounded-lg border text-sm font-medium" disabled={pending} onClick={onStartReject}>
+            <button type="button" className="min-h-12 rounded-staff border text-sm font-medium" disabled={pending} onClick={onStartReject}>
               {t.reject}
             </button>
           </div>

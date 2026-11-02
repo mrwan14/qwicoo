@@ -164,11 +164,11 @@ test("suppliers and purchase orders follow catalogue and stock roles", () => {
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "suppliers"), true);
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "purchaseOrders"), true);
   assert.equal(canOpenInventoryPage("WAITER", "purchaseOrders"), false);
-  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/purchase-orders"));
+  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/stock/purchase-orders"));
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "counts"), true);
   assert.equal(canOpenInventoryPage("CASHIER", "counts"), true);
   assert.equal(canOpenInventoryPage("WAITER", "counts"), false);
-  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/counts"));
+  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/stock/counts"));
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "transfers"), true);
   assert.equal(canApproveTransfer("BRANCH_ADMIN"), false);
   assert.equal(canApproveTransfer("REGIONAL_MANAGER"), true);
@@ -176,7 +176,7 @@ test("suppliers and purchase orders follow catalogue and stock roles", () => {
   assert.equal(canListBranches("RUNNER"), false);
   assert.equal(canListBranches("CASHIER"), true);
   assert.equal(canListBranches("BRANCH_ADMIN"), true);
-  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/inventory/transfers"));
+  assert.ok(Object.values(INVENTORY_HREFS).includes("/app/stock/transfers"));
 });
 
 test("a purchase with receipts closes instead of cancelling", () => {

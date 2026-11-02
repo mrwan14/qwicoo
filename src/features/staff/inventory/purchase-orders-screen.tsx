@@ -71,7 +71,7 @@ export function PurchaseOrdersScreen() {
         action={canWrite ? <button type="button" className={primaryButton} onClick={() => setSelected("new")}>{t.purchaseOrders.add}</button> : null}
       />
       <label className="grid max-w-xs gap-1 text-sm">
-        <span className="text-muted-foreground">{t.purchaseOrders.status}</span>
+        <span className="text-ink-secondary">{t.purchaseOrders.status}</span>
         <select className={control} value={status} onChange={(event) => { setStatus(event.target.value); setOffset(0); }}>
           <option value="">{t.all}</option>
           {STATUSES.map((item) => <option key={item} value={item}>{t.purchaseOrders.statuses[item]}</option>)}
@@ -81,7 +81,7 @@ export function PurchaseOrdersScreen() {
       {orders.isError ? <QueryErrorState error={orders.error} screen={t.tabs.purchaseOrders} onRetry={() => void orders.refetch()} /> : null}
       {orders.data && rows.length === 0 ? <EmptyState title={t.purchaseOrders.empty} body={t.purchaseOrders.detail} /> : null}
       {rows.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full min-w-[720px] border-collapse text-sm">
             <thead>
               <tr className="border-b">
@@ -236,7 +236,7 @@ function OrderDetail({
 
   return (
     <div className="grid gap-4 px-4 pb-6">
-      <p className="text-sm text-muted-foreground">{status ? t.purchaseOrders.statuses[status] : order.status}</p>
+      <p className="text-sm text-ink-secondary">{status ? t.purchaseOrders.statuses[status] : order.status}</p>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>

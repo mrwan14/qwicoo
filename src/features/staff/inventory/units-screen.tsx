@@ -61,7 +61,7 @@ export function UnitsScreen() {
       {units.isError ? <QueryErrorState error={units.error} screen={t.tabs.units} onRetry={() => void units.refetch()} /> : null}
       {units.data && units.data.length === 0 ? <EmptyState title={t.units.empty} body={t.units.detail} /> : null}
       {units.data && units.data.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="border-b">
@@ -84,7 +84,7 @@ export function UnitsScreen() {
         </div>
       ) : null}
       <h2 className="font-medium">{t.units.brandConversions}</h2>
-      <p className="text-sm text-muted-foreground">{t.units.conversionHint}</p>
+      <p className="text-sm text-ink-secondary">{t.units.conversionHint}</p>
       <BrandConversions brandId={brandId ?? ""} units={units.data ?? []} rows={conversions.data ?? []} canWrite={canWrite} />
       {open && brandId ? <UnitDrawer brandId={brandId} onClose={() => setOpen(false)} /> : null}
     </InventoryFrame>

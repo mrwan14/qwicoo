@@ -24,7 +24,7 @@ import {
   type AssistantBranch,
   type StarterKey,
 } from "./access";
-import { useAssistantSession } from "./session";
+import { useAssistantLauncher, useAssistantSession } from "./session";
 
 const STARTER_ICON: Record<StarterKey, ReactNode> = {
   today: <TrendingUp aria-hidden className="size-4" />,
@@ -143,6 +143,13 @@ export function AskQwicoo({ autoFocus = false, className }: { autoFocus?: boolea
     }
   }
 
+  // A question typed into the Home box is sent once, when the panel opens.
+  useEffect(() => {
+    const prompt = useAssistantLauncher.getState().takePrompt();
+    if (prompt) void submit(prompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per mount
+  }, []);
+
   function askAgain() {
     const lastUser = [...useAssistantSession.getState().messages].reverse().find((message) => message.role === "user");
     if (lastUser?.role === "user") void submit(lastUser.content);
@@ -200,7 +207,8 @@ export function AskQwicooButton() {
   const { dir } = useLocale();
   const mobile = useMobileSheet();
   const mac = useMacShortcut();
-  const [open, setOpen] = useState(false);
+  const open = useAssistantLauncher((state) => state.open);
+  const setOpen = useAssistantLauncher((state) => state.setOpen);
   const button = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -213,7 +221,7 @@ export function AskQwicooButton() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [me]);
+  }, [me, setOpen]);
 
   if (!me || !canAskQwicoo(me.role)) return null;
 
@@ -228,12 +236,13 @@ export function AskQwicooButton() {
       <button
         ref={button}
         type="button"
-        className="inline-flex min-h-11 items-center gap-1.5 border-e-[3px] border-e-[var(--orange)] bg-ink px-3 text-sm font-medium text-canvas"
+        className="inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-staff border border-border bg-canvas px-3 text-sm font-medium text-ink transition-colors hover:border-ink-secondary/50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus"
+        aria-label={t.ask}
         onClick={() => setOpen(true)}
       >
         <MessageCircle aria-hidden className="size-4" />
-        <span>{t.ask}</span>
-        <kbd className="ms-1 hidden text-[11px] font-normal text-[#cfc8bf] md:inline">{mac ? t.shortcut : t.shortcutCtrl}</kbd>
+        <span className="hidden xl:inline">{t.ask}</span>
+        <kbd dir="ltr" className="ms-1 hidden text-[11px] font-normal text-ink-secondary xl:inline">{mac ? t.shortcut : t.shortcutCtrl}</kbd>
       </button>
       <SheetContent
         side={assistantSheetSide(mobile, dir)}

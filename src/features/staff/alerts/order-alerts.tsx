@@ -49,7 +49,7 @@ const POLL_MS = 7000;
 const PAGE: Record<AlertEvent["kind"], string> = {
   confirmation: "/app/floor",
   "floor-status": "/app/floor",
-  payment: "/app/payments",
+  payment: "/app/orders/payments",
   "service-request": "/app/floor/requests",
   "kitchen-ticket": "/app/kds",
   "handover-ready": "/app/kds/expo",

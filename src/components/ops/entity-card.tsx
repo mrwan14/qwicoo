@@ -24,14 +24,14 @@ export function EntityCard({
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const src = imageUrl && failedUrl !== imageUrl ? imageUrl : null;
   return (
-    <div className="relative bg-card">
+    <div className="relative rounded-staff border border-border bg-canvas transition-colors hover:border-ink-secondary/50">
       <Link
         href={href}
         onClick={onClick}
-        className="flex min-h-28 flex-col gap-3 rounded-2xl p-4 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex min-h-28 flex-col gap-3 rounded-staff p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <div className="flex items-start justify-between gap-3">
-          <span className="flex size-12 items-center justify-center overflow-hidden rounded-xl bg-secondary text-lg font-semibold text-primary">
+          <span className="flex size-10 items-center justify-center overflow-hidden rounded-staff bg-ink font-title text-lg font-semibold text-on-ink">
             {src ? (
               // Stored logos are on the API host, which next/image is not set up to optimise.
               // eslint-disable-next-line @next/next/no-img-element
@@ -43,8 +43,8 @@ export function EntityCard({
           {badge ? <span className={menu ? "me-8" : undefined}>{badge}</span> : null}
         </div>
         <div>
-          <p className="font-semibold">{title}</p>
-          {meta ? <p className="mt-1 text-sm text-muted-foreground">{meta}</p> : null}
+          <p className="text-sm font-semibold text-ink">{title}</p>
+          {meta ? <p className="mt-1 text-[13px] text-ink-secondary">{meta}</p> : null}
         </div>
       </Link>
       {menu ? <div className="absolute end-2 top-2 z-10">{menu}</div> : null}

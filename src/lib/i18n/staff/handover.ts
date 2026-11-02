@@ -14,8 +14,8 @@ const en = {
   takePaymentFirst: "Take payment first, then scan again.",
   verifyFailed: "Handover failed",
   verified: "Handover verified",
-  title: "Handover",
-  runnerTitle: "To hand over",
+  title: "Hand to runner",
+  runnerTitle: "Ready to serve",
   hint: "Give the finished order to the guest. The kitchen cooks it first.",
   runnerHint: "Ready orders only. Hand each one to the guest — no kitchen bump from this list.",
   guestCode: "Guest code",
@@ -52,6 +52,11 @@ const en = {
   pack: "Pack",
   store: "Store",
   bay: "Bay {number}",
+  paymentDue: "Payment is still due at the counter.",
+  runnerEmptyTitle: "All caught up",
+  runnerEmptyBody: "Ready orders show up here as soon as the kitchen finishes them.",
+  delivered: "Delivered",
+  readyCount: "{count} ready",
 } as const;
 
 const ar = {
@@ -68,8 +73,8 @@ const ar = {
   takePaymentFirst: "اقبض أولاً، ثم امسح مرة أخرى.",
   verifyFailed: "تعذّر التحقق من التسليم",
   verified: "تم التحقق من التسليم",
-  title: "التسليم",
-  runnerTitle: "للتسليم",
+  title: "التسليم للمقدّم",
+  runnerTitle: "جاهز للتقديم",
   hint: "سلّم الطلب الجاهز للضيف. المطبخ يجهّزه أولاً.",
   runnerHint: "الطلبات الجاهزة فقط. سلّم كل طلب للضيف — بلا تجهيز مطبخ من هذه القائمة.",
   guestCode: "رمز الضيف",
@@ -106,6 +111,11 @@ const ar = {
   pack: "التجهيز",
   store: "المتجر",
   bay: "المسار {number}",
+  paymentDue: "الدفع ما زال مستحقًا عند الكاشير.",
+  runnerEmptyTitle: "لا شيء متبقٍ",
+  runnerEmptyBody: "تظهر الطلبات الجاهزة هنا فور انتهاء المطبخ منها.",
+  delivered: "تم التسليم",
+  readyCount: "{count} جاهز",
 } as const;
 
 export const handoverCopy = defineDictionary(en, ar);

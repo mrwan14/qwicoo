@@ -134,7 +134,7 @@ function StoreCard({
   const vehicle = vehicleDetails(order.vehicle_info);
   const where = order.fulfillment_type.toUpperCase() === "DELIVERY" ? order.delivery_address_label : vehicle;
   return (
-    <article className="grid gap-2 border bg-card p-4" onClick={onOpen}>
+    <article className="grid gap-2 border bg-canvas p-4" onClick={onOpen}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h2 className="font-semibold tabular-nums">
           {orderHeading(order)}
@@ -142,7 +142,7 @@ function StoreCard({
         <p className="text-sm">{channelLabel(order.fulfillment_type, labels)}</p>
       </div>
       {order.customer_first_name ? <p className="text-sm">{order.customer_first_name}</p> : null}
-      {where ? <p className="text-sm text-muted-foreground">{where}</p> : null}
+      {where ? <p className="text-sm text-ink-secondary">{where}</p> : null}
       <p className="text-sm">{order.payment_status === "completed" ? labels.paid : labels.cashDue}</p>
       <p className="text-sm font-medium"><Money amount={order.total_amount} /></p>
       <ul className="grid gap-1 text-sm">

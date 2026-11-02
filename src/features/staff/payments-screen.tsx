@@ -6,9 +6,12 @@ import { toast } from "sonner";
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
 
 import { latestTimestamp, LiveCount } from "@/components/ops/live-fact";
-import { Money } from "@/components/ops/money";
-import { StatusChip } from "@/components/ops/status-chip";
-import { LoadingState, QueryErrorState } from "@/components/ops/states";
+import { Badge, type Tone } from "@/components/ops/kit/badge";
+import { Button } from "@/components/ops/kit/button";
+import { DataTable, type Column } from "@/components/ops/kit/data-table";
+import { formatAmount } from "@/components/ops/kit/money";
+import { QueryErrorState } from "@/components/ops/states";
+import { pendingPaymentsQuery } from "@/features/staff/orders/queries";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { formatCairoDateTime } from "@/lib/format/time";
@@ -22,11 +25,11 @@ import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
 import { paymentPlaceLabel } from "@/features/staff/place-labels";
 import { useScope } from "@/stores/scope";
 
-function paymentTone(status: string): "available" | "browsing" | "ordered" | "soldout" | "neutral" {
-  if (status === "COMPLETED") return "available";
-  if (status === "FAILED" || status === "REFUNDED") return "soldout";
-  if (status === "PENDING_CASHIER_VERIFICATION") return "browsing";
-  if (status === "PENDING") return "ordered";
+function paymentTone(status: string): Tone {
+  if (status === "COMPLETED") return "success";
+  if (status === "FAILED" || status === "REFUNDED") return "danger";
+  if (status === "PENDING_CASHIER_VERIFICATION") return "warning";
+  if (status === "PENDING") return "info";
   return "neutral";
 }
 
@@ -47,13 +50,8 @@ export function PaymentsScreen() {
   const branchId = useScope((state) => state.branchId);
   const queryClient = useQueryClient();
   const pending = useQuery({
-    queryKey: ["payments-pending", branchId],
+    ...pendingPaymentsQuery(branchId, t.loadFailed, locale),
     refetchInterval: pollUnlessRoleDenied(interval),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/payments/branch/pending");
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data;
-    },
   });
 
   const verify = useMutation({
@@ -92,66 +90,56 @@ export function PaymentsScreen() {
     },
   });
 
-  if (pending.isLoading) return <LoadingState label={t.loading} />;
   if (pending.isError) return <QueryErrorState error={pending.error} screen={t.screen} onRetry={() => void pending.refetch()} />;
 
   const lastPayment = latestTimestamp(rows.map((payment) => payment.created_at));
+  type Row = (typeof rows)[number];
+  const columns: Column<Row>[] = [
+    {
+      key: "order",
+      header: t.order,
+      strong: true,
+      cell: (payment) => placeLabel({ ...payment, display_number: tables.data?.[payment.order_id] }, t),
+    },
+    { key: "method", header: t.method, cell: (payment) => paymentMethodLabel(payment.payment_method, locale) },
+    {
+      key: "status",
+      header: t.status,
+      cell: (payment) => <Badge tone={paymentTone(payment.status)}>{paymentStatusLabel(payment.status, locale)}</Badge>,
+    },
+    { key: "amount", header: t.amount, align: "end", cell: (payment) => formatAmount(payment.amount, payment.currency, locale) },
+    {
+      key: "action",
+      header: <span className="sr-only">{t.action}</span>,
+      align: "end",
+      width: 140,
+      cell: (payment) => {
+        const confirming = verify.isPending && verify.variables === payment.id;
+        return (
+          <Button size="sm" disabled={confirming} onClick={() => verify.mutate(payment.id)}>
+            {confirming ? t.confirming : t.confirm}
+          </Button>
+        );
+      },
+    },
+  ];
 
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.hint}</p>
-        {rows.length > 0 ? (
-          <p className="text-sm text-muted-foreground">
-            <LiveCount value={rows.length} /> {t.waiting}
-            {lastPayment ? <> · {fill(t.lastAt, { time: formatCairoDateTime(lastPayment, locale) })}</> : null}
-          </p>
-        ) : null}
-      </div>
-      {rows.length === 0 ? <p className="text-sm text-muted-foreground">{t.empty}</p> : (
-        <div className="overflow-x-auto bg-card">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
-            <caption className="px-4 py-3 text-start text-sm text-muted-foreground">{t.caption}</caption>
-            <thead>
-              <tr className="border-b text-muted-foreground">
-                <th scope="col" className="px-4 py-3 text-start font-medium">{t.order}</th>
-                <th scope="col" className="px-4 py-3 text-start font-medium">{t.method}</th>
-                <th scope="col" className="px-4 py-3 text-start font-medium">{t.status}</th>
-                <th scope="col" className="px-4 py-3 text-start font-medium">{t.amount}</th>
-                <th scope="col" className="px-4 py-3 text-start font-medium">{t.action}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((payment) => {
-                const confirming = verify.isPending && verify.variables === payment.id;
-                return (
-                  <tr key={payment.id} className="border-b align-middle last:border-b-0">
-                    <th scope="row" className="px-4 py-4 text-start font-semibold tabular-nums">
-                      {placeLabel({ ...payment, display_number: tables.data?.[payment.order_id] }, t)}
-                    </th>
-                    <td className="px-4 py-4">{paymentMethodLabel(payment.payment_method)}</td>
-                    <td className="px-4 py-4">
-                      <StatusChip tone={paymentTone(payment.status)}>{paymentStatusLabel(payment.status)}</StatusChip>
-                    </td>
-                    <td className="px-4 py-4 font-medium"><Money amount={payment.amount} currency={payment.currency} /></td>
-                    <td className="px-4 py-4">
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
-                        disabled={confirming}
-                        onClick={() => verify.mutate(payment.id)}
-                      >
-                        {confirming ? t.confirming : t.confirm}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <div className="grid grid-cols-1 gap-3">
+      {rows.length > 0 ? (
+        <p className="text-sm text-ink-secondary">
+          <LiveCount value={rows.length} /> {t.waiting}
+          {lastPayment ? <> · {fill(t.lastAt, { time: formatCairoDateTime(lastPayment, locale) })}</> : null}
+        </p>
+      ) : null}
+      <DataTable
+        caption={t.caption}
+        columns={columns}
+        rows={rows}
+        loading={pending.isLoading}
+        rowKey={(payment) => payment.id}
+        empty={t.empty}
+      />
     </div>
   );
 }

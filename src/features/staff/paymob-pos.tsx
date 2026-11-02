@@ -106,12 +106,12 @@ export function PaymobPosCheckout({ tableId, online }: { tableId: string; online
     <section className="grid w-full gap-3 border p-4">
       <div>
         <h3 className="text-sm font-semibold">{t.payTitle}</h3>
-        <p className="text-sm leading-6 text-muted-foreground">{t.payHint}</p>
+        <p className="text-sm leading-6 text-ink-secondary">{t.payHint}</p>
       </div>
-      {order.isLoading ? <p className="text-sm text-muted-foreground">{t.loading}</p> : null}
+      {order.isLoading ? <p className="text-sm text-ink-secondary">{t.loading}</p> : null}
       {loaded ? (
         <>
-          <p className="text-sm text-muted-foreground">{fill(t.payRemaining, { amount: formatMoney(remaining, currency, locale) })}</p>
+          <p className="text-sm text-ink-secondary">{fill(t.payRemaining, { amount: formatMoney(remaining, currency, locale) })}</p>
           <label className="grid gap-1 text-sm">
             {t.payAmount}
             <input className={field} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />

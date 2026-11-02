@@ -102,10 +102,10 @@ export function ReportsScreen() {
         action={<button type="button" className={secondaryButton} onClick={() => void exportServer().catch((error) => toast.error(error instanceof Error ? error.message : t.loadFailed))}>{t.reports.exportAll}</button>}
       />
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="grid gap-1 text-sm"><span className="text-muted-foreground">{t.reports.from}</span><input className={control} type="date" value={start} onChange={(event) => setStart(event.target.value)} /></label>
-        <label className="grid gap-1 text-sm"><span className="text-muted-foreground">{t.reports.to}</span><input className={control} type="date" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
+        <label className="grid gap-1 text-sm"><span className="text-ink-secondary">{t.reports.from}</span><input className={control} type="date" value={start} onChange={(event) => setStart(event.target.value)} /></label>
+        <label className="grid gap-1 text-sm"><span className="text-ink-secondary">{t.reports.to}</span><input className={control} type="date" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
         <label className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">{t.reports.scope}</span>
+          <span className="text-ink-secondary">{t.reports.scope}</span>
           <select className={control} value={scope} onChange={(event) => setScope(event.target.value as "branch" | "brand")}>
             <option value="branch">{t.reports.thisBranch}</option>
             <option value="brand">{t.reports.wholeBrand}</option>
@@ -129,7 +129,7 @@ export function ReportsScreen() {
               ...data.ingredients.map((row) => [name(row.name), row.theoretical_usage_qty, row.on_hand, row.count_variance_qty, row.value]),
             ]))}
           >
-            <div className="overflow-x-auto bg-card">
+            <div className="overflow-x-auto bg-canvas">
               <table className="w-full min-w-[720px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b">
@@ -179,7 +179,7 @@ export function ReportsScreen() {
               ]),
             ]))}
           >
-            <p className="text-start text-sm text-muted-foreground">{t.reports.driftCaption}</p>
+            <p className="text-start text-sm text-ink-secondary">{t.reports.driftCaption}</p>
             <ul className="grid w-full gap-2 text-sm">
               {data.prep_drift.items.map((row) => {
                 const tracked = stocked(row.sku);
@@ -192,7 +192,7 @@ export function ReportsScreen() {
                     ) : null}
                     <span className="tabular-nums">{formatQty(row.on_hand, locale)}</span>
                     {tracked || row.leaf_skus.length === 0 ? null : (
-                      <bdi className="text-muted-foreground">{row.leaf_skus.join(", ")}</bdi>
+                      <bdi className="text-ink-secondary">{row.leaf_skus.join(", ")}</bdi>
                     )}
                   </li>
                 );
@@ -212,8 +212,8 @@ function reasonLabel(reason: string, labels: Record<string, string>) {
 
 function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="bg-card px-4 py-3">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
+    <div className="bg-canvas px-4 py-3">
+      <dt className="text-xs text-ink-secondary">{label}</dt>
       <dd className="mt-1 text-lg font-medium tabular-nums">{value}</dd>
     </div>
   );

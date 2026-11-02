@@ -41,10 +41,11 @@ export function workspaceProblem(me: UserProfile): WorkspaceProblem | null {
 
 export function scopeHome(me: UserProfile): string {
   if (workspaceProblem(me)) return NO_WORKSPACE_PATH;
+  // App Admin, brand admins and branch admins share one Home that adapts to the scope.
+  if (me.role === "SUPER_ADMIN" || me.role === "BRAND_ADMIN" || me.role === "BRANCH_ADMIN") return "/app/home";
   const scope = homeScopeOf(me);
   if (scope === "platform") return "/app/brands";
   if (scope === "brand") return `/app/brands/${me.brand_id}`;
-  if (me.role === "BRANCH_ADMIN") return "/app/dashboard";
   return roleHome(me.role);
 }
 

@@ -42,7 +42,7 @@ export function JobsScreen() {
       {jobs.isError ? <QueryErrorState error={jobs.error} screen={t.tabs.jobs} onRetry={() => void jobs.refetch()} /> : null}
       {jobs.data && jobs.data.length === 0 ? <EmptyState title={t.jobs.empty} body={t.jobs.detail} /> : null}
       {jobs.data && jobs.data.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead>
               <tr className="border-b">

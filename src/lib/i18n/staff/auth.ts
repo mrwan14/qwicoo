@@ -25,7 +25,7 @@ const en = {
   login: {
     metaTitle: "Sign in",
     title: "Welcome back",
-    description: "Sign in once. We take you straight to your brand, your branch, or the Qwicoo platform.",
+    description: "Sign in to run your restaurant.",
     footer: "No account yet? Your brand or branch admin invites you by email, and the link sets your password.",
     forgot: "Forgot password?",
     tooMany: "Too many sign-in attempts. The button stays disabled until the wait ends.",
@@ -111,7 +111,7 @@ const ar = {
   login: {
     metaTitle: "تسجيل الدخول",
     title: "أهلاً بعودتك",
-    description: "سجّل الدخول مرة واحدة. ننقلك مباشرة إلى علامتك أو فرعك أو منصة Qwicoo.",
+    description: "سجّل الدخول لإدارة مطعمك.",
     footer: "ليس لديك حساب بعد؟ يرسل لك مدير العلامة أو الفرع دعوة بالبريد، والرابط يضبط كلمة المرور.",
     forgot: "نسيت كلمة المرور؟",
     tooMany: "محاولات دخول كثيرة. يبقى الزر متوقفاً حتى ينتهي الانتظار.",

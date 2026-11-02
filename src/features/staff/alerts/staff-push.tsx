@@ -11,10 +11,8 @@ import { commonCopy } from "@/lib/i18n/staff/common";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useWorkspace } from "@/stores/workspace";
 
+import { alertChip as chip } from "./alert-chip";
 import { useAlertPreferences } from "./preferences";
-
-const chip =
-  "inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function usePushKey(active: boolean) {
   return useQuery({ queryKey: ["staff-push-key"], queryFn: fetchPushKey, enabled: active, staleTime: Infinity, retry: false });
@@ -69,11 +67,12 @@ export function NotificationsControl() {
     return (
       <button
         type="button"
-        className={`${chip} text-muted-foreground`}
+        className={`${chip} text-ink-secondary`}
+        title={t.notifications}
         onClick={() => toast(t.addHome, { description: t.addHomeBody })}
       >
-        <Smartphone className="size-4" aria-hidden />
-        <span className="hidden md:inline">{t.notifications}</span>
+        <Smartphone className="size-[18px]" aria-hidden />
+        <span className="sr-only">{t.notifications}</span>
       </button>
     );
   }
@@ -115,15 +114,14 @@ export function NotificationsControl() {
   return (
     <button
       type="button"
-      className={`${chip} ${on ? "text-primary" : ""}`}
+      className={`${chip} ${on ? "text-ink" : "text-ink-secondary"}`}
       aria-pressed={on}
       disabled={busy}
-      title={denied ? t.notificationsBlockedTitle : undefined}
+      title={denied ? t.notificationsBlockedTitle : on ? t.notificationsOn : t.enableNotifications}
       onClick={() => void toggle()}
     >
-      <BellRing className="size-4" aria-hidden />
-      <span className="hidden md:inline">{on ? t.notificationsOn : t.enableNotifications}</span>
-      <span className="sr-only md:hidden">{on ? t.notificationsOn : t.enableNotifications}</span>
+      <BellRing className="size-[18px]" aria-hidden />
+      <span className="sr-only">{on ? t.notificationsOn : t.enableNotifications}</span>
     </button>
   );
 }

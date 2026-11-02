@@ -78,7 +78,7 @@ export function PaymobRefunds({ orderId }: { orderId: string }) {
 
   return (
     <div className="grid w-full gap-2">
-      {needsDrawer ? <Link href="/app/financials" className="text-sm underline-offset-2 hover:underline">{orders.openTill}</Link> : null}
+      {needsDrawer ? <Link href="/app/reports/till" className="text-sm underline-offset-2 hover:underline">{orders.openTill}</Link> : null}
       {captures.map(({ payment }) => (
         <button
           key={payment.id}
@@ -102,7 +102,7 @@ export function PaymobRefunds({ orderId }: { orderId: string }) {
           <label className="grid gap-1 text-sm">
             {t.refundAmount}
             <input className={field} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
-            <span className="text-muted-foreground">{t.refundFull}</span>
+            <span className="text-ink-secondary">{t.refundFull}</span>
           </label>
           <button
             type="button"

@@ -3,8 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
+import { ScreenTitle } from "@/components/ops/page-header";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
@@ -21,11 +23,11 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { areaNames, boundsForGovernorate, loadEgyptGovernorates, searchEgyptAreas, type EgyptAreaSuggestion } from "@/lib/maps/egypt";
 import { useScope } from "@/stores/scope";
 
-const control = "h-11 w-full rounded-lg border px-3 text-sm";
-const hint = "text-sm leading-6 text-muted-foreground";
-const sectionCard = "grid max-w-3xl gap-4 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5";
-const primaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
-const secondaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+const control = "h-11 w-full rounded-staff border px-3 text-sm";
+const hint = "text-sm leading-6 text-ink-secondary";
+const sectionCard = "grid max-w-3xl gap-4 rounded-staff bg-canvas p-4 border border-border";
+const primaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+const secondaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-staff border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 const ROLES = ["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER", "BRANCH_ADMIN"] as const;
 
 function staffRole(role: string): string {
@@ -46,7 +48,12 @@ export function StaffScreen() {
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<(typeof ROLES)[number]>("CASHIER");
   const [removeId, setRemoveId] = useState<string | null>(null);
-  const [staffQuery, setStaffQuery] = useState("");
+  const searchParam = useSearchParams().get("q");
+  const [staffQuery, setStaffQuery] = useState(searchParam ?? "");
+  // `?q=` comes from the top-bar search.
+  useEffect(() => {
+    if (searchParam !== null) setStaffQuery(searchParam);
+  }, [searchParam]);
   const staff = useQuery({
     queryKey: ["staff", branchId],
     enabled: Boolean(branchId),
@@ -123,7 +130,7 @@ export function StaffScreen() {
   return (
     <div className="grid gap-6">
       <header>
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
+        <ScreenTitle>{t.title}</ScreenTitle>
         <p className={`mt-1 max-w-2xl ${hint}`}>{t.intro}</p>
       </header>
 
@@ -225,11 +232,11 @@ function StaffCard({
     : "";
 
   return (
-    <li className="grid content-start gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+    <li className="grid content-start gap-3 rounded-staff bg-canvas p-4 border border-border">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="grid gap-1">
           <p className="font-semibold">{person.full_name}</p>
-          <p className="text-sm text-muted-foreground">{person.email}</p>
+          <p className="text-sm text-ink-secondary">{person.email}</p>
         </div>
         <StatusChip tone={person.is_active ? "available" : "soldout"}>{person.is_active ? t.active : t.inactive}</StatusChip>
       </div>
@@ -270,7 +277,7 @@ function StaffCard({
           {person.is_active ? (
             <button
               type="button"
-              className="inline-flex min-h-11 items-center rounded-xl border border-destructive/30 px-4 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="inline-flex min-h-11 items-center rounded-staff border border-danger/30 px-4 text-sm font-medium text-danger hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               onClick={onDeactivate}
             >
               {t.deactivate}
@@ -385,11 +392,11 @@ export function FeaturesScreen() {
   return (
     <div className="grid gap-6">
       <header>
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
+        <ScreenTitle>{t.title}</ScreenTitle>
         <p className={`mt-1 max-w-2xl ${hint}`}>{t.intro}</p>
       </header>
 
-      <form className="grid max-w-3xl gap-4 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
+      <form className="grid max-w-3xl gap-4 rounded-staff bg-canvas p-4 border border-border" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
         <div>
           <h2 className="text-lg font-semibold">{t.addTitle}</h2>
           <p className={hint}>{t.addHint}</p>
@@ -434,7 +441,7 @@ export function FeaturesScreen() {
             ))}
           </select>
         </label>
-        {brands.isError ? <p className="text-sm text-destructive">{brands.error.message}</p> : null}
+        {brands.isError ? <p className="text-sm text-danger">{brands.error.message}</p> : null}
       </section>
 
       <section className="grid gap-3">
@@ -453,10 +460,10 @@ export function FeaturesScreen() {
               const enabled = enabledKeys.has(feature.id);
               const pending = pendingToggle?.featureKey === feature.id;
               return (
-                <li key={feature.id} className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5 sm:flex-row sm:items-center sm:justify-between">
+                <li key={feature.id} className="flex flex-col gap-3 rounded-staff bg-canvas p-4 border border-border sm:flex-row sm:items-center sm:justify-between">
                   <div className="grid gap-1">
                     <p className="font-semibold">{pickLocale({ en: feature.name_en, ar: feature.name_ar }, locale) || feature.name_en}</p>
-                    <p className="text-sm text-muted-foreground">{feature.id}</p>
+                    <p className="text-sm text-ink-secondary">{feature.id}</p>
                     {feature.description ? <p className={hint}>{feature.description}</p> : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -470,11 +477,11 @@ export function FeaturesScreen() {
                       {pending ? (enabled ? t.disabling : t.enabling) : enabled ? fill(t.disableFor, { name: brandName ?? t.brandFallback }) : fill(t.enableFor, { name: brandName ?? t.brandFallback })}
                     </button>
                     {feature.is_core ? (
-                      <span className="text-sm text-muted-foreground">{t.core}</span>
+                      <span className="text-sm text-ink-secondary">{t.core}</span>
                     ) : (
                       <button
                         type="button"
-                        className="inline-flex min-h-11 items-center rounded-xl border border-destructive/30 px-4 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center rounded-staff border border-danger/30 px-4 text-sm font-medium text-danger hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
                         disabled={remove.isPending}
                         onClick={() => setRemoveKey(feature.id)}
                       >
@@ -515,11 +522,11 @@ export function FeaturesScreen() {
               const match = features.find((feature) => feature.id === item.feature_key);
               const name = match ? pickLocale({ en: match.name_en, ar: match.name_ar }, locale) || match.name_en : undefined;
               return (
-                <li key={item.id} className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+                <li key={item.id} className="flex flex-col gap-3 rounded-staff bg-canvas p-4 border border-border">
                   <div className="flex items-start justify-between gap-3">
                     <div className="grid gap-1">
                       <p className="font-semibold">{name ?? item.feature_key}</p>
-                      {name ? <p className="text-sm text-muted-foreground">{item.feature_key}</p> : null}
+                      {name ? <p className="text-sm text-ink-secondary">{item.feature_key}</p> : null}
                     </div>
                     <StatusChip tone={item.is_enabled_by_super_admin ? "available" : "soldout"}>{item.is_enabled_by_super_admin ? t.on : t.off}</StatusChip>
                   </div>
@@ -718,7 +725,7 @@ export function DeliveryScreen() {
   return (
     <div className="grid gap-6">
       <header>
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
+        <ScreenTitle>{t.title}</ScreenTitle>
         <p className={`mt-1 max-w-2xl ${hint}`}>
           {fill(t.intro, { brand: brandLabel })}
         </p>
@@ -746,7 +753,7 @@ export function DeliveryScreen() {
             ))}
           </select>
         </label>
-        {brands.isError ? <p className="text-sm text-destructive">{brands.error.message}</p> : null}
+        {brands.isError ? <p className="text-sm text-danger">{brands.error.message}</p> : null}
       </section>
 
       <section className={sectionCard}>
@@ -778,7 +785,7 @@ export function DeliveryScreen() {
               ))}
             </select>
           </label>
-          {egypt.isError ? <p className="text-sm text-destructive">{egypt.error.message}</p> : null}
+          {egypt.isError ? <p className="text-sm text-danger">{egypt.error.message}</p> : null}
           {draftGov ? <p className={hint} dir="auto">{draftGov.nameEn} · {draftGov.nameAr}</p> : null}
           <button className={primaryButton} type="submit" disabled={!brandId || !draftGov || governorateAlreadyAdded || createGov.isPending} aria-describedby="add-governorate-hint">
             <Plus aria-hidden className="size-4" />
@@ -800,9 +807,9 @@ export function DeliveryScreen() {
         {governorates.length > 0 ? (
           <ul className="grid gap-2">
             {governorates.map((gov) => (
-              <li key={gov.id} className="rounded-xl bg-background px-3 py-2 ring-1 ring-foreground/5">
+              <li key={gov.id} className="rounded-staff bg-background px-3 py-2">
                 <p className="font-medium">{gov.name_en}</p>
-                <p className="text-sm text-muted-foreground" dir="rtl">{gov.name_ar}</p>
+                <p className="text-sm text-ink-secondary" dir="rtl">{gov.name_ar}</p>
               </li>
             ))}
           </ul>
@@ -846,9 +853,9 @@ export function DeliveryScreen() {
           </label>
           {areaSearching ? <p className={hint}>{t.searching}</p> : null}
           {areaMiss && !areaSearching && areaQuery.trim().length >= 2 ? <p className={hint}>{t.noAreas}</p> : null}
-          {areaError ? <p className="text-sm text-destructive">{areaError}</p> : null}
+          {areaError ? <p className="text-sm text-danger">{areaError}</p> : null}
           {areaOptions.length > 0 ? (
-            <ul id="delivery-area-list" role="listbox" className="grid max-h-64 overflow-auto rounded-xl bg-background py-1 ring-1 ring-foreground/10">
+            <ul id="delivery-area-list" role="listbox" className="grid max-h-64 overflow-auto rounded-staff bg-background py-1 ring-1 ring-foreground/10">
               {areaOptions.map((option) => (
                 <li key={option.placeId} role="option">
                   <button
@@ -865,7 +872,7 @@ export function DeliveryScreen() {
                     }}
                   >
                     <span className="font-medium">{option.label}</span>
-                    {option.detail ? <span className="text-sm text-muted-foreground">{option.detail}</span> : null}
+                    {option.detail ? <span className="text-sm text-ink-secondary">{option.detail}</span> : null}
                   </button>
                 </li>
               ))}
@@ -893,9 +900,9 @@ export function DeliveryScreen() {
         {zoneItems.length > 0 ? (
           <ul className="grid gap-2">
             {zoneItems.map((zone) => (
-              <li key={zone.id} className="rounded-xl bg-background px-3 py-2 ring-1 ring-foreground/5">
+              <li key={zone.id} className="rounded-staff bg-background px-3 py-2">
                 <p className="font-medium">{zone.name_en}</p>
-                <p className="text-sm text-muted-foreground" dir="rtl">{zone.name_ar}</p>
+                <p className="text-sm text-ink-secondary" dir="rtl">{zone.name_ar}</p>
               </li>
             ))}
           </ul>
@@ -922,7 +929,7 @@ export function DeliveryScreen() {
             ))}
           </select>
         </label>
-        {brandBranches.isError ? <p className="text-sm text-destructive">{brandBranches.error.message}</p> : null}
+        {brandBranches.isError ? <p className="text-sm text-danger">{brandBranches.error.message}</p> : null}
         <label className="grid max-w-xs gap-1 text-sm">
           {t.feeLabel}
           <input className={control} inputMode="decimal" value={fee} onChange={(event) => setFee(event.target.value)} />

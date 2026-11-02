@@ -20,23 +20,24 @@ const REPORTS: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MA
 
 export const INVENTORY_NAV_ROLES = READ;
 
+/** Stock lives under /app/stock; units, import, jobs and rules under Settings → Stock; usage under Reports. */
 export const INVENTORY_HREFS: Record<InventoryPage, string> = {
-  overview: "/app/inventory",
-  stock: "/app/inventory/stock",
-  movements: "/app/inventory/movements",
-  ingredients: "/app/inventory/ingredients",
-  units: "/app/inventory/units",
-  import: "/app/inventory/import",
-  recipes: "/app/inventory/recipes",
-  suppliers: "/app/inventory/suppliers",
-  purchaseOrders: "/app/inventory/purchase-orders",
-  counts: "/app/inventory/counts",
-  transfers: "/app/inventory/transfers",
-  waste: "/app/inventory/waste",
-  prep: "/app/inventory/prep",
-  reports: "/app/inventory/reports",
-  settings: "/app/inventory/settings",
-  jobs: "/app/inventory/jobs",
+  overview: "/app/stock",
+  stock: "/app/stock",
+  movements: "/app/stock/movements",
+  ingredients: "/app/stock/ingredients",
+  units: "/app/settings/stock/units",
+  import: "/app/settings/stock/import",
+  recipes: "/app/stock/recipes",
+  suppliers: "/app/stock/suppliers",
+  purchaseOrders: "/app/stock/purchase-orders",
+  counts: "/app/stock/counts",
+  transfers: "/app/stock/transfers",
+  waste: "/app/stock/waste",
+  prep: "/app/stock/prep",
+  reports: "/app/reports/stock",
+  settings: "/app/settings/stock",
+  jobs: "/app/settings/stock/jobs",
 };
 
 export type InventoryPage =

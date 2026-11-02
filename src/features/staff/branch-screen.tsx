@@ -1,11 +1,17 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Plus, RefreshCw } from "lucide-react";
+import { MapPin, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { PageHeader as KitPageHeader } from "@/components/ops/kit/page-header";
+import { Tabs } from "@/components/ops/kit/tabs";
+import { NestedHeaders } from "@/components/ops/page-header";
+import { SettingsFrame } from "@/features/staff/settings/frame";
+import { settingsCopy } from "@/lib/i18n/staff/settings";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { PIN_ROLES } from "@/lib/auth/scope";
@@ -24,18 +30,29 @@ import { StatusChip } from "@/components/ops/status-chip";
 import { ErrorState, LoadingState } from "@/components/ops/states";
 import type { components } from "@/lib/api/schema";
 
-const control = "h-11 w-full rounded-lg border px-3 text-sm";
-const hint = "max-w-lg text-sm leading-6 text-muted-foreground";
+const control = "h-11 w-full rounded-staff border px-3 text-sm";
+const hint = "max-w-lg text-sm leading-6 text-ink-secondary";
 
-const TAB_KEYS = ["profile", "qwicoo", "hours", "location", "financials", "sla", "offline", "pin", "tables"] as const;
+type BranchTab = "profile" | "qwicoo" | "hours" | "location" | "financials" | "sla" | "offline" | "pin" | "tables";
 
-type BranchTab = (typeof TAB_KEYS)[number];
+/** Branch settings in four tabs; each shows its old sections one after another. */
+const GROUP_KEYS = ["details", "tables", "money", "service"] as const;
+type BranchGroup = (typeof GROUP_KEYS)[number];
+const GROUPS: Record<BranchGroup, readonly BranchTab[]> = {
+  details: ["profile", "location", "hours"],
+  tables: ["tables", "pin"],
+  money: ["financials", "qwicoo"],
+  service: ["sla", "offline"],
+};
 type BranchText = (typeof branchCopy)["en"];
 
 export function BranchScreen({ branchId }: { branchId: string }) {
   const t = useStaffSection(branchCopy);
   const me = useStaffSession();
-  const [tab, setTab] = useState<BranchTab>("profile");
+  const settings = useStaffSection(settingsCopy);
+  const params = useSearchParams();
+  const group = GROUP_KEYS.find((key) => key === params.get("tab")) ?? "details";
+  const platform = useScope((state) => state.homeScope === "platform");
   const branch = useQuery({
     queryKey: ["branch", branchId],
     retry: false,
@@ -69,47 +86,55 @@ export function BranchScreen({ branchId }: { branchId: string }) {
 
   const canSeePin = Boolean(me && PIN_ROLES.includes(me.role));
   const canSetOffline = Boolean(me && OFFLINE_ADMIN_ROLES.includes(me.role));
-  const tabs = TAB_KEYS.filter((item) => (item !== "pin" || canSeePin) && (item !== "offline" || canSetOffline));
+  const visible = (item: BranchTab) => (item !== "pin" || canSeePin) && (item !== "offline" || canSetOffline);
+  const tabs = GROUP_KEYS.filter((key) => GROUPS[key].some(visible)).map((key) => ({
+    value: key,
+    label: settings.branchTabs[key],
+    href: `/app/branches/${branchId}${key === "details" ? "" : `?tab=${key}`}`,
+  }));
+  const sections = GROUPS[group].filter(visible);
+  const body = (
+    <div className="grid grid-cols-1 gap-8">
+      {sections.map((item) => (
+        <section key={item} className="grid gap-3 border-t border-border pt-5 first:border-t-0 first:pt-0">
+          <h2 className="text-base font-semibold text-ink">{t.tabs[item]}</h2>
+          {item === "profile" ? <ProfileTab branchId={branchId} currency={branchRecord.currency} address={branchRecord.address ?? ""} /> : null}
+          {item === "qwicoo" ? <QwicooTab branchId={branchId} /> : null}
+          {item === "hours" ? <HoursTab branchId={branchId} hours={branchRecord.opening_hours} /> : null}
+          {item === "location" ? <LocationTab branch={branchRecord} /> : null}
+          {item === "financials" ? <FinancialsTab branchId={branchId} /> : null}
+          {item === "sla" ? <SlaTab branchId={branchId} /> : null}
+          {item === "pin" ? <PinTab branchId={branchId} /> : null}
+          {item === "offline" ? <OfflineTab branchId={branchId} /> : null}
+          {item === "tables" ? <TablesTab branchId={branchId} /> : null}
+        </section>
+      ))}
+    </div>
+  );
+  const title = (
+    <span className="inline-flex items-center gap-3">
+      {logoSrc ? (
+        // Stored logos are on the API host, which next/image is not set up to optimise.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logoSrc} alt={fill(t.logoAlt, { name: branchTitle })} className="size-10 rounded-staff border border-border object-cover" />
+      ) : null}
+      {branchTitle}
+    </span>
+  );
+
+  if (!platform) {
+    return (
+      <SettingsFrame item="branch" title={title} subtitle={settings.items.branch.body} tab={group} tabs={tabs}>
+        {body}
+      </SettingsFrame>
+    );
+  }
+  // App Admin comes here from a brand, so the way back is that brand.
   return (
-    <div className="grid gap-4">
-      <Link
-        href={branchRecord.brand_id ? `/app/brands/${branchRecord.brand_id}` : "/app/brands"}
-        className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        <ArrowLeft aria-hidden className="size-4 rtl:-scale-x-100" />
-        {t.back}
-      </Link>
-      <div className="flex items-center gap-3">
-        {logoSrc ? (
-          // Stored logos are on the API host, which next/image is not set up to optimise.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoSrc} alt={fill(t.logoAlt, { name: branchTitle })} className="size-14 rounded-xl object-cover ring-1 ring-foreground/5" />
-        ) : null}
-        <h1 className="text-[length:var(--text-28)] font-semibold">{branchTitle}</h1>
-      </div>
-      <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label={t.settingsLabel}>
-        {tabs.map((item) => (
-          <button
-            key={item}
-            type="button"
-            role="tab"
-            aria-selected={tab === item}
-            className={`min-h-11 shrink-0 rounded-full border px-3 text-sm ${tab === item ? "border-primary/40 bg-secondary font-medium" : ""}`}
-            onClick={() => setTab(item)}
-          >
-            {t.tabs[item]}
-          </button>
-        ))}
-      </div>
-      {tab === "profile" ? <ProfileTab branchId={branchId} currency={branchRecord.currency} address={branchRecord.address ?? ""} /> : null}
-      {tab === "qwicoo" ? <QwicooTab branchId={branchId} /> : null}
-      {tab === "hours" ? <HoursTab branchId={branchId} hours={branchRecord.opening_hours} /> : null}
-      {tab === "location" ? <LocationTab branch={branchRecord} /> : null}
-      {tab === "financials" ? <FinancialsTab branchId={branchId} /> : null}
-      {tab === "sla" ? <SlaTab branchId={branchId} /> : null}
-      {tab === "pin" && canSeePin ? <PinTab branchId={branchId} /> : null}
-      {tab === "offline" && canSetOffline ? <OfflineTab branchId={branchId} /> : null}
-      {tab === "tables" ? <TablesTab branchId={branchId} /> : null}
+    <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-5">
+      <KitPageHeader back={{ href: branchRecord.brand_id ? `/app/brands/${branchRecord.brand_id}` : "/app/brands", label: t.back }} title={title} />
+      <Tabs label={settings.branchTabsLabel} value={group} items={tabs} />
+      <NestedHeaders>{body}</NestedHeaders>
     </div>
   );
 }
@@ -145,7 +170,7 @@ function BranchMobileSwitches({ branchId }: { branchId: string }) {
     onError: (error: Error) => toast.error(error.message),
   });
   if (settings.isLoading) return <p className={hint}>{t.checkingFee}</p>;
-  if (settings.isError || !settings.data) return <p className="text-sm text-destructive">{settings.error?.message ?? t.switchesFailed}</p>;
+  if (settings.isError || !settings.data) return <p className="text-sm text-danger">{settings.error?.message ?? t.switchesFailed}</p>;
   const current = settings.data;
   const rows = [
     ["mobile_ordering", t.mobileOrdering],
@@ -219,7 +244,7 @@ function QwicooTab({ branchId }: { branchId: string }) {
   const nameOf = (row: { name_en: string; name_ar: string }) => (locale === "ar" ? row.name_ar || row.name_en : row.name_en);
 
   return (
-    <div className="grid max-w-xl gap-4 border bg-card p-4">
+    <div className="grid max-w-xl gap-4 border bg-canvas p-4">
       <div className="grid gap-1">
         <h2 className="font-medium">{t.tabs.qwicoo}</h2>
         <p className={hint}>{t.qwicooHint}</p>
@@ -312,7 +337,7 @@ function HoursTab({ branchId, hours }: { branchId: string; hours: components["sc
       {WEEKDAY_KEYS.map((key) => {
         const day = days[key];
         return (
-          <div key={key} className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-[8rem_1fr_1fr_auto] sm:items-end">
+          <div key={key} className="grid gap-2 rounded-staff border bg-canvas p-3 sm:grid-cols-[8rem_1fr_1fr_auto] sm:items-end">
             <span className="text-sm font-medium">{t.days[key]}</span>
             <label className="grid gap-1 text-sm">
               {t.opens}
@@ -329,7 +354,7 @@ function HoursTab({ branchId, hours }: { branchId: string; hours: components["sc
           </div>
         );
       })}
-      <button className="min-h-11 w-fit rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={save.isPending}>
+      <button className="min-h-11 w-fit rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={save.isPending}>
         {save.isPending ? t.saving : t.saveHours}
       </button>
     </form>
@@ -377,7 +402,7 @@ function ProfileTab({ branchId, currency, address: savedAddress }: { branchId: s
         <input className={control} placeholder={t.addressPlaceholder} value={address} onChange={(event) => setAddress(event.target.value)} />
       </label>
       <p id="save-profile-hint" className={hint}>{t.saveProfileHint}</p>
-      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit" aria-describedby="save-profile-hint">{t.saveProfile}</button>
+      <button className="min-h-11 rounded-staff bg-primary text-sm text-primary-foreground" type="submit" aria-describedby="save-profile-hint">{t.saveProfile}</button>
     </form>
   );
 }
@@ -424,7 +449,7 @@ function LocationTab({ branch }: { branch: components["schemas"]["BranchResponse
       <p id="open-map-hint" className={hint}>{t.openMapHint}</p>
       <button
         type="button"
-        className="flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-start text-sm hover:border-primary/40"
+        className="flex min-h-11 items-center gap-3 rounded-staff border px-3 py-2 text-start text-sm hover:border-primary/40"
         aria-describedby="open-map-hint"
         onClick={() => setPickerOpen(true)}
       >
@@ -432,10 +457,10 @@ function LocationTab({ branch }: { branch: components["schemas"]["BranchResponse
         {location ? (
           <span className="grid gap-0.5">
             <span className="line-clamp-2">{location.address || t.pinned}</span>
-            <span className="text-xs text-muted-foreground tabular-nums">{location.latitude}, {location.longitude}</span>
+            <span className="text-xs text-ink-secondary tabular-nums">{location.latitude}, {location.longitude}</span>
           </span>
         ) : (
-          <span className="text-muted-foreground">{t.noLocation}</span>
+          <span className="text-ink-secondary">{t.noLocation}</span>
         )}
         <span className="ms-auto text-xs text-primary">{t.openMap}</span>
       </button>
@@ -445,7 +470,7 @@ function LocationTab({ branch }: { branch: components["schemas"]["BranchResponse
         <input className={control} type="number" min={5} max={5000} value={radius} onChange={(event) => setRadius(Number(event.target.value))} />
       </label>
       <p id="save-location-hint" className={hint}>{t.saveLocationHint}</p>
-      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground disabled:opacity-50" type="submit" disabled={!location || save.isPending} aria-describedby="save-location-hint">{t.saveLocation}</button>
+      <button className="min-h-11 rounded-staff bg-primary text-sm text-primary-foreground disabled:opacity-50" type="submit" disabled={!location || save.isPending} aria-describedby="save-location-hint">{t.saveLocation}</button>
       <LocationPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} value={location} radiusMeters={radius} onConfirm={setLocation} />
     </form>
   );
@@ -507,7 +532,7 @@ function FinancialsForm({ branchId, settings }: { branchId: string; settings: co
         <input className={control} value={fee} onChange={(event) => setFee(event.target.value)} />
       </label>
       <p id="save-financials-hint" className={hint}>{t.saveFinancialsHint}</p>
-      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit" aria-describedby="save-financials-hint">{t.saveFinancials}</button>
+      <button className="min-h-11 rounded-staff bg-primary text-sm text-primary-foreground" type="submit" aria-describedby="save-financials-hint">{t.saveFinancials}</button>
     </form>
   );
 }
@@ -561,8 +586,8 @@ function OfflineForm({ branchId, enabled: savedEnabled, hours: savedHours }: { b
         <span className={hint}>{t.offlineHoursHint}</span>
         <input className={control} type="number" min={1} max={72} value={hours} onChange={(event) => setHours(Number(event.target.value))} />
       </label>
-      {!valid ? <p className="text-sm text-destructive">{t.offlineHoursInvalid}</p> : null}
-      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground disabled:opacity-50" type="submit" disabled={!valid || save.isPending}>
+      {!valid ? <p className="text-sm text-danger">{t.offlineHoursInvalid}</p> : null}
+      <button className="min-h-11 rounded-staff bg-primary text-sm text-primary-foreground disabled:opacity-50" type="submit" disabled={!valid || save.isPending}>
         {t.saveOffline}
       </button>
     </form>
@@ -612,7 +637,7 @@ function SlaForm({ branchId, minutes: savedMinutes }: { branchId: string; minute
         <input className={control} type="number" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} />
       </label>
       <p id="save-sla-hint" className={hint}>{t.saveSlaHint}</p>
-      <button className="min-h-11 rounded-lg bg-primary text-sm text-primary-foreground" type="submit" aria-describedby="save-sla-hint">{t.saveSla}</button>
+      <button className="min-h-11 rounded-staff bg-primary text-sm text-primary-foreground" type="submit" aria-describedby="save-sla-hint">{t.saveSla}</button>
     </form>
   );
 }
@@ -647,7 +672,7 @@ function PinTab({ branchId }: { branchId: string }) {
       <p id="rotate-pin-hint" className={hint}>{t.rotateHint}</p>
       <button
         type="button"
-        className="inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+        className="inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-staff border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
         aria-describedby="rotate-pin-hint"
         disabled={rotate.isPending}
         onClick={() => setConfirm(true)}
@@ -741,7 +766,7 @@ function TablesTab({ branchId }: { branchId: string }) {
           <input className={control} placeholder={t.tableNumberPlaceholder} value={number} onChange={(event) => setNumber(event.target.value)} required />
         </label>
         <button
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium whitespace-nowrap text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-staff bg-primary px-4 text-sm font-medium whitespace-nowrap text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
           type="submit"
           aria-describedby="add-table-hint"
           disabled={create.isPending}
@@ -756,12 +781,12 @@ function TablesTab({ branchId }: { branchId: string }) {
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {(tables.data ?? []).map((table) => (
-            <li key={table.id} className="flex min-h-28 flex-col justify-between gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+            <li key={table.id} className="flex min-h-28 flex-col justify-between gap-3 rounded-staff bg-canvas p-4 border border-border">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-lg font-semibold">{fill(t.tableTitle, { number: table.table_number })}</p>
                 <StatusChip tone={tableTone(table)}>{tableLabel(table, t.tableStatus)}</StatusChip>
               </div>
-              <p className="text-sm text-muted-foreground">{table.zone_name} · {seatLabel(table.capacity, t.oneSeat, t.manySeats)}</p>
+              <p className="text-sm text-ink-secondary">{table.zone_name} · {seatLabel(table.capacity, t.oneSeat, t.manySeats)}</p>
             </li>
           ))}
         </ul>

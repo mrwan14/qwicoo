@@ -119,11 +119,11 @@ export function StockScreen() {
         <div className="grid gap-3 sm:grid-cols-4">
           <WarehouseSelect warehouses={warehouses.data} value={selected} onChange={setWarehouseId} />
           <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{t.search}</span>
+            <span className="text-ink-secondary">{t.search}</span>
             <input className={control} value={query} onChange={(event) => setQuery(event.target.value)} />
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{t.stock.category}</span>
+            <span className="text-ink-secondary">{t.stock.category}</span>
             <select className={control} value={category} onChange={(event) => setCategory(event.target.value)}>
               <option value="">{t.all}</option>
               {categories.map((item) => (
@@ -132,7 +132,7 @@ export function StockScreen() {
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{t.stock.status}</span>
+            <span className="text-ink-secondary">{t.stock.status}</span>
             <select className={control} value={status} onChange={(event) => setStatus(event.target.value)}>
               <option value="">{t.all}</option>
               {(["ok", "low", "out", "negative"] as const).map((item) => (
@@ -141,7 +141,7 @@ export function StockScreen() {
             </select>
           </label>
           <label className="grid gap-1 text-sm sm:col-span-2">
-            <span className="text-muted-foreground">{t.displayUnit}</span>
+            <span className="text-ink-secondary">{t.displayUnit}</span>
             <select className={control} value={displayUnitId} onChange={(event) => setDisplayUnitId(event.target.value)}>
               <option value="">{t.baseUnit}</option>
               {(units.data ?? []).map((unit) => (
@@ -153,7 +153,7 @@ export function StockScreen() {
       ) : null}
       {stock.data && rows.length === 0 ? <EmptyState title={t.stock.empty} body={t.stock.detail} /> : null}
       {rows.length > 0 ? (
-        <div className="overflow-x-auto bg-card">
+        <div className="overflow-x-auto bg-canvas">
           <table className="w-full min-w-[880px] border-collapse text-sm">
             <thead>
               <tr className="border-b text-start">
@@ -171,7 +171,7 @@ export function StockScreen() {
                   <tr key={item.ingredient_id} className="cursor-pointer border-b hover:bg-muted/40" onClick={() => setRow(item)}>
                     <td className="px-3 py-2">
                       <span className="font-medium">{pickLocale(item.name, locale)}</span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">{item.sku}</span>
+                      <span className="mt-0.5 block text-xs text-ink-secondary">{item.sku}</span>
                     </td>
                     <td className="px-3 py-2 tabular-nums">{shown.qty} {shown.unit}</td>
                     <td className="px-3 py-2 tabular-nums">{showQty(item.par_level, item.ingredient_id, meta?.base_unit_id, displayUnitId, edges, base, units.data ?? [], locale).qty}</td>
@@ -328,7 +328,7 @@ function StockDrawer({
             <label className="grid gap-1 text-sm">
               <span>{t.quantity}</span>
               <input className={`${control} text-base`} inputMode="decimal" value={qty} onChange={(event) => setQty(event.target.value)} />
-              {mode === "adjust" ? <span className="text-muted-foreground">{t.stock.signedQty}</span> : null}
+              {mode === "adjust" ? <span className="text-ink-secondary">{t.stock.signedQty}</span> : null}
             </label>
             <label className="grid gap-1 text-sm">
               <span>{t.unit}</span>
@@ -343,12 +343,12 @@ function StockDrawer({
                 <label className="grid gap-1 text-sm">
                   <span>{t.reason}</span>
                   <input className={control} value={reason} onChange={(event) => setReason(event.target.value)} />
-                  <span className="text-muted-foreground">{t.stock.reasonHint}</span>
+                  <span className="text-ink-secondary">{t.stock.reasonHint}</span>
                 </label>
                 <label className="grid gap-1 text-sm">
                   <span>{t.stock.unitCost}</span>
                   <input className={control} inputMode="decimal" value={unitCost} onChange={(event) => setUnitCost(event.target.value)} />
-                  <span className="text-muted-foreground">{t.stock.unitCostHint}</span>
+                  <span className="text-ink-secondary">{t.stock.unitCostHint}</span>
                 </label>
                 <button type="button" className={primaryButton} disabled={adjust.isPending || !reason.trim() || !qty} onClick={() => adjust.mutate()}>
                   {t.save}

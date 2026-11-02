@@ -24,12 +24,12 @@ export function InventoryBarChart({
   const { locale } = useLocale();
   const margin = locale === "ar" ? { top: 4, right: 4, left: 12, bottom: 4 } : { top: 4, right: 12, left: 4, bottom: 4 };
   return (
-    <section className="grid gap-3 bg-card p-4" aria-label={title}>
+    <section className="grid gap-3 bg-canvas p-4" aria-label={title}>
       <div>
         <h2 className="font-medium">{title}</h2>
-        <p className="text-sm leading-6 text-muted-foreground">{caption}</p>
+        <p className="text-sm leading-6 text-ink-secondary">{caption}</p>
       </div>
-      {rows.length === 0 || !ready ? <p className="text-sm text-muted-foreground">{caption}</p> : (
+      {rows.length === 0 || !ready ? <p className="text-sm text-ink-secondary">{caption}</p> : (
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={rows} margin={margin}>
             <CartesianGrid stroke="var(--border)" vertical={false} />
@@ -45,5 +45,5 @@ export function InventoryBarChart({
 }
 
 function Tip({ children }: { children: ReactNode }) {
-  return <div className="bg-card px-3 py-2 text-sm text-card-foreground shadow-elev-1">{children}</div>;
+  return <div className="bg-canvas px-3 py-2 text-sm text-card-foreground">{children}</div>;
 }

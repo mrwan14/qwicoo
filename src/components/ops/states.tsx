@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { EmptyState as KitEmptyState } from "@/components/ops/kit/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isRoleDenied } from "@/lib/api/error";
 import { fill } from "@/lib/i18n/dictionary";
@@ -20,6 +21,7 @@ export function LoadingState({ label }: { label?: string }) {
   );
 }
 
+/** Staff-only. Shows the kit empty state, so every older screen gets the new look. */
 export function EmptyState({
   title,
   body,
@@ -29,13 +31,7 @@ export function EmptyState({
   body: string;
   action?: ReactNode;
 }) {
-  return (
-    <div className="bg-card p-6">
-      <h2 className="text-[length:var(--text-20)] font-semibold">{title}</h2>
-      <p className="mt-2 max-w-prose text-sm text-muted-foreground">{body}</p>
-      {action ? <div className="mt-4">{action}</div> : null}
-    </div>
-  );
+  return <KitEmptyState title={title} body={body || undefined} action={action} />;
 }
 
 export function ErrorState({

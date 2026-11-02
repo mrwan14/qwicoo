@@ -1,11 +1,11 @@
 "use client";
 
+import { Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ops/kit/button";
+import { Field, Input } from "@/components/ops/kit/field";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { authCopy } from "@/lib/i18n/staff/auth";
@@ -72,44 +72,45 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="grid gap-4">
-      <div className="grid gap-2">
-        <Label htmlFor="email">{t.shared.email}</Label>
+      <Field label={t.shared.email}>
         <Input
-          id="email"
+          icon={Mail}
           name="email"
           type="email"
           autoComplete="username"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="h-11"
+          className="[&_input]:h-[46px]"
         />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="password">{t.shared.password}</Label>
+      </Field>
+      <Field label={t.shared.password}>
         <Input
-          id="password"
+          icon={Lock}
           name="password"
           type="password"
           autoComplete="current-password"
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="h-11"
+          className="[&_input]:h-[46px]"
         />
-      </div>
+      </Field>
       <div className="flex justify-end">
-        <Link href="/forgot-password" className="text-sm font-medium underline underline-offset-4">
+        <Link
+          href="/forgot-password"
+          className="rounded-staff text-[13px] font-medium text-ink underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        >
           {t.login.forgot}
         </Link>
       </div>
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-danger">
           {error}
           {waitMs > 0 ? ` ${fill(t.login.retryIn, { seconds: Math.ceil(waitMs / 1000) })}` : null}
         </p>
       ) : null}
-      <Button type="submit" className="min-h-11" disabled={pending || waitMs > 0}>
+      <Button type="submit" className="w-full" disabled={pending || waitMs > 0}>
         {pending ? t.login.pending : t.login.submit}
       </Button>
     </form>

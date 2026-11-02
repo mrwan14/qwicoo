@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ScreenTitle } from "@/components/ops/page-header";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
@@ -74,8 +75,8 @@ export function CustomersScreen() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.hint}</p>
+        <ScreenTitle>{t.title}</ScreenTitle>
+        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.hint}</p>
       </div>
       {isSuper ? (
         <label className="grid max-w-md gap-1 text-sm">
@@ -109,14 +110,14 @@ export function CustomersScreen() {
           {customers.data && customers.data.length > 0 ? (
             <ul className="grid gap-2">
               {customers.data.map((customer) => (
-                <li key={customer.customer_id} className="grid gap-1 border bg-card p-3 text-sm">
+                <li key={customer.customer_id} className="grid gap-1 border bg-canvas p-3 text-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-medium">{customer.full_name}</p>
                     <StatusChip tone={customer.status === "blocked" ? "soldout" : "available"}>
                       {customer.status === "blocked" ? t.blocked : t.active}
                     </StatusChip>
                   </div>
-                  <p className="text-muted-foreground">{customer.email} · {customer.phone}</p>
+                  <p className="text-ink-secondary">{customer.email} · {customer.phone}</p>
                   <p className="tabular-nums">{fill(t.orders, { count: customer.order_count })}{customer.last_order_at ? ` · ${formatCairoDateTime(customer.last_order_at, locale)}` : ""}</p>
                   <button
                     type="button"

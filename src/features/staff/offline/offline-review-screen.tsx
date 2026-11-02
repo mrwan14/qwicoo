@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ScreenTitle } from "@/components/ops/page-header";
 import { Money } from "@/components/ops/money";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { StatusChip } from "@/components/ops/status-chip";
@@ -46,8 +47,8 @@ export function OfflineReviewScreen() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-1">
-        <h1 className="text-[length:var(--text-28)] font-semibold">{t.title}</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t.intro}</p>
+        <ScreenTitle>{t.title}</ScreenTitle>
+        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.intro}</p>
       </div>
       <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label={t.tabsAria}>
         {REVIEW_STATES.map((item) => (
@@ -133,20 +134,20 @@ function ReviewCard({ order }: { order: ReviewOrder }) {
     : order.status === "CANCELLED" ? t.cancelled : t.notPaid;
 
   return (
-    <article className="grid gap-3 rounded-2xl bg-card p-4 shadow-elev-1 ring-1 ring-foreground/5">
+    <article className="grid gap-3 rounded-staff bg-canvas p-4 border border-border">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="grid gap-0.5">
           <span className="text-lg font-semibold tabular-nums">
-            {place} <span className="text-sm font-normal text-muted-foreground">{wasLabel}</span>
+            {place} <span className="text-sm font-normal text-ink-secondary">{wasLabel}</span>
           </span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-ink-secondary">
             {fill(t.soldSynced, { sold: when(order.offline_created_at, locale), synced: when(order.offline_synced_at, locale) })}
           </span>
         </div>
         <StatusChip tone={pending ? "ordered" : order.reviewed_at ? "available" : "neutral"}>{pending ? t.needsReview : order.reviewed_at ? t.reviewed : t.noFlags}</StatusChip>
       </div>
       {order.review_reasons.length ? (
-        <ul className="grid gap-1 rounded-xl bg-secondary px-3 py-2 text-sm">
+        <ul className="grid gap-1 rounded-staff bg-secondary px-3 py-2 text-sm">
           {order.review_reasons.map((reason, index) => (
             <li key={index}>• {reasonLabel(reason, locale)}</li>
           ))}
@@ -157,10 +158,10 @@ function ReviewCard({ order }: { order: ReviewOrder }) {
           <li key={line.order_item_id} className="flex items-center justify-between gap-2">
             <span>{line.quantity} × {line.name}</span>
             {mode === "adjust" ? (
-              <label className="flex items-center gap-1 text-xs text-muted-foreground">
+              <label className="flex items-center gap-1 text-xs text-ink-secondary">
                 {t.unitPrice}
                 <input
-                  className="h-10 w-24 rounded-lg border bg-background px-2 text-end text-sm tabular-nums text-foreground"
+                  className="h-10 w-24 rounded-staff border bg-background px-2 text-end text-sm tabular-nums text-foreground"
                   inputMode="decimal"
                   value={prices[line.order_item_id] ?? ""}
                   onChange={(event) => setPrices((current) => ({ ...current, [line.order_item_id]: event.target.value }))}
@@ -178,15 +179,15 @@ function ReviewCard({ order }: { order: ReviewOrder }) {
         </span>
         <Money amount={String(order.total_amount)} />
       </p>
-      <p className="text-xs text-muted-foreground">{fill(t.device, { device: order.offline_device_id ?? t.unknownDevice, status: orderStatusLabel(order.status, locale) })}</p>
-      {order.reviewed_at ? <p className="text-sm text-muted-foreground">{fill(t.reviewedWhen, { when: when(order.reviewed_at, locale) })}{order.review_note ? ` · “${order.review_note}”` : ""}</p> : null}
+      <p className="text-xs text-ink-secondary">{fill(t.device, { device: order.offline_device_id ?? t.unknownDevice, status: orderStatusLabel(order.status, locale) })}</p>
+      {order.reviewed_at ? <p className="text-sm text-ink-secondary">{fill(t.reviewedWhen, { when: when(order.reviewed_at, locale) })}{order.review_note ? ` · “${order.review_note}”` : ""}</p> : null}
 
       {pending && mode === "view" ? (
         <div className="flex gap-2">
-          <button type="button" className="min-h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onClick={() => setMode("approve")}>
+          <button type="button" className="min-h-11 flex-1 rounded-staff bg-primary text-sm font-medium text-primary-foreground" onClick={() => setMode("approve")}>
             {t.approve}
           </button>
-          <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm" onClick={() => setMode("adjust")}>
+          <button type="button" className="min-h-11 flex-1 rounded-staff border text-sm" onClick={() => setMode("adjust")}>
             {t.adjustPrices}
           </button>
         </div>
@@ -202,21 +203,21 @@ function ReviewCard({ order }: { order: ReviewOrder }) {
         >
           <label className="grid gap-1 text-sm">
             {mode === "approve" ? t.noteOptional : t.whyChange}
-            <span className="text-sm leading-6 text-muted-foreground">
+            <span className="text-sm leading-6 text-ink-secondary">
               {mode === "approve" ? t.approveHint : t.adjustHint}
             </span>
-            <input className="h-11 rounded-lg border bg-background px-3" value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} />
+            <input className="h-11 rounded-staff border bg-background px-3" value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} />
           </label>
-          {mode === "adjust" && priceInvalid ? <p className="text-sm text-destructive">{t.priceInvalid}</p> : null}
+          {mode === "adjust" && priceInvalid ? <p className="text-sm text-danger">{t.priceInvalid}</p> : null}
           <div className="flex gap-2">
             <button
               type="submit"
-              className="min-h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
+              className="min-h-11 flex-1 rounded-staff bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
               disabled={approve.isPending || adjust.isPending || (mode === "adjust" && (note.trim().length < 3 || priceInvalid))}
             >
               {mode === "approve" ? t.approveSale : t.savePrices}
             </button>
-            <button type="button" className="min-h-11 flex-1 rounded-lg border text-sm" onClick={() => setMode("view")}>
+            <button type="button" className="min-h-11 flex-1 rounded-staff border text-sm" onClick={() => setMode("view")}>
               {t.back}
             </button>
           </div>

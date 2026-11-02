@@ -43,17 +43,17 @@ export function Receipt({
   return (
     <div
       dir={dir}
-      className={`w-[72mm] max-w-full border bg-card p-3 text-sm ${locale === "ar" ? "font-[family-name:var(--font-arabic)]" : ""}`}
+      className={`w-[72mm] max-w-full border bg-canvas p-3 text-sm ${locale === "ar" ? "font-[family-name:var(--font-arabic)]" : ""}`}
     >
       <p className="text-base font-semibold">{receipt.brand_name || receipt.branch_name || "Qwicoo"}</p>
       {receipt.branch_name ? <p>{receipt.branch_name}</p> : null}
-      {receipt.branch_address ? <p className="text-muted-foreground">{receipt.branch_address}</p> : null}
+      {receipt.branch_address ? <p className="text-ink-secondary">{receipt.branch_address}</p> : null}
       {receipt.branch_phone ? (
-        <p className="text-muted-foreground" dir="ltr">
+        <p className="text-ink-secondary" dir="ltr">
           {receipt.branch_phone}
         </p>
       ) : null}
-      <div className="mt-2 grid gap-0.5 border-t border-dashed pt-2 text-muted-foreground">
+      <div className="mt-2 grid gap-0.5 border-t border-dashed pt-2 text-ink-secondary">
         <p className="flex justify-between gap-2">
           <span>{labels.receipt}</span>
           <span dir="ltr">{receipt.receipt_number}</span>
@@ -112,7 +112,7 @@ export function Receipt({
       <div className="mt-2 grid gap-0.5 border-t border-dashed pt-2">
         {payments.length > 0 ? (
           payments.map((payment, index) => (
-            <p key={`${payment.method}-${index}`} className="flex justify-between gap-2 text-muted-foreground">
+            <p key={`${payment.method}-${index}`} className="flex justify-between gap-2 text-ink-secondary">
               <span>
                 {receiptPaymentCaption(payment, locale)}
               </span>
@@ -120,10 +120,10 @@ export function Receipt({
             </p>
           ))
         ) : (
-          <p className="text-muted-foreground">{receipt.is_paid ? labels.paid : labels.unpaid}</p>
+          <p className="text-ink-secondary">{receipt.is_paid ? labels.paid : labels.unpaid}</p>
         )}
       </div>
-      <p className="mt-2 text-muted-foreground">{labels.thanks}</p>
+      <p className="mt-2 text-ink-secondary">{labels.thanks}</p>
     </div>
   );
 }

@@ -79,12 +79,17 @@ export function foodCostTone(pct: number | null): "good" | "watch" | "high" | "n
 }
 
 /**
- * A supplier pack's price for one of the order line's unit. `lastPrice` buys one pack of
- * `packSize` pack units; `factor` is how many pack units make one line unit.
+ * A supplier's price for one of the order line's unit. `lastPrice` is per one pack unit (receiving
+ * an order writes the unit price paid into it); `factor` is how many pack units make one line unit.
  */
-export function packPricePerUnit(lastPrice: string, packSize: string, factor: number | null): string | null {
-  const size = Number(packSize) > 0 ? Number(packSize) : 1;
-  const perPackUnit = Number(lastPrice) / size;
-  if (factor == null || !Number.isFinite(perPackUnit)) return null;
-  return (Math.round(perPackUnit * factor * 100) / 100).toFixed(2);
+export function packPricePerUnit(lastPrice: string, factor: number | null): string | null {
+  const price = Number(lastPrice);
+  if (factor == null || !Number.isFinite(price)) return null;
+  return (Math.round(price * factor * 100) / 100).toFixed(2);
+}
+
+/** The recipe cost API answers for the whole yield; this is one portion of it. */
+export function perPortion(cost: string | number, portions: string | number | null | undefined): number {
+  const count = Number(portions);
+  return Number(cost) / (count > 0 ? count : 1);
 }

@@ -26,7 +26,7 @@ import { useScope } from "@/stores/scope";
 
 import { canWriteCatalogue } from "./access";
 import { InventoryFrame, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
-import { foodCostPct, foodCostTone } from "./easy";
+import { foodCostPct, foodCostTone, perPortion } from "./easy";
 import { formatQty } from "./qty";
 import { FoodCostBar, RecipePanel, type RecipeTarget, type TargetKind } from "./recipe-panel";
 import { untrackedMenu } from "./untracked";
@@ -34,7 +34,8 @@ import { untrackedMenu } from "./untracked";
 type Recipe = components["schemas"]["RecipeResponse"];
 type Cost = components["schemas"]["RecipeCostResponse"];
 type Sort = "cost" | "name";
-type Row = { recipe: Recipe; name: string; detail: string; cost: Cost | undefined; loading: boolean; pct: number | null };
+/** plate: cost of one portion; the API's cost is for the whole recipe yield. */
+type Row = { recipe: Recipe; name: string; detail: string; cost: Cost | undefined; plate: number | null; loading: boolean; pct: number | null };
 
 const KINDS: TargetKind[] = ["MENU_ITEM", "MODIFIER_OPTION", "PREP"];
 
@@ -143,11 +144,15 @@ export function RecipesScreen() {
       name = prep ? pickLocale(prep.name, locale) : "";
       detail = prep?.category ?? "";
     }
-    return { recipe, name, detail, cost, loading: costs[index]?.isLoading ?? false, pct: cost ? foodCostPct(cost.cost, cost.price) : null };
+    const plate = cost ? perPortion(cost.cost, cost.portions || recipe.yield_qty) : null;
+    return { recipe, name, detail, cost, plate, loading: costs[index]?.isLoading ?? false, pct: plate != null && cost ? foodCostPct(plate, cost.price) : null };
   });
 
+  // Recipes can't be deleted, so a prep item that's switched off hides its recipe instead.
+  const inactivePrep = new Set((ingredients.data ?? []).filter((item) => !item.is_active).map((item) => item.id));
+  const shown = rows.filter((row) => !(row.recipe.target_type === "PREP" && inactivePrep.has(row.recipe.prep_ingredient_id ?? "")));
   const needle = query.trim().toLowerCase();
-  const visible = rows
+  const visible = shown
     .filter((row) => row.recipe.target_type === kind)
     .filter((row) => !needle || row.name.toLowerCase().includes(needle) || row.detail.toLowerCase().includes(needle))
     .sort((a, b) => (sort === "cost" ? (b.pct ?? -1) - (a.pct ?? -1) : a.name.localeCompare(b.name, locale)));
@@ -179,7 +184,7 @@ export function RecipesScreen() {
       },
     },
     { key: "price", header: t.rx.price, align: "end", cell: (row) => <Figure loading={row.loading} value={row.cost?.price != null ? money(row.cost.price) : t.rx.noPrice} muted={row.cost?.price == null} /> },
-    { key: "costs", header: t.rx.costs, align: "end", cell: (row) => <Figure loading={row.loading} value={row.cost ? money(row.cost.cost) : "—"} /> },
+    { key: "costs", header: t.rx.costs, align: "end", cell: (row) => <Figure loading={row.loading} value={row.cost ? money(row.recipe.target_type === "PREP" ? row.cost.cost : (row.plate ?? 0)) : "—"} /> },
     { key: "food", header: t.rx.foodCost, width: 180, cell: (row) => (row.loading ? <span className="text-ink-secondary">…</span> : <FoodCostBar pct={row.pct} />) },
     {
       key: "keep",
@@ -187,7 +192,7 @@ export function RecipesScreen() {
       align: "end",
       cell: (row) => {
         const price = Number(row.cost?.price);
-        const cost = Number(row.cost?.cost);
+        const cost = row.plate ?? Number.NaN;
         if (!row.cost || row.cost.price == null || !Number.isFinite(price)) return <span className="text-ink-secondary">—</span>;
         return <span className="font-medium tabular-nums">{money(price - cost)}</span>;
       },
@@ -250,7 +255,7 @@ export function RecipesScreen() {
               onValueChange={setKind}
               items={KINDS.map((value) => ({
                 value,
-                label: `${t.rx.kinds[value]} · ${formatQty(rows.filter((row) => row.recipe.target_type === value).length, locale)}`,
+                label: `${t.rx.kinds[value]} · ${formatQty(shown.filter((row) => row.recipe.target_type === value).length, locale)}`,
               }))}
             />
             <Input icon={Search} type="search" className="min-w-0 flex-1 basis-48" aria-label={t.rx.search} placeholder={t.rx.search} value={query} onChange={(event) => setQuery(event.target.value)} />

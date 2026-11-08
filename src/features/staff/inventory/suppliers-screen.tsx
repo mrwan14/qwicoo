@@ -4,14 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Money } from "@/components/ops/money";
 import { PageHeader } from "@/components/ops/page-header";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { asApiError } from "@/lib/api/error";
+import { formatMoney } from "@/lib/format/money";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
@@ -308,9 +309,9 @@ function Packs({
           <div key={pack.id} className="grid gap-1 border-b py-2 text-sm">
             <div className="flex items-center justify-between gap-2">
               <span>{ingredient ? pickLocale(ingredient.name, locale) : pack.ingredient_sku ?? pack.ingredient_id.slice(0, 8)}</span>
-              <Money amount={pack.last_price} currency={currency} />
+              <span className="tabular-nums">{fill(t.suppliers.pricePer, { amount: formatMoney(pack.last_price, currency, locale), unit: unit ? pickLocale(unit.name, locale) : "" })}</span>
             </div>
-            <span className="text-ink-secondary">{formatQty(pack.pack_size, locale)} {unit ? pickLocale(unit.name, locale) : ""}</span>
+            <span className="text-ink-secondary">{fill(t.suppliers.packOf, { qty: formatQty(pack.pack_size, locale), unit: unit ? pickLocale(unit.name, locale) : "" })}</span>
             {canWrite ? (
               <div className="flex gap-2">
                 <button type="button" className={secondaryButton} onClick={() => setEditing(pack.id)}>{t.suppliers.edit}</button>

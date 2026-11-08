@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { autoSku, foodCostPct, foodCostTone, needsAttention, packPricePerUnit, suggestedOrder, unitsFor, validAmount } from "./easy.ts";
+import { autoSku, foodCostPct, foodCostTone, needsAttention, packPricePerUnit, perPortion, suggestedOrder, unitsFor, validAmount } from "./easy.ts";
 
 const row = (status: "ok" | "low" | "out" | "negative", on_hand = "0", par_level = "10", reorder_level = "4") => ({ status, on_hand, par_level, reorder_level });
 
@@ -48,12 +48,17 @@ test("food cost is the share of the price, judged against 35%", () => {
   assert.equal(foodCostTone(null), "none");
 });
 
-test("a pack price becomes a price for one of the line's unit", () => {
-  // 12 pieces for 120 → 10 per piece; ordered by the box of 50 pieces → 500 per box.
-  assert.equal(packPricePerUnit("120", "12", 1), "10.00");
-  assert.equal(packPricePerUnit("120", "12", 50), "500.00");
-  // 0.05 per millilitre, ordered in litres.
-  assert.equal(packPricePerUnit("0.05", "1", 1000), "50.00");
-  assert.equal(packPricePerUnit("120", "0", 1), "120.00");
-  assert.equal(packPricePerUnit("120", "12", null), null);
+test("a supplier's unit price becomes a price for one of the line's unit", () => {
+  // 0.45 per gram, ordered in kilograms.
+  assert.equal(packPricePerUnit("0.45", 1000), "450.00");
+  // 10 per piece, ordered by the box of 50.
+  assert.equal(packPricePerUnit("10", 50), "500.00");
+  assert.equal(packPricePerUnit("10", 1), "10.00");
+  assert.equal(packPricePerUnit("10", null), null);
+});
+
+test("a recipe's cost is split over the portions it makes", () => {
+  assert.equal(perPortion("87.762", "500"), 0.175524);
+  assert.equal(perPortion("27.19", "1.0000"), 27.19);
+  assert.equal(perPortion("10", "0"), 10);
 });

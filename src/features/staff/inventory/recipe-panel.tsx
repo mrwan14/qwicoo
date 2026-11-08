@@ -20,7 +20,7 @@ import { pickLocale } from "@/lib/i18n/locale-text";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 
-import { foodCostPct, foodCostTone, unitsFor, validAmount } from "./easy";
+import { foodCostPct, foodCostTone, perPortion, unitsFor, validAmount } from "./easy";
 import { formatQty } from "./qty";
 import { convertQty, type ConversionEdge } from "./units";
 
@@ -77,7 +77,7 @@ export function RecipePanel({
   warehouseId: string;
   currency: string;
   /** The saved recipe's cost from the server, shown until the recipe is changed. */
-  serverCost?: { cost: string; price: string | null } | null;
+  serverCost?: { cost: string; price: string | null; portions: string } | null;
   /** Dishes, add-ons and prep items that already have a recipe; a new recipe can't pick them. */
   taken?: ReadonlySet<string>;
   canWrite: boolean;
@@ -196,7 +196,8 @@ export function RecipePanel({
   const portions = Number(yieldQty) > 0 ? Number(yieldQty) : 1;
   const priced = checked.filter((row) => row.cost != null);
   const estimated = priced.length ? priced.reduce((sum, row) => sum + (row.cost ?? 0), 0) / portions : null;
-  const exact = recipe && !dirty && serverCost ? Number(serverCost.cost) : null;
+  // The API's cost is for the whole yield; the footer shows one portion like the estimate does.
+  const exact = recipe && !dirty && serverCost ? perPortion(serverCost.cost, serverCost.portions || recipe.yield_qty) : null;
   const estimate = exact ?? estimated;
   const pct = estimate != null && price != null ? foodCostPct(estimate, price) : null;
   const yieldOk = validAmount(yieldQty);

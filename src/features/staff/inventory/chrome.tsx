@@ -207,7 +207,7 @@ export function InventoryFrame({ page, children }: { page: InventoryPage; childr
         <Tabs
           label={t.hub.tabsLabel}
           value={place.tab}
-          className="min-w-0 flex-1"
+          className="min-w-0 flex-1 basis-full md:basis-auto"
           items={tabs.map((entry) => ({ value: entry.tab, label: t.hub.tabs[entry.tab], href: INVENTORY_HREFS[entry.views[0]] }))}
         />
         <ViewSwitch views={views} page={page} />

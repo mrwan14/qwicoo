@@ -283,6 +283,8 @@ export function StockScreen() {
           warehouseId={selected}
           units={unitsFor(units.data ?? [], edges, row.ingredient_id, byIngredient.get(row.ingredient_id)?.base_unit_id)}
           unitLabel={unitLabel(row)}
+          edges={edges}
+          baseUnitId={byIngredient.get(row.ingredient_id)?.base_unit_id}
           canAdjust={canAdjust}
           canWaste={canWaste}
           canOrder={canOrder}
@@ -401,6 +403,8 @@ function StockItemPanel({
   warehouseId,
   units,
   unitLabel,
+  edges,
+  baseUnitId,
   canAdjust,
   canWaste,
   canOrder,
@@ -412,6 +416,8 @@ function StockItemPanel({
   warehouseId: string;
   units: Unit[];
   unitLabel: string;
+  edges: ConversionEdge[];
+  baseUnitId: string | undefined;
   canAdjust: boolean;
   canWaste: boolean;
   canOrder: boolean;
@@ -436,6 +442,9 @@ function StockItemPanel({
   const chosenLabel = chosenUnit ? pickLocale(chosenUnit.name, locale) : unitLabel;
   const presets = mode === "add" ? t.easy.reasonsAdd : t.easy.reasonsRemove;
   const reasonText = reason.trim();
+  // Taking out more than is here is allowed (stock can be wrong), but say so before saving.
+  const outBase = amountOk && mode !== "add" && baseUnitId ? convertQty(qty, edges, row.ingredient_id, unitId, baseUnitId) : null;
+  const overdraw = outBase != null && outBase > Math.max(Number(row.on_hand), 0);
   const ready = amountOk && (mode === "waste" ? wasteReason !== "OTHER" || note.trim().length > 0 : reasonText.length > 0);
 
   const save = useMutation({
@@ -542,7 +551,7 @@ function StockItemPanel({
 
           <Field
             label={mode === "add" ? t.easy.howMuchAdd : mode === "remove" ? t.easy.howMuchRemove : t.easy.howMuchWaste}
-            error={qty.trim() && !amountOk ? t.easy.enterAmount : undefined}
+            error={qty.trim() && !amountOk ? t.easy.enterAmount : overdraw ? fill(t.easy.overOnHand, { qty: formatQty(Math.max(Number(row.on_hand), 0), locale), unit: unitLabel }) : undefined}
           >
             <div className="flex gap-2">
               <Input

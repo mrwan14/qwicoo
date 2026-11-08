@@ -384,6 +384,17 @@ export function WarehouseSelect({
   );
 }
 
+/**
+ * Forms opened from a link (?new=1, ?ingredient=) drop the query once closed, so a refresh or
+ * Back doesn't open them again.
+ */
+export function useClearLink() {
+  const router = useRouter();
+  return () => {
+    if (window.location.search) router.replace(window.location.pathname, { scroll: false });
+  };
+}
+
 export function useStaffNames() {
   const me = useStaffSession();
   const branchId = useScope((state) => state.branchId);

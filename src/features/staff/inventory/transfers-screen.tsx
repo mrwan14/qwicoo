@@ -32,6 +32,7 @@ import {
   useBrandWarehouses,
   useWarehouses,
   WarehouseSelect,
+  useClearLink,
 } from "./chrome";
 import { MoveStockPanel } from "./move-panel";
 import { formatQty } from "./qty";
@@ -54,7 +55,8 @@ export function TransfersScreen() {
   const [direction, setDirection] = useState<"from" | "to" | "brand">(canApprove ? "brand" : "from");
   const [status, setStatus] = useState("");
   const [offset, setOffset] = useState(0);
-  const [selected, setSelected] = useState<string | "new" | null>(preset ? "new" : null);
+  const [selected, setSelected] = useState<string | "new" | null>(preset && canWrite ? "new" : null);
+  const clearLink = useClearLink();
   const selectedWarehouse = warehouseId || warehouses.data?.[0]?.id || "";
   const transfers = useQuery({
     queryKey: ["inventory", "transfers", direction, selectedWarehouse, brandId, status, offset],
@@ -150,7 +152,10 @@ export function TransfersScreen() {
           presetIngredient={preset}
           canWrite={canWrite}
           canApprove={canApprove}
-          onClose={() => setSelected(null)}
+          onClose={() => {
+            setSelected(null);
+            clearLink();
+          }}
         />
       ) : null}
     </InventoryFrame>

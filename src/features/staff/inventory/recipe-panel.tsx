@@ -64,6 +64,7 @@ export function RecipePanel({
   warehouseId,
   currency,
   serverCost,
+  taken,
   canWrite,
   onClose,
 }: {
@@ -77,6 +78,8 @@ export function RecipePanel({
   currency: string;
   /** The saved recipe's cost from the server, shown until the recipe is changed. */
   serverCost?: { cost: string; price: string | null } | null;
+  /** Dishes, add-ons and prep items that already have a recipe; a new recipe can't pick them. */
+  taken?: ReadonlySet<string>;
   canWrite: boolean;
   onClose: () => void;
 }) {
@@ -303,176 +306,182 @@ export function RecipePanel({
         </div>
       }
     >
-      {!fixedTarget ? (
-        <div className="grid gap-3">
-          <span className="text-sm font-semibold text-ink">{t.rx.forWhat}</span>
-          <SegmentedControl<TargetKind>
-            label={t.rx.forWhat}
-            value={kind}
-            className="w-full [&>button]:flex-1 [&>button]:justify-center"
-            onValueChange={(next) => {
-              setKind(next);
-              setTargetId("");
-            }}
-            items={(["MENU_ITEM", "MODIFIER_OPTION", "PREP"] as const).map((value) => ({ value, label: t.rx.kinds[value] }))}
-          />
-          {kind === "PREP" && choices.length === 0 ? (
-            <p className="rounded-staff bg-subtle px-3 py-2.5 text-sm text-ink-secondary">{t.rx.noPrepItems}</p>
-          ) : (
-            <Select value={targetId} aria-label={t.rx.forWhat} aria-invalid={tried && !targetId ? true : undefined} onChange={(event) => setTargetId(event.target.value)}>
-              <option value="">{kind === "MENU_ITEM" ? t.rx.pickDish : kind === "MODIFIER_OPTION" ? t.rx.pickAddon : t.rx.pickPrep}</option>
-              {choices.map((choice) => (
-                <option key={choice.id} value={choice.id}>
-                  {choice.label}
-                </option>
-              ))}
-            </Select>
-          )}
-        </div>
-      ) : null}
+      {/* Read-only roles can look at a recipe but every field stays locked. */}
+      <fieldset disabled={!canWrite} className="grid min-w-0 gap-5">
+        {!fixedTarget ? (
+          <div className="grid gap-3">
+            <span className="text-sm font-semibold text-ink">{t.rx.forWhat}</span>
+            <SegmentedControl<TargetKind>
+              label={t.rx.forWhat}
+              value={kind}
+              className="w-full [&>button]:flex-1 [&>button]:justify-center"
+              onValueChange={(next) => {
+                setKind(next);
+                setTargetId("");
+              }}
+              items={(["MENU_ITEM", "MODIFIER_OPTION", "PREP"] as const).map((value) => ({ value, label: t.rx.kinds[value] }))}
+            />
+            {kind === "PREP" && choices.length === 0 ? (
+              <p className="rounded-staff bg-subtle px-3 py-2.5 text-sm text-ink-secondary">{t.rx.noPrepItems}</p>
+            ) : (
+              <Select value={targetId} aria-label={t.rx.forWhat} aria-invalid={tried && !targetId ? true : undefined} onChange={(event) => setTargetId(event.target.value)}>
+                <option value="">{kind === "MENU_ITEM" ? t.rx.pickDish : kind === "MODIFIER_OPTION" ? t.rx.pickAddon : t.rx.pickPrep}</option>
+                {choices.map((choice) => {
+                  const done = taken?.has(choice.id) ?? false;
+                  return (
+                    <option key={choice.id} value={choice.id} disabled={done}>
+                      {done ? fill(t.rx.hasRecipe, { name: choice.label }) : choice.label}
+                    </option>
+                  );
+                })}
+              </Select>
+            )}
+          </div>
+        ) : null}
 
-      <PanelSection
-        title={`${t.rx.ingredientsTitle} · ${lines.length}`}
-        hint={fill(t.rx.ingredientsHint, {
-          portion: kind === "PREP" ? t.rx.batch : t.rx.portion,
-        })}
-      >
-        <ul className="grid gap-3">
-          {checked.map(({ line, ingredient, unitId, duplicate, amountOk, wasteOk, cost }) => {
-            const choicesForUnit = ingredient ? unitsFor(units.data ?? [], edges, ingredient.id, ingredient.base_unit_id) : [];
-            const qtyBad = (tried || line.qty.trim().length > 0) && !amountOk;
-            return (
-              <li key={line.key} className="grid gap-2 rounded-staff border border-border bg-canvas p-3">
-                <div className="flex items-start gap-2">
-                  <Select
-                    className="min-w-0 flex-1"
-                    aria-label={t.rx.pickIngredient}
-                    aria-invalid={(tried && !ingredient) || duplicate ? true : undefined}
-                    value={line.ingredientId}
-                    onChange={(event) =>
-                      update(line.key, {
-                        ingredientId: event.target.value,
-                        unitId: "",
-                      })
-                    }
-                  >
-                    <option value="">{t.rx.pickIngredient}</option>
-                    {ingredients.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {pickLocale(item.name, locale)}
-                      </option>
-                    ))}
-                  </Select>
-                  {lines.length > 1 && canWrite ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={t.rx.removeIngredient}
-                      onClick={() => {
-                        setDirty(true);
-                        setLines((current) => current.filter((item) => item.key !== line.key));
-                      }}
+        <PanelSection
+          title={`${t.rx.ingredientsTitle} · ${lines.length}`}
+          hint={fill(t.rx.ingredientsHint, {
+            portion: kind === "PREP" ? t.rx.batch : t.rx.portion,
+          })}
+        >
+          <ul className="grid gap-3">
+            {checked.map(({ line, ingredient, unitId, duplicate, amountOk, wasteOk, cost }) => {
+              const choicesForUnit = ingredient ? unitsFor(units.data ?? [], edges, ingredient.id, ingredient.base_unit_id) : [];
+              const qtyBad = (tried || line.qty.trim().length > 0) && !amountOk;
+              return (
+                <li key={line.key} className="grid gap-2 rounded-staff border border-border bg-canvas p-3">
+                  <div className="flex items-start gap-2">
+                    <Select
+                      className="min-w-0 flex-1"
+                      aria-label={t.rx.pickIngredient}
+                      aria-invalid={(tried && !ingredient) || duplicate ? true : undefined}
+                      value={line.ingredientId}
+                      onChange={(event) =>
+                        update(line.key, {
+                          ingredientId: event.target.value,
+                          unitId: "",
+                        })
+                      }
                     >
-                      <X aria-hidden />
-                    </Button>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    inputMode="decimal"
-                    className="w-28 tabular-nums"
-                    aria-label={t.quantity}
-                    placeholder={t.quantity}
-                    aria-invalid={qtyBad ? true : undefined}
-                    value={line.qty}
-                    onChange={(event) =>
-                      update(line.key, {
-                        qty: event.target.value.replace(/[^\d.]/g, ""),
-                      })
-                    }
-                  />
-                  {choicesForUnit.length > 1 ? (
-                    <Select className="w-32" aria-label={t.unit} value={unitId} onChange={(event) => update(line.key, { unitId: event.target.value })}>
-                      {choicesForUnit.map((unit) => (
-                        <option key={unit.id} value={unit.id}>
-                          {pickLocale(unit.name, locale)}
+                      <option value="">{t.rx.pickIngredient}</option>
+                      {ingredients.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {pickLocale(item.name, locale)}
                         </option>
                       ))}
                     </Select>
-                  ) : (
-                    <span className="inline-flex h-[42px] min-w-16 items-center justify-center rounded-staff bg-subtle px-3 text-sm text-ink-secondary">
-                      {unitName(unitId) || t.unit}
-                    </span>
-                  )}
-                  <span className="ms-auto text-sm tabular-nums text-ink-secondary">{cost != null ? money(cost) : ""}</span>
-                </div>
-                {duplicate ? <p className="text-xs text-danger">{t.rx.duplicateLine}</p> : qtyBad ? <p className="text-xs text-danger">{t.easy.enterAmount}</p> : null}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                  {line.waste !== "" || showWaste.has(line.key) ? (
-                    <label className="inline-flex items-center gap-2 text-ink-secondary">
-                      {t.rx.wasteLabel}
-                      <Input
-                        inputMode="decimal"
-                        className="h-9 w-20 tabular-nums"
-                        placeholder="0"
-                        title={t.rx.wasteHint}
-                        aria-invalid={!wasteOk ? true : undefined}
-                        value={line.waste}
-                        onChange={(event) =>
-                          update(line.key, {
-                            waste: event.target.value.replace(/[^\d.]/g, ""),
-                          })
-                        }
-                      />
-                    </label>
-                  ) : canWrite ? (
-                    <button
-                      type="button"
-                      className="text-[13px] text-ink-secondary underline-offset-4 hover:text-ink hover:underline"
-                      onClick={() => setShowWaste((current) => new Set(current).add(line.key))}
-                    >
-                      + {t.rx.wasteLabel}
-                    </button>
-                  ) : null}
-                  {kind === "MODIFIER_OPTION" ? (
-                    <label className="inline-flex min-w-0 flex-1 items-center gap-2 text-ink-secondary">
-                      {t.rx.insteadOf}
-                      <Select className="min-w-0 flex-1 [&_select]:h-9" value={line.insteadOf} onChange={(event) => update(line.key, { insteadOf: event.target.value })}>
-                        <option value="">{t.rx.insteadOfNone}</option>
-                        {ingredients.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {pickLocale(item.name, locale)}
+                    {lines.length > 1 && canWrite ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={t.rx.removeIngredient}
+                        onClick={() => {
+                          setDirty(true);
+                          setLines((current) => current.filter((item) => item.key !== line.key));
+                        }}
+                      >
+                        <X aria-hidden />
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      inputMode="decimal"
+                      className="w-28 tabular-nums"
+                      aria-label={t.quantity}
+                      placeholder={t.quantity}
+                      aria-invalid={qtyBad ? true : undefined}
+                      value={line.qty}
+                      onChange={(event) =>
+                        update(line.key, {
+                          qty: event.target.value.replace(/[^\d.]/g, ""),
+                        })
+                      }
+                    />
+                    {choicesForUnit.length > 1 ? (
+                      <Select className="w-32" aria-label={t.unit} value={unitId} onChange={(event) => update(line.key, { unitId: event.target.value })}>
+                        {choicesForUnit.map((unit) => (
+                          <option key={unit.id} value={unit.id}>
+                            {pickLocale(unit.name, locale)}
                           </option>
                         ))}
                       </Select>
-                    </label>
-                  ) : null}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        {canWrite ? (
-          <Button variant="secondary" size="field" className="w-fit" onClick={() => setLines((current) => [...current, blank()])}>
-            <Plus aria-hidden />
-            {t.rx.addIngredient}
-          </Button>
-        ) : null}
-      </PanelSection>
+                    ) : (
+                      <span className="inline-flex h-[42px] min-w-16 items-center justify-center rounded-staff bg-subtle px-3 text-sm text-ink-secondary">
+                        {unitName(unitId) || t.unit}
+                      </span>
+                    )}
+                    <span className="ms-auto text-sm tabular-nums text-ink-secondary">{cost != null ? money(cost) : ""}</span>
+                  </div>
+                  {duplicate ? <p className="text-xs text-danger">{t.rx.duplicateLine}</p> : qtyBad ? <p className="text-xs text-danger">{t.easy.enterAmount}</p> : null}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                    {line.waste !== "" || showWaste.has(line.key) ? (
+                      <label className="inline-flex items-center gap-2 text-ink-secondary">
+                        {t.rx.wasteLabel}
+                        <Input
+                          inputMode="decimal"
+                          className="h-9 w-20 tabular-nums"
+                          placeholder="0"
+                          title={t.rx.wasteHint}
+                          aria-invalid={!wasteOk ? true : undefined}
+                          value={line.waste}
+                          onChange={(event) =>
+                            update(line.key, {
+                              waste: event.target.value.replace(/[^\d.]/g, ""),
+                            })
+                          }
+                        />
+                      </label>
+                    ) : canWrite ? (
+                      <button
+                        type="button"
+                        className="text-[13px] text-ink-secondary underline-offset-4 hover:text-ink hover:underline"
+                        onClick={() => setShowWaste((current) => new Set(current).add(line.key))}
+                      >
+                        + {t.rx.wasteLabel}
+                      </button>
+                    ) : null}
+                    {kind === "MODIFIER_OPTION" ? (
+                      <label className="inline-flex min-w-0 flex-1 items-center gap-2 text-ink-secondary">
+                        {t.rx.insteadOf}
+                        <Select className="min-w-0 flex-1 [&_select]:h-9" value={line.insteadOf} onChange={(event) => update(line.key, { insteadOf: event.target.value })}>
+                          <option value="">{t.rx.insteadOfNone}</option>
+                          {ingredients.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {pickLocale(item.name, locale)}
+                            </option>
+                          ))}
+                        </Select>
+                      </label>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {canWrite ? (
+            <Button variant="secondary" size="field" className="w-fit" onClick={() => setLines((current) => [...current, blank()])}>
+              <Plus aria-hidden />
+              {t.rx.addIngredient}
+            </Button>
+          ) : null}
+        </PanelSection>
 
-      <PanelSection title={t.rx.yieldLabel} hint={t.rx.yieldHint}>
-        <Input
-          inputMode="decimal"
-          className="w-28 tabular-nums"
-          aria-label={t.rx.yieldLabel}
-          aria-invalid={!yieldOk ? true : undefined}
-          value={yieldQty}
-          onChange={(event) => {
-            setDirty(true);
-            setYieldQty(event.target.value.replace(/[^\d.]/g, ""));
-          }}
-        />
-      </PanelSection>
+        <PanelSection title={t.rx.yieldLabel} hint={t.rx.yieldHint}>
+          <Input
+            inputMode="decimal"
+            className="w-28 tabular-nums"
+            aria-label={t.rx.yieldLabel}
+            aria-invalid={!yieldOk ? true : undefined}
+            value={yieldQty}
+            onChange={(event) => {
+              setDirty(true);
+              setYieldQty(event.target.value.replace(/[^\d.]/g, ""));
+            }}
+          />
+        </PanelSection>
+      </fieldset>
     </SidePanel>
   );
 }

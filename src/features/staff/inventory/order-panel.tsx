@@ -22,13 +22,14 @@ import { useScope } from "@/stores/scope";
 import { INVENTORY_HREFS, useBranchCurrency, useWarehouses } from "./chrome";
 import { unitsFor, validAmount } from "./easy";
 import { warehouseLabel } from "./transfers";
-import { type ConversionEdge } from "./units";
+import { conversionFactor, type ConversionEdge } from "./units";
 
-type Line = { key: number; ingredientId: string; unitId: string; qty: string; price: string };
+/** autoPrice: the price came from the supplier, so it follows a change of supplier or unit. */
+type Line = { key: number; ingredientId: string; unitId: string; qty: string; price: string; autoPrice: boolean };
 export type OrderPrefill = { suggest: boolean; ingredientId: string; qty: string };
 
 let nextKey = 1;
-const blank = (patch: Partial<Line> = {}): Line => ({ key: nextKey++, ingredientId: "", unitId: "", qty: "", price: "", ...patch });
+const blank = (patch: Partial<Line> = {}): Line => ({ key: nextKey++, ingredientId: "", unitId: "", qty: "", price: "", autoPrice: false, ...patch });
 const PRICE = /^\d+(\.\d{1,2})?$/;
 
 /** A draft purchase order: supplier, then items with amount and price, and a running total. */
@@ -101,17 +102,31 @@ export function NewOrderPanel({ branchId, prefill, onClose }: { branchId: string
   const byIngredient = new Map((ingredients.data ?? []).map((item) => [item.id, item]));
   const packFor = (ingredientId: string) => (packs.data ?? []).find((pack) => pack.ingredient_id === ingredientId);
 
-  // When a supplier is picked, lines without a price take its last price and pack unit.
+  // The supplier's last price, turned into the line's own unit. The amount and unit the
+  // cashier chose are never changed; only the price is suggested.
+  const suggestPrice = (ingredientId: string, unitId: string): string | null => {
+    const pack = packFor(ingredientId);
+    const ingredient = byIngredient.get(ingredientId);
+    if (!pack || !ingredient) return null;
+    const factor = conversionFactor(edges, ingredientId, unitId || ingredient.base_unit_id, pack.pack_unit_id);
+    const price = Number(pack.last_price);
+    if (factor == null || !Number.isFinite(price)) return null;
+    return (Math.round(price * factor * 100) / 100).toFixed(2);
+  };
+  const priced = (line: Line): Line => {
+    if (!line.ingredientId || (line.price && !line.autoPrice)) return line;
+    const price = suggestPrice(line.ingredientId, line.unitId);
+    return { ...line, price: price ?? "", autoPrice: price != null };
+  };
+  // A new supplier re-prices the lines it priced before, and clears prices it can't offer.
   useEffect(() => {
-    if (!packs.data) return;
-    setLines((current) =>
-      current.map((line) => {
-        const pack = packs.data.find((item) => item.ingredient_id === line.ingredientId);
-        if (!pack) return line;
-        return { ...line, unitId: line.unitId || pack.pack_unit_id, price: line.price || (pack.last_price ?? "") };
-      }),
-    );
-  }, [packs.data]);
+    if (supplierId && !packs.data) return;
+    setLines((current) => {
+      const next = current.map(priced);
+      return next.some((line, index) => line.price !== current[index].price || line.autoPrice !== current[index].autoPrice) ? next : current;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-price when the supplier's packs or conversions arrive
+  }, [packs.data, supplierId, edges]);
 
   const fillLow = useMutation({
     mutationFn: async () => {
@@ -126,10 +141,7 @@ export function NewOrderPanel({ branchId, prefill, onClose }: { branchId: string
       }
       setLines((current) => {
         const kept = current.filter((line) => line.ingredientId && !items.some((item) => item.ingredient_id === line.ingredientId));
-        const added = items.map((item) => {
-          const pack = packFor(item.ingredient_id);
-          return blank({ ingredientId: item.ingredient_id, unitId: pack?.pack_unit_id ?? "", qty: String(Number(item.suggested_qty)), price: pack?.last_price ?? "" });
-        });
+        const added = items.map((item) => priced(blank({ ingredientId: item.ingredient_id, qty: String(Number(item.suggested_qty)) })));
         return [...kept, ...added];
       });
     },
@@ -142,13 +154,14 @@ export function NewOrderPanel({ branchId, prefill, onClose }: { branchId: string
     fillLow.mutate();
   }, [prefill.suggest, storeId, fillLow]);
 
-  const checked = lines.map((line) => {
+  const checked = lines.map((line, index) => {
     const ingredient = byIngredient.get(line.ingredientId);
+    const duplicate = Boolean(line.ingredientId) && lines.findIndex((other) => other.ingredientId === line.ingredientId) !== index;
     const unitId = line.unitId || ingredient?.base_unit_id || "";
     const priceOk = PRICE.test(line.price.trim());
-    const complete = Boolean(ingredient) && validAmount(line.qty) && priceOk;
+    const complete = Boolean(ingredient) && validAmount(line.qty) && priceOk && !duplicate;
     const total = complete ? Number(line.qty) * Number(line.price) : 0;
-    return { line, ingredient, unitId, priceOk, complete, total };
+    return { line, ingredient, unitId, priceOk, complete, total, duplicate };
   });
   const filled = checked.filter((row) => row.line.ingredientId || row.line.qty || row.line.price);
   const ready = Boolean(storeId && supplierId) && filled.length > 0 && filled.every((row) => row.complete);
@@ -261,7 +274,7 @@ export function NewOrderPanel({ branchId, prefill, onClose }: { branchId: string
         }
       >
         <ul className="grid gap-3">
-          {checked.map(({ line, ingredient, unitId, priceOk, total: lineTotal }) => {
+          {checked.map(({ line, ingredient, unitId, priceOk, total: lineTotal, duplicate }) => {
             const choices = ingredient ? unitsFor(units.data ?? [], edges, ingredient.id, ingredient.base_unit_id) : [];
             const unitLabel = unitName(unitId);
             const qtyBad = (tried || line.qty.trim().length > 0) && !validAmount(line.qty);
@@ -272,11 +285,11 @@ export function NewOrderPanel({ branchId, prefill, onClose }: { branchId: string
                   <Select
                     className="min-w-0 flex-1"
                     aria-label={t.easy.item}
-                    aria-invalid={tried && !ingredient ? true : undefined}
+                    aria-invalid={(tried && !ingredient) || duplicate ? true : undefined}
                     value={line.ingredientId}
                     onChange={(event) => {
-                      const pack = packFor(event.target.value);
-                      update(line.key, { ingredientId: event.target.value, unitId: pack?.pack_unit_id ?? "", price: pack?.last_price ?? "" });
+                      const next = priced({ ...line, ingredientId: event.target.value, unitId: "", price: "", autoPrice: false });
+                      update(line.key, next);
                     }}
                   >
                     <option value="">{t.easy.movePickItem}</option>
@@ -303,7 +316,7 @@ export function NewOrderPanel({ branchId, prefill, onClose }: { branchId: string
                     onChange={(event) => update(line.key, { qty: event.target.value.replace(/[^\d.]/g, "") })}
                   />
                   {choices.length > 1 ? (
-                    <Select className="w-32" aria-label={t.unit} value={unitId} onChange={(event) => update(line.key, { unitId: event.target.value })}>
+                    <Select className="w-32" aria-label={t.unit} value={unitId} onChange={(event) => update(line.key, line.autoPrice ? priced({ ...line, unitId: event.target.value }) : { unitId: event.target.value })}>
                       {choices.map((unit) => (
                         <option key={unit.id} value={unit.id}>
                           {pickLocale(unit.name, locale)}
@@ -320,10 +333,12 @@ export function NewOrderPanel({ branchId, prefill, onClose }: { branchId: string
                     placeholder={fill(t.easy.pricePer, { unit: unitLabel || t.unit })}
                     aria-invalid={priceBad ? true : undefined}
                     value={line.price}
-                    onChange={(event) => update(line.key, { price: event.target.value.replace(/[^\d.]/g, "") })}
+                    onChange={(event) => update(line.key, { price: event.target.value.replace(/[^\d.]/g, ""), autoPrice: false })}
                   />
                 </div>
-                {qtyBad ? (
+                {duplicate ? (
+                  <p className="text-xs text-danger">{t.easy.moveDuplicate}</p>
+                ) : qtyBad ? (
                   <p className="text-xs text-danger">{t.easy.enterAmount}</p>
                 ) : lineTotal > 0 ? (
                   <p className="text-end text-xs text-ink-secondary tabular-nums">{formatAmount(lineTotal, currency, locale)}</p>

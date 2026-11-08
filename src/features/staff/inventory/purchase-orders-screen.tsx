@@ -22,7 +22,7 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { canWriteStock } from "./access";
-import { control, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency } from "./chrome";
+import { control, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency, useClearLink } from "./chrome";
 import { purchaseCancel } from "./purchasing";
 import { NewOrderPanel, type OrderPrefill } from "./order-panel";
 import { formatQty } from "./qty";
@@ -50,6 +50,7 @@ export function PurchaseOrdersScreen() {
     qty: params.get("qty") ?? "",
   }));
   const [selected, setSelected] = useState<string | "new" | null>(params.get("new") === "1" && canWrite ? "new" : null);
+  const clearLink = useClearLink();
   const orders = useQuery({
     queryKey: ["inventory", "purchase-orders", branchId, status, offset],
     enabled: Boolean(branchId),
@@ -116,7 +117,10 @@ export function PurchaseOrdersScreen() {
         </div>
       ) : null}
       {selected ? (
-        <OrderDrawer key={selected} orderId={selected} branchId={branchId} canWrite={canWrite} currency={currency} prefill={prefill} onClose={() => setSelected(null)} />
+        <OrderDrawer key={selected} orderId={selected} branchId={branchId} canWrite={canWrite} currency={currency} prefill={prefill} onClose={() => {
+            setSelected(null);
+            clearLink();
+          }} />
       ) : null}
     </InventoryFrame>
   );

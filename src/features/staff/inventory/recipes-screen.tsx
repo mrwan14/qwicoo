@@ -321,6 +321,7 @@ export function RecipesScreen() {
           ingredients={ingredients.data ?? []}
           warehouseId={selectedWarehouse}
           currency={currency}
+          taken={new Set(list.filter((recipe) => recipe.is_active).map((recipe) => recipe.menu_item_id ?? recipe.modifier_option_id ?? recipe.prep_ingredient_id ?? ""))}
           serverCost={"brand_id" in editing ? rows.find((row) => row.recipe.id === editing.id)?.cost ?? null : null}
           canWrite={canWrite}
           onClose={() => setEditing(null)}

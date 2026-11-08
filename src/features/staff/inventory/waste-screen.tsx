@@ -17,6 +17,7 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { control, InventoryFrame, primaryButton, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
+import { unitsFor, validAmount } from "./easy";
 import { formatQty } from "./qty";
 
 const REASONS = ["EXPIRED", "SPOILED", "DROPPED", "OVERPRODUCTION", "STAFF_MEAL", "OTHER"] as const;
@@ -53,11 +54,27 @@ export function WasteScreen() {
       return result.data.items;
     },
   });
+  const conversions = useQuery({
+    queryKey: ["inventory", "conversions", brandId],
+    enabled: Boolean(brandId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/conversions", { params: { query: { brand_id: brandId } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data.items;
+    },
+  });
+  // Only the units this item converts to, starting with its own; the item's unit is the default.
+  const ingredient = (ingredients.data ?? []).find((item) => item.id === ingredientId);
+  const edges = (conversions.data ?? []).map((edge) => ({ ingredientId: edge.ingredient_id, fromUnitId: edge.from_unit_id, toUnitId: edge.to_unit_id, factor: edge.factor }));
+  const unitChoices = ingredient ? unitsFor(units.data ?? [], edges, ingredient.id, ingredient.base_unit_id) : [];
+  const chosenUnit = unitChoices.some((unit) => unit.id === unitId) ? unitId : (ingredient?.base_unit_id ?? "");
+  const amountOk = validAmount(qty);
+  const ready = Boolean(selected && ingredient && chosenUnit && amountOk && (reason !== "OTHER" || note.trim()));
   const save = useMutation({
     mutationFn: async () => {
       const result = await browserApi.POST("/api/v1/inventory/warehouses/{warehouse_id}/waste", {
         params: { path: { warehouse_id: selected } },
-        body: { ingredient_id: ingredientId, qty, unit_id: unitId, reason_code: reason, note: note.trim() || null },
+        body: { ingredient_id: ingredientId, qty: qty.trim(), unit_id: chosenUnit, reason_code: reason, note: note.trim() || null },
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, t.loadFailed, locale);
     },
@@ -66,6 +83,7 @@ export function WasteScreen() {
       setQty("");
       setNote("");
       await queryClient.invalidateQueries({ queryKey: ["inventory", "waste", selected] });
+      await queryClient.invalidateQueries({ queryKey: ["inventory", "stock", selected] });
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : t.loadFailed),
   });
@@ -86,20 +104,21 @@ export function WasteScreen() {
         ) : null}
         <label className="grid gap-1 text-sm">
           <span>{t.ingredient}</span>
-          <select className={`${control} h-14 text-base`} value={ingredientId} onChange={(event) => setIngredientId(event.target.value)} required>
+          <select className={`${control} h-14 text-base`} value={ingredientId} onChange={(event) => { setIngredientId(event.target.value); setUnitId(""); }} required>
             <option value="">{t.ingredient}</option>
             {(ingredients.data ?? []).map((item) => <option key={item.id} value={item.id}>{pickLocale(item.name, locale)}</option>)}
           </select>
         </label>
         <label className="grid gap-1 text-sm">
           <span>{t.quantity}</span>
-          <input className={`${control} h-14 text-lg`} inputMode="decimal" value={qty} onChange={(event) => setQty(event.target.value)} required />
+          <input className={`${control} h-14 text-lg`} inputMode="decimal" aria-invalid={qty.trim() && !amountOk ? true : undefined} value={qty} onChange={(event) => setQty(event.target.value.replace(/[^\d.]/g, ""))} required />
+          {qty.trim() && !amountOk ? <span className="text-xs text-danger">{t.easy.enterAmount}</span> : null}
         </label>
         <label className="grid gap-1 text-sm">
           <span>{t.unit}</span>
-          <select className={`${control} h-14 text-base`} value={unitId} onChange={(event) => setUnitId(event.target.value)} required>
-            <option value="">{t.unit}</option>
-            {(units.data ?? []).map((unit) => <option key={unit.id} value={unit.id}>{pickLocale(unit.name, locale)}</option>)}
+          <select className={`${control} h-14 text-base`} value={chosenUnit} disabled={!ingredient} onChange={(event) => setUnitId(event.target.value)} required>
+            {!ingredient ? <option value="">{t.unit}</option> : null}
+            {unitChoices.map((unit) => <option key={unit.id} value={unit.id}>{pickLocale(unit.name, locale)}</option>)}
           </select>
         </label>
         <label className="grid gap-1 text-sm">
@@ -112,7 +131,7 @@ export function WasteScreen() {
           <span>{t.note}</span>
           <input className={`${control} h-14 text-base`} value={note} onChange={(event) => setNote(event.target.value)} required={reason === "OTHER"} />
         </label>
-        <button type="submit" className={`${primaryButton} h-14 text-base`} disabled={save.isPending || !selected}>{t.waste.submit}</button>
+        <button type="submit" className={`${primaryButton} h-14 text-base`} disabled={save.isPending || !ready}>{t.waste.submit}</button>
       </form>
       <WasteHistory warehouseId={selected} currency={currency} ingredients={ingredients.data ?? []} />
     </InventoryFrame>

@@ -22,7 +22,7 @@ import { useScope } from "@/stores/scope";
 
 import { canWriteStock } from "./access";
 import { countReview } from "./counts";
-import { control, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
+import { control, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency, useWarehouses, WarehouseSelect, useClearLink } from "./chrome";
 import { formatQty } from "./qty";
 
 const STATUSES = ["OPEN", "SUBMITTED", "POSTED"] as const;
@@ -40,6 +40,7 @@ export function CountsScreen() {
   const [warehouseId, setWarehouseId] = useState("");
   const [status, setStatus] = useState("");
   const [selected, setSelected] = useState<string | "new" | null>(preset ? "new" : null);
+  const clearLink = useClearLink();
   const selectedWarehouse = warehouseId || warehouses.data?.[0]?.id || "";
   const counts = useQuery({
     queryKey: ["inventory", "counts", selectedWarehouse, status],
@@ -110,7 +111,10 @@ export function CountsScreen() {
           canPost={canPost}
           currency={currency}
           onStarted={(id) => setSelected(id)}
-          onClose={() => setSelected(null)}
+          onClose={() => {
+            setSelected(null);
+            clearLink();
+          }}
         />
       ) : null}
     </InventoryFrame>
@@ -262,11 +266,28 @@ function CountSheet({
   const t = useStaffSection(inventoryCopy);
   const { locale } = useLocale();
   const [qty, setQty] = useState<Record<string, string>>(() => Object.fromEntries(count.lines.map((line) => [line.ingredient_id, line.counted_qty ?? ""])));
+  const [tried, setTried] = useState(false);
+  const brandId = useScope((state) => state.brandId) ?? "";
+  const ingredients = useQuery({
+    queryKey: ["inventory", "ingredients", brandId, "all"],
+    enabled: Boolean(brandId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/inventory/ingredients", { params: { query: { brand_id: brandId, active_only: false } } });
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data.items;
+    },
+  });
+  const nameOf = (id: string, sku: string) => {
+    const item = ingredients.data?.find((entry) => entry.id === id);
+    return item ? pickLocale(item.name, locale) : sku;
+  };
+  // A blank line used to be sent as 0, which wiped that item's stock when the count was posted.
+  const blank = count.lines.filter((line) => !/^\d+(\.\d{1,3})?$/.test((qty[line.ingredient_id] ?? "").trim()));
   const submit = useMutation({
     mutationFn: async () => {
       const result = await browserApi.POST("/api/v1/inventory/counts/{count_id}/submit", {
         params: { path: { count_id: count.id } },
-        body: { lines: count.lines.map((line) => ({ ingredient_id: line.ingredient_id, counted_qty: qty[line.ingredient_id] || "0" })) },
+        body: { lines: count.lines.map((line) => ({ ingredient_id: line.ingredient_id, counted_qty: (qty[line.ingredient_id] ?? "").trim() })) },
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, t.loadFailed, locale);
     },
@@ -292,12 +313,21 @@ function CountSheet({
         const review = countReview(line);
         return (
           <div key={line.id} className="grid gap-2 border-b py-3">
-            <div className="font-medium">{line.ingredient_sku}</div>
+            <div className="grid gap-0.5">
+              <span className="font-medium">{nameOf(line.ingredient_id, line.ingredient_sku)}</span>
+              <span className="text-xs text-ink-secondary">{line.ingredient_sku}</span>
+            </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <span>{t.counts.expected}</span><span className="tabular-nums">{formatQty(review.expected, locale)}</span>
               <span>{t.counts.counted}</span>
               {open ? (
-                <input className={`${control} h-14 text-lg`} inputMode="decimal" value={qty[line.ingredient_id] ?? ""} onChange={(event) => setQty({ ...qty, [line.ingredient_id]: event.target.value })} />
+                <input
+                  className={`${control} h-14 text-lg`}
+                  inputMode="decimal"
+                  aria-invalid={tried && blank.includes(line) ? true : undefined}
+                  value={qty[line.ingredient_id] ?? ""}
+                  onChange={(event) => setQty({ ...qty, [line.ingredient_id]: event.target.value.replace(/[^\d.]/g, "") })}
+                />
               ) : <span className="tabular-nums">{review.counted == null ? "—" : formatQty(review.counted, locale)}</span>}
               <span>{t.counts.variance}</span><span className="tabular-nums">{review.varianceQty == null ? "—" : formatQty(review.varianceQty, locale)}</span>
               <span>{t.counts.value}</span><span>{review.varianceValue == null ? "—" : <Money amount={review.varianceValue} currency={currency} />}</span>
@@ -305,7 +335,17 @@ function CountSheet({
           </div>
         );
       })}
-      {open ? <button type="button" className={`${primaryButton} h-14`} disabled={submit.isPending} onClick={() => submit.mutate()}>{t.counts.submit}</button> : null}
+      {open && tried && blank.length > 0 ? <p role="alert" className="text-sm text-danger">{t.easy.countEvery}</p> : null}
+      {open ? (
+        <button
+          type="button"
+          className={`${primaryButton} h-14`}
+          disabled={submit.isPending}
+          onClick={() => (blank.length > 0 ? setTried(true) : submit.mutate())}
+        >
+          {t.counts.submit}
+        </button>
+      ) : null}
       {canPost && count.status === "SUBMITTED" ? <button type="button" className={primaryButton} disabled={post.isPending} onClick={() => post.mutate()}>{t.counts.post}</button> : null}
     </div>
   );

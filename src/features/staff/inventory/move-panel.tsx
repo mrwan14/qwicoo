@@ -9,6 +9,7 @@ import { Button } from "@/components/ops/kit/button";
 import { Field, Input, Select } from "@/components/ops/kit/field";
 import { PanelSection, SidePanel } from "@/components/ops/kit/side-panel";
 import { QueryErrorState } from "@/components/ops/states";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { fill } from "@/lib/i18n/dictionary";
@@ -17,6 +18,7 @@ import { pickLocale } from "@/lib/i18n/locale-text";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 
+import { canWriteCentralKitchen } from "./access";
 import { useWarehouses } from "./chrome";
 import { unitsFor, validAmount } from "./easy";
 import { formatQty } from "./qty";
@@ -36,8 +38,10 @@ export function MoveStockPanel({ brandId, presetIngredient, onClose }: { brandId
   const t = useStaffSection(inventoryCopy);
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const me = useStaffSession();
   const warehouses = useWarehouses();
-  const sources = warehouses.data ?? [];
+  // Only stores this role may take stock out of can be the source.
+  const sources = (warehouses.data ?? []).filter((item) => item.kind !== "CENTRAL_KITCHEN" || canWriteCentralKitchen(me?.role));
   const [fromChoice, setFromChoice] = useState("");
   const fromId = fromChoice || sources[0]?.id || "";
   const [toChoice, setToChoice] = useState("");

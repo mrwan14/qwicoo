@@ -77,10 +77,29 @@ export function DeliveryScreen() {
   });
   const turnOn = useMutation({
     mutationFn: async () => {
-      const result = await browserApi.PUT("/api/v1/features/brand/{brand_id}/{feature_key}", {
-        params: { path: { brand_id: brandId ?? "", feature_key: DELIVERY_FEATURE } },
-        body: { is_enabled_by_super_admin: true },
-      });
+      const enable = () =>
+        browserApi.PUT("/api/v1/features/brand/{brand_id}/{feature_key}", {
+          params: { path: { brand_id: brandId ?? "", feature_key: DELIVERY_FEATURE } },
+          body: { is_enabled_by_super_admin: true },
+        });
+      let result = await enable();
+      // A brand can only switch on a feature the platform list has. Databases that were never
+      // seeded with delivery lack it, so add it (off for other brands) and try again.
+      if (!result.response.ok && (result.response.status === 404 || /does not exist/i.test(JSON.stringify(result.error ?? "")))) {
+        const body: components["schemas"]["PlatformFeatureCreate"] = {
+          id: DELIVERY_FEATURE,
+          name_en: "Delivery",
+          name_ar: "التوصيل",
+          category: "OPS",
+          is_core: false,
+          is_premium: false,
+          default_enabled: false,
+        };
+        const created = await browserApi.POST("/api/v1/features/platform", { body });
+        if (!created.response.ok) throw asApiError(created.error, created.response, t.turnOnFailed);
+        void queryClient.invalidateQueries({ queryKey: ["features-platform"] });
+        result = await enable();
+      }
       if (!result.response.ok) throw asApiError(result.error, result.response, t.turnOnFailed);
     },
     onSuccess: () => {

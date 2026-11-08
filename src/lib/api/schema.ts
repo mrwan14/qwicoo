@@ -1790,7 +1790,11 @@ export interface paths {
         /** Put Recipe */
         put: operations["put_recipe_api_v1_inventory_recipes__recipe_id__put"];
         post?: never;
-        delete?: never;
+        /**
+         * Delete Recipe
+         * @description Remove a recipe and its lines. Stock movements already posted keep their history.
+         */
+        delete: operations["delete_recipe_api_v1_inventory_recipes__recipe_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -25771,6 +25775,46 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_recipe_api_v1_inventory_recipes__recipe_id__delete: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path: {
+                recipe_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden: FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

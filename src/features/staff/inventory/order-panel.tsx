@@ -102,15 +102,15 @@ export function NewOrderPanel({ branchId, prefill, onClose }: { branchId: string
   const byIngredient = new Map((ingredients.data ?? []).map((item) => [item.id, item]));
   const packFor = (ingredientId: string) => (packs.data ?? []).find((pack) => pack.ingredient_id === ingredientId);
 
-  // The supplier's last price per pack unit, turned into a price for one of the line's own unit. The amount and unit the
+  // The supplier's last pack price, turned into a price for one of the line's own unit. The amount and unit the
   // cashier chose are never changed; only the price is suggested.
   const suggestPrice = (ingredientId: string, unitId: string): string | null => {
     const pack = packFor(ingredientId);
     const ingredient = byIngredient.get(ingredientId);
     if (!pack || !ingredient) return null;
     const factor = conversionFactor(edges, ingredientId, unitId || ingredient.base_unit_id, pack.pack_unit_id);
-    // last_price is per one pack unit: receiving an order writes the unit price paid into it.
-    return packPricePerUnit(pack.last_price, factor);
+    // last_price buys one pack of pack_size pack units; the backend keeps it per pack after deliveries too.
+    return packPricePerUnit(pack.last_price, pack.pack_size, factor);
   };
   const priced = (line: Line): Line => {
     if (!line.ingredientId || (line.price && !line.autoPrice)) return line;

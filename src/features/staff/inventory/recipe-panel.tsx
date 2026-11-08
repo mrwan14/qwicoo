@@ -6,6 +6,7 @@ import { Plus, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Button } from "@/components/ops/kit/button";
 import { Input, Select } from "@/components/ops/kit/field";
 import { formatAmount } from "@/components/ops/kit/money";
@@ -203,6 +204,23 @@ export function RecipePanel({
   const yieldOk = validAmount(yieldQty);
   const ready = canWrite && Boolean(targetId) && yieldOk && checked.length > 0 && checked.every((row) => row.complete);
 
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const remove = useMutation({
+    mutationFn: async () => {
+      if (!recipe) return;
+      const result = await browserApi.DELETE("/api/v1/inventory/recipes/{recipe_id}", {
+        params: { path: { recipe_id: recipe.id }, query: { brand_id: brandId } },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.rx.removeFailed, locale);
+    },
+    onSuccess: async () => {
+      setConfirmRemove(false);
+      toast.success(t.rx.removed);
+      await queryClient.invalidateQueries({ queryKey: ["inventory", "recipes", brandId] });
+      onClose();
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : t.rx.removeFailed),
+  });
   const save = useMutation({
     mutationFn: async () => {
       const body = {
@@ -290,7 +308,12 @@ export function RecipePanel({
             </p>
           ) : null}
           {canWrite ? (
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              {recipe ? (
+                <Button variant="dangerGhost" className="me-auto" disabled={remove.isPending} onClick={() => setConfirmRemove(true)}>
+                  {t.rx.removeRecipe}
+                </Button>
+              ) : null}
               <Button variant="secondary" onClick={onClose}>
                 {t.cancel}
               </Button>
@@ -483,6 +506,16 @@ export function RecipePanel({
           />
         </PanelSection>
       </fieldset>
+      <ConfirmDialog
+        open={confirmRemove}
+        onOpenChange={setConfirmRemove}
+        title={fill(t.rx.removeTitle, { name: targetLabel })}
+        description={t.rx.removeBody}
+        confirmLabel={t.rx.removeRecipe}
+        destructive
+        pending={remove.isPending}
+        onConfirm={() => remove.mutate()}
+      />
     </SidePanel>
   );
 }

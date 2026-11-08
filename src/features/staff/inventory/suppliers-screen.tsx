@@ -309,7 +309,7 @@ function Packs({
           <div key={pack.id} className="grid gap-1 border-b py-2 text-sm">
             <div className="flex items-center justify-between gap-2">
               <span>{ingredient ? pickLocale(ingredient.name, locale) : pack.ingredient_sku ?? pack.ingredient_id.slice(0, 8)}</span>
-              <span className="tabular-nums">{fill(t.suppliers.pricePer, { amount: formatMoney(pack.last_price, currency, locale), unit: unit ? pickLocale(unit.name, locale) : "" })}</span>
+              <span className="tabular-nums">{fill(t.suppliers.pricePer, { amount: formatMoney(pack.last_price, currency, locale) })}</span>
             </div>
             <span className="text-ink-secondary">{fill(t.suppliers.packOf, { qty: formatQty(pack.pack_size, locale), unit: unit ? pickLocale(unit.name, locale) : "" })}</span>
             {canWrite ? (

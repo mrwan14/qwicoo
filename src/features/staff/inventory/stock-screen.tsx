@@ -137,7 +137,8 @@ export function StockScreen() {
         reorder_level: item.reorder_level,
         avg_cost: "0",
         base_unit_code: "",
-        status: Number(item.reorder_level) > 0 || Number(item.par_level) > 0 ? "out" : "ok",
+        // Same rule as the backend's stock_status: nothing on hand is "out".
+        status: "out",
       }));
     return [...stock.data, ...missing];
   }, [stock.data, ingredients.data]);

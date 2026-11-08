@@ -48,13 +48,14 @@ test("food cost is the share of the price, judged against 35%", () => {
   assert.equal(foodCostTone(null), "none");
 });
 
-test("a supplier's unit price becomes a price for one of the line's unit", () => {
-  // 0.45 per gram, ordered in kilograms.
-  assert.equal(packPricePerUnit("0.45", 1000), "450.00");
-  // 10 per piece, ordered by the box of 50.
-  assert.equal(packPricePerUnit("10", 50), "500.00");
-  assert.equal(packPricePerUnit("10", 1), "10.00");
-  assert.equal(packPricePerUnit("10", null), null);
+test("a pack price becomes a price for one of the line's unit", () => {
+  // A 25 kg sack for 500 → 20 per kilo, or 0.02 per gram.
+  assert.equal(packPricePerUnit("500", "25", 1), "20.00");
+  assert.equal(packPricePerUnit("500", "25", 0.001), "0.02");
+  // 12 pieces for 120, ordered by the box of 50 pieces.
+  assert.equal(packPricePerUnit("120", "12", 50), "500.00");
+  assert.equal(packPricePerUnit("120", "0", 1), "120.00");
+  assert.equal(packPricePerUnit("120", "12", null), null);
 });
 
 test("a recipe's cost is split over the portions it makes", () => {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { autoSku, needsAttention, suggestedOrder, unitsFor, validAmount } from "./easy.ts";
+import { autoSku, foodCostPct, foodCostTone, needsAttention, suggestedOrder, unitsFor, validAmount } from "./easy.ts";
 
 const row = (status: "ok" | "low" | "out" | "negative", on_hand = "0", par_level = "10", reorder_level = "4") => ({ status, on_hand, par_level, reorder_level });
 
@@ -36,4 +36,14 @@ test("amounts must be positive with up to three decimals", () => {
   assert.equal(validAmount("0"), false);
   assert.equal(validAmount("1.2345"), false);
   assert.equal(validAmount("-1"), false);
+});
+
+test("food cost is the share of the price, judged against 35%", () => {
+  assert.equal(foodCostPct("27.19", "55"), 49);
+  assert.equal(foodCostPct("10", null), null);
+  assert.equal(foodCostPct("10", "0"), null);
+  assert.equal(foodCostTone(30), "good");
+  assert.equal(foodCostTone(40), "watch");
+  assert.equal(foodCostTone(49), "high");
+  assert.equal(foodCostTone(null), "none");
 });

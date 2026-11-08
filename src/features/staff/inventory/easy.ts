@@ -60,3 +60,20 @@ export function autoSku(name: string, taken: readonly string[]): string {
 export function validAmount(value: string): boolean {
   return /^\d+(\.\d{1,3})?$/.test(value.trim()) && Number(value) > 0;
 }
+
+/** Food cost as a share of the price, in whole percent; null when there's no price to compare. */
+export function foodCostPct(cost: string | number, price: string | number | null | undefined): number | null {
+  const plate = Number(cost);
+  const sell = Number(price);
+  if (price == null || !Number.isFinite(plate) || !(sell > 0)) return null;
+  return Math.round((plate / sell) * 100);
+}
+
+/** Restaurants usually aim for 35% or less; above 45% the dish barely pays for itself. */
+export const HEALTHY_FOOD_COST = 35;
+export function foodCostTone(pct: number | null): "good" | "watch" | "high" | "none" {
+  if (pct == null) return "none";
+  if (pct <= HEALTHY_FOOD_COST) return "good";
+  if (pct <= 45) return "watch";
+  return "high";
+}

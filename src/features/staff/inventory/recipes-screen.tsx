@@ -1,16 +1,23 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { cn } from "cn";
+import { AlertTriangle, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 
-import { PageHeader } from "@/components/ops/page-header";
-import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
+import { Button } from "@/components/ops/kit/button";
+import { Card, KpiCard } from "@/components/ops/kit/card";
+import { DataTable, type Column } from "@/components/ops/kit/data-table";
+import { EmptyState } from "@/components/ops/kit/empty-state";
+import { Input, Select } from "@/components/ops/kit/field";
+import { formatAmount } from "@/components/ops/kit/money";
+import { SegmentedControl } from "@/components/ops/kit/segmented";
+import { QueryErrorState } from "@/components/ops/states";
 import { useStaffSession } from "@/components/ops/staff-session";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
@@ -18,13 +25,18 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { canWriteCatalogue } from "./access";
-import { formatPlateCost } from "./cost";
-import { control, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
+import { InventoryFrame, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
+import { foodCostPct, foodCostTone } from "./easy";
+import { formatQty } from "./qty";
+import { FoodCostBar, RecipePanel, type RecipeTarget, type TargetKind } from "./recipe-panel";
 import { untrackedMenu } from "./untracked";
 
 type Recipe = components["schemas"]["RecipeResponse"];
-type Target = "MENU_ITEM" | "MODIFIER_OPTION" | "PREP";
-type Line = { ingredient_id: string; qty: string; unit_id: string; waste_pct: string; replaces_ingredient_id: string };
+type Cost = components["schemas"]["RecipeCostResponse"];
+type Sort = "cost" | "name";
+type Row = { recipe: Recipe; name: string; detail: string; cost: Cost | undefined; loading: boolean; pct: number | null };
+
+const KINDS: TargetKind[] = ["MENU_ITEM", "MODIFIER_OPTION", "PREP"];
 
 export function RecipesScreen() {
   const t = useStaffSection(inventoryCopy);
@@ -36,7 +48,10 @@ export function RecipesScreen() {
   const currency = useBranchCurrency();
   const warehouses = useWarehouses();
   const [warehouseId, setWarehouseId] = useState("");
-  const [editing, setEditing] = useState<Recipe | "new" | null>(null);
+  const [kind, setKind] = useState<TargetKind>("MENU_ITEM");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<Sort>("cost");
+  const [editing, setEditing] = useState<Recipe | RecipeTarget | null>(null);
   const selectedWarehouse = warehouseId || warehouses.data?.[0]?.id || "";
 
   const recipes = useQuery({
@@ -52,9 +67,7 @@ export function RecipesScreen() {
     queryKey: ["inventory", "ingredients", brandId, "all"],
     enabled: Boolean(brandId),
     queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/ingredients", {
-        params: { query: { brand_id: brandId, active_only: false } },
-      });
+      const result = await browserApi.GET("/api/v1/inventory/ingredients", { params: { query: { brand_id: brandId, active_only: false } } });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
       return result.data.items;
     },
@@ -68,83 +81,247 @@ export function RecipesScreen() {
       return result.data;
     },
   });
+
   const items = useMemo(
-    () => (menu.data?.categories ?? []).flatMap((category) => category.items ?? []).map((item) => ({ id: item.id, name: item.name })),
-    [menu.data],
+    () =>
+      (menu.data?.categories ?? []).flatMap((category) =>
+        (category.items ?? []).map((item) => ({
+          id: item.id,
+          name: pickLocale(item.name, locale),
+          category: pickLocale(category.name, locale),
+          price: String(item.base_price),
+        })),
+      ),
+    [menu.data, locale],
   );
   const options = useMemo(
     () =>
       (menu.data?.categories ?? []).flatMap((category) =>
         (category.items ?? []).flatMap((item) =>
           (item.modifier_groups ?? []).flatMap((group) =>
-            (group.options ?? []).map((option) => ({ id: option.id, name: option.name, itemName: item.name })),
+            (group.options ?? []).map((option) => ({
+              id: option.id,
+              name: pickLocale(option.name, locale),
+              itemName: pickLocale(item.name, locale),
+              price: String(option.price_delta),
+            })),
           ),
         ),
       ),
-    [menu.data],
+    [menu.data, locale],
   );
-  const missing = useMemo(() => untrackedMenu(items, options, recipes.data ?? []), [items, options, recipes.data]);
-  const nameOf = (recipe: Recipe) => {
-    if (recipe.target_type === "MENU_ITEM") return items.find((item) => item.id === recipe.menu_item_id)?.name ?? recipe.menu_item_id ?? "";
-    if (recipe.target_type === "MODIFIER_OPTION") return options.find((option) => option.id === recipe.modifier_option_id)?.name ?? "";
-    const prep = (ingredients.data ?? []).find((item) => item.id === recipe.prep_ingredient_id);
-    return prep ? pickLocale(prep.name, locale) : "";
-  };
+  const list = useMemo(() => recipes.data ?? [], [recipes.data]);
+  const costs = useQueries({
+    queries: list.map((recipe) => ({
+      queryKey: ["inventory", "recipe-cost", recipe.id, selectedWarehouse],
+      enabled: Boolean(selectedWarehouse),
+      queryFn: async () => {
+        const result = await browserApi.GET("/api/v1/inventory/recipes/{recipe_id}/cost", {
+          params: { path: { recipe_id: recipe.id }, query: { warehouse_id: selectedWarehouse } },
+        });
+        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+        return result.data;
+      },
+    })),
+  });
+  const missing = useMemo(() => untrackedMenu(items, options, list), [items, options, list]);
+
+  const rows: Row[] = list.map((recipe, index) => {
+    const cost = costs[index]?.data;
+    let name = "";
+    let detail = "";
+    if (recipe.target_type === "MENU_ITEM") {
+      const item = items.find((entry) => entry.id === recipe.menu_item_id);
+      name = item?.name ?? "";
+      detail = item?.category ?? "";
+    } else if (recipe.target_type === "MODIFIER_OPTION") {
+      const option = options.find((entry) => entry.id === recipe.modifier_option_id);
+      name = option?.name ?? "";
+      detail = option?.itemName ?? "";
+    } else {
+      const prep = (ingredients.data ?? []).find((entry) => entry.id === recipe.prep_ingredient_id);
+      name = prep ? pickLocale(prep.name, locale) : "";
+      detail = prep?.category ?? "";
+    }
+    return { recipe, name, detail, cost, loading: costs[index]?.isLoading ?? false, pct: cost ? foodCostPct(cost.cost, cost.price) : null };
+  });
+
+  const needle = query.trim().toLowerCase();
+  const visible = rows
+    .filter((row) => row.recipe.target_type === kind)
+    .filter((row) => !needle || row.name.toLowerCase().includes(needle) || row.detail.toLowerCase().includes(needle))
+    .sort((a, b) => (sort === "cost" ? (b.pct ?? -1) - (a.pct ?? -1) : a.name.localeCompare(b.name, locale)));
+
+  const dishes = rows.filter((row) => row.recipe.target_type === "MENU_ITEM" && row.pct != null);
+  const average = dishes.length ? Math.round(dishes.reduce((sum, row) => sum + (row.pct ?? 0), 0) / dishes.length) : null;
+  const tooCostly = dishes.filter((row) => foodCostTone(row.pct) === "high").length;
+  const money = (value: string | number) => formatAmount(value, currency, locale);
+
+  const columns: Column<Row>[] = [
+    {
+      key: "dish",
+      header: t.rx.dish,
+      cell: (row) => {
+        const portions = Number(row.recipe.yield_qty);
+        const notes = [row.detail, portions && portions !== 1 ? fill(t.rx.makes, { qty: formatQty(portions, locale) }) : ""].filter(Boolean).join(" · ");
+        return (
+          <span className="grid gap-0.5">
+            <span className="font-medium text-ink">{row.name || "—"}</span>
+            {notes ? <span className="text-xs text-ink-secondary">{notes}</span> : null}
+            {row.cost && row.cost.unpriced_ingredient_ids.length > 0 ? (
+              <span className="inline-flex items-center gap-1 text-xs text-warning">
+                <AlertTriangle aria-hidden className="size-3" />
+                {t.rx.missingCosts}
+              </span>
+            ) : null}
+          </span>
+        );
+      },
+    },
+    { key: "price", header: t.rx.price, align: "end", cell: (row) => <Figure loading={row.loading} value={row.cost?.price != null ? money(row.cost.price) : t.rx.noPrice} muted={row.cost?.price == null} /> },
+    { key: "costs", header: t.rx.costs, align: "end", cell: (row) => <Figure loading={row.loading} value={row.cost ? money(row.cost.cost) : "—"} /> },
+    { key: "food", header: t.rx.foodCost, width: 180, cell: (row) => (row.loading ? <span className="text-ink-secondary">…</span> : <FoodCostBar pct={row.pct} />) },
+    {
+      key: "keep",
+      header: t.rx.keep,
+      align: "end",
+      cell: (row) => {
+        const price = Number(row.cost?.price);
+        const cost = Number(row.cost?.cost);
+        if (!row.cost || row.cost.price == null || !Number.isFinite(price)) return <span className="text-ink-secondary">—</span>;
+        return <span className="font-medium tabular-nums">{money(price - cost)}</span>;
+      },
+    },
+  ];
+
+  const missingCount = missing.items.length;
 
   return (
     <InventoryFrame page="recipes">
-      <PageHeader
-        title={t.recipes.title}
-        detail={t.recipes.detail}
-        action={canWrite ? <button type="button" className={primaryButton} onClick={() => setEditing("new")}>{t.recipes.add}</button> : null}
-      />
-      {warehouses.data && warehouses.data.length > 0 ? (
-        <WarehouseSelect warehouses={warehouses.data} value={selectedWarehouse} onChange={setWarehouseId} />
-      ) : null}
-      {recipes.isLoading ? <LoadingState label={t.loading} /> : null}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid gap-0.5">
+          <h2 className="text-lg font-semibold text-ink">{t.rx.title}</h2>
+          <p className="text-sm text-ink-secondary">{t.rx.intro}</p>
+        </div>
+        {canWrite ? (
+          <Button onClick={() => setEditing({ kind, id: "" })}>
+            <Plus aria-hidden />
+            {t.rx.newRecipe}
+          </Button>
+        ) : null}
+      </div>
+
       {recipes.isError ? <QueryErrorState error={recipes.error} screen={t.tabs.recipes} onRetry={() => void recipes.refetch()} /> : null}
-      {recipes.data && recipes.data.length === 0 ? <EmptyState title={t.recipes.empty} body={t.recipes.detail} /> : null}
-      {recipes.data && recipes.data.length > 0 ? (
-        <div className="overflow-x-auto bg-canvas">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="px-3 py-2 text-start font-medium">{t.recipes.target}</th>
-                <th className="px-3 py-2 text-start font-medium">{t.recipes.yield}</th>
-                <th className="px-3 py-2 text-start font-medium">{t.recipes.cost}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recipes.data.map((recipe) => (
-                <RecipeRow
-                  key={recipe.id}
-                  recipe={recipe}
-                  label={nameOf(recipe)}
-                  warehouseId={selectedWarehouse}
-                  currency={currency}
-                  onOpen={() => setEditing(recipe)}
-                />
-              ))}
-            </tbody>
-          </table>
+
+      {list.length > 0 ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <KpiCard
+            label={t.rx.avgFoodCost}
+            value={average == null ? "—" : `${formatQty(average, locale)}%`}
+            note={t.rx.avgFoodCostNote}
+            loading={costs.some((query) => query.isLoading)}
+          />
+          <KpiCard label={t.rx.highCost} value={formatQty(tooCostly, locale)} note={t.rx.highCostNote} loading={costs.some((query) => query.isLoading)} />
+          <KpiCard label={t.rx.noRecipe} value={formatQty(missingCount, locale)} note={t.rx.noRecipeNote} loading={menu.isLoading} />
         </div>
       ) : null}
-      <section className="grid gap-2">
-        <h2 className="font-medium">{t.recipes.untracked}</h2>
-        <p className="text-sm text-ink-secondary">{t.recipes.untrackedDetail}</p>
-        <ul className="grid gap-1 text-sm">
-          {missing.items.map((item) => <li key={item.id}>{item.name}</li>)}
-          {missing.options.map((option) => <li key={option.id}>{option.itemName} · {option.name}</li>)}
-        </ul>
-      </section>
+
+      {recipes.isSuccess && list.length === 0 ? (
+        <EmptyState
+          title={t.rx.emptyTitle}
+          body={t.rx.emptyBody}
+          action={
+            canWrite ? (
+              <Button onClick={() => setEditing({ kind: "MENU_ITEM", id: "" })}>
+                <Plus aria-hidden />
+                {t.rx.newRecipe}
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : null}
+
+      {list.length > 0 ? (
+        <div className="grid gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <SegmentedControl<TargetKind>
+              label={t.rx.dish}
+              value={kind}
+              onValueChange={setKind}
+              items={KINDS.map((value) => ({
+                value,
+                label: `${t.rx.kinds[value]} · ${formatQty(rows.filter((row) => row.recipe.target_type === value).length, locale)}`,
+              }))}
+            />
+            <Input icon={Search} type="search" className="min-w-0 flex-1 basis-48" aria-label={t.rx.search} placeholder={t.rx.search} value={query} onChange={(event) => setQuery(event.target.value)} />
+            <Select className="w-56" aria-label={t.rx.sortLabel} value={sort} onChange={(event) => setSort(event.target.value as Sort)}>
+              <option value="cost">{t.rx.sortCost}</option>
+              <option value="name">{t.rx.sortName}</option>
+            </Select>
+            {(warehouses.data?.length ?? 0) > 1 && warehouses.data ? (
+              <div className="w-full sm:w-64" title={t.rx.storeHint}>
+                <WarehouseSelect warehouses={warehouses.data} value={selectedWarehouse} onChange={setWarehouseId} />
+              </div>
+            ) : null}
+          </div>
+          {kind !== "PREP" ? (
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-secondary" aria-label={t.rx.foodCost}>
+              <li className="inline-flex items-center gap-1.5"><span aria-hidden className="size-2 rounded-full bg-success" />{t.rx.legendGood}</li>
+              <li className="inline-flex items-center gap-1.5"><span aria-hidden className="size-2 rounded-full bg-warning" />{t.rx.legendWatch}</li>
+              <li className="inline-flex items-center gap-1.5"><span aria-hidden className="size-2 rounded-full bg-danger" />{t.rx.legendHigh}</li>
+            </ul>
+          ) : null}
+          <DataTable
+            caption={t.rx.title}
+            columns={kind === "PREP" ? columns.filter((column) => column.key === "dish" || column.key === "costs") : columns}
+            rows={visible}
+            rowKey={(row) => row.recipe.id}
+            onRowClick={(row) => setEditing(row.recipe)}
+            loading={recipes.isLoading}
+            empty={t.rx.none}
+          />
+        </div>
+      ) : null}
+
+      {menu.isSuccess && list.length > 0 ? (
+        missingCount === 0 ? (
+          <p className="flex items-center gap-2 text-sm text-ink-secondary">
+            <span aria-hidden className="size-2 rounded-full bg-success" />
+            {t.rx.allTracked}
+          </p>
+        ) : (
+          <Card title={missingCount === 1 ? t.rx.untrackedOne : fill(t.rx.untrackedTitle, { count: missingCount })} description={t.rx.untrackedBody}>
+            <ul className="flex flex-wrap gap-2">
+              {missing.items.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    disabled={!canWrite}
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-canvas px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-subtle focus-visible:outline-2 focus-visible:outline-focus disabled:cursor-default disabled:hover:bg-canvas"
+                    onClick={() => setEditing({ kind: "MENU_ITEM", id: item.id })}
+                  >
+                    {canWrite ? <Plus aria-hidden className="size-3.5 text-ink-secondary" /> : null}
+                    {item.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )
+      ) : null}
+
       {editing ? (
-        <RecipeDrawer
-          key={editing === "new" ? "new" : editing.id}
+        <RecipePanel
+          key={"id" in editing && "brand_id" in editing ? editing.id : `new-${editing.kind}-${"id" in editing ? editing.id : ""}`}
           brandId={brandId}
-          recipe={editing}
+          recipe={"brand_id" in editing ? editing : null}
+          target={"brand_id" in editing ? null : editing}
           items={items}
           options={options}
           ingredients={ingredients.data ?? []}
+          warehouseId={selectedWarehouse}
+          currency={currency}
+          serverCost={"brand_id" in editing ? rows.find((row) => row.recipe.id === editing.id)?.cost ?? null : null}
           canWrite={canWrite}
           onClose={() => setEditing(null)}
         />
@@ -153,173 +330,7 @@ export function RecipesScreen() {
   );
 }
 
-function RecipeRow({
-  recipe,
-  label,
-  warehouseId,
-  currency,
-  onOpen,
-}: {
-  recipe: Recipe;
-  label: string;
-  warehouseId: string;
-  currency: string;
-  onOpen: () => void;
-}) {
-  const t = useStaffSection(inventoryCopy);
-  const { locale } = useLocale();
-  const cost = useQuery({
-    queryKey: ["inventory", "recipe-cost", recipe.id, warehouseId],
-    enabled: Boolean(warehouseId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/recipes/{recipe_id}/cost", {
-        params: { path: { recipe_id: recipe.id }, query: { warehouse_id: warehouseId } },
-      });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data;
-    },
-  });
-  const plate = cost.data ? formatPlateCost({ cost: cost.data.cost, price: cost.data.price, marginPct: cost.data.margin_pct }, currency, locale) : null;
-  return (
-    <tr className="cursor-pointer border-b hover:bg-muted/40" onClick={onOpen}>
-      <td className="px-3 py-2">{label}</td>
-      <td className="px-3 py-2 tabular-nums">{recipe.yield_qty}</td>
-      <td className="px-3 py-2">{plate ? `${plate.cost}${plate.margin ? ` · ${plate.margin}` : ""}` : ""}</td>
-    </tr>
-  );
-}
-
-function RecipeDrawer({
-  brandId,
-  recipe,
-  items,
-  options,
-  ingredients,
-  canWrite,
-  onClose,
-}: {
-  brandId: string;
-  recipe: Recipe | "new";
-  items: { id: string; name: string }[];
-  options: { id: string; name: string; itemName: string }[];
-  ingredients: components["schemas"]["IngredientResponse"][];
-  canWrite: boolean;
-  onClose: () => void;
-}) {
-  const t = useStaffSection(inventoryCopy);
-  const { locale } = useLocale();
-  const queryClient = useQueryClient();
-  const current = recipe === "new" ? null : recipe;
-  const units = useQuery({
-    queryKey: ["inventory", "units", brandId],
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/units", { params: { query: { brand_id: brandId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data.items;
-    },
-  });
-  const [target, setTarget] = useState<Target>((current?.target_type as Target) || "MENU_ITEM");
-  const [targetId, setTargetId] = useState(current?.menu_item_id || current?.modifier_option_id || current?.prep_ingredient_id || "");
-  const [yieldQty, setYieldQty] = useState(current?.yield_qty ?? "1");
-  const [lines, setLines] = useState<Line[]>(
-    current?.lines?.map((line) => ({
-      ingredient_id: line.ingredient_id,
-      qty: line.qty,
-      unit_id: line.unit_id,
-      waste_pct: line.waste_pct,
-      replaces_ingredient_id: line.replaces_ingredient_id ?? "",
-    })) ?? [
-      { ingredient_id: "", qty: "", unit_id: "", waste_pct: "0", replaces_ingredient_id: "" },
-    ],
-  );
-  const save = useMutation({
-    mutationFn: async () => {
-      const body = {
-        target_type: target,
-        menu_item_id: target === "MENU_ITEM" ? targetId : null,
-        modifier_option_id: target === "MODIFIER_OPTION" ? targetId : null,
-        prep_ingredient_id: target === "PREP" ? targetId : null,
-        yield_qty: yieldQty || "1",
-        lines: lines
-          .filter((line) => line.ingredient_id && line.qty && line.unit_id)
-          .map((line) => ({
-            ingredient_id: line.ingredient_id,
-            qty: line.qty,
-            unit_id: line.unit_id,
-            waste_pct: line.waste_pct || "0",
-            replaces_ingredient_id: target === "MODIFIER_OPTION" && line.replaces_ingredient_id ? line.replaces_ingredient_id : null,
-          })),
-      };
-      const result = current
-        ? await browserApi.PUT("/api/v1/inventory/recipes/{recipe_id}", {
-            params: { path: { recipe_id: current.id }, query: { brand_id: brandId } },
-            body,
-          })
-        : await browserApi.POST("/api/v1/inventory/recipes", { params: { query: { brand_id: brandId } }, body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.loadFailed, locale);
-    },
-    onSuccess: async () => {
-      toast.success(t.saved);
-      await queryClient.invalidateQueries({ queryKey: ["inventory", "recipes", brandId] });
-      onClose();
-    },
-    onError: (error) => toast.error(error instanceof Error ? error.message : t.loadFailed),
-  });
-  const choices = target === "MENU_ITEM"
-    ? items.map((item) => ({ id: item.id, label: item.name }))
-    : target === "MODIFIER_OPTION"
-      ? options.map((option) => ({ id: option.id, label: `${option.itemName} · ${option.name}` }))
-      : ingredients.filter((item) => item.is_prep).map((item) => ({ id: item.id, label: pickLocale(item.name, locale) }));
-
-  return (
-    <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent side="right" className="w-full overflow-y-auto rounded-none sm:max-w-xl">
-        <SheetHeader><SheetTitle>{current ? t.recipes.save : t.recipes.add}</SheetTitle></SheetHeader>
-        <form className="grid gap-3 px-4 pb-6" onSubmit={(event) => { event.preventDefault(); if (canWrite) save.mutate(); }}>
-          <label className="grid gap-1 text-sm">
-            <span>{t.recipes.target}</span>
-            <select className={control} value={target} disabled={Boolean(current)} onChange={(event) => { setTarget(event.target.value as Target); setTargetId(""); }}>
-              <option value="MENU_ITEM">{t.recipes.menuItem}</option>
-              <option value="MODIFIER_OPTION">{t.recipes.modifier}</option>
-              <option value="PREP">{t.recipes.prep}</option>
-            </select>
-          </label>
-          <select className={control} value={targetId} disabled={Boolean(current)} onChange={(event) => setTargetId(event.target.value)} required>
-            <option value="">{t.recipes.target}</option>
-            {choices.map((choice) => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
-          </select>
-          <label className="grid gap-1 text-sm"><span>{t.recipes.yield}</span><input className={control} inputMode="decimal" value={yieldQty} onChange={(event) => setYieldQty(event.target.value)} /></label>
-          <h3 className="font-medium">{t.recipes.lines}</h3>
-          {lines.map((line, index) => (
-            <div key={index} className="grid gap-2 border-b pb-2">
-              <select className={control} value={line.ingredient_id} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, ingredient_id: event.target.value } : item))}>
-                <option value="">{t.ingredient}</option>
-                {ingredients.map((item) => <option key={item.id} value={item.id}>{pickLocale(item.name, locale)}</option>)}
-              </select>
-              {target === "MODIFIER_OPTION" ? (
-                <label className="grid w-full gap-1 text-sm">
-                  <span>{t.recipes.replaces}</span>
-                  <select className={control} value={line.replaces_ingredient_id} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, replaces_ingredient_id: event.target.value } : item))}>
-                    <option value="">{t.recipes.replacesNone}</option>
-                    {ingredients.map((item) => <option key={item.id} value={item.id}>{pickLocale(item.name, locale)}</option>)}
-                  </select>
-                </label>
-              ) : null}
-              <div className="grid grid-cols-3 gap-2">
-                <input className={control} inputMode="decimal" placeholder={t.quantity} value={line.qty} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, qty: event.target.value } : item))} />
-                <select className={control} value={line.unit_id} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, unit_id: event.target.value } : item))}>
-                  <option value="">{t.unit}</option>
-                  {(units.data ?? []).map((unit) => <option key={unit.id} value={unit.id}>{unit.code}</option>)}
-                </select>
-                <input className={control} inputMode="decimal" placeholder={t.recipes.waste} value={line.waste_pct} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, waste_pct: event.target.value } : item))} />
-              </div>
-              <button type="button" className={secondaryButton} onClick={() => setLines(lines.filter((_, i) => i !== index))}>{t.recipes.removeLine}</button>
-            </div>
-          ))}
-          <button type="button" className={secondaryButton} onClick={() => setLines([...lines, { ingredient_id: "", qty: "", unit_id: "", waste_pct: "0", replaces_ingredient_id: "" }])}>{t.recipes.addLine}</button>
-          {canWrite ? <button type="submit" className={primaryButton} disabled={save.isPending}>{t.recipes.save}</button> : null}
-        </form>
-      </SheetContent>
-    </Sheet>
-  );
+function Figure({ value, loading, muted }: { value: string; loading: boolean; muted?: boolean }) {
+  if (loading) return <span className="text-ink-secondary">…</span>;
+  return <span className={cn("tabular-nums", muted && "text-ink-secondary")}>{value}</span>;
 }

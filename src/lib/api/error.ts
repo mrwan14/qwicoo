@@ -164,6 +164,10 @@ const CATALOG: Record<string, Catalog> = {
     en: "The Store isn't enabled for this brand.",
     ar: "المتجر غير مفعّل لهذه العلامة.",
   },
+  FEATURE_LOCKED_BY_PLATFORM: {
+    en: "This feature is switched off for this brand. Qwicoo can turn it on in Features.",
+    ar: "هذه الميزة متوقفة لهذه العلامة. يمكن لكويكو تشغيلها من الميزات.",
+  },
   STORE_NOT_PACKED: {
     en: "Pack the Store items before handing over this order.",
     ar: "جهّز منتجات المتجر قبل تسليم هذا الطلب.",

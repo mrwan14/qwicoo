@@ -1,5 +1,5 @@
 import { RoleGate } from "@/components/ops/screen";
-import { DeliveryScreen } from "@/features/staff/people-screen";
+import { DeliveryScreen } from "@/features/staff/delivery-areas-screen";
 
 export default function Page() {
   return (

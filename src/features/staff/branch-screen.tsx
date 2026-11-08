@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { PageHeader as KitPageHeader } from "@/components/ops/kit/page-header";
 import { Tabs } from "@/components/ops/kit/tabs";
 import { NestedHeaders } from "@/components/ops/page-header";
+import { DownloadAllQrButton, TableQrActions } from "@/features/staff/qr/table-qr";
 import { SettingsFrame } from "@/features/staff/settings/frame";
 import { settingsCopy } from "@/lib/i18n/staff/settings";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
@@ -742,9 +743,10 @@ function TablesTab({ branchId }: { branchId: string }) {
       const result = await browserApi.GET("/api/v1/branches/{branch_id}/tables", { params: { path: { branch_id: branchId } } });
       if (result.response.status === 500) throw new ApiError(500, t.tableListUnavailable);
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.tablesFailed);
-      return result.data;
+      return [...result.data].sort((a, b) => a.table_number.localeCompare(b.table_number, undefined, { numeric: true }));
     },
   });
+  const list = tables.data ?? [];
   const create = useMutation({
     mutationFn: async () => {
       const body: components["schemas"]["TableCreateRequest"] = { table_number: number, capacity: 4, zone_name: "Indoor" };
@@ -778,18 +780,29 @@ function TablesTab({ branchId }: { branchId: string }) {
       <p id="add-table-hint" className={hint}>{t.addTableHint}</p>
       {tables.isError ? (
         <ErrorState title={t.noTableList} body={tables.error.message} onRetry={() => void tables.refetch()} />
+      ) : tables.isLoading ? (
+        <LoadingState label={t.loadingTables} />
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {(tables.data ?? []).map((table) => (
-            <li key={table.id} className="flex min-h-28 flex-col justify-between gap-3 rounded-staff bg-canvas p-4 border border-border">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-lg font-semibold">{fill(t.tableTitle, { number: table.table_number })}</p>
-                <StatusChip tone={tableTone(table)}>{tableLabel(table, t.tableStatus)}</StatusChip>
-              </div>
-              <p className="text-sm text-ink-secondary">{table.zone_name} · {seatLabel(table.capacity, t.oneSeat, t.manySeats)}</p>
-            </li>
-          ))}
-        </ul>
+        <>
+          {list.length > 0 ? (
+            <div className="flex justify-end">
+              {/* This branch's tables by id: the scope header may point at another branch. */}
+              <DownloadAllQrButton tableIds={list.map((table) => table.id)} />
+            </div>
+          ) : null}
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {list.map((table) => (
+              <li key={table.id} className="flex min-h-28 flex-col justify-between gap-3 rounded-staff bg-canvas p-4 border border-border">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-lg font-semibold">{fill(t.tableTitle, { number: table.table_number })}</p>
+                  <StatusChip tone={tableTone(table)}>{tableLabel(table, t.tableStatus)}</StatusChip>
+                </div>
+                <p className="text-sm text-ink-secondary">{table.zone_name} · {seatLabel(table.capacity, t.oneSeat, t.manySeats)}</p>
+                <TableQrActions table={table} />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

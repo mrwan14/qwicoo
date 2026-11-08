@@ -28,6 +28,7 @@ const en = {
   couldntLoadLink: "Couldn't load the guest link",
   couldntLoadQr: "Couldn't load the QR code",
   tablesFailed: "Tables failed",
+  retry: "Try again",
 } as const;
 
 const ar = {
@@ -58,6 +59,7 @@ const ar = {
   couldntLoadLink: "تعذّر تحميل رابط الضيف",
   couldntLoadQr: "تعذّر تحميل رمز QR",
   tablesFailed: "تعذّر تحميل الطاولات",
+  retry: "حاول مرة أخرى",
 } as const;
 
 export const qrCopy = defineDictionary(en, ar);

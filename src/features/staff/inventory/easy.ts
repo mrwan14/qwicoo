@@ -77,3 +77,14 @@ export function foodCostTone(pct: number | null): "good" | "watch" | "high" | "n
   if (pct <= 45) return "watch";
   return "high";
 }
+
+/**
+ * A supplier pack's price for one of the order line's unit. `lastPrice` buys one pack of
+ * `packSize` pack units; `factor` is how many pack units make one line unit.
+ */
+export function packPricePerUnit(lastPrice: string, packSize: string, factor: number | null): string | null {
+  const size = Number(packSize) > 0 ? Number(packSize) : 1;
+  const perPackUnit = Number(lastPrice) / size;
+  if (factor == null || !Number.isFinite(perPackUnit)) return null;
+  return (Math.round(perPackUnit * factor * 100) / 100).toFixed(2);
+}

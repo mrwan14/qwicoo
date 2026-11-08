@@ -20,7 +20,7 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { INVENTORY_HREFS, useBranchCurrency, useWarehouses } from "./chrome";
-import { unitsFor, validAmount } from "./easy";
+import { packPricePerUnit, unitsFor, validAmount } from "./easy";
 import { warehouseLabel } from "./transfers";
 import { conversionFactor, type ConversionEdge } from "./units";
 
@@ -102,16 +102,15 @@ export function NewOrderPanel({ branchId, prefill, onClose }: { branchId: string
   const byIngredient = new Map((ingredients.data ?? []).map((item) => [item.id, item]));
   const packFor = (ingredientId: string) => (packs.data ?? []).find((pack) => pack.ingredient_id === ingredientId);
 
-  // The supplier's last price, turned into the line's own unit. The amount and unit the
+  // The supplier's last pack price, turned into a price for one of the line's own unit. The amount and unit the
   // cashier chose are never changed; only the price is suggested.
   const suggestPrice = (ingredientId: string, unitId: string): string | null => {
     const pack = packFor(ingredientId);
     const ingredient = byIngredient.get(ingredientId);
     if (!pack || !ingredient) return null;
     const factor = conversionFactor(edges, ingredientId, unitId || ingredient.base_unit_id, pack.pack_unit_id);
-    const price = Number(pack.last_price);
-    if (factor == null || !Number.isFinite(price)) return null;
-    return (Math.round(price * factor * 100) / 100).toFixed(2);
+    // last_price buys one pack of pack_size pack units (the Suppliers page shows "EGP 120 · 12 Piece").
+    return packPricePerUnit(pack.last_price, pack.pack_size, factor);
   };
   const priced = (line: Line): Line => {
     if (!line.ingredientId || (line.price && !line.autoPrice)) return line;

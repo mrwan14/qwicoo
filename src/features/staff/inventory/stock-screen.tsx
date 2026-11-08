@@ -121,7 +121,27 @@ export function StockScreen() {
   const byIngredient = useMemo(() => new Map((ingredients.data ?? []).map((item) => [item.id, item])), [ingredients.data]);
   const byUnit = useMemo(() => new Map((units.data ?? []).map((item) => [item.id, item])), [units.data]);
   const categories = [...new Set((ingredients.data ?? []).map((item) => item.category).filter(Boolean))] as string[];
-  const all = stock.data ?? [];
+  // An item with no stock movement yet may have no stock row. List it at 0 so a new item can
+  // be found and stocked here; rows the API already returns win.
+  const all = useMemo(() => {
+    if (!stock.data) return [];
+    const stocked = new Set(stock.data.map((row) => row.ingredient_id));
+    const missing: StockRow[] = (ingredients.data ?? [])
+      .filter((item) => item.is_active && !stocked.has(item.id))
+      .map((item) => ({
+        ingredient_id: item.id,
+        name: item.name,
+        sku: item.sku,
+        on_hand: "0",
+        par_level: item.par_level,
+        reorder_level: item.reorder_level,
+        avg_cost: "0",
+        base_unit_code: "",
+        status: Number(item.reorder_level) > 0 || Number(item.par_level) > 0 ? "out" : "ok",
+      }));
+    return [...stock.data, ...missing];
+  }, [stock.data, ingredients.data]);
+  const unstocked = useMemo(() => new Set(all.filter((row) => !stock.data?.some((item) => item.ingredient_id === row.ingredient_id)).map((row) => row.ingredient_id)), [all, stock.data]);
   const needs = needsAttention(all);
 
   const needle = query.trim().toLowerCase();
@@ -156,7 +176,9 @@ export function StockScreen() {
       cell: (item) => (
         <span className="grid gap-0.5">
           <span className="font-medium">{pickLocale(item.name, locale)}</span>
-          <span className="text-xs font-normal text-ink-secondary">{byIngredient.get(item.ingredient_id)?.category || item.sku}</span>
+          <span className="text-xs font-normal text-ink-secondary">
+            {unstocked.has(item.ingredient_id) ? t.easy.noStockYet : byIngredient.get(item.ingredient_id)?.category || item.sku}
+          </span>
         </span>
       ),
     },

@@ -45,11 +45,12 @@ export { INVENTORY_HREFS };
 type StockTab = "stock" | "recipes" | "buying" | "counts";
 
 /** The four Stock tabs, each a small set of the existing inventory pages. */
+// Most-used first: what's in stock, ordering more, counting and waste, then recipe setup.
 const STOCK_TABS: readonly { tab: StockTab; views: readonly InventoryPage[] }[] = [
   { tab: "stock", views: ["stock", "movements"] },
-  { tab: "recipes", views: ["recipes", "ingredients", "prep"] },
-  { tab: "buying", views: ["suppliers", "purchaseOrders", "transfers"] },
+  { tab: "buying", views: ["purchaseOrders", "suppliers", "transfers"] },
   { tab: "counts", views: ["counts", "waste"] },
+  { tab: "recipes", views: ["recipes", "ingredients", "prep"] },
 ];
 const SETTINGS_VIEWS: readonly InventoryPage[] = ["settings", "units", "import", "jobs"];
 

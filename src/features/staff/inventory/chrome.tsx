@@ -117,8 +117,6 @@ function StockKpis() {
   });
   const rows = stock.data ?? [];
   const value = rows.reduce((sum, row) => sum + Number(lineValue(row.on_hand, row.avg_cost)), 0);
-  const low = rows.filter((row) => row.status === "low").length;
-  const out = rows.filter((row) => row.status === "out" || row.status === "negative").length;
   const loading = warehouses.isLoading || stock.isLoading;
   return (
     <div className="grid grid-cols-1 gap-3">
@@ -131,13 +129,12 @@ function StockKpis() {
           </Link>
         </p>
       ) : null}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Low and out items are listed under "Needs ordering" on the Stock page, so only value and orders here. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <KpiCard label={t.hub.kpis.value} value={stock.data ? formatAmount(value, currency, locale) : "—"} loading={loading} />
-        <KpiCard label={t.hub.kpis.low} value={stock.data ? formatQty(low, locale) : "—"} loading={loading} />
-        <KpiCard label={t.hub.kpis.out} value={stock.data ? formatQty(out, locale) : "—"} loading={loading} />
         <KpiCard
           label={t.hub.kpis.openOrders}
-          value={overview.data ? formatQty(overview.data.pending_purchase_orders, locale) : "—"}
+          value={overview.data?.pending_purchase_orders != null ? formatQty(overview.data.pending_purchase_orders, locale) : "—"}
           loading={overview.isLoading}
           note={overview.data?.transfers_to_receive ? fill(t.hub.kpis.toReceive, { count: overview.data.transfers_to_receive }) : undefined}
         />

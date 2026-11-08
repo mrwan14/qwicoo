@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -21,8 +22,9 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { canWriteStock } from "./access";
-import { control, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
+import { control, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency } from "./chrome";
 import { purchaseCancel } from "./purchasing";
+import { NewOrderPanel, type OrderPrefill } from "./order-panel";
 import { formatQty } from "./qty";
 
 const STATUSES = ["DRAFT", "SENT", "PARTIALLY_RECEIVED", "RECEIVED", "CANCELLED", "CLOSED"] as const;
@@ -30,7 +32,6 @@ const PAGE = 50;
 
 type Summary = components["schemas"]["PurchaseOrderSummary"];
 type Detail = components["schemas"]["PurchaseOrderDetailResponse"];
-type LineDraft = { ingredientId: string; unitId: string; qty: string; unitPrice: string };
 
 export function PurchaseOrdersScreen() {
   const t = useStaffSection(inventoryCopy);
@@ -41,7 +42,14 @@ export function PurchaseOrdersScreen() {
   const canWrite = canWriteStock(me?.role);
   const [status, setStatus] = useState("");
   const [offset, setOffset] = useState(0);
-  const [selected, setSelected] = useState<string | "new" | null>(null);
+  // The Stock page links here with ?new=1, plus either suggest=1 or one ingredient and amount.
+  const params = useSearchParams();
+  const [prefill] = useState<OrderPrefill>(() => ({
+    suggest: params.get("suggest") === "1",
+    ingredientId: params.get("ingredient") ?? "",
+    qty: params.get("qty") ?? "",
+  }));
+  const [selected, setSelected] = useState<string | "new" | null>(params.get("new") === "1" && canWrite ? "new" : null);
   const orders = useQuery({
     queryKey: ["inventory", "purchase-orders", branchId, status, offset],
     enabled: Boolean(branchId),
@@ -108,7 +116,7 @@ export function PurchaseOrdersScreen() {
         </div>
       ) : null}
       {selected ? (
-        <OrderDrawer key={selected} orderId={selected} branchId={branchId} canWrite={canWrite} currency={currency} onClose={() => setSelected(null)} />
+        <OrderDrawer key={selected} orderId={selected} branchId={branchId} canWrite={canWrite} currency={currency} prefill={prefill} onClose={() => setSelected(null)} />
       ) : null}
     </InventoryFrame>
   );
@@ -134,12 +142,14 @@ function OrderDrawer({
   branchId,
   canWrite,
   currency,
+  prefill,
   onClose,
 }: {
   orderId: string | "new";
   branchId: string;
   canWrite: boolean;
   currency: string;
+  prefill: OrderPrefill;
   onClose: () => void;
 }) {
   const t = useStaffSection(inventoryCopy);
@@ -162,13 +172,13 @@ function OrderDrawer({
     if (orderId !== "new") await queryClient.invalidateQueries({ queryKey: ["inventory", "purchase-order", orderId] });
   }
 
+  if (orderId === "new") return <NewOrderPanel branchId={branchId} prefill={prefill} onClose={onClose} />;
   return (
     <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
       <SheetContent side="right" className="w-full overflow-y-auto rounded-none sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>{orderId === "new" ? t.purchaseOrders.add : detail.data?.supplier_name ?? t.purchaseOrders.title}</SheetTitle>
         </SheetHeader>
-        {orderId === "new" ? <CreateOrder branchId={branchId} onClose={onClose} /> : null}
         {orderId !== "new" && detail.isLoading ? <LoadingState label={t.loading} /> : null}
         {orderId !== "new" && detail.isError ? <QueryErrorState error={detail.error} screen={t.tabs.purchaseOrders} onRetry={() => void detail.refetch()} /> : null}
         {detail.data ? <OrderDetail order={detail.data} canWrite={canWrite} currency={currency} onChanged={refresh} /> : null}
@@ -288,134 +298,3 @@ function OrderDetail({
   );
 }
 
-function CreateOrder({ branchId, onClose }: { branchId: string; onClose: () => void }) {
-  const t = useStaffSection(inventoryCopy);
-  const { locale } = useLocale();
-  const brandId = useScope((state) => state.brandId) ?? "";
-  const queryClient = useQueryClient();
-  const warehouses = useWarehouses();
-  const [warehouseId, setWarehouseId] = useState("");
-  const [supplierId, setSupplierId] = useState("");
-  const [lines, setLines] = useState<LineDraft[]>([{ ingredientId: "", unitId: "", qty: "", unitPrice: "" }]);
-  const selectedWarehouse = warehouseId || warehouses.data?.find((item) => item.kind !== "CENTRAL_KITCHEN")?.id || "";
-  const suppliers = useQuery({
-    queryKey: ["inventory", "suppliers", brandId, false],
-    enabled: Boolean(brandId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/suppliers", {
-        params: { query: { brand_id: brandId, include_inactive: false } },
-      });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data.items;
-    },
-  });
-  const ingredients = useQuery({
-    queryKey: ["inventory", "ingredients", brandId, "active"],
-    enabled: Boolean(brandId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/ingredients", { params: { query: { brand_id: brandId, active_only: true } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data.items;
-    },
-  });
-  const units = useQuery({
-    queryKey: ["inventory", "units", brandId],
-    enabled: Boolean(brandId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/units", { params: { query: { brand_id: brandId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data.items;
-    },
-  });
-  const packs = useQuery({
-    queryKey: ["inventory", "supplier", supplierId],
-    enabled: Boolean(supplierId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/suppliers/{supplier_id}", {
-        params: { path: { supplier_id: supplierId } },
-      });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data.packs ?? [];
-    },
-  });
-  const suggest = useMutation({
-    mutationFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/warehouses/{warehouse_id}/purchase-suggestions", {
-        params: { path: { warehouse_id: selectedWarehouse } },
-      });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data.items;
-    },
-    onSuccess: (items) => {
-      const next = items.filter((item) => Number(item.suggested_qty) > 0).map((item) => {
-        const pack = (packs.data ?? []).find((row) => row.ingredient_id === item.ingredient_id);
-        const ingredient = (ingredients.data ?? []).find((row) => row.id === item.ingredient_id);
-        return {
-          ingredientId: item.ingredient_id,
-          unitId: pack?.pack_unit_id ?? ingredient?.base_unit_id ?? "",
-          qty: item.suggested_qty,
-          unitPrice: pack?.last_price ?? "",
-        };
-      });
-      if (next.length) setLines(next);
-    },
-    onError: (error) => toast.error(error instanceof Error ? error.message : t.loadFailed),
-  });
-  const save = useMutation({
-    mutationFn: async () => {
-      const result = await browserApi.POST("/api/v1/inventory/purchase-orders", {
-        body: {
-          warehouse_id: selectedWarehouse,
-          supplier_id: supplierId,
-          lines: lines.map((line) => ({
-            ingredient_id: line.ingredientId,
-            unit_id: line.unitId,
-            qty: line.qty,
-            unit_price: line.unitPrice,
-          })),
-        },
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.loadFailed, locale);
-    },
-    onSuccess: async () => {
-      toast.success(t.saved);
-      await queryClient.invalidateQueries({ queryKey: ["inventory", "purchase-orders", branchId] });
-      onClose();
-    },
-    onError: (error) => toast.error(error instanceof Error ? error.message : t.loadFailed),
-  });
-
-  function update(index: number, patch: Partial<LineDraft>) {
-    setLines(lines.map((line, item) => item === index ? { ...line, ...patch } : line));
-  }
-
-  return (
-    <form className="grid gap-3 px-4 pb-6" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
-      {warehouses.data ? <WarehouseSelect warehouses={warehouses.data.filter((item) => item.kind !== "CENTRAL_KITCHEN")} value={selectedWarehouse} onChange={setWarehouseId} /> : null}
-      <label className="grid gap-1 text-sm">
-        <span>{t.purchaseOrders.supplier}</span>
-        <select className={control} value={supplierId} onChange={(event) => setSupplierId(event.target.value)} required>
-          <option value="">{t.purchaseOrders.supplier}</option>
-          {(suppliers.data ?? []).map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
-        </select>
-      </label>
-      <button type="button" className={secondaryButton} disabled={!selectedWarehouse || suggest.isPending} onClick={() => suggest.mutate()}>{t.purchaseOrders.suggest}</button>
-      {lines.map((line, index) => (
-        <div key={index} className="grid gap-2 border-b py-2">
-          <select className={control} value={line.ingredientId} onChange={(event) => update(index, { ingredientId: event.target.value })} required>
-            <option value="">{t.ingredient}</option>
-            {(ingredients.data ?? []).map((item) => <option key={item.id} value={item.id}>{pickLocale(item.name, locale)}</option>)}
-          </select>
-          <select className={control} value={line.unitId} onChange={(event) => update(index, { unitId: event.target.value })} required>
-            <option value="">{t.unit}</option>
-            {(units.data ?? []).map((unit) => <option key={unit.id} value={unit.id}>{pickLocale(unit.name, locale)}</option>)}
-          </select>
-          <input className={control} inputMode="decimal" placeholder={t.quantity} value={line.qty} onChange={(event) => update(index, { qty: event.target.value })} required />
-          <input className={control} inputMode="decimal" placeholder={t.purchaseOrders.price} value={line.unitPrice} onChange={(event) => update(index, { unitPrice: event.target.value })} required />
-        </div>
-      ))}
-      <button type="button" className={secondaryButton} onClick={() => setLines([...lines, { ingredientId: "", unitId: "", qty: "", unitPrice: "" }])}>{t.recipes.addLine}</button>
-      <button type="submit" className={primaryButton} disabled={save.isPending || !selectedWarehouse || !supplierId}>{t.save}</button>
-    </form>
-  );
-}

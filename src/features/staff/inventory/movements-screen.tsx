@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/ops/page-header";
@@ -42,7 +43,8 @@ export function MovementsScreen() {
   const brandId = useScope((state) => state.brandId);
   const warehouses = useWarehouses();
   const [warehouseId, setWarehouseId] = useState("");
-  const [ingredientId, setIngredientId] = useState("");
+  // The Stock item panel links here with ?ingredient= to show one item's history.
+  const [ingredientId, setIngredientId] = useState(useSearchParams().get("ingredient") ?? "");
   const [movementType, setMovementType] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");

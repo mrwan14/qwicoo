@@ -22,7 +22,7 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { canApproveTransfer, canWriteStock } from "./access";
-import { canReceiveTransfer, transferTargets, warehouseLabel } from "./transfers";
+import { canReceiveTransfer, warehouseLabel } from "./transfers";
 import {
   control,
   InventoryFrame,
@@ -33,12 +33,12 @@ import {
   useWarehouses,
   WarehouseSelect,
 } from "./chrome";
+import { MoveStockPanel } from "./move-panel";
 import { formatQty } from "./qty";
 
 const STATUSES = ["REQUESTED", "APPROVED", "REJECTED", "SENT", "RECEIVED"] as const;
 const PAGE = 50;
 type Detail = components["schemas"]["TransferDetailResponse"];
-type LineDraft = { ingredientId: string; unitId: string; qty: string };
 
 export function TransfersScreen() {
   const t = useStaffSection(inventoryCopy);
@@ -84,7 +84,7 @@ export function TransfersScreen() {
       <PageHeader
         title={t.transfers.title}
         detail={t.transfers.detail}
-        action={canWrite ? <button type="button" className={primaryButton} onClick={() => setSelected("new")}>{t.transfers.request}</button> : null}
+        action={canWrite ? <button type="button" className={primaryButton} onClick={() => setSelected("new")}>{t.easy.moveTitle}</button> : null}
       />
       <div className="grid gap-3 sm:grid-cols-3">
         {warehouses.data && direction !== "brand" ? <WarehouseSelect warehouses={warehouses.data} value={selectedWarehouse} onChange={(id) => { setWarehouseId(id); setOffset(0); }} /> : null}
@@ -222,11 +222,11 @@ function TransferDrawer({
     await queryClient.invalidateQueries({ queryKey: ["inventory", "transfers"] });
     if (transferId !== "new") await queryClient.invalidateQueries({ queryKey: ["inventory", "transfer", transferId] });
   }
+  if (transferId === "new") return <MoveStockPanel brandId={brandId} presetIngredient={presetIngredient} onClose={onClose} />;
   return (
     <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
       <SheetContent side="right" className="w-full overflow-x-hidden overflow-y-auto rounded-none sm:max-w-xl">
         <SheetHeader className="pe-12"><SheetTitle>{transferId === "new" ? t.transfers.request : t.transfers.title}</SheetTitle></SheetHeader>
-        {transferId === "new" ? <RequestTransfer brandId={brandId} presetIngredient={presetIngredient} onClose={onClose} /> : null}
         {detail.isLoading ? <LoadingState label={t.loading} /> : null}
         {detail.isError ? <QueryErrorState error={detail.error} screen={t.tabs.transfers} onRetry={() => void detail.refetch()} /> : null}
         {detail.data ? <TransferDetail transfer={detail.data} canWrite={canWrite} canApprove={canApprove} currency={currency} onChanged={refresh} /> : null}
@@ -381,85 +381,3 @@ function TransferDetail({
   );
 }
 
-function RequestTransfer({ brandId, presetIngredient, onClose }: { brandId: string; presetIngredient: string; onClose: () => void }) {
-  const t = useStaffSection(inventoryCopy);
-  const { locale } = useLocale();
-  const queryClient = useQueryClient();
-  const warehouses = useWarehouses();
-  const destinations = useTransferDestinations();
-  const [fromId, setFromId] = useState("");
-  const [toId, setToId] = useState("");
-  const targets = transferTargets(destinations.data ?? [], fromId);
-  const [lines, setLines] = useState<LineDraft[]>([{ ingredientId: presetIngredient, unitId: "", qty: "" }]);
-  const ingredients = useQuery({
-    queryKey: ["inventory", "ingredients", brandId, "active"],
-    enabled: Boolean(brandId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/ingredients", { params: { query: { brand_id: brandId, active_only: true } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data.items;
-    },
-  });
-  const units = useQuery({
-    queryKey: ["inventory", "units", brandId],
-    enabled: Boolean(brandId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/inventory/units", { params: { query: { brand_id: brandId } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
-      return result.data.items;
-    },
-  });
-  const save = useMutation({
-    mutationFn: async () => {
-      const result = await browserApi.POST("/api/v1/inventory/transfers", {
-        body: {
-          from_warehouse_id: fromId,
-          to_warehouse_id: toId,
-          lines: lines.map((line) => ({ ingredient_id: line.ingredientId, unit_id: line.unitId, qty: line.qty })),
-        },
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.loadFailed, locale);
-    },
-    onSuccess: async () => {
-      toast.success(t.saved);
-      await queryClient.invalidateQueries({ queryKey: ["inventory", "transfers"] });
-      onClose();
-    },
-    onError: (error) => toast.error(error instanceof Error ? error.message : t.loadFailed),
-  });
-  return (
-    <form className="grid gap-3 px-4 pb-6" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
-      <label className="grid gap-1 text-sm"><span>{t.transfers.from}</span>
-        <select className={control} value={fromId} onChange={(event) => {
-          const next = event.target.value;
-          setFromId(next);
-          if (toId === next) setToId("");
-        }} required>
-          <option value="">{t.transfers.from}</option>
-          {(warehouses.data ?? []).map((item) => <option key={item.id} value={item.id}>{warehouseLabel(item, locale, t)}</option>)}
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm"><span>{t.transfers.to}</span>
-        <select className={control} value={toId} onChange={(event) => setToId(event.target.value)} required>
-          <option value="">{t.transfers.to}</option>
-          {targets.map((item) => <option key={item.id} value={item.id}>{warehouseLabel(item, locale, t)}</option>)}
-        </select>
-      </label>
-      {destinations.isError ? <QueryErrorState error={destinations.error} screen={t.tabs.transfers} onRetry={() => void destinations.refetch()} /> : null}
-      {lines.map((line, index) => (
-        <div key={index} className="grid gap-2 border-b py-2">
-          <select className={control} value={line.ingredientId} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, ingredientId: event.target.value } : item))} required>
-            <option value="">{t.ingredient}</option>
-            {(ingredients.data ?? []).map((item) => <option key={item.id} value={item.id}>{pickLocale(item.name, locale)}</option>)}
-          </select>
-          <select className={control} value={line.unitId} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, unitId: event.target.value } : item))} required>
-            <option value="">{t.unit}</option>
-            {(units.data ?? []).map((unit) => <option key={unit.id} value={unit.id}>{pickLocale(unit.name, locale)}</option>)}
-          </select>
-          <input className={control} inputMode="decimal" value={line.qty} placeholder={t.quantity} onChange={(event) => setLines(lines.map((item, i) => i === index ? { ...item, qty: event.target.value } : item))} required />
-        </div>
-      ))}
-      <button type="submit" className={primaryButton} disabled={save.isPending || !fromId || !toId}>{t.transfers.request}</button>
-    </form>
-  );
-}

@@ -49,7 +49,7 @@ export function StaffChatPanel({
   const end = useRef<HTMLDivElement>(null);
   const empty = messages.length === 0 && !pending;
   const latest = [...messages].reverse().find((message) => message.role === "assistant");
-  const live = pending ? t.pendingStep : failure?.message ?? (latest?.role === "assistant" ? latest.answer.text : "");
+  const live = pending ? t.typing : failure?.message ?? (latest?.role === "assistant" ? latest.answer.text : "");
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end", behavior: "smooth" });
@@ -160,7 +160,7 @@ export function StaffChatPanel({
                     <i className="staff-dot" />
                     <i className="staff-dot" />
                   </span>
-                  {t.pendingStep}
+                  <span className="sr-only">{t.typing}</span>
                 </span>
               </li>
             ) : null}

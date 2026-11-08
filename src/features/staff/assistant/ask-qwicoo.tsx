@@ -3,10 +3,11 @@
 import { Ban, Building2, Clock, MessageCircle, TrendingUp, Utensils, Wallet } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { ChatPanel, type StarterTile } from "@/components/assistant/chat-panel";
 import { classifyAssistantError, presentAnswer, type AssistantFailure } from "@/components/assistant/model";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useStaffSession } from "@/components/ops/staff-session";
+import { cn } from "cn";
+import { ChevronDown } from "lucide-react";
 import { browserApi } from "@/lib/api/browser";
 import { canAskQwicoo } from "@/lib/auth/roles";
 import { scopeBranches } from "@/lib/auth/scope";
@@ -25,6 +26,7 @@ import {
   type StarterKey,
 } from "./access";
 import { useAssistantLauncher, useAssistantSession } from "./session";
+import { StaffChatPanel, type StaffStarter } from "./staff-chat-panel";
 
 const STARTER_ICON: Record<StarterKey, ReactNode> = {
   today: <TrendingUp aria-hidden className="size-4" />,
@@ -33,15 +35,6 @@ const STARTER_ICON: Record<StarterKey, ReactNode> = {
   cancelled: <Ban aria-hidden className="size-4" />,
   hours: <Clock aria-hidden className="size-4" />,
   topBranch: <Building2 aria-hidden className="size-4" />,
-};
-
-const STARTER_EDGE: Record<StarterKey, string> = {
-  today: "var(--orange)",
-  items: "var(--amber)",
-  cash: "var(--sage)",
-  cancelled: "var(--orange)",
-  hours: "var(--amber)",
-  topBranch: "var(--sage)",
 };
 
 function failureBody(status: number, error: unknown) {
@@ -81,7 +74,7 @@ function focusedInField(): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
-export function AskQwicoo({ autoFocus = false, className }: { autoFocus?: boolean; className?: string }) {
+export function AskQwicoo({ autoFocus = false, className, onClose }: { autoFocus?: boolean; className?: string; onClose?: () => void }) {
   const t = useStaffSection(assistantCopy);
   const { locale } = useLocale();
   const me = useStaffSession();
@@ -100,15 +93,10 @@ export function AskQwicoo({ autoFocus = false, className }: { autoFocus?: boolea
     branchId == null && brandLevel
       ? t.allBranches
       : (accessible.find((branch) => branch.id === branchId)?.name ?? t.branch);
-  const starters: StarterTile[] = me
-    ? starterKeys(me.role).map((key) => ({
-        id: key,
-        label: t.starters[key],
-        icon: STARTER_ICON[key],
-        edge: STARTER_EDGE[key],
-      }))
+  const starters: StaffStarter[] = me
+    ? starterKeys(me.role).map((key) => ({ id: key, label: t.starters[key], icon: STARTER_ICON[key] }))
     : [];
-  const emptyTitle = t.emptyTitle.replace("{branch}", scopeName);
+  const firstName = me?.full_name.trim().split(/\s+/)[0] || null;
   const showPicker = brandLevel ? accessible.length > 0 : accessible.length > 1;
 
   async function submit(text: string | null) {
@@ -155,47 +143,58 @@ export function AskQwicoo({ autoFocus = false, className }: { autoFocus?: boolea
     if (lastUser?.role === "user") void submit(lastUser.content);
   }
 
+  const branchPicker = showPicker ? (
+    <label className="relative inline-flex w-fit max-w-full items-center">
+      <span className="sr-only">{t.branch}</span>
+      <select
+        className="max-w-[16rem] cursor-pointer appearance-none truncate rounded-full bg-transparent py-0.5 pe-5 text-[13px] text-ink-secondary outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"
+        value={branchId ?? ""}
+        onChange={(event) => {
+          const raw = event.target.value;
+          const next = raw === "" ? null : raw;
+          if (next === branchId) return;
+          if (next && !accessible.some((branch) => branch.id === next)) return;
+          useAssistantSession.setState({ branchId: next, messages: [] });
+          setFailure(null);
+        }}
+      >
+        {brandLevel ? <option value="">{t.allBranches}</option> : null}
+        {accessible.map((branch) => (
+          <option key={branch.id} value={branch.id}>
+            {branch.name}
+          </option>
+        ))}
+      </select>
+      <ChevronDown aria-hidden className="pointer-events-none absolute end-0 size-3.5 text-ink-secondary" />
+    </label>
+  ) : null;
+
   return (
-    <div className="grid min-h-0">
-      <ChatPanel
-        title={t.ask}
+    <div
+      className={cn(
+        "grid min-h-0",
+        // On its own page the panel is a framed card; in the sheet it fills the sheet.
+        onClose ? "h-full" : "h-[calc(100dvh-9rem)] overflow-hidden rounded-xl border border-border",
+        className,
+      )}
+    >
+      <StaffChatPanel
         scopeLabel={scopeName}
-        emptyTitle={emptyTitle}
+        firstName={firstName}
         messages={messages}
         pending={pending}
         failure={failure}
         starters={starters}
         autoFocus={autoFocus}
-        className={className}
+        branchPicker={branchPicker}
         onSend={(text) => void submit(text)}
         onRetry={() => void submit(null)}
         onAskAgain={askAgain}
-        headerExtra={
-          showPicker ? (
-            <label className="grid gap-0.5 text-xs text-[#cfc8bf]">
-              <span className="sr-only">{t.branch}</span>
-              <select
-                className="h-9 max-w-[11rem] border border-[#5a534c] bg-ink px-2 text-sm text-canvas"
-                value={branchId ?? ""}
-                onChange={(event) => {
-                  const raw = event.target.value;
-                  const next = raw === "" ? null : raw;
-                  if (next === branchId) return;
-                  if (next && !accessible.some((branch) => branch.id === next)) return;
-                  useAssistantSession.setState({ branchId: next, messages: [] });
-                  setFailure(null);
-                }}
-              >
-                {brandLevel ? <option value="">{t.allBranches}</option> : null}
-                {accessible.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null
-        }
+        onNewChat={() => {
+          useAssistantSession.setState({ messages: [] });
+          setFailure(null);
+        }}
+        onClose={onClose}
       />
     </div>
   );
@@ -246,12 +245,21 @@ export function AskQwicooButton() {
       </button>
       <SheetContent
         side={assistantSheetSide(mobile, dir)}
-        className="h-dvh w-full max-w-none gap-0 rounded-none p-0 sm:h-full sm:w-[32rem] sm:max-w-[32rem]"
+        showCloseButton={false}
+        className="h-dvh w-full max-w-none gap-0 overflow-hidden rounded-none border-0 p-0 shadow-panel max-sm:h-[92dvh] max-sm:rounded-t-2xl sm:h-full sm:w-[30rem] sm:max-w-[30rem]"
       >
         <SheetHeader className="sr-only">
           <SheetTitle>{t.ask}</SheetTitle>
         </SheetHeader>
-        {open ? <AskQwicoo autoFocus className="min-h-0 h-full" /> : null}
+        {open ? (
+          <AskQwicoo
+            autoFocus
+            onClose={() => {
+              setOpen(false);
+              requestAnimationFrame(() => button.current?.focus());
+            }}
+          />
+        ) : null}
       </SheetContent>
     </Sheet>
   );

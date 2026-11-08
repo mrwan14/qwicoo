@@ -246,7 +246,7 @@ export function AskQwicooButton() {
       <SheetContent
         side={assistantSheetSide(mobile, dir)}
         showCloseButton={false}
-        className="h-dvh w-full max-w-none gap-0 overflow-hidden rounded-none border-0 p-0 shadow-panel max-sm:h-[92dvh] max-sm:rounded-t-2xl sm:h-full sm:w-[30rem] sm:max-w-[30rem]"
+        className="h-dvh w-full max-w-none gap-0 overflow-hidden rounded-none border-0 p-0 shadow-panel max-sm:h-[92dvh] max-sm:rounded-t-2xl sm:h-full sm:w-[34rem] sm:max-w-[34rem] lg:w-[42rem] lg:max-w-[42rem]"
       >
         <SheetHeader className="sr-only">
           <SheetTitle>{t.ask}</SheetTitle>

@@ -20,11 +20,14 @@ export function Trend({
   comparison,
   good = "up",
   unit = "percent",
+  inverse = false,
 }: {
   change: number | null;
   comparison: Comparison;
   good?: "up" | "down" | "none";
   unit?: "percent" | "points";
+  /** On a dark (ink) surface: the "vs …" text turns light so it stays readable. */
+  inverse?: boolean;
 }) {
   const t = useStaffSection(reportsCopy);
   const { locale } = useLocale();
@@ -35,7 +38,7 @@ export function Trend({
   const value = unit === "points" ? fill(t.trend.points, { value: size.toFixed(1) }) : `${formatCount(size, locale)}%`;
   const Icon = direction === "down" ? ArrowDown : ArrowUp;
   return (
-    <p className="flex flex-wrap items-center gap-1.5 text-xs text-ink-secondary">
+    <p className={cn("flex flex-wrap items-center gap-1.5 text-xs", inverse ? "text-on-ink/70" : "text-ink-secondary")}>
       <span
         className={cn(
           "inline-flex items-center gap-0.5 rounded-staff px-1.5 py-0.5 font-medium text-ink tabular-nums",

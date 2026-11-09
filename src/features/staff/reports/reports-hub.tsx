@@ -21,12 +21,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { SectionLabel } from "@/components/ops/kit/card";
 import { EmptyState } from "@/components/ops/kit/empty-state";
 import { PageHeader } from "@/components/ops/kit/page-header";
 import { RoleGate } from "@/components/ops/screen";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { canOpenInventoryPage } from "@/features/staff/inventory/access";
+import { fill } from "@/lib/i18n/dictionary";
 import { reportsCopy } from "@/lib/i18n/staff/reports";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { navForUser } from "@/lib/nav";
@@ -65,27 +65,61 @@ const ENTRIES: readonly Entry[] = [
   { kind: "soon", key: "speed", group: "service", icon: Gauge },
 ];
 
-const GROUPS: readonly Group[] = ["sales", "menu", "stock", "staff", "money", "service"];
+/**
+ * The panels flow down into columns, so this order also balances them: Sales and Menu share the
+ * first column, Payments & taxes (the longest) takes the middle, Stock and Staff the last.
+ */
+const GROUPS: readonly Group[] = ["sales", "menu", "money", "stock", "staff", "service"];
 
-function ReportCard({ entry, t }: { entry: Extract<Entry, { kind: "ready" }>; t: Copy }) {
+const GROUP_ICONS: Record<Group, LucideIcon> = {
+  sales: BarChart3,
+  money: Wallet,
+  menu: UtensilsCrossed,
+  stock: Package,
+  staff: ClipboardList,
+  service: Gauge,
+};
+
+function ReportRow({ entry, t }: { entry: Extract<Entry, { kind: "ready" }>; t: Copy }) {
   const Icon = entry.icon;
   const copy = t.items[entry.key];
   return (
-    <Link
-      href={entry.href}
-      className="grid min-h-36 content-between gap-4 rounded-staff border border-border bg-canvas p-4 transition-colors hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-    >
-      <span className="flex items-start justify-between gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-staff border border-border bg-subtle">
-          <Icon aria-hidden className="size-[18px] text-ink" />
+    <li>
+      <Link
+        href={entry.href}
+        className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-subtle focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+      >
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-staff bg-ink text-on-ink">
+          <Icon aria-hidden className="size-[18px]" />
         </span>
-        <ChevronRight aria-hidden className="size-4 text-ink-secondary rtl:-scale-x-100" />
-      </span>
-      <span className="grid gap-1">
-        <span className="text-sm font-semibold text-ink">{copy.title}</span>
-        <span className="text-[13px] leading-snug text-ink-secondary">{copy.body}</span>
-      </span>
-    </Link>
+        <span className="grid min-w-0 flex-1 gap-0.5">
+          <span className="text-sm font-semibold text-ink">{copy.title}</span>
+          <span className="text-[13px] leading-snug text-ink-secondary">{copy.body}</span>
+        </span>
+        <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-secondary transition-transform group-hover:translate-x-0.5 group-hover:text-ink rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5" />
+      </Link>
+    </li>
+  );
+}
+
+/** One group of reports as a single panel: a tinted header, then a row per report. */
+function GroupPanel({ group, entries, t }: { group: Group; entries: readonly Extract<Entry, { kind: "ready" }>[]; t: Copy }) {
+  const Icon = GROUP_ICONS[group];
+  return (
+    <section className="mb-4 break-inside-avoid overflow-hidden rounded-staff border border-border bg-canvas shadow-card">
+      <header className="flex items-center justify-between gap-3 border-b border-border bg-well px-4 py-2.5">
+        <h2 className="flex items-center gap-2 text-xs font-semibold tracking-wide text-ink uppercase">
+          <Icon aria-hidden className="size-3.5" />
+          {t.groups[group]}
+        </h2>
+        <span className="text-xs text-ink-secondary tabular-nums">{entries.length === 1 ? t.groupCountOne : fill(t.groupCount, { count: entries.length })}</span>
+      </header>
+      <ul className="divide-y divide-border">
+        {entries.map((entry) => (
+          <ReportRow key={entry.key} entry={entry} t={t} />
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -106,11 +140,10 @@ export function ReportsHub() {
   });
   const ready = entries.filter((entry): entry is Extract<Entry, { kind: "ready" }> => entry.kind === "ready");
   const soon = entries.filter((entry): entry is Extract<Entry, { kind: "soon" }> => entry.kind === "soon");
-  const anyReady = ready.length > 0;
 
   return (
     <RoleGate href="/app/reports">
-      <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-6">
+      <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-5">
         <PageHeader title={t.title} subtitle={t.subtitle} />
         <HubSnapshot
           sales={allowed.has("/app/reports/sales")}
@@ -118,39 +151,31 @@ export function ReportsHub() {
           stock={canOpenInventoryPage(me.role, "reports")}
           branchId={branchId}
         />
-        {!anyReady ? <EmptyState icon={BarChart3} title={t.nothing} /> : null}
-        {GROUPS.map((group) => {
-          const cards = ready.filter((entry) => entry.group === group);
-          if (cards.length === 0) return null;
-          return (
-            <section key={group} className="grid gap-2.5">
-              <SectionLabel>{t.groups[group]}</SectionLabel>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {cards.map((entry) => (
-                  <ReportCard key={entry.key} entry={entry} t={t} />
-                ))}
-              </div>
-            </section>
-          );
-        })}
+        {ready.length === 0 ? (
+          <EmptyState icon={BarChart3} title={t.nothing} />
+        ) : (
+          <div className="columns-1 gap-4 md:columns-2 xl:columns-3">
+            {GROUPS.map((group) => {
+              const rows = ready.filter((entry) => entry.group === group);
+              return rows.length > 0 ? <GroupPanel key={group} group={group} entries={rows} t={t} /> : null;
+            })}
+          </div>
+        )}
         {soon.length > 0 ? (
           // Reports still being built sit in one quiet line, so they don't crowd the ones that work.
-          <section className="grid gap-2.5">
-            <SectionLabel>{t.soon.onTheWay}</SectionLabel>
-            <div className="grid gap-3 rounded-staff border border-dashed border-border bg-subtle p-4">
-              <p className="text-[13px] text-ink-secondary">{t.soon.onTheWayHint}</p>
-              <ul className="flex flex-wrap gap-2">
-                {soon.map((entry) => {
-                  const Icon = entry.icon;
-                  return (
-                    <li key={entry.key} title={t.soon[entry.key].body} className="inline-flex items-center gap-1.5 rounded-staff border border-border bg-canvas px-2.5 py-1 text-[13px] text-ink-secondary">
-                      <Icon aria-hidden className="size-3.5 text-disabled" />
-                      {t.soon[entry.key].title}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+          <section className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-staff border border-dashed border-border px-4 py-3">
+            <span className="text-xs font-semibold tracking-wide text-ink uppercase">{t.soon.onTheWay}</span>
+            <ul className="flex flex-wrap gap-1.5">
+              {soon.map((entry) => {
+                const Icon = entry.icon;
+                return (
+                  <li key={entry.key} title={t.soon[entry.key].body} className="inline-flex items-center gap-1.5 rounded-staff bg-well px-2 py-1 text-xs text-ink-secondary">
+                    <Icon aria-hidden className="size-3.5" />
+                    {t.soon[entry.key].title}
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         ) : null}
       </div>

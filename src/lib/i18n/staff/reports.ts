@@ -34,6 +34,8 @@ const en = {
     speed: { title: "Speed of service", body: "Time from order to kitchen to table." },
   },
   nothing: "No reports for your role yet.",
+  groupCount: "{count} reports",
+  groupCountOne: "1 report",
   partial: "Older days not loaded",
   closedOnly: "Closed days only",
   zDetail: {
@@ -254,6 +256,8 @@ const ar = {
     speed: { title: "سرعة الخدمة", body: "الوقت من الطلب إلى المطبخ إلى الطاولة." },
   },
   nothing: "لا توجد تقارير لدورك بعد.",
+  groupCount: "{count} تقارير",
+  groupCountOne: "تقرير واحد",
   partial: "لم تُحمَّل الأيام الأقدم",
   closedOnly: "الأيام المغلقة فقط",
   zDetail: {

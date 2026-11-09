@@ -17,10 +17,13 @@ import { isUserRole, roleLabel } from "@/lib/auth/roles";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
+import { attendanceCopy } from "@/lib/i18n/staff/attendance";
 import { commonCopy } from "@/lib/i18n/staff/common";
 import { peopleCopy } from "@/lib/i18n/staff/people";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
+
+import { UsualShiftPanel } from "./attendance/usual-shift-panel";
 
 const control = "h-11 w-full rounded-staff border px-3 text-sm";
 const hint = "text-sm leading-6 text-ink-secondary";
@@ -46,6 +49,9 @@ export function StaffScreen() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<(typeof ROLES)[number]>("CASHIER");
+  const [shiftStart, setShiftStart] = useState("10:00");
+  const [shiftEnd, setShiftEnd] = useState("18:00");
+  const usualCopy = useStaffSection(attendanceCopy).usual;
   const [removeId, setRemoveId] = useState<string | null>(null);
   const searchParam = useSearchParams().get("q");
   const [staffQuery, setStaffQuery] = useState(searchParam ?? "");
@@ -70,8 +76,8 @@ export function StaffScreen() {
         full_name: fullName,
         role,
         branch_id: branchId ?? "",
-        shift_start_time: "10:00:00",
-        shift_end_time: "18:00:00",
+        shift_start_time: `${shiftStart || "10:00"}:00`,
+        shift_end_time: `${shiftEnd || "18:00"}:00`,
         late_grace_period_minutes: 30,
       };
       const path = brandId ? "/api/v1/brands/{brand_id}/staff" : "/api/v1/branches/{branch_id}/staff";
@@ -161,6 +167,15 @@ export function StaffScreen() {
               {ROLES.map((item) => <option key={item} value={item}>{roleLabel(item)}</option>)}
             </select>
           </label>
+          <label className="grid gap-1 text-sm">
+            {usualCopy.start}
+            <input className={control} type="time" value={shiftStart} onChange={(event) => setShiftStart(event.target.value)} required />
+          </label>
+          <label className="grid gap-1 text-sm">
+            {usualCopy.end}
+            <input className={control} type="time" value={shiftEnd} onChange={(event) => setShiftEnd(event.target.value)} required />
+            {shiftEnd && shiftStart && shiftEnd < shiftStart ? <span className={hint}>{usualCopy.endHint}</span> : null}
+          </label>
         </div>
         <button className={primaryButton} type="submit" disabled={create.isPending}>
           <Plus aria-hidden className="size-4" />
@@ -220,6 +235,8 @@ function StaffCard({
 }) {
   const t = useStaffSection(peopleCopy).staff;
   const common = useStaffSection(commonCopy);
+  const usualCopy = useStaffSection(attendanceCopy).usual;
+  const [shiftOpen, setShiftOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(person.full_name);
   const edited = name.trim().length > 0 && name.trim() !== person.full_name.trim();
@@ -273,6 +290,9 @@ function StaffCard({
           <button type="button" className={secondaryButton} onClick={() => { setName(person.full_name); setEditing(true); }}>
             {t.changeName}
           </button>
+          <button type="button" className={secondaryButton} onClick={() => setShiftOpen(true)}>
+            {usualCopy.button}
+          </button>
           {person.is_active ? (
             <button
               type="button"
@@ -284,6 +304,7 @@ function StaffCard({
           ) : null}
         </div>
       )}
+      {shiftOpen ? <UsualShiftPanel person={person} onClose={() => setShiftOpen(false)} /> : null}
     </li>
   );
 }

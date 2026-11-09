@@ -318,6 +318,11 @@ function HoursTab({ branchId, hours }: { branchId: string; hours: components["sc
           opening_hours[key] = [];
           continue;
         }
+        // 00:00 to 00:00 is how the API stores "open 24 hours".
+        if (day.allDay) {
+          opening_hours[key] = [{ open: "00:00", close: "00:00" }];
+          continue;
+        }
         if (day.open === day.close) throw new Error(fill(t.hoursMismatch, { day: t.days[key] }));
         opening_hours[key] = [{ open: day.open, close: day.close }];
       }
@@ -336,18 +341,30 @@ function HoursTab({ branchId, hours }: { branchId: string; hours: components["sc
   return (
     <form className="grid max-w-xl gap-3" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
       <p className={hint}>{t.hoursHint}</p>
+      <p className={hint}>{t.hoursExample}</p>
+      <button
+        type="button"
+        className="min-h-11 w-fit rounded-staff border px-4 text-sm font-medium hover:bg-muted"
+        onClick={() => setDays((current) => Object.fromEntries(WEEKDAY_KEYS.map((key) => [key, { ...current.mon }])) as typeof current)}
+      >
+        {fill(t.sameEveryDay, { day: t.days.mon })}
+      </button>
       {WEEKDAY_KEYS.map((key) => {
         const day = days[key];
         return (
-          <div key={key} className="grid gap-2 rounded-staff border bg-canvas p-3 sm:grid-cols-[8rem_1fr_1fr_auto] sm:items-end">
+          <div key={key} className="grid gap-2 rounded-staff border bg-canvas p-3 sm:grid-cols-[8rem_1fr_1fr_auto_auto] sm:items-end">
             <span className="text-sm font-medium">{t.days[key]}</span>
             <label className="grid gap-1 text-sm">
               {t.opens}
-              <input className={control} type="time" value={day.open} disabled={day.closed} onChange={(event) => setDays((current) => ({ ...current, [key]: { ...current[key], open: event.target.value } }))} />
+              <input className={control} type="time" value={day.open} disabled={day.closed || day.allDay} onChange={(event) => setDays((current) => ({ ...current, [key]: { ...current[key], open: event.target.value } }))} />
             </label>
             <label className="grid gap-1 text-sm">
               {t.closes}
-              <input className={control} type="time" value={day.close} disabled={day.closed} onChange={(event) => setDays((current) => ({ ...current, [key]: { ...current[key], close: event.target.value } }))} />
+              <input className={control} type="time" value={day.close} disabled={day.closed || day.allDay} onChange={(event) => setDays((current) => ({ ...current, [key]: { ...current[key], close: event.target.value } }))} />
+            </label>
+            <label className="flex min-h-11 items-center gap-2 text-sm">
+              <input type="checkbox" checked={day.allDay} disabled={day.closed} onChange={(event) => setDays((current) => ({ ...current, [key]: { ...current[key], allDay: event.target.checked } }))} />
+              {t.allDay}
             </label>
             <label className="flex min-h-11 items-center gap-2 text-sm">
               <input type="checkbox" checked={day.closed} onChange={(event) => setDays((current) => ({ ...current, [key]: { ...current[key], closed: event.target.checked } }))} />
@@ -363,17 +380,23 @@ function HoursTab({ branchId, hours }: { branchId: string; hours: components["sc
   );
 }
 
-function daysFromHours(hours: components["schemas"]["OpeningHours"] | null | undefined): Record<Weekday, { open: string; close: string; closed: boolean }> {
-  const next = {} as Record<Weekday, { open: string; close: string; closed: boolean }>;
+type DayHours = { open: string; close: string; closed: boolean; allDay: boolean };
+
+function daysFromHours(hours: components["schemas"]["OpeningHours"] | null | undefined): Record<Weekday, DayHours> {
+  const next = {} as Record<Weekday, DayHours>;
   for (const key of WEEKDAY_KEYS) {
     if (!hours) {
-      next[key] = { open: "09:00", close: "23:00", closed: false };
+      next[key] = { open: "09:00", close: "23:00", closed: false, allDay: false };
       continue;
     }
     const range = hours[key]?.[0];
+    const open = range?.open.slice(0, 5);
+    const close = range?.close.slice(0, 5);
     next[key] = range
-      ? { open: range.open.slice(0, 5), close: range.close.slice(0, 5), closed: false }
-      : { open: "09:00", close: "23:00", closed: true };
+      ? open === "00:00" && close === "00:00"
+        ? { open: "09:00", close: "23:00", closed: false, allDay: true }
+        : { open: open ?? "09:00", close: close ?? "23:00", closed: false, allDay: false }
+      : { open: "09:00", close: "23:00", closed: true, allDay: false };
   }
   return next;
 }

@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 
 import { EmptyState } from "@/components/ops/kit/empty-state";
+import { Panel } from "@/components/ops/kit/panel";
 import { PageHeader } from "@/components/ops/kit/page-header";
 import { RoleGate } from "@/components/ops/screen";
 import { useStaffSession } from "@/components/ops/staff-session";
@@ -102,24 +103,21 @@ function ReportRow({ entry, t }: { entry: Extract<Entry, { kind: "ready" }>; t: 
   );
 }
 
-/** One group of reports as a single panel: a tinted header, then a row per report. */
+/** One group of reports as a single panel, with a row per report. */
 function GroupPanel({ group, entries, t }: { group: Group; entries: readonly Extract<Entry, { kind: "ready" }>[]; t: Copy }) {
-  const Icon = GROUP_ICONS[group];
   return (
-    <section className="mb-4 break-inside-avoid overflow-hidden rounded-staff border border-border bg-canvas shadow-card">
-      <header className="flex items-center justify-between gap-3 border-b border-border bg-well px-4 py-2.5">
-        <h2 className="flex items-center gap-2 text-xs font-semibold tracking-wide text-ink uppercase">
-          <Icon aria-hidden className="size-3.5" />
-          {t.groups[group]}
-        </h2>
-        <span className="text-xs text-ink-secondary tabular-nums">{entries.length === 1 ? t.groupCountOne : fill(t.groupCount, { count: entries.length })}</span>
-      </header>
+    <Panel
+      className="mb-4 break-inside-avoid"
+      title={t.groups[group]}
+      icon={GROUP_ICONS[group]}
+      action={<span className="text-ink-secondary tabular-nums">{entries.length === 1 ? t.groupCountOne : fill(t.groupCount, { count: entries.length })}</span>}
+    >
       <ul className="divide-y divide-border">
         {entries.map((entry) => (
           <ReportRow key={entry.key} entry={entry} t={t} />
         ))}
       </ul>
-    </section>
+    </Panel>
   );
 }
 

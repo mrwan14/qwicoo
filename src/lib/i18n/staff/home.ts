@@ -59,6 +59,7 @@ const en = {
   },
   brand: {
     subtitle: "{brand} · {count} branches",
+    subtitleOne: "{brand} · 1 branch",
     period: "Period",
     kpis: {
       gross: "Gross sales",
@@ -88,6 +89,7 @@ const en = {
       share: "{share}% of sales",
       empty: "No items sold in this period.",
       categories: "Sales by category",
+      top: "Top sellers",
     },
   },
   platform: {
@@ -188,6 +190,7 @@ const ar = {
   },
   brand: {
     subtitle: "{brand} · {count} فروع",
+    subtitleOne: "{brand} · فرع واحد",
     period: "الفترة",
     kpis: {
       gross: "إجمالي المبيعات",
@@ -217,6 +220,7 @@ const ar = {
       share: "{share}% من المبيعات",
       empty: "لم يُبع أي صنف في هذه الفترة.",
       categories: "المبيعات حسب الفئة",
+      top: "الأكثر مبيعًا",
     },
   },
   platform: {

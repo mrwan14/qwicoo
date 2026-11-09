@@ -2,11 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "cn";
-import { Package, ReceiptText, TrendingUp, Wallet, type LucideIcon } from "lucide-react";
-import Link from "next/link";
+import { Package, ReceiptText, TrendingUp, Wallet } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ops/kit/badge";
+import { StatCard } from "@/components/ops/kit/stat-card";
 import { dateFilter } from "@/components/ops/kit/date-range";
 import { formatAmount } from "@/components/ops/kit/money";
 import { cairoInclusiveRange } from "@/features/staff/inventory/qty";
@@ -21,58 +21,6 @@ import { percentChange, previousPeriod } from "./compare";
 import { analyticsPeriod } from "./period";
 import { rangeLabel } from "./report-shell";
 import { Trend } from "./trend";
-
-/**
- * One snapshot card. The lead number (sales today) is the single ink card so the eye lands there
- * first; the rest are white cards with an ink icon tile, like the report rows below. The whole
- * card opens its report. `extra` is the change badge or drawer status, `note` a quiet line.
- */
-function Cell({
-  href,
-  label,
-  icon: Icon,
-  value,
-  loading,
-  extra,
-  note,
-  ink = false,
-}: {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  value: ReactNode;
-  loading: boolean;
-  extra?: ReactNode;
-  note?: ReactNode;
-  ink?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "group grid min-w-0 content-start gap-3 rounded-staff border p-4 shadow-card transition-[background-color,border-color,box-shadow] hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
-        ink ? "border-ink bg-ink text-on-ink hover:bg-[#1f1f1f]" : "border-border bg-canvas text-ink hover:border-ink",
-      )}
-    >
-      <span className="flex items-start justify-between gap-3">
-        <span className={cn("text-xs font-medium", ink ? "text-on-ink/70" : "text-ink-secondary")}>{label}</span>
-        <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-staff", ink ? "bg-on-ink/10 text-on-ink" : "bg-ink text-on-ink")}>
-          <Icon aria-hidden className="size-4" />
-        </span>
-      </span>
-      {/* Values sit at the same height in every card so the row reads as one line of figures. */}
-      <span className="grid gap-1.5">
-        {loading ? (
-          <span className={cn("h-9 w-28 animate-pulse rounded-staff", ink ? "bg-on-ink/10" : "bg-well")} />
-        ) : (
-          <span className="truncate text-[24px] leading-8 font-semibold tabular-nums sm:text-[28px] sm:leading-9">{value}</span>
-        )}
-        {!loading && extra ? <span className="justify-self-start">{extra}</span> : null}
-        {note ? <span className={cn("text-xs", ink ? "text-on-ink/60" : "text-ink-secondary")}>{note}</span> : null}
-      </span>
-    </Link>
-  );
-}
 
 const COLUMNS = ["", "xl:grid-cols-1", "xl:grid-cols-2", "xl:grid-cols-3", "xl:grid-cols-4"] as const;
 
@@ -131,7 +79,7 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
     const trend = (current?: string | number, previous?: string | number, inverse = false) =>
       kpis && before.data ? <Trend change={percentChange(current, previous)} comparison={comparison} inverse={inverse} /> : null;
     tiles.push(
-      <Cell
+      <StatCard
         key="sales"
         ink
         href="/app/reports/sales?range=today"
@@ -141,7 +89,7 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
         loading={now.isLoading}
         extra={trend(kpis?.gmv, before.data?.gmv, true)}
       />,
-      <Cell
+      <StatCard
         key="orders"
         href="/app/reports/sales?range=today"
         label={t.snapshot.ordersToday}
@@ -159,7 +107,7 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
     const counted = report?.cash_reconciliation?.declared_cash != null;
     const day = report?.business_date.slice(0, 10);
     tiles.push(
-      <Cell
+      <StatCard
         key="till"
         href="/app/reports/till"
         label={t.snapshot.lastClose}
@@ -173,7 +121,7 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
   }
   if (stock && branchId) {
     tiles.push(
-      <Cell
+      <StatCard
         key="food"
         href="/app/reports/stock"
         label={t.snapshot.foodCost}

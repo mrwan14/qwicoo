@@ -27,7 +27,6 @@ import { PageHeader } from "@/components/ops/kit/page-header";
 import { RoleGate } from "@/components/ops/screen";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { canOpenInventoryPage } from "@/features/staff/inventory/access";
-import { fill } from "@/lib/i18n/dictionary";
 import { reportsCopy } from "@/lib/i18n/staff/reports";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import type { UserProfile } from "@/lib/auth/roles";
@@ -91,7 +90,7 @@ function ReportRow({ entry, t }: { entry: Extract<Entry, { kind: "ready" }>; t: 
         href={entry.href}
         className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-subtle focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-staff bg-ink text-on-ink">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-staff bg-well text-ink transition-colors group-hover:bg-ink group-hover:text-on-ink group-focus-visible:bg-ink group-focus-visible:text-on-ink">
           <Icon aria-hidden className="size-[18px]" />
         </span>
         <span className="grid min-w-0 flex-1 gap-0.5">
@@ -111,7 +110,6 @@ function GroupPanel({ group, entries, t }: { group: Group; entries: readonly Ext
       className="mb-4 break-inside-avoid"
       title={t.groups[group]}
       icon={GROUP_ICONS[group]}
-      action={<span className="text-ink-secondary tabular-nums">{entries.length === 1 ? t.groupCountOne : fill(t.groupCount, { count: entries.length })}</span>}
     >
       <ul className="divide-y divide-border">
         {entries.map((entry) => (
@@ -173,7 +171,7 @@ export function ReportsHub() {
         {soon.length > 0 ? (
           // Reports still being built sit in one quiet line, so they don't crowd the ones that work.
           <section className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-staff border border-dashed border-border px-4 py-3">
-            <span className="text-xs font-semibold tracking-wide text-ink uppercase">{t.soon.onTheWay}</span>
+            <span className="text-xs font-semibold tracking-wide text-ink-secondary uppercase">{t.soon.onTheWay}</span>
             <ul className="flex flex-wrap gap-1.5">
               {soon.map((entry) => {
                 const Icon = entry.icon;

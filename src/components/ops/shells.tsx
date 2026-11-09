@@ -172,18 +172,18 @@ function AdminShell({ children }: { children: ReactNode }) {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <ConnectionBanner items={items} />
-        <header className="sticky top-0 z-30 flex h-[60px] items-center gap-3 border-b border-border bg-subtle px-4 print:hidden sm:px-6">
+        <header className="sticky top-0 z-30 flex h-[60px] items-center gap-3 border-b border-border bg-canvas px-4 print:hidden sm:px-6">
           <button
             type="button"
             aria-label={t.openNav}
             aria-expanded={navOpen}
             onClick={() => setNavOpen(true)}
-            className="-ms-1.5 inline-flex size-10 shrink-0 items-center justify-center rounded-staff text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-focus lg:hidden"
+            className="-ms-1.5 inline-flex size-10 shrink-0 items-center justify-center rounded-staff text-ink hover:bg-well focus-visible:outline-2 focus-visible:outline-focus lg:hidden"
           >
             <MenuIcon aria-hidden className="size-5" />
           </button>
-          <GlobalSearch items={items} entries={entries} className="hidden w-[340px] min-w-0 shrink md:block" />
-          <div className="ms-auto flex min-w-0 items-center gap-2 sm:gap-4">
+          <GlobalSearch items={items} entries={entries} shortcut className="hidden w-[360px] min-w-0 shrink md:block" />
+          <div className="ms-auto flex min-w-0 items-center gap-2 sm:gap-3">
             <AskQwicooButton />
             <BranchSwitcher className="min-w-0" />
             <div className="flex items-center text-ink">

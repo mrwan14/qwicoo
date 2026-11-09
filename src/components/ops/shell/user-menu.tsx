@@ -64,11 +64,11 @@ export function UserMenu() {
       <Menu>
         <MenuTrigger
           aria-label={`${t.account}: ${me.full_name}`}
-          className="flex min-h-[42px] items-center gap-2.5 rounded-staff px-1.5 text-start outline-none hover:bg-canvas focus-visible:outline-2 focus-visible:outline-focus data-popup-open:bg-canvas"
+          className="flex min-h-[42px] items-center gap-2.5 rounded-staff px-1.5 text-start outline-none hover:bg-well focus-visible:outline-2 focus-visible:outline-focus data-popup-open:bg-well"
         >
           <Avatar name={me.full_name} />
           <span className="hidden min-w-0 md:grid">
-            <span className="truncate text-[13px] font-medium text-ink-secondary">{me.full_name}</span>
+            <span className="truncate text-[13px] font-medium text-ink">{me.full_name}</span>
             <span className="truncate text-xs text-ink-secondary">{roleLabel(me.role)}</span>
           </span>
         </MenuTrigger>

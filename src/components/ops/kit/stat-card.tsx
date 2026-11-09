@@ -5,7 +5,8 @@ import type { ReactNode } from "react";
 
 /**
  * A headline number with its icon. One card per row may be `ink` (black) so the eye lands on
- * the number that matters most; the rest are white with an ink icon tile. With `href` the whole
+ * the number that matters most; the rest are white with a quiet icon tile, so the black card stays
+ * the only strong block in the row. With `href` the whole
  * card opens the report behind it and lifts on hover. `extra` holds a change badge or status,
  * `note` a quiet line under it. Values sit at the same height in every card so a row reads as
  * one line of figures.
@@ -35,7 +36,7 @@ export function StatCard({
     <>
       <span className="flex items-start justify-between gap-3">
         <span className={cn("text-xs font-medium", ink ? "text-on-ink/70" : "text-ink-secondary")}>{label}</span>
-        <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-staff", ink ? "bg-on-ink/10 text-on-ink" : "bg-ink text-on-ink")}>
+        <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-staff", ink ? "bg-on-ink/10 text-on-ink" : "bg-well text-ink")}>
           <Icon aria-hidden className="size-4" />
         </span>
       </span>

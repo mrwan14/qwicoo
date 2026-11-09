@@ -3,7 +3,7 @@
 import { cn } from "cn";
 import { CornerDownLeft, FileText, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import { fill } from "@/lib/i18n/dictionary";
 import { navCopy } from "@/lib/i18n/staff/nav";
@@ -29,17 +29,32 @@ export function GlobalSearch({
   entries,
   className,
   onNavigate,
+  shortcut = false,
 }: {
   items: readonly NavItem[];
   entries: readonly SidebarEntry[];
   className?: string;
   onNavigate?: () => void;
+  /** Pressing "/" anywhere outside a text field jumps here; only one search on the page should take it. */
+  shortcut?: boolean;
 }) {
   const t = useStaffSection(shellCopy);
   const nav = useStaffSection(navCopy);
   const router = useRouter();
   const listId = useId();
   const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!shortcut) return;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+      event.preventDefault();
+      input.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [shortcut]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -117,6 +132,7 @@ export function GlobalSearch({
         aria-expanded={showList}
         aria-controls={listId}
         aria-autocomplete="list"
+        aria-keyshortcuts={shortcut ? "/" : undefined}
         aria-activedescendant={showList && results[current] ? `${listId}-${current}` : undefined}
         placeholder={t.search.placeholder}
         value={query}
@@ -128,8 +144,19 @@ export function GlobalSearch({
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onKeyDown={onKeyDown}
-        className="h-[38px] w-full rounded-staff border border-border bg-canvas ps-9 pe-3 text-sm text-ink outline-none placeholder:text-disabled hover:border-ink-secondary/50 focus-visible:border-focus [&::-webkit-search-cancel-button]:hidden"
+        className={cn(
+          "peer h-[38px] w-full rounded-staff border border-transparent bg-well ps-9 text-sm text-ink outline-none transition-colors placeholder:text-ink-secondary hover:border-border focus-visible:border-focus focus-visible:bg-canvas [&::-webkit-search-cancel-button]:hidden",
+          shortcut ? "pe-9" : "pe-3",
+        )}
       />
+      {shortcut && !query ? (
+        <kbd
+          aria-hidden
+          className="pointer-events-none absolute end-2.5 top-1/2 flex h-5 min-w-5 -translate-y-1/2 items-center justify-center rounded border border-border bg-canvas px-1 font-sans text-[11px] text-ink-secondary peer-focus-visible:hidden"
+        >
+          /
+        </kbd>
+      ) : null}
       <div
         id={listId}
         role="listbox"

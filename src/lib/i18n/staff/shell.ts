@@ -3,6 +3,8 @@ import { defineDictionary } from "@/lib/i18n/dictionary";
 const en = {
   mainNav: "Main",
   openNav: "Open menu",
+  collapseNav: "Collapse sidebar",
+  expandNav: "Expand sidebar",
   platform: "Platform",
   sidebar: {
     home: "Home",
@@ -54,6 +56,8 @@ const en = {
 const ar = {
   mainNav: "التنقل الرئيسي",
   openNav: "فتح القائمة",
+  collapseNav: "طي الشريط الجانبي",
+  expandNav: "توسيع الشريط الجانبي",
   platform: "المنصة",
   sidebar: {
     home: "الرئيسية",

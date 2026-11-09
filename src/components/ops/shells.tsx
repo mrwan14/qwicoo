@@ -3,17 +3,19 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { Menu as MenuIcon, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { cn } from "cn";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { BranchSwitcher } from "@/components/ops/scope-header";
 import { FrontlineBar } from "@/components/ops/shell/frontline-bar";
 import { GlobalSearch } from "@/components/ops/shell/global-search";
-import { SidebarContent } from "@/components/ops/shell/sidebar";
+import { SidebarContent, type SidebarSubLink } from "@/components/ops/shell/sidebar";
 import { UserMenu } from "@/components/ops/shell/user-menu";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { AlertControls } from "@/features/staff/alerts/alert-controls";
 import { AskQwicooButton } from "@/features/staff/assistant/ask-qwicoo";
 import { StaffConnectionBanner } from "@/features/staff/offline/staff-connection-banner";
+import { useSidebarSubnav } from "@/features/staff/sidebar-subnav";
 import { usePendingConfirmationCount } from "@/hooks/use-floor-live";
 import { commonCopy } from "@/lib/i18n/staff/common";
 import { kitCopy } from "@/lib/i18n/staff/kit";
@@ -59,6 +61,7 @@ function NavDrawer({
   items,
   activeKey,
   badges,
+  subnav,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -66,6 +69,7 @@ function NavDrawer({
   items: readonly NavItem[];
   activeKey: SidebarKey | null;
   badges: Partial<Record<SidebarKey, number>>;
+  subnav: Partial<Record<SidebarKey, readonly SidebarSubLink[]>>;
 }) {
   const t = useStaffSection(shellCopy);
   const kit = useStaffSection(kitCopy);
@@ -82,6 +86,7 @@ function NavDrawer({
             entries={entries}
             activeKey={activeKey}
             badges={badges}
+            subnav={subnav}
             onNavigate={close}
             headerEnd={
               <Dialog.Close
@@ -99,6 +104,45 @@ function NavDrawer({
   );
 }
 
+const COLLAPSED_KEY = "qwicoo.sidebar.collapsed";
+
+/**
+ * Whether the desktop sidebar is folded to icons. Remembered per browser (read after mount, so
+ * the server and first client render agree), and toggled with the "[" key outside text fields.
+ */
+function useCollapsedSidebar(): [boolean, () => void] {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(COLLAPSED_KEY) === "1") setCollapsed(true);
+    } catch {
+      // Storage can be blocked; the sidebar simply starts open.
+    }
+  }, []);
+  const toggle = useCallback(() => {
+    setCollapsed((current) => {
+      const next = !current;
+      try {
+        window.localStorage.setItem(COLLAPSED_KEY, next ? "1" : "0");
+      } catch {
+        // Not remembered this time; the toggle still works.
+      }
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "[" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      toggle();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggle]);
+  return [collapsed, toggle];
+}
+
 function AdminShell({ children }: { children: ReactNode }) {
   const t = useStaffSection(shellCopy);
   const pathname = usePathname();
@@ -106,6 +150,8 @@ function AdminShell({ children }: { children: ReactNode }) {
   const activeBranchId = useScope((state) => state.branchId);
   const pending = usePendingConfirmationCount();
   const [navOpen, setNavOpen] = useState(false);
+  const [collapsed, toggleCollapsed] = useCollapsedSidebar();
+  const subnav = useSidebarSubnav(me, pathname);
   if (!me) return null;
 
   const items = navForUser(me, activeBranchId);
@@ -116,8 +162,13 @@ function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh bg-canvas text-ink">
       <SkipLink />
-      <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 overflow-y-auto border-e border-border bg-subtle print:hidden lg:block">
-        <SidebarContent entries={entries} activeKey={activeKey} badges={badges} />
+      <aside
+        className={cn(
+          "sticky top-0 hidden h-dvh shrink-0 overflow-x-hidden overflow-y-auto border-e border-border bg-subtle transition-[width] duration-200 ease-out print:hidden lg:block motion-reduce:transition-none",
+          collapsed ? "w-16" : "w-[232px]",
+        )}
+      >
+        <SidebarContent entries={entries} activeKey={activeKey} badges={badges} subnav={subnav} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <ConnectionBanner items={items} />
@@ -152,6 +203,7 @@ function AdminShell({ children }: { children: ReactNode }) {
         items={items}
         activeKey={activeKey}
         badges={badges}
+        subnav={subnav}
       />
     </div>
   );

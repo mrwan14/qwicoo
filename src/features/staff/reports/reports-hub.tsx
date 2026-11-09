@@ -30,6 +30,7 @@ import { canOpenInventoryPage } from "@/features/staff/inventory/access";
 import { fill } from "@/lib/i18n/dictionary";
 import { reportsCopy } from "@/lib/i18n/staff/reports";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
+import type { UserProfile } from "@/lib/auth/roles";
 import { navForUser } from "@/lib/nav";
 import { useScope } from "@/stores/scope";
 
@@ -121,6 +122,24 @@ function GroupPanel({ group, entries, t }: { group: Group; entries: readonly Ext
   );
 }
 
+type ReadyEntry = Extract<Entry, { kind: "ready" }>;
+
+/**
+ * The reports this person can open, in hub order. Shared by the hub and the sidebar, so both
+ * always list the same reports.
+ */
+export function readyReports(me: UserProfile, branchId: string | null, branchCount: number): ReadyEntry[] {
+  const allowed = new Set(navForUser(me, branchId).map((item) => item.href));
+  const order = new Map(GROUPS.map((group, index) => [group, index]));
+  return ENTRIES.filter((entry): entry is ReadyEntry => {
+    if (entry.kind !== "ready" || !allowed.has(entry.nav)) return false;
+    if (entry.key === "stock") return canOpenInventoryPage(me.role, "reports");
+    // Comparing branches needs more than one; a Branch Admin would get a one-row table.
+    if (entry.key === "branches") return branchCount > 1 || me.role === "SUPER_ADMIN";
+    return true;
+  }).sort((left, right) => (order.get(left.group) ?? 0) - (order.get(right.group) ?? 0));
+}
+
 export function ReportsHub() {
   const t = useStaffSection(reportsCopy);
   const me = useStaffSession();
@@ -128,16 +147,8 @@ export function ReportsHub() {
   const branchCount = useScope((state) => state.branches.length);
   if (!me) return null;
   const allowed = new Set(navForUser(me, branchId).map((item) => item.href));
-  const entries = ENTRIES.filter((entry) => {
-    if (entry.kind === "soon") return true;
-    if (!allowed.has(entry.nav)) return false;
-    if (entry.key === "stock") return canOpenInventoryPage(me.role, "reports");
-    // Comparing branches needs more than one; a Branch Admin would get a one-row table.
-    if (entry.key === "branches") return branchCount > 1 || me.role === "SUPER_ADMIN";
-    return true;
-  });
-  const ready = entries.filter((entry): entry is Extract<Entry, { kind: "ready" }> => entry.kind === "ready");
-  const soon = entries.filter((entry): entry is Extract<Entry, { kind: "soon" }> => entry.kind === "soon");
+  const ready = readyReports(me, branchId, branchCount);
+  const soon = ENTRIES.filter((entry): entry is Extract<Entry, { kind: "soon" }> => entry.kind === "soon");
 
   return (
     <RoleGate href="/app/reports">

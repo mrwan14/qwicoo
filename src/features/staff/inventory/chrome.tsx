@@ -20,6 +20,7 @@ import { useStaffSession } from "@/components/ops/staff-session";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import type { UserRole } from "@/lib/auth/roles";
 import { denyAccess } from "@/lib/auth/session-client";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
@@ -42,7 +43,7 @@ export const secondaryButton = buttonClass({ variant: "secondary", size: "field"
 
 export { INVENTORY_HREFS };
 
-type StockTab = "stock" | "recipes" | "buying" | "counts";
+export type StockTab = "stock" | "recipes" | "buying" | "counts";
 
 /** The four Stock tabs, each a small set of the existing inventory pages. */
 // Most-used first: what's in stock, ordering more, counting and waste, then recipe setup.
@@ -53,6 +54,17 @@ const STOCK_TABS: readonly { tab: StockTab; views: readonly InventoryPage[] }[] 
   { tab: "recipes", views: ["recipes", "ingredients", "prep"] },
 ];
 const SETTINGS_VIEWS: readonly InventoryPage[] = ["settings", "units", "import", "jobs"];
+
+/**
+ * The Stock tabs this role can open, each with the page it opens and every page it covers.
+ * The sidebar lists these under Stock.
+ */
+export function stockSections(role: UserRole): { tab: StockTab; href: string; hrefs: string[] }[] {
+  return STOCK_TABS.flatMap((entry) => {
+    const views = entry.views.filter((view) => canOpenInventoryPage(role, view));
+    return views.length ? [{ tab: entry.tab, href: INVENTORY_HREFS[views[0]], hrefs: views.map((view) => INVENTORY_HREFS[view]) }] : [];
+  });
+}
 
 type Place =
   | { kind: "stock"; tab: StockTab; views: readonly InventoryPage[] }

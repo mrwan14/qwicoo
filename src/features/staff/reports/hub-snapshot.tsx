@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight } from "lucide-react";
+import { cn } from "cn";
+import { Package, ReceiptText, TrendingUp, Wallet, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -22,26 +23,53 @@ import { rangeLabel } from "./report-shell";
 import { Trend } from "./trend";
 
 /**
- * One number on the dark snapshot strip. The whole cell opens its report; `extra` holds the
- * change badge or the drawer status, `note` a quiet line under it.
+ * One snapshot card. The lead number (sales today) is the single ink card so the eye lands there
+ * first; the rest are white cards with an ink icon tile, like the report rows below. The whole
+ * card opens its report. `extra` is the change badge or drawer status, `note` a quiet line.
  */
-function Cell({ href, label, value, loading, extra, note }: { href: string; label: string; value: ReactNode; loading: boolean; extra?: ReactNode; note?: ReactNode }) {
+function Cell({
+  href,
+  label,
+  icon: Icon,
+  value,
+  loading,
+  extra,
+  note,
+  ink = false,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  value: ReactNode;
+  loading: boolean;
+  extra?: ReactNode;
+  note?: ReactNode;
+  ink?: boolean;
+}) {
   return (
     <Link
       href={href}
-      className="group grid min-w-0 content-start gap-2 bg-ink px-4 py-3.5 text-on-ink sm:px-5 sm:py-4 transition-colors hover:bg-[#1f1f1f] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-on-ink"
-    >
-      <span className="flex items-center justify-between gap-2 text-xs font-medium text-on-ink/70">
-        {label}
-        <ChevronRight aria-hidden className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100 rtl:-scale-x-100" />
-      </span>
-      {loading ? (
-        <span className="h-9 w-28 animate-pulse rounded-staff bg-on-ink/10" />
-      ) : (
-        <span className="truncate text-[22px] leading-8 font-semibold tabular-nums sm:text-[28px] sm:leading-9">{value}</span>
+      className={cn(
+        "group grid min-w-0 content-start gap-3 rounded-staff border p-4 shadow-card transition-[background-color,border-color,box-shadow] hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+        ink ? "border-ink bg-ink text-on-ink hover:bg-[#1f1f1f]" : "border-border bg-canvas text-ink hover:border-ink",
       )}
-      {!loading && extra ? <span className="justify-self-start">{extra}</span> : null}
-      {note ? <span className="text-xs text-on-ink/60">{note}</span> : null}
+    >
+      <span className="flex items-start justify-between gap-3">
+        <span className={cn("text-xs font-medium", ink ? "text-on-ink/70" : "text-ink-secondary")}>{label}</span>
+        <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-staff", ink ? "bg-on-ink/10 text-on-ink" : "bg-ink text-on-ink")}>
+          <Icon aria-hidden className="size-4" />
+        </span>
+      </span>
+      {/* Values sit at the same height in every card so the row reads as one line of figures. */}
+      <span className="grid gap-1.5">
+        {loading ? (
+          <span className={cn("h-9 w-28 animate-pulse rounded-staff", ink ? "bg-on-ink/10" : "bg-well")} />
+        ) : (
+          <span className="truncate text-[24px] leading-8 font-semibold tabular-nums sm:text-[28px] sm:leading-9">{value}</span>
+        )}
+        {!loading && extra ? <span className="justify-self-start">{extra}</span> : null}
+        {note ? <span className={cn("text-xs", ink ? "text-on-ink/60" : "text-ink-secondary")}>{note}</span> : null}
+      </span>
     </Link>
   );
 }
@@ -100,13 +128,24 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
   const tiles: ReactNode[] = [];
   if (sales) {
     const kpis = now.data;
-    const trend = (current?: string | number, previous?: string | number) => (kpis && before.data ? <Trend change={percentChange(current, previous)} comparison={comparison} inverse /> : null);
+    const trend = (current?: string | number, previous?: string | number, inverse = false) =>
+      kpis && before.data ? <Trend change={percentChange(current, previous)} comparison={comparison} inverse={inverse} /> : null;
     tiles.push(
-      <Cell key="sales" href="/app/reports/sales?range=today" label={t.snapshot.salesToday} value={kpis ? money(kpis.gmv) : "—"} loading={now.isLoading} extra={trend(kpis?.gmv, before.data?.gmv)} />,
+      <Cell
+        key="sales"
+        ink
+        href="/app/reports/sales?range=today"
+        label={t.snapshot.salesToday}
+        icon={TrendingUp}
+        value={kpis ? money(kpis.gmv) : "—"}
+        loading={now.isLoading}
+        extra={trend(kpis?.gmv, before.data?.gmv, true)}
+      />,
       <Cell
         key="orders"
         href="/app/reports/sales?range=today"
         label={t.snapshot.ordersToday}
+        icon={ReceiptText}
         value={kpis ? formatCount(kpis.total_orders, locale) : "—"}
         loading={now.isLoading}
         extra={trend(kpis?.total_orders, before.data?.total_orders)}
@@ -124,6 +163,7 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
         key="till"
         href="/app/reports/till"
         label={t.snapshot.lastClose}
+        icon={Wallet}
         value={report && counted ? money(variance) : "—"}
         loading={lastClose.isLoading}
         extra={report && !counted ? <Badge>{t.snapshot.notCounted}</Badge> : report ? <Badge tone={variance < 0 ? "danger" : variance > 0 ? "warning" : "success"}>{variance < 0 ? t.snapshot.short : variance > 0 ? t.snapshot.over : t.snapshot.matches}</Badge> : null}
@@ -137,6 +177,7 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
         key="food"
         href="/app/reports/stock"
         label={t.snapshot.foodCost}
+        icon={Package}
         value={food.data != null ? `${Number(food.data).toFixed(1)}%` : "—"}
         loading={food.isLoading}
         note={fill(t.snapshot.foodCostNote, { range: rangeLabel(week.from, week.to, locale) })}
@@ -144,6 +185,5 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
     );
   }
   if (tiles.length === 0) return null;
-  // Hairline gaps over a lighter fill draw the dividers between cells at any column count.
-  return <div className={`grid grid-cols-2 gap-px overflow-hidden rounded-staff bg-[#2e2e2e] shadow-card ${COLUMNS[tiles.length]}`}>{tiles}</div>;
+  return <div className={cn("grid grid-cols-2 gap-3 sm:gap-4", COLUMNS[tiles.length])}>{tiles}</div>;
 }

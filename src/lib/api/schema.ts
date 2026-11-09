@@ -652,6 +652,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/my-pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set my till PIN
+         * @description 4 to 6 digits for clocking in on a branch till. Obvious PINs (1234, 0000, 1212) are refused: ATTENDANCE_PIN_TOO_SIMPLE.
+         */
+        put: operations["set_my_attendance_pin_api_v1_attendance_my_pin_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branches/{branch_id}/staff/{user_id}/attendance-pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set or clear someone's till PIN
+         * @description A manager sets a person's till PIN, or clears it with null; also lifts a lock. SUPER_ADMIN, BRAND_ADMIN, BRANCH_ADMIN.
+         */
+        put: operations["set_staff_attendance_pin_api_v1_branches__branch_id__staff__user_id__attendance_pin_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branches/{branch_id}/till-roster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who can clock in at this till
+         * @description The branch's staff with whether they have a PIN, are on shift, or are locked out. Any staff at the branch.
+         */
+        get: operations["get_till_roster_api_v1_branches__branch_id__till_roster_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branches/{branch_id}/till-punch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clock in or out on the till with a PIN
+         * @description Taken on a signed-in device at the branch. Checks the person's PIN: ATTENDANCE_PIN_WRONG (403, with attempts_left), ATTENDANCE_PIN_LOCKED (429) after too many tries, ATTENDANCE_PIN_NOT_SET (409). The record notes TILL_PIN and the till session.
+         */
+        post: operations["till_punch_api_v1_branches__branch_id__till_punch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/branches/{branch_id}/attendance-logs": {
         parameters: {
             query?: never;
@@ -5928,10 +6008,20 @@ export interface components {
              */
             check_in?: string | null;
             /**
+             * Check In Method
+             * @description GPS or TILL_PIN; null for older records.
+             */
+            check_in_method?: string | null;
+            /**
              * Check Out
              * @description ISO-8601 check-out in the branch timezone, including the offset.
              */
             check_out?: string | null;
+            /**
+             * Check Out Method
+             * @description GPS, TILL_PIN or AUTO (closed by the sweep).
+             */
+            check_out_method?: string | null;
             /** Correction Reason */
             correction_reason?: string | null;
             /**
@@ -6030,6 +6120,11 @@ export interface components {
          * @description Branch attendance rules in minutes. Null means the default shown in `defaults`.
          */
         AttendanceRules: {
+            /**
+             * Clock Mode
+             * @description TILL_ONLY turns off phone clock-in. Null is ANY.
+             */
+            clock_mode?: string | null;
             /** Early Leave Minutes */
             early_leave_minutes?: number | null;
             /** Late After Minutes */
@@ -6039,6 +6134,11 @@ export interface components {
         };
         /** AttendanceRulesResponse */
         AttendanceRulesResponse: {
+            /**
+             * Clock Mode
+             * @description TILL_ONLY turns off phone clock-in. Null is ANY.
+             */
+            clock_mode?: string | null;
             defaults: components["schemas"]["AttendanceRules"];
             /** Early Leave Minutes */
             early_leave_minutes?: number | null;
@@ -6246,6 +6346,83 @@ export interface components {
             user_id: string;
         };
         /**
+         * AttendancePinRequest
+         * @description Set your own till PIN: 4 to 6 digits, not an obvious one like 1234 or 0000.
+         */
+        AttendancePinRequest: {
+            /** Pin */
+            pin: string;
+        };
+        /** AttendancePinResponse */
+        AttendancePinResponse: {
+            /** Has Pin */
+            has_pin: boolean;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /**
+         * StaffPinRequest
+         * @description A manager sets someone's till PIN, or clears it with null.
+         */
+        StaffPinRequest: {
+            /** Pin */
+            pin?: string | null;
+        };
+        /** TillPunchRequest */
+        TillPunchRequest: {
+            /** Action */
+            action: string;
+            /** Pin */
+            pin: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** TillRosterPerson */
+        TillRosterPerson: {
+            /** Full Name */
+            full_name: string;
+            /**
+             * Has Pin
+             * @default false
+             */
+            has_pin: boolean;
+            /**
+             * Locked
+             * @description Too many wrong PINs; try again later.
+             * @default false
+             */
+            locked: boolean;
+            /**
+             * On Shift
+             * @description Clocked in now (today, or since last night).
+             * @default false
+             */
+            on_shift: boolean;
+            /** Role */
+            role?: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** TillRosterResponse */
+        TillRosterResponse: {
+            /**
+             * Branch Id
+             * Format: uuid
+             */
+            branch_id: string;
+            /** People */
+            people: components["schemas"]["TillRosterPerson"][];
+        };
+        /**
          * AttendanceStatusResponse
          * @description Complete attendance status for the current employee today.
          */
@@ -6253,6 +6430,12 @@ export interface components {
             attendance: components["schemas"]["AttendanceInfo"];
             /** Branch Name */
             branch_name: string;
+            /**
+             * Clock Mode
+             * @description ANY (phone or till) or TILL_ONLY at this branch.
+             * @default ANY
+             */
+            clock_mode: string;
             /**
              * Date
              * Format: date
@@ -6265,6 +6448,12 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name: string;
+            /**
+             * Has Till Pin
+             * @description This person has set a till clock-in PIN.
+             * @default false
+             */
+            has_till_pin: boolean;
             today_shift: components["schemas"]["ShiftInfo"];
         };
         /**
@@ -7881,6 +8070,11 @@ export interface components {
          * @description Employee check-in payload with real-time GPS coordinates.
          */
         CheckInRequest: {
+            /**
+             * Accuracy Meters
+             * @description The phone's reported GPS accuracy. Fixes worse than the server limit are refused (LOCATION_TOO_WEAK).
+             */
+            accuracy_meters?: number | null;
             /** Latitude */
             latitude: number;
             /** Longitude */
@@ -7891,6 +8085,11 @@ export interface components {
          * @description Employee check-out payload with real-time GPS coordinates.
          */
         CheckOutRequest: {
+            /**
+             * Accuracy Meters
+             * @description The phone's reported GPS accuracy. Fixes worse than the server limit are refused (LOCATION_TOO_WEAK).
+             */
+            accuracy_meters?: number | null;
             /** Latitude */
             latitude: number;
             /** Longitude */
@@ -20852,6 +21051,141 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TimesheetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_my_attendance_pin_api_v1_attendance_my_pin_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendancePinRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendancePinResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_staff_attendance_pin_api_v1_branches__branch_id__staff__user_id__attendance_pin_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffPinRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendancePinResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_till_roster_api_v1_branches__branch_id__till_roster_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TillRosterResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    till_punch_api_v1_branches__branch_id__till_punch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TillPunchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceStatusResponse"];
                 };
             };
             /** @description Validation Error */

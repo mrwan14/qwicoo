@@ -33,6 +33,11 @@ export function useMyAttendance({ enabled = true }: { enabled?: boolean } = {}) 
   /** Asks for the device location: the API checks the person is at the branch. */
   async function punch(kind: "in" | "out"): Promise<boolean> {
     if (punching) return false;
+    // A till-only branch refuses phone punches: say so instead of asking for the location.
+    if (status.data?.clock_mode === "TILL_ONLY") {
+      toast.error(t.my.tillOnly);
+      return false;
+    }
     setPunching(true);
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -45,6 +50,8 @@ export function useMyAttendance({ enabled = true }: { enabled?: boolean } = {}) 
       const body: components["schemas"]["CheckInRequest"] = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
+        // The API refuses a vague fix (LOCATION_TOO_WEAK) instead of guessing.
+        accuracy_meters: Number.isFinite(position.coords.accuracy) ? Math.round(position.coords.accuracy) : null,
       };
       const result =
         kind === "in"

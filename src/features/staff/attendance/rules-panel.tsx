@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ops/kit/button";
 import { Field, Input } from "@/components/ops/kit/field";
+import { SegmentedControl } from "@/components/ops/kit/segmented";
 import { SidePanel } from "@/components/ops/kit/side-panel";
 import { ErrorState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
@@ -51,6 +52,7 @@ function RulesForm({ branchId, rules, onClose }: { branchId: string; rules: Rule
     early_leave_minutes: initial("early_leave_minutes"),
     overtime_after_minutes: initial("overtime_after_minutes"),
   });
+  const [clockMode, setClockMode] = useState<"ANY" | "TILL_ONLY">(rules.clock_mode === "TILL_ONLY" ? "TILL_ONLY" : "ANY");
   const parsed = Object.fromEntries((Object.keys(LIMITS) as Key[]).map((key) => [key, parseMinutes(values[key], LIMITS[key])])) as Record<Key, number | null | undefined>;
   const valid = Object.values(parsed).every((value) => value !== undefined);
 
@@ -62,6 +64,7 @@ function RulesForm({ branchId, rules, onClose }: { branchId: string; rules: Rule
           late_after_minutes: parsed.late_after_minutes ?? null,
           early_leave_minutes: parsed.early_leave_minutes ?? null,
           overtime_after_minutes: parsed.overtime_after_minutes ?? null,
+          clock_mode: clockMode,
         },
       });
       if (!result.response.ok) throw asApiError(result.error, result.response, t.rules.failed);
@@ -71,6 +74,7 @@ function RulesForm({ branchId, rules, onClose }: { branchId: string; rules: Rule
       await queryClient.invalidateQueries({ queryKey: ["attendance-rules", branchId] });
       await queryClient.invalidateQueries({ queryKey: ["attendance-logs"] });
       await queryClient.invalidateQueries({ queryKey: ["timesheet", branchId] });
+      await queryClient.invalidateQueries({ queryKey: ["attendance-me"] });
       onClose();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -90,6 +94,20 @@ function RulesForm({ branchId, rules, onClose }: { branchId: string; rules: Rule
 
   return (
     <div className="grid gap-4">
+      <div className="grid gap-1.5">
+        <span className="text-xs font-medium text-ink-secondary">{t.rules.clockMode}</span>
+        <SegmentedControl<"ANY" | "TILL_ONLY">
+          label={t.rules.clockMode}
+          value={clockMode}
+          onValueChange={setClockMode}
+          className="w-full [&>button]:flex-1 [&>button]:justify-center"
+          items={[
+            { value: "ANY", label: t.rules.clockAny },
+            { value: "TILL_ONLY", label: t.rules.clockTill },
+          ]}
+        />
+        <p className="text-xs text-ink-secondary">{t.rules.clockHint}</p>
+      </div>
       {field("late_after_minutes", t.rules.lateAfter, t.rules.lateAfterHint)}
       {field("early_leave_minutes", t.rules.earlyLeave, t.rules.earlyLeaveHint)}
       {field("overtime_after_minutes", t.rules.overtimeAfter, t.rules.overtimeAfterHint)}

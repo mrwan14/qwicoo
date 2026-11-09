@@ -24,3 +24,19 @@ export function parseMinutes(text: string, max: number): number | null | undefin
   const minutes = Number(value);
   return minutes <= max ? minutes : undefined;
 }
+
+/** A till PIN is 4 to 6 digits (the API also refuses obvious ones like 1234). */
+export function validPin(pin: string): boolean {
+  return /^\d{4,6}$/.test(pin);
+}
+
+/** Tries left after a wrong PIN, from the API error body (`{code, attempts_left}` or nested in `detail`). */
+export function triesLeft(raw: unknown): number | null {
+  const read = (value: unknown): number | null => {
+    if (!value || typeof value !== "object") return null;
+    const record = value as Record<string, unknown>;
+    if (typeof record.attempts_left === "number") return record.attempts_left;
+    return read(record.detail);
+  };
+  return read(raw);
+}

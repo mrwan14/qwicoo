@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
-import { Clock, LogIn, LogOut, SlidersHorizontal } from "lucide-react";
+import { Clock, KeyRound, LogIn, LogOut, SlidersHorizontal, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -28,9 +28,11 @@ import { roleLabel, isUserRole } from "@/lib/auth/roles";
 import { useScope } from "@/stores/scope";
 
 import { useMyAttendance } from "./clock";
+import { PinPanel } from "./pin-panel";
 import { RotaView } from "./rota-view";
 import { RulesPanel } from "./rules-panel";
 import { branchNow, clockOf, minutesSince, shiftTimes, splitMinutes } from "./time";
+import { TillClockPanel } from "./till-clock-panel";
 import { TimesheetView } from "./timesheet-view";
 
 type Log = components["schemas"]["AttendanceLogItem"];
@@ -75,6 +77,7 @@ export function AttendanceScreen() {
   const oneBranch = branchId ?? (branches.length === 1 ? branches[0].id : null);
   const [view, setView] = useState<View>("today");
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [tillOpen, setTillOpen] = useState(false);
 
   return (
     <div className="grid gap-5">
@@ -86,6 +89,15 @@ export function AttendanceScreen() {
         </p>
       </div>
       <MyShift />
+      {oneBranch ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="field" variant="secondary" onClick={() => setTillOpen(true)}>
+            <Store aria-hidden />
+            {t.till.button}
+          </Button>
+        </div>
+      ) : null}
+      {tillOpen && oneBranch ? <TillClockPanel branchId={oneBranch} canManagePins={canCorrect} onClose={() => setTillOpen(false)} /> : null}
       {canReview ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -122,6 +134,8 @@ function MyShift() {
   const shift = data?.today_shift;
   const done = Boolean(record?.check_in && record?.check_out);
   const worked = checkInAt ? splitMinutes(minutesSince(checkInAt, now)) : null;
+  const tillOnly = data?.clock_mode === "TILL_ONLY";
+  const [pinOpen, setPinOpen] = useState(false);
 
   if (status.isError) {
     return <ErrorState body={status.error instanceof Error ? status.error.message : t.statusFailed} onRetry={() => void status.refetch()} />;
@@ -153,8 +167,16 @@ function MyShift() {
             )}
             {record?.status ? <Badge tone={statusTone(record.status)}>{record.status === "LATE" ? t.late : t.onTime}</Badge> : null}
           </p>
+          {tillOnly && !done ? <p className="text-[13px] text-ink-secondary">{t.my.tillOnly}</p> : null}
+          {data ? (
+            <button type="button" onClick={() => setPinOpen(true)} className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-ink underline-offset-2 hover:underline">
+              <KeyRound aria-hidden className="size-3.5" />
+              {data.has_till_pin ? t.my.changePin : t.my.setPin}
+            </button>
+          ) : null}
         </div>
-        {!done ? (
+        {pinOpen ? <PinPanel onClose={() => setPinOpen(false)} /> : null}
+        {!done && !tillOnly ? (
           <Button size="touch" className="w-full sm:w-auto" variant={clockedIn ? "secondary" : "primary"} disabled={punching || status.isLoading} onClick={() => void punch(clockedIn ? "out" : "in")}>
             {clockedIn ? <LogOut aria-hidden /> : <LogIn aria-hidden />}
             {punching ? t.my.clocking : clockedIn ? t.my.clockOut : t.my.clockIn}
@@ -252,8 +274,8 @@ function TeamAttendance({ branchIds, canCorrect }: { branchIds: string[]; canCor
       ),
     },
     ...(range === "daily" ? [] : [{ key: "day", header: t.day, cell: (row: Log) => dayLabel(row.date) }]),
-    { key: "in", header: t.arrived, cell: (row) => <span className="tabular-nums">{clockOf(row.check_in) || "—"}</span> },
-    { key: "out", header: t.left, cell: (row) => <span className="tabular-nums">{clockOf(row.check_out) || "—"}</span> },
+    { key: "in", header: t.arrived, cell: (row) => <Punch time={clockOf(row.check_in)} method={row.check_in_method} /> },
+    { key: "out", header: t.left, cell: (row) => <Punch time={clockOf(row.check_out)} method={row.check_out_method} /> },
     { key: "hours", header: t.log.hours, align: "end", cell: (row) => <span className="tabular-nums">{duration(row.minutes_worked)}</span> },
     {
       key: "late",
@@ -317,6 +339,19 @@ function TeamAttendance({ branchIds, canCorrect }: { branchIds: string[]; canCor
       </section>
       {fixing ? <CorrectionPanel key={fixing.id} log={fixing} onClose={() => setFixing(null)} /> : null}
     </>
+  );
+}
+
+/** A punch time, marked when it was taken on the till or filled in automatically. */
+function Punch({ time, method }: { time: string; method?: string | null }) {
+  const t = useStaffSection(attendanceCopy);
+  if (!time) return <span className="text-ink-secondary">—</span>;
+  const note = method === "TILL_PIN" ? t.log.viaTill : method === "AUTO" ? t.log.auto : null;
+  return (
+    <span className="inline-flex items-baseline gap-1.5">
+      <span className="tabular-nums">{time}</span>
+      {note ? <span className="text-[11px] text-ink-secondary">{note}</span> : null}
+    </span>
   );
 }
 

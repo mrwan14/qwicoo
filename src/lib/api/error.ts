@@ -188,6 +188,30 @@ const CATALOG: Record<string, Catalog> = {
     en: "You can't set stock below what's held for open orders.",
     ar: "لا يمكن ضبط المخزون أقل مما هو محجوز للطلبات المفتوحة.",
   },
+  LOCATION_TOO_WEAK: {
+    en: "Your location isn't precise enough. Move near a window and try again.",
+    ar: "موقعك غير دقيق بما يكفي. اقترب من نافذة وحاول مرة أخرى.",
+  },
+  CLOCK_IN_AT_TILL: {
+    en: "This branch clocks in at the till only. Use your PIN on the till.",
+    ar: "هذا الفرع يسجل الحضور من جهاز الكاشير فقط. استخدم رمزك على الجهاز.",
+  },
+  ATTENDANCE_PIN_TOO_SIMPLE: {
+    en: "Choose a PIN that's harder to guess, not like 1234 or 0000.",
+    ar: "اختر رمزًا يصعب تخمينه، وليس مثل 1234 أو 0000.",
+  },
+  ATTENDANCE_PIN_NOT_SET: {
+    en: "This person has no till PIN yet. Ask a manager to set one.",
+    ar: "لم يتم تعيين رمز لهذا الشخص بعد. اطلب من المدير تعيينه.",
+  },
+  ATTENDANCE_PIN_WRONG: {
+    en: "That PIN isn't right.",
+    ar: "الرمز غير صحيح.",
+  },
+  ATTENDANCE_PIN_LOCKED: {
+    en: "Too many wrong PINs. Try again in a few minutes, or ask a manager to reset it.",
+    ar: "محاولات خاطئة كثيرة. حاول بعد بضع دقائق، أو اطلب من المدير إعادة تعيينه.",
+  },
   CHECK_IN_REQUIRED: {
     en: "Enter the arrival time to mark someone on time or late.",
     ar: "أدخل وقت الوصول لتسجيل الحضور أو التأخير.",

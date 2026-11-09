@@ -27,3 +27,14 @@ test("rule minutes: empty is the default, junk and too large are invalid", () =>
   assert.equal(parseMinutes("-1", 240), undefined);
   assert.equal(parseMinutes("241", 240), undefined);
 });
+
+test("till PINs and tries left after a wrong one", async () => {
+  const { triesLeft, validPin } = await import("./sheet.ts");
+  assert.equal(validPin("2580"), true);
+  assert.equal(validPin("258"), false);
+  assert.equal(validPin("2580123"), false);
+  assert.equal(validPin("25a0"), false);
+  assert.equal(triesLeft({ code: "ATTENDANCE_PIN_WRONG", attempts_left: 3 }), 3);
+  assert.equal(triesLeft({ detail: { code: "ATTENDANCE_PIN_WRONG", attempts_left: 0 } }), 0);
+  assert.equal(triesLeft({ detail: "nope" }), null);
+});

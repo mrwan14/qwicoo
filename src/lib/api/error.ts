@@ -189,8 +189,8 @@ const CATALOG: Record<string, Catalog> = {
     ar: "لا يمكن ضبط المخزون أقل مما هو محجوز للطلبات المفتوحة.",
   },
   CASH_DRAWER_NOT_OPEN: {
-    en: "No cash drawer is open. Open the till before refunding collected cash.",
-    ar: "لا يوجد درج نقدية مفتوح. افتح الصندوق قبل رد مبلغ تم قبضه.",
+    en: "No cash drawer is open. Open the drawer to take or refund cash.",
+    ar: "لا يوجد درج نقدية مفتوح. افتح الدرج لقبض النقدية أو ردها.",
   },
   DELIVERY_DRAWER_NOT_OPEN: {
     en: "No cash drawer is open for this branch. Open the drawer before handing over this delivery.",

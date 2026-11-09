@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
 import { Banknote, Check, CreditCard, Minus, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -317,6 +317,33 @@ export function PosScreen() {
 
   // Card and online payments need the network; offline the till takes cash only.
   const effectiveTender: components["schemas"]["PaymentMethod"] = online ? tender : "CASH";
+  // Cash needs an open drawer (the backend refuses it otherwise). Offline sales skip this: they
+  // sync into the drawer that was open at the time.
+  const queryClient = useQueryClient();
+  const [openingCash, setOpeningCash] = useState("0.00");
+  const drawer = useQuery({
+    queryKey: ["drawer", branchId],
+    enabled: Boolean(branchId) && online,
+    retry: false,
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/financials/drawer/current");
+      if (result.response.status === 404) return null;
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.drawerOpenFailed, locale);
+      return result.data ?? null;
+    },
+  });
+  const openDrawer = useMutation({
+    mutationFn: async () => {
+      const result = await browserApi.POST("/api/v1/financials/drawer/open", { body: { opening_balance: openingCash.trim() || "0.00" } });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.drawerOpenFailed, locale);
+    },
+    onSuccess: async () => {
+      toast.success(t.drawerOpened);
+      await queryClient.invalidateQueries({ queryKey: ["drawer"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const needsDrawer = online && effectiveTender === "CASH" && drawer.isSuccess && drawer.data === null;
 
   const categories = useMemo(() => menu.data?.categories ?? [], [menu.data]);
   // A category that left the menu (branch switch, menu edit) falls back to All.
@@ -503,16 +530,16 @@ export function PosScreen() {
   if (!viewingStore && menu.isError) return <QueryErrorState error={menu.error} screen={t.screen} onRetry={() => void menu.refetch()} />;
 
   const total = centsToMoney(lines.reduce((sum, line) => sum + moneyToCents(line.subtotal), 0));
-  const sendDisabled = lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim());
+  const sendDisabled = lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim()) || needsDrawer;
 
   const pill = (active: boolean) =>
     cn(
       "inline-flex min-h-12 shrink-0 items-center gap-2 rounded-staff border px-4 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:text-disabled",
-      active ? "border-ink bg-ink text-on-ink" : "border-border bg-canvas text-ink hover:bg-subtle",
+      active ? "border-ink bg-ink text-on-ink shadow-card" : "border-transparent bg-canvas text-ink shadow-card hover:border-ink/20",
     );
 
   const ticket = (
-    <aside className="grid content-start gap-4 rounded-staff border border-border bg-canvas p-4 text-ink">
+    <aside className="grid content-start gap-4 rounded-staff bg-canvas p-4 text-ink shadow-card ring-1 ring-black/5">
       {confirmation ? (
         <OrderConfirmation
           confirmation={confirmation}
@@ -615,6 +642,22 @@ export function PosScreen() {
           })}
         </div>
         <p className="text-[13px] text-ink-secondary">{online ? t.tenderOnline : t.tenderOffline}</p>
+        {needsDrawer ? (
+          <div role="status" className="grid gap-2.5 rounded-staff border border-warning/40 bg-warning-bg px-3 py-3">
+            <div className="grid gap-0.5">
+              <p className="text-sm font-semibold text-ink">{t.drawerClosedTitle}</p>
+              <p className="text-[13px] text-ink">{t.drawerClosedBody}</p>
+            </div>
+            <div className="flex items-end gap-2">
+              <Field label={t.openingCash} className="min-w-0 flex-1">
+                <Input inputMode="decimal" className="h-11 tabular-nums" value={openingCash} onChange={(event) => setOpeningCash(event.target.value.replace(/[^\d.]/g, ""))} />
+              </Field>
+              <Button className="h-11" disabled={openDrawer.isPending} onClick={() => openDrawer.mutate()}>
+                {openDrawer.isPending ? t.openingDrawer : t.openDrawer}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
       <Button size="touch" className="min-h-[60px] w-full text-[17px]" disabled={sendDisabled} onClick={() => checkout.mutate()}>
         {checkout.isPending ? t.sending : lines.length > 0 ? `${t.sendOrder} · ${formatMoney(total, undefined, locale)}` : t.sendOrder}
@@ -626,7 +669,7 @@ export function PosScreen() {
 
   const sale = (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
-      <div className="grid min-w-0 content-start gap-3">
+      <div className="grid min-w-0 content-start gap-3 rounded-staff bg-well p-3 sm:p-4">
         <div className="flex gap-2 overflow-x-auto pb-1">
           {[{ id: ALL_CATEGORIES, name: t.allItems }, ...categories.map((category) => ({ id: category.id, name: pickLocale(category.name, locale) }))].map(
             (category) => {
@@ -740,28 +783,46 @@ function ItemGrid({ items, onAdd }: { items: MenuItem[]; onAdd: (item: MenuItem)
   const t = useStaffSection(posCopy);
   const { locale } = useLocale();
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
       {items.map((item) => {
         const image = mediaUrl(item.image_url);
         const choices = (item.modifier_groups ?? []).length;
+        const name = pickLocale(item.name, locale);
         return (
           <button
             key={item.id}
             type="button"
             disabled={!item.is_available}
-            className="grid min-h-[112px] content-between gap-2 overflow-hidden rounded-staff border border-border bg-canvas p-3.5 text-start text-ink transition-colors hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:bg-subtle disabled:text-ink-secondary"
+            className="group grid content-start gap-2.5 rounded-staff bg-canvas p-2 text-start text-ink shadow-card ring-1 ring-black/5 transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-card-hover hover:ring-ink/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:shadow-none"
             onClick={() => onAdd(item)}
           >
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={image} alt="" className="-mx-3.5 -mt-3.5 h-20 w-[calc(100%+1.75rem)] max-w-none bg-subtle object-cover" />
-            ) : null}
-            <span className="text-base font-medium leading-snug">{pickLocale(item.name, locale)}</span>
-            <span className="flex items-center justify-between gap-2">
-              <span className="text-sm text-ink-secondary tabular-nums">
-                <Money amount={String(item.base_price)} />
+            {/* The whole photo shows (contain, not cover) on a tinted well, so dishes are never cut off. */}
+            <span className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-staff bg-well">
+              {image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={image}
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-contain transition-transform duration-200 group-enabled:group-hover:scale-[1.03] group-disabled:opacity-50 group-disabled:grayscale"
+                />
+              ) : (
+                <span aria-hidden className="text-4xl font-semibold text-ink/25 group-disabled:text-ink/15">
+                  {Array.from(name.trim())[0]?.toLocaleUpperCase(locale) ?? ""}
+                </span>
+              )}
+              {!item.is_available ? (
+                <span className="absolute inset-0 grid place-items-center bg-ink/45 text-sm font-semibold text-on-ink">{t.soldOut}</span>
+              ) : null}
+            </span>
+            <span className="grid gap-1 px-1.5 pb-1.5">
+              <span className="line-clamp-2 text-[15px] font-semibold leading-snug group-disabled:text-ink-secondary">{name}</span>
+              <span className="flex items-center justify-between gap-2">
+                <span className="text-[15px] font-semibold tabular-nums group-disabled:text-ink-secondary">
+                  <Money amount={String(item.base_price)} />
+                </span>
+                {item.is_available && choices > 0 ? <Badge>+{choices}</Badge> : null}
               </span>
-              {!item.is_available ? <Badge tone="danger">{t.soldOut}</Badge> : choices > 0 ? <Badge>+{choices}</Badge> : null}
             </span>
           </button>
         );

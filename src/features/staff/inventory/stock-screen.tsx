@@ -68,11 +68,12 @@ export function StockScreen() {
   const canOrder = Boolean(me && canWriteStock(me.role) && canOpenInventoryPage(me.role, "purchaseOrders") && !central);
 
   const stock = useQuery({
-    queryKey: ["inventory", "stock", selected],
+    queryKey: ["inventory", "stock", selected, "with-unstocked"],
     enabled: Boolean(selected),
     queryFn: async () => {
+      // include_unstocked lists new items at 0; older backends ignore it and the merge below covers them.
       const result = await browserApi.GET("/api/v1/inventory/warehouses/{warehouse_id}/stock", {
-        params: { path: { warehouse_id: selected } },
+        params: { path: { warehouse_id: selected }, query: { include_unstocked: true } },
       });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
       return result.data.items;

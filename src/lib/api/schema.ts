@@ -29544,7 +29544,10 @@ export interface operations {
     };
     get_stock_api_v1_inventory_warehouses__warehouse_id__stock_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Also list active brand ingredients this store has never stocked, at 0. Off by default. */
+                include_unstocked?: boolean;
+            };
             header?: never;
             path: {
                 warehouse_id: string;

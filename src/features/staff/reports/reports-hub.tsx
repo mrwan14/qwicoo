@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "cn";
 import {
+  BadgePercent,
   BarChart3,
   Building2,
   ChevronRight,
@@ -13,6 +13,7 @@ import {
   Percent,
   Receipt,
   Repeat,
+  Smartphone,
   Timer,
   UtensilsCrossed,
   Wallet,
@@ -20,7 +21,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { Badge } from "@/components/ops/kit/badge";
 import { SectionLabel } from "@/components/ops/kit/card";
 import { EmptyState } from "@/components/ops/kit/empty-state";
 import { PageHeader } from "@/components/ops/kit/page-header";
@@ -32,10 +32,12 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { navForUser } from "@/lib/nav";
 import { useScope } from "@/stores/scope";
 
+import { HubSnapshot } from "./hub-snapshot";
+
 type Copy = (typeof reportsCopy)["en"];
 type Group = keyof Copy["groups"];
 type Ready = keyof Copy["items"];
-type Soon = Exclude<keyof Copy["soon"], "badge">;
+type Soon = Exclude<keyof Copy["soon"], "badge" | "onTheWay" | "onTheWayHint">;
 
 type Entry =
   | { kind: "ready"; key: Ready; group: Group; href: string; icon: LucideIcon; nav: string }
@@ -48,6 +50,7 @@ type Entry =
 const ENTRIES: readonly Entry[] = [
   { kind: "ready", key: "overview", group: "sales", href: "/app/reports/sales", icon: BarChart3, nav: "/app/reports/sales" },
   { kind: "ready", key: "branches", group: "sales", href: "/app/reports/branches", icon: Building2, nav: "/app/reports/sales" },
+  { kind: "ready", key: "channels", group: "sales", href: "/app/reports/channels", icon: Smartphone, nav: "/app/reports/till" },
   { kind: "soon", key: "salesBy", group: "sales", icon: Layers },
   { kind: "ready", key: "menu", group: "menu", href: "/app/reports/menu", icon: UtensilsCrossed, nav: "/app/reports/sales" },
   { kind: "soon", key: "engineering", group: "menu", icon: Percent },
@@ -57,43 +60,31 @@ const ENTRIES: readonly Entry[] = [
   { kind: "soon", key: "shifts", group: "staff", icon: Timer },
   { kind: "ready", key: "till", group: "money", href: "/app/reports/till", icon: Wallet, nav: "/app/reports/till" },
   { kind: "ready", key: "payments", group: "money", href: "/app/reports/payments", icon: CreditCard, nav: "/app/reports/payments" },
-  { kind: "soon", key: "taxes", group: "money", icon: Receipt },
+  { kind: "ready", key: "taxes", group: "money", href: "/app/reports/taxes", icon: Receipt, nav: "/app/reports/till" },
+  { kind: "ready", key: "discounts", group: "money", href: "/app/reports/discounts", icon: BadgePercent, nav: "/app/reports/till" },
   { kind: "soon", key: "speed", group: "service", icon: Gauge },
 ];
 
 const GROUPS: readonly Group[] = ["sales", "menu", "stock", "staff", "money", "service"];
 
-function ReportCard({ entry, t }: { entry: Entry; t: Copy }) {
+function ReportCard({ entry, t }: { entry: Extract<Entry, { kind: "ready" }>; t: Copy }) {
   const Icon = entry.icon;
-  const copy = entry.kind === "ready" ? t.items[entry.key] : t.soon[entry.key];
-  const body = (
-    <>
-      <span className="flex items-start justify-between gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-staff border border-border bg-subtle">
-          <Icon aria-hidden className={cn("size-[18px]", entry.kind === "ready" ? "text-ink" : "text-disabled")} />
-        </span>
-        {entry.kind === "soon" ? <Badge>{t.soon.badge}</Badge> : <ChevronRight aria-hidden className="size-4 text-ink-secondary rtl:-scale-x-100" />}
-      </span>
-      <span className="grid gap-1">
-        <span className={cn("text-sm font-semibold", entry.kind === "ready" ? "text-ink" : "text-ink-secondary")}>{copy.title}</span>
-        <span className="text-[13px] leading-snug text-ink-secondary">{copy.body}</span>
-      </span>
-    </>
-  );
-  const card = "grid min-h-36 content-between gap-4 rounded-staff border p-4";
-  if (entry.kind === "soon") {
-    return (
-      <div aria-disabled="true" className={cn(card, "border-dashed border-border bg-subtle")}>
-        {body}
-      </div>
-    );
-  }
+  const copy = t.items[entry.key];
   return (
     <Link
       href={entry.href}
-      className={cn(card, "border-border bg-canvas transition-colors hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus")}
+      className="grid min-h-36 content-between gap-4 rounded-staff border border-border bg-canvas p-4 transition-colors hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
-      {body}
+      <span className="flex items-start justify-between gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-staff border border-border bg-subtle">
+          <Icon aria-hidden className="size-[18px] text-ink" />
+        </span>
+        <ChevronRight aria-hidden className="size-4 text-ink-secondary rtl:-scale-x-100" />
+      </span>
+      <span className="grid gap-1">
+        <span className="text-sm font-semibold text-ink">{copy.title}</span>
+        <span className="text-[13px] leading-snug text-ink-secondary">{copy.body}</span>
+      </span>
     </Link>
   );
 }
@@ -102,20 +93,34 @@ export function ReportsHub() {
   const t = useStaffSection(reportsCopy);
   const me = useStaffSession();
   const branchId = useScope((state) => state.branchId);
+  const branchCount = useScope((state) => state.branches.length);
   if (!me) return null;
   const allowed = new Set(navForUser(me, branchId).map((item) => item.href));
-  const entries = ENTRIES.filter(
-    (entry) => entry.kind === "soon" || (allowed.has(entry.nav) && (entry.key !== "stock" || canOpenInventoryPage(me.role, "reports"))),
-  );
-  const anyReady = entries.some((entry) => entry.kind === "ready");
+  const entries = ENTRIES.filter((entry) => {
+    if (entry.kind === "soon") return true;
+    if (!allowed.has(entry.nav)) return false;
+    if (entry.key === "stock") return canOpenInventoryPage(me.role, "reports");
+    // Comparing branches needs more than one; a Branch Admin would get a one-row table.
+    if (entry.key === "branches") return branchCount > 1 || me.role === "SUPER_ADMIN";
+    return true;
+  });
+  const ready = entries.filter((entry): entry is Extract<Entry, { kind: "ready" }> => entry.kind === "ready");
+  const soon = entries.filter((entry): entry is Extract<Entry, { kind: "soon" }> => entry.kind === "soon");
+  const anyReady = ready.length > 0;
 
   return (
     <RoleGate href="/app/reports">
       <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-6">
         <PageHeader title={t.title} subtitle={t.subtitle} />
+        <HubSnapshot
+          sales={allowed.has("/app/reports/sales")}
+          till={allowed.has("/app/reports/till")}
+          stock={canOpenInventoryPage(me.role, "reports")}
+          branchId={branchId}
+        />
         {!anyReady ? <EmptyState icon={BarChart3} title={t.nothing} /> : null}
         {GROUPS.map((group) => {
-          const cards = entries.filter((entry) => entry.group === group);
+          const cards = ready.filter((entry) => entry.group === group);
           if (cards.length === 0) return null;
           return (
             <section key={group} className="grid gap-2.5">
@@ -128,6 +133,26 @@ export function ReportsHub() {
             </section>
           );
         })}
+        {soon.length > 0 ? (
+          // Reports still being built sit in one quiet line, so they don't crowd the ones that work.
+          <section className="grid gap-2.5">
+            <SectionLabel>{t.soon.onTheWay}</SectionLabel>
+            <div className="grid gap-3 rounded-staff border border-dashed border-border bg-subtle p-4">
+              <p className="text-[13px] text-ink-secondary">{t.soon.onTheWayHint}</p>
+              <ul className="flex flex-wrap gap-2">
+                {soon.map((entry) => {
+                  const Icon = entry.icon;
+                  return (
+                    <li key={entry.key} title={t.soon[entry.key].body} className="inline-flex items-center gap-1.5 rounded-staff border border-border bg-canvas px-2.5 py-1 text-[13px] text-ink-secondary">
+                      <Icon aria-hidden className="size-3.5 text-disabled" />
+                      {t.soon[entry.key].title}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </section>
+        ) : null}
       </div>
     </RoleGate>
   );

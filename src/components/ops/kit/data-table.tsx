@@ -31,6 +31,7 @@ export function DataTable<Row>({
   loading = false,
   empty,
   caption,
+  stack = false,
   className,
 }: {
   columns: readonly Column<Row>[];
@@ -42,17 +43,22 @@ export function DataTable<Row>({
   empty?: ReactNode;
   /** Read by screen readers only. */
   caption?: string;
+  /**
+   * On phones, show each row as a card (first column as its title, the rest as label and value)
+   * instead of a table that scrolls sideways. Wider screens keep the table.
+   */
+  stack?: boolean;
   className?: string;
 }) {
   const t = useStaffSection(kitCopy);
-  const activate = (event: KeyboardEvent<HTMLTableRowElement>, row: Row) => {
+  const activate = (event: KeyboardEvent<HTMLElement>, row: Row) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     onRowClick?.(row);
   };
 
-  return (
-    <div className={cn("overflow-x-auto rounded-staff border border-border bg-canvas", className)}>
+  const table = (
+    <div className={cn("overflow-x-auto rounded-staff border border-border bg-canvas", stack && "hidden sm:block", className)}>
       <table className="w-full border-collapse text-sm text-ink">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead>
@@ -127,5 +133,49 @@ export function DataTable<Row>({
         </tbody>
       </table>
     </div>
+  );
+  if (!stack) return table;
+
+  const [title, ...rest] = columns;
+  return (
+    <>
+      {table}
+      <div className={cn("grid gap-2 sm:hidden", className)}>
+        {caption ? <p className="sr-only">{caption}</p> : null}
+        {loading ? (
+          [0, 1, 2].map((index) => <Skeleton key={index} className="h-24 w-full rounded-staff" />)
+        ) : rows.length === 0 ? (
+          <p className="rounded-staff border border-border bg-canvas px-4 py-10 text-center text-sm text-ink-secondary">{empty ?? t.nothingYet}</p>
+        ) : (
+          <ul className="grid gap-2">
+            {rows.map((row) => {
+              const key = rowKey(row);
+              return (
+                <li
+                  key={key}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  onKeyDown={onRowClick ? (event) => activate(event, row) : undefined}
+                  className={cn(
+                    "grid gap-2 rounded-staff border border-border bg-canvas p-3 text-sm text-ink",
+                    onRowClick && "cursor-pointer hover:bg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+                  )}
+                >
+                  {title ? <div className="font-semibold">{title.cell(row)}</div> : null}
+                  <dl className="grid gap-1.5">
+                    {rest.map((column) => (
+                      <div key={column.key} className="flex items-center justify-between gap-3">
+                        <dt className="text-xs text-ink-secondary">{column.header}</dt>
+                        <dd className="text-end tabular-nums">{column.cell(row)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </>
   );
 }

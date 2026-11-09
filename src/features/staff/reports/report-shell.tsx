@@ -1,9 +1,8 @@
 "use client";
 
-import { CalendarClock, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Badge } from "@/components/ops/kit/badge";
 import { Button } from "@/components/ops/kit/button";
 import { Card } from "@/components/ops/kit/card";
 import { PageHeader } from "@/components/ops/kit/page-header";
@@ -23,8 +22,8 @@ export function rangeLabel(from: string, to: string, locale: string): string {
 }
 
 /**
- * The report page from the Till / Z frame: back to Reports, title, Schedule (not built yet)
- * and Export, the filter bar, up to four KPIs, one chart and one table.
+ * The report page from the Till / Z frame: back to Reports, title and Export, the filter bar,
+ * up to four KPIs, one chart and one table. Scheduled exports come back here once the API sends them.
  */
 export function ReportShell({
   group,
@@ -59,23 +58,12 @@ export function ReportShell({
         title={title}
         subtitle={subtitle}
         actions={
-          <>
-            <span className="inline-flex items-center gap-2" title={t.scheduleSoon}>
-              <Button variant="ghost" disabled aria-describedby="schedule-soon">
-                <CalendarClock aria-hidden />
-                {t.schedule}
-              </Button>
-              <span id="schedule-soon">
-                <Badge>{t.soon.badge}</Badge>
-              </span>
-            </span>
-            {onExport ? (
-              <Button onClick={onExport} disabled={!canExport}>
-                <Download aria-hidden />
-                {t.exportCsv}
-              </Button>
-            ) : null}
-          </>
+          onExport ? (
+            <Button onClick={onExport} disabled={!canExport}>
+              <Download aria-hidden />
+              {t.exportCsv}
+            </Button>
+          ) : null
         }
       />
       {filters}

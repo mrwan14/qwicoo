@@ -2,14 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import { Badge, type Tone } from "@/components/ops/kit/badge";
-import { MeterList } from "@/components/ops/kit/bar-chart";
+import { BarChart, MeterList } from "@/components/ops/kit/bar-chart";
 import { KpiCard } from "@/components/ops/kit/card";
 import { DataTable, type Column } from "@/components/ops/kit/data-table";
-import { dateFilter, type DateFilter } from "@/components/ops/kit/date-range";
 import { FilterBar } from "@/components/ops/kit/filter-bar";
 import { formatAmount } from "@/components/ops/kit/money";
 import { MoreOptions } from "@/components/ops/kit/side-panel";
@@ -29,17 +27,18 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
 import { useScope } from "@/stores/scope";
 
+import { daysIn, percentChange, previousPeriod } from "./compare";
 import { downloadCsv } from "./csv";
+import { loadSince, monthsIn } from "./paging";
 import { rangeLabel, ReportShell } from "./report-shell";
+import { Trend } from "./trend";
+import { useReportFilters } from "./use-report-filters";
 
-type ZReport = components["schemas"]["ZReportResponse"];
+import { num, useZReports, type ZReport } from "./z-reports";
 
-const num = (value: string | number | null | undefined) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
+type DayRange = { from: string; to: string };
 
-function inRange(day: string, range: DateFilter): boolean {
+function inRange(day: string, range: DayRange): boolean {
   const date = day.slice(0, 10);
   return date >= range.from && date <= range.to;
 }
@@ -48,19 +47,12 @@ function inRange(day: string, range: DateFilter): boolean {
 export function TillReport() {
   const t = useStaffSection(reportsCopy);
   const { locale } = useLocale();
-  const branchId = useScope((state) => state.branchId);
   const branchName = useScope((state) => state.branches.find((branch) => branch.id === state.branchId)?.name);
-  const [range, setRange] = useState<DateFilter>(() => dateFilter("yesterday"));
-  const reports = useQuery({
-    queryKey: ["z-reports", branchId],
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/financials/z-reports");
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
-      return result.data.items ?? [];
-    },
-  });
+  // Today has no Z report until the day is closed, so Till opens on yesterday and ignores the period carried from other reports.
+  const { range, setRange } = useReportFilters("yesterday", { carry: false });
+  const { query: reports, rows, complete } = useZReports(range, { compare: false });
   const money = (amount: string | number) => formatAmount(amount, undefined, locale);
-  const rows = (reports.data ?? []).filter((report) => inRange(report.business_date, range));
+  const counts = rows.filter((row) => row.cash_reconciliation?.declared_cash != null).length;
   const counted = rows.reduce((sum, row) => sum + num(row.cash_reconciliation?.declared_cash), 0);
   const difference = rows.reduce((sum, row) => sum + num(row.cash_reconciliation?.cash_variance), 0);
   // The API reports declared cash and the variance; what the drawer should have held is the one minus the other.
@@ -101,7 +93,7 @@ export function TillReport() {
     <ReportShell
       group="money"
       title={t.items.till.title}
-      subtitle={[rangeLabel(range.from, range.to, locale), branchName].filter(Boolean).join(" · ")}
+      subtitle={[rangeLabel(range.from, range.to, locale), branchName, reports.data && !complete ? t.partial : null].filter(Boolean).join(" · ")}
       filters={<FilterBar date={{ value: range, onChange: setRange }} />}
       kpis={
         <>
@@ -113,7 +105,7 @@ export function TillReport() {
             loading={reports.isLoading}
             note={reports.data ? (short ? (short === 1 ? t.till.shortOne : fill(t.till.short, { count: short })) : over ? (over === 1 ? t.till.overOne : fill(t.till.over, { count: over })) : t.till.matches) : undefined}
           />
-          <KpiCard label={t.till.closed} value={reports.data ? formatCount(rows.filter((row) => row.drawer_session_id).length, locale) : "—"} loading={reports.isLoading} note={fill(t.till.closedNote, { count: rows.length })} />
+          <KpiCard label={t.till.closed} value={reports.data ? formatCount(rows.length, locale) : "—"} loading={reports.isLoading} note={reports.data ? fill(t.till.closedNote, { count: counts }) : undefined} />
         </>
       }
       chartTitle={t.till.addsUp}
@@ -135,7 +127,7 @@ export function TillReport() {
           </div>
         </dl>
       }
-      table={<DataTable caption={t.items.till.title} columns={columns} rows={rows} loading={reports.isLoading} rowKey={(row) => row.id} empty={reports.isError ? t.loadFailed : t.empty} />}
+      table={<DataTable stack caption={t.items.till.title} columns={columns} rows={rows} loading={reports.isLoading} rowKey={(row) => row.id} empty={reports.isError ? t.loadFailed : t.empty} />}
       canExport={rows.length > 0}
       onExport={() => {
         downloadCsv(
@@ -164,8 +156,15 @@ export function TillReport() {
 
 type AttendanceLog = components["schemas"]["AttendanceLogItem"];
 
-/** The API keeps attendance by today, this week or this month. */
-const PRESET_FILTER = { today: "daily", yesterday: "daily", thisWeek: "weekly", thisMonth: "monthly", custom: "monthly" } as const;
+/**
+ * The API answers a day, a week or a month around `target_date`. One day asks for that day; any
+ * longer range asks for each month it touches and keeps the days in range, so a week that starts
+ * on Saturday or crosses into a new month is never cut short.
+ */
+function attendanceRequests(range: DayRange): { filter_type: string; target_date: string }[] {
+  if (range.from === range.to) return [{ filter_type: "daily", target_date: range.from }];
+  return monthsIn(range.from, range.to).map((month) => ({ filter_type: "monthly", target_date: month }));
+}
 
 export function AttendanceReport() {
   const t = useStaffSection(reportsCopy);
@@ -174,30 +173,41 @@ export function AttendanceReport() {
   const branchId = useScope((state) => state.branchId);
   const branches = useScope((state) => state.branches);
   const ids = branches.length > 0 ? branches.map((branch) => branch.id) : branchId ? [branchId] : [];
-  const [range, setRange] = useState<DateFilter>(() => dateFilter("today"));
-  const filterType = PRESET_FILTER[range.preset];
+  const { range, setRange } = useReportFilters();
+  const comparison = previousPeriod(range);
+  // The same month can be asked for twice when the two periods share it.
+  const requests = [...new Map([...attendanceRequests(range), ...attendanceRequests(comparison)].map((query) => [`${query.filter_type}:${query.target_date}`, query])).values()];
   const logs = useQuery({
-    queryKey: ["attendance-logs", ids.join(","), filterType, range.preset === "yesterday" ? range.from : ""],
+    queryKey: ["attendance-logs", ids.join(","), range.from, range.to, comparison.from],
     enabled: ids.length > 0,
     queryFn: async () => {
       const pages = await Promise.all(
-        ids.map(async (id) => {
-          const result = await browserApi.GET("/api/v1/branches/{branch_id}/attendance-logs", {
-            params: { path: { branch_id: id }, query: { filter_type: filterType, ...(range.preset === "yesterday" ? { target_date: range.from } : {}) } },
-          });
-          if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
-          return result.data.records ?? [];
-        }),
+        ids.flatMap((id) =>
+          requests.map(async (query) => {
+            const result = await browserApi.GET("/api/v1/branches/{branch_id}/attendance-logs", {
+              params: { path: { branch_id: id }, query },
+            });
+            if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
+            return result.data.records ?? [];
+          }),
+        ),
       );
-      return pages.flat();
+      // Month requests can overlap when the API ignores target_date; keep each record once.
+      return [...new Map(pages.flat().map((row) => [row.id, row])).values()];
     },
   });
   const rows = (logs.data ?? []).filter((row) => inRange(row.date, range)).sort((left, right) => right.date.localeCompare(left.date) || left.employee_name.localeCompare(right.employee_name));
+  const earlier = (logs.data ?? []).filter((row) => inRange(row.date, comparison));
   const statusKey = (status: string) => status.toUpperCase();
-  const count = (status: string) => rows.filter((row) => statusKey(row.status) === status).length;
-  const onTime = count("PRESENT") + count("ON_TIME");
-  const late = count("LATE");
-  const absent = count("ABSENT");
+  const tally = (list: readonly AttendanceLog[]) => {
+    const count = (status: string) => list.filter((row) => statusKey(row.status) === status).length;
+    return { total: list.length, onTime: count("PRESENT") + count("ON_TIME"), late: count("LATE"), absent: count("ABSENT") };
+  };
+  const { onTime, late, absent } = tally(rows);
+  const before = tally(earlier);
+  // Without any records last time there is nothing fair to compare with.
+  const trend = (now: number, then: number, good: "up" | "down" | "none") =>
+    logs.data && before.total > 0 ? <Trend change={percentChange(now, then)} comparison={comparison} good={good} /> : null;
   const tone = (status: string): Tone => (statusKey(status) === "LATE" ? "warning" : statusKey(status) === "ABSENT" ? "danger" : "success");
   const label = (status: string) => {
     const key = statusKey(status);
@@ -222,10 +232,10 @@ export function AttendanceReport() {
       filters={<FilterBar date={{ value: range, onChange: setRange, presets: ["today", "yesterday", "thisWeek", "thisMonth"] }} />}
       kpis={
         <>
-          <KpiCard label={t.attendance.records} value={logs.data ? formatCount(rows.length, locale) : "—"} loading={logs.isLoading} />
-          <KpiCard label={t.attendance.onTime} value={logs.data ? formatCount(onTime, locale) : "—"} loading={logs.isLoading} />
-          <KpiCard label={t.attendance.late} value={logs.data ? formatCount(late, locale) : "—"} loading={logs.isLoading} />
-          <KpiCard label={t.attendance.absent} value={logs.data ? formatCount(absent, locale) : "—"} loading={logs.isLoading} />
+          <KpiCard label={t.attendance.records} value={logs.data ? formatCount(rows.length, locale) : "—"} loading={logs.isLoading} trend={trend(rows.length, before.total, "none")} />
+          <KpiCard label={t.attendance.onTime} value={logs.data ? formatCount(onTime, locale) : "—"} loading={logs.isLoading} trend={trend(onTime, before.onTime, "up")} />
+          <KpiCard label={t.attendance.late} value={logs.data ? formatCount(late, locale) : "—"} loading={logs.isLoading} trend={trend(late, before.late, "down")} />
+          <KpiCard label={t.attendance.absent} value={logs.data ? formatCount(absent, locale) : "—"} loading={logs.isLoading} trend={trend(absent, before.absent, "down")} />
         </>
       }
       chartTitle={t.attendance.chart}
@@ -242,7 +252,7 @@ export function AttendanceReport() {
           <p className="py-6 text-sm text-ink-secondary">{logs.isError ? t.loadFailed : t.empty}</p>
         )
       }
-      table={<DataTable caption={t.items.attendance.title} columns={columns} rows={rows} loading={logs.isLoading} rowKey={(row) => row.id} empty={t.empty} />}
+      table={<DataTable stack caption={t.items.attendance.title} columns={columns} rows={rows} loading={logs.isLoading} rowKey={(row) => row.id} empty={t.empty} />}
       canExport={rows.length > 0}
       onExport={() => {
         downloadCsv(
@@ -257,35 +267,77 @@ export function AttendanceReport() {
 }
 
 type Transaction = components["schemas"]["CashierTransactionItem"];
-const PAGE = 100;
+
+const cairoDay = (iso: string) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
+
+type Tender = "cash" | "card" | "online";
+const CARD_METHODS = new Set(["CARD_TERMINAL", "POS_TERMINAL"]);
+
+/** Cash, a card on the branch's own terminal, or anything paid online (Paymob, wallets, prepaid). */
+export function tenderOf(method: string): Tender {
+  if (method === "CASH") return "cash";
+  return CARD_METHODS.has(method) ? "card" : "online";
+}
+
+/** Completed payments only, split by how they were paid. */
+function takings(rows: readonly Transaction[]): Record<Tender | "total", number> {
+  const sums = { cash: 0, card: 0, online: 0, total: 0 };
+  for (const row of rows) {
+    if (row.status !== "COMPLETED") continue;
+    const amount = num(row.amount);
+    sums[tenderOf(row.payment_method)] += amount;
+    sums.total += amount;
+  }
+  return sums;
+}
 
 export function PaymentsReport() {
   const t = useStaffSection(reportsCopy);
   const { locale } = useLocale();
   const me = useStaffSession();
   const branchId = useScope((state) => state.branchId);
-  const [range, setRange] = useState<DateFilter>(() => dateFilter("today"));
+  const { range, setRange } = useReportFilters();
+  const comparison = previousPeriod(range);
+  // One load reaches back to the start of the comparison period, so both periods come from the same rows.
   const txns = useQuery({
-    queryKey: ["cashier-txns", branchId, "report"],
+    queryKey: ["cashier-txns", branchId, "report", comparison.from],
     enabled: Boolean(branchId && me),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/branches/{branch_id}/cashier-transactions", {
-        params: { path: { branch_id: branchId ?? "" }, query: { limit: PAGE } },
-      });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
-      return result.data;
-    },
+    queryFn: () =>
+      loadSince<Transaction>({
+        from: comparison.from,
+        dayOf: (row) => cairoDay(row.created_at),
+        load: async (offset, limit) => {
+          const result = await browserApi.GET("/api/v1/branches/{branch_id}/cashier-transactions", {
+            params: { path: { branch_id: branchId ?? "" }, query: { offset, limit } },
+          });
+          if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
+          return { rows: result.data.records ?? [], total: result.data.total ?? 0 };
+        },
+      }),
   });
-  const day = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
-  const all = txns.data?.records ?? [];
-  const rows = all.filter((row) => inRange(day(row.created_at), range));
+  const all = txns.data?.rows ?? [];
+  const rows = all.filter((row) => inRange(cairoDay(row.created_at), range));
   const completed = rows.filter((row) => row.status === "COMPLETED");
-  const total = completed.reduce((sum, row) => sum + num(row.amount), 0);
-  const cash = completed.filter((row) => row.payment_method === "CASH").reduce((sum, row) => sum + num(row.amount), 0);
+  const refunded = rows.filter((row) => row.status === "REFUNDED").reduce((sum, row) => sum + num(row.amount), 0);
+  const now = takings(rows);
+  const before = takings(all.filter((row) => inRange(cairoDay(row.created_at), comparison)));
+  const total = now.total;
+  const sumOf = (kind: Tender) => now[kind];
+  // A list cut short may be missing the earlier period, so it gets no comparison.
+  const trend = (kind: Tender | "total") =>
+    txns.data?.complete ? <Trend change={percentChange(now[kind], before[kind])} comparison={comparison} /> : null;
   const byMethod = new Map<string, number>();
   for (const row of completed) byMethod.set(row.payment_method, (byMethod.get(row.payment_method) ?? 0) + num(row.amount));
   const money = (amount: number) => formatAmount(amount, undefined, locale);
-  const partial = (txns.data?.total ?? 0) > all.length;
+  const partial = Boolean(txns.data && !txns.data.complete);
+  // Over several days the chart shows takings per day; one day (or more than a month) keeps the split by method.
+  const days = daysIn(range.from, range.to);
+  const perDay =
+    days.length > 1 && days.length <= 31
+      ? days.map((day) => ({ day, amount: completed.filter((row) => cairoDay(row.created_at) === day).reduce((sum, row) => sum + num(row.amount), 0) }))
+      : null;
+  const peakDay = Math.max(0, ...(perDay ?? []).map((entry) => entry.amount));
   const columns: Column<Transaction>[] = [
     { key: "when", header: t.payments.when, cell: (row) => formatCairoDateTime(row.created_at, locale) },
     { key: "method", header: t.payments.method, strong: true, cell: (row) => paymentMethodLabel(row.payment_method, locale) },
@@ -297,31 +349,44 @@ export function PaymentsReport() {
     <ReportShell
       group="money"
       title={t.items.payments.title}
-      subtitle={[rangeLabel(range.from, range.to, locale), partial ? fill(t.payments.latest, { count: all.length }) : null].filter(Boolean).join(" · ")}
+      subtitle={[rangeLabel(range.from, range.to, locale), partial ? fill(t.payments.latest, { count: formatCount(all.length, locale) }) : null].filter(Boolean).join(" · ")}
       filters={<FilterBar date={{ value: range, onChange: setRange }} />}
       kpis={
         <>
-          <KpiCard label={t.payments.total} value={txns.data ? money(total) : "—"} loading={txns.isLoading} />
-          <KpiCard label={t.payments.cash} value={txns.data ? money(cash) : "—"} loading={txns.isLoading} />
-          <KpiCard label={t.payments.card} value={txns.data ? money(total - cash) : "—"} loading={txns.isLoading} />
-          <KpiCard label={t.payments.count} value={txns.data ? formatCount(rows.length, locale) : "—"} loading={txns.isLoading} />
+          <KpiCard
+            label={t.payments.total}
+            value={txns.data ? money(total) : "—"}
+            loading={txns.isLoading}
+            trend={trend("total")}
+            note={txns.data ? fill(refunded > 0 ? t.payments.takenRefunded : t.payments.takenNote, { count: formatCount(completed.length, locale), refunded: money(refunded) }) : undefined}
+          />
+          <KpiCard label={t.payments.cash} value={txns.data ? money(sumOf("cash")) : "—"} loading={txns.isLoading} trend={trend("cash")} />
+          <KpiCard label={t.payments.card} value={txns.data ? money(sumOf("card")) : "—"} loading={txns.isLoading} trend={trend("card")} note={t.payments.cardNote} />
+          <KpiCard label={t.payments.online} value={txns.data ? money(sumOf("online")) : "—"} loading={txns.isLoading} trend={trend("online")} note={t.payments.onlineNote} />
         </>
       }
-      chartTitle={t.payments.chart}
+      chartTitle={perDay ? t.payments.byDay : t.payments.chart}
       chart={
-        byMethod.size > 0 ? (
+        perDay && total > 0 ? (
+          <BarChart
+            label={t.payments.byDay}
+            format={(value) => money(value)}
+            // The day of the month fits under a narrow bar; the full date is in the table.
+            bars={perDay.map(({ day, amount }) => ({ key: day, label: String(Number(day.slice(8, 10))), value: amount, highlight: amount > 0 && amount === peakDay }))}
+          />
+        ) : byMethod.size > 0 ? (
           <MeterList rows={[...byMethod.entries()].map(([method, amount]) => ({ key: method, label: paymentMethodLabel(method, locale), value: amount, detail: money(amount) }))} />
         ) : (
           <p className="py-6 text-sm text-ink-secondary">{txns.isError ? t.loadFailed : t.empty}</p>
         )
       }
-      table={<DataTable caption={t.items.payments.title} columns={columns} rows={rows} loading={txns.isLoading} rowKey={(row) => row.id} empty={t.empty} />}
+      table={<DataTable stack caption={t.items.payments.title} columns={columns} rows={rows} loading={txns.isLoading} rowKey={(row) => row.id} empty={t.empty} />}
       canExport={rows.length > 0}
       onExport={() => {
         downloadCsv(
           `payments-${range.from}-${range.to}.csv`,
           [t.payments.when, t.payments.method, t.payments.status, t.payments.reference, t.payments.amount],
-          rows.map((row) => [row.created_at, row.payment_method, row.status, row.transaction_reference, row.amount]),
+          rows.map((row) => [formatCairoDateTime(row.created_at, locale), paymentMethodLabel(row.payment_method, locale), paymentStatusLabel(row.status, locale), row.transaction_reference, row.amount]),
         );
         toast.success(t.exported);
       }}

@@ -1,14 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { BarChart, MeterList } from "@/components/ops/kit/bar-chart";
 import { Badge } from "@/components/ops/kit/badge";
 import { KpiCard } from "@/components/ops/kit/card";
 import { DataTable, type Column } from "@/components/ops/kit/data-table";
-import { dateFilter, type DateFilter } from "@/components/ops/kit/date-range";
+import type { DateFilter } from "@/components/ops/kit/date-range";
 import { FilterBar } from "@/components/ops/kit/filter-bar";
 import { formatAmount } from "@/components/ops/kit/money";
 import { asApiError } from "@/lib/api/error";
@@ -22,9 +22,14 @@ import { reportsCopy } from "@/lib/i18n/staff/reports";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
+import { percentChange, pointChange, previousPeriod } from "./compare";
 import { downloadCsv } from "./csv";
-import { analyticsPeriod } from "./period";
+import { filterQuery } from "./filter-query";
+import { weightedCancelRate } from "./paging";
+import { analyticsPeriod, type AnalyticsPeriodQuery } from "./period";
 import { rangeLabel, ReportShell } from "./report-shell";
+import { Trend } from "./trend";
+import { useReportFilters } from "./use-report-filters";
 
 type Item = components["schemas"]["ItemPerformanceItem"];
 type BranchRow = components["schemas"]["BranchPerformanceRow"];
@@ -33,8 +38,9 @@ type BranchRow = components["schemas"]["BranchPerformanceRow"];
 function useAnalyticsFilters() {
   const t = useStaffSection(reportsCopy);
   const branches = useScope((state) => state.branches);
-  const [range, setRange] = useState<DateFilter>(() => dateFilter("today"));
-  const [branch, setBranch] = useState("all");
+  const { range, setRange, branch: wanted, setBranch } = useReportFilters();
+  // A branch carried over in the URL that this person cannot see falls back to all branches.
+  const branch = branches.some((entry) => entry.id === wanted) ? wanted : "all";
   const branchFilter =
     branches.length > 1
       ? {
@@ -46,6 +52,20 @@ function useAnalyticsFilters() {
       : undefined;
   const branchName = branch === "all" ? (branches.length > 1 ? t.allBranches : branches[0]?.name) : branches.find((entry) => entry.id === branch)?.name;
   return { range, setRange, branch: branch === "all" ? null : branch, branchFilter, branchName };
+}
+
+/**
+ * One analytics endpoint for the chosen period and for the period it is compared with.
+ * The comparison loads after the main numbers, so the page never waits on it.
+ */
+function usePeriodData<T>(key: string, range: DateFilter, branch: string | null, load: (query: AnalyticsPeriodQuery & { branch_id?: string }) => Promise<T>) {
+  const comparison = previousPeriod(range);
+  const withBranch = (query: AnalyticsPeriodQuery) => (branch ? { ...query, branch_id: branch } : query);
+  const period = analyticsPeriod(range);
+  const before: AnalyticsPeriodQuery = { period: "custom", start_date: comparison.from, end_date: comparison.to };
+  const current = useQuery({ queryKey: ["reports", key, period, branch], queryFn: () => load(withBranch(period)) });
+  const previous = useQuery({ queryKey: ["reports", key, before, branch], queryFn: () => load(withBranch(before)), enabled: current.isSuccess });
+  return { current, previous: previous.data, comparison };
 }
 
 function useSubtitle(range: DateFilter, branchName?: string | null) {
@@ -62,18 +82,16 @@ export function SalesReport() {
   const { locale } = useLocale();
   const filters = useAnalyticsFilters();
   const subtitle = useSubtitle(filters.range, filters.branchName);
-  const period = analyticsPeriod(filters.range);
-  const data = useQuery({
-    queryKey: ["reports", "sales", period, filters.branch],
-    queryFn: async () => {
-      const query = filters.branch ? { ...period, branch_id: filters.branch } : period;
-      const result = await browserApi.GET("/api/v1/analytics/dashboard", { params: { query } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
-      return result.data;
-    },
+  const { current: data, previous, comparison } = usePeriodData("sales", filters.range, filters.branch, async (query) => {
+    const result = await browserApi.GET("/api/v1/analytics/dashboard", { params: { query } });
+    if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
+    return result.data;
   });
   const money = (amount: string) => formatAmount(amount, undefined, locale);
   const kpis = data.data?.kpis;
+  const before = previous?.kpis;
+  const trend = (now: string | number | undefined, then: string | number | undefined) =>
+    kpis && before ? <Trend change={percentChange(now, then)} comparison={comparison} /> : null;
   const items = data.data?.top_selling_items ?? [];
   const columns: Column<Item>[] = [
     { key: "item", header: t.sales.item, strong: true, cell: (item) => pickLocale(item.item_name, locale) },
@@ -90,10 +108,16 @@ export function SalesReport() {
       filters={<FilterBar date={{ value: filters.range, onChange: filters.setRange }} branch={filters.branchFilter} />}
       kpis={
         <>
-          <KpiCard label={t.sales.gross} value={kpis ? money(kpis.gmv) : "—"} loading={data.isLoading} />
-          <KpiCard label={t.sales.net} value={kpis ? money(kpis.net_revenue) : "—"} loading={data.isLoading} />
-          <KpiCard label={t.sales.orders} value={kpis ? formatCount(kpis.total_orders, locale) : "—"} loading={data.isLoading} note={kpis ? fill(t.sales.paid, { count: kpis.paid_orders }) : undefined} />
-          <KpiCard label={t.sales.average} value={kpis ? money(kpis.aov) : "—"} loading={data.isLoading} />
+          <KpiCard label={t.sales.gross} value={kpis ? money(kpis.gmv) : "—"} loading={data.isLoading} trend={trend(kpis?.gmv, before?.gmv)} />
+          <KpiCard label={t.sales.net} value={kpis ? money(kpis.net_revenue) : "—"} loading={data.isLoading} trend={trend(kpis?.net_revenue, before?.net_revenue)} />
+          <KpiCard
+            label={t.sales.orders}
+            value={kpis ? formatCount(kpis.total_orders, locale) : "—"}
+            loading={data.isLoading}
+            trend={trend(kpis?.total_orders, before?.total_orders)}
+            note={kpis ? fill(t.sales.paid, { count: kpis.paid_orders }) : undefined}
+          />
+          <KpiCard label={t.sales.average} value={kpis ? money(kpis.aov) : "—"} loading={data.isLoading} trend={trend(kpis?.aov, before?.aov)} />
         </>
       }
       chartTitle={t.sales.chart}
@@ -111,7 +135,7 @@ export function SalesReport() {
           <p className="py-6 text-sm text-ink-secondary">{data.isError ? t.loadFailed : t.empty}</p>
         )
       }
-      table={<DataTable caption={t.items.overview.title} columns={columns} rows={items} loading={data.isLoading} rowKey={(item) => item.item_id} empty={t.empty} />}
+      table={<DataTable stack caption={t.items.overview.title} columns={columns} rows={items} loading={data.isLoading} rowKey={(item) => item.item_id} empty={t.empty} />}
       canExport={items.length > 0}
       onExport={() => {
         downloadCsv(
@@ -128,21 +152,21 @@ export function SalesReport() {
 export function BranchesReport() {
   const t = useStaffSection(reportsCopy);
   const { locale } = useLocale();
-  const [range, setRange] = useState<DateFilter>(() => dateFilter("today"));
+  const { range, setRange } = useReportFilters();
+  const router = useRouter();
   const subtitle = useSubtitle(range, t.allBranches);
-  const period = analyticsPeriod(range);
-  const data = useQuery({
-    queryKey: ["reports", "branches", period],
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/analytics/branches-matrix", { params: { query: period } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
-      return result.data;
-    },
+  const { current: data, previous, comparison } = usePeriodData("branches", range, null, async (query) => {
+    const result = await browserApi.GET("/api/v1/analytics/branches-matrix", { params: { query } });
+    if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
+    return result.data;
   });
   const money = (amount: string | number) => formatAmount(amount, undefined, locale);
   const rows = [...(data.data?.branches ?? [])].sort((left, right) => Number(right.gmv) - Number(left.gmv));
   const total = rows.reduce((sum, row) => sum + (Number(row.gmv) || 0), 0);
-  const cancelled = rows.length ? rows.reduce((sum, row) => sum + (Number(row.cancellation_rate_percentage) || 0), 0) / rows.length : 0;
+  const cancelRate = (list: readonly BranchRow[]) => weightedCancelRate(list.map((row) => ({ paid: row.total_paid_orders, ratePct: Number(row.cancellation_rate_percentage) || 0 })));
+  const cancelled = cancelRate(rows);
+  const before = previous?.branches;
+  const totalBefore = before?.reduce((sum, row) => sum + (Number(row.gmv) || 0), 0);
   const columns: Column<BranchRow>[] = [
     { key: "branch", header: t.branches.branch, strong: true, cell: (row) => pickLocale(row.branch_name, locale) },
     { key: "sales", header: t.sales.gross, align: "end", cell: (row) => money(row.gmv) },
@@ -161,9 +185,19 @@ export function BranchesReport() {
       kpis={
         <>
           <KpiCard label={t.branches.count} value={data.data ? formatCount(rows.length, locale) : "—"} loading={data.isLoading} />
-          <KpiCard label={t.branches.total} value={data.data ? money(total) : "—"} loading={data.isLoading} />
+          <KpiCard
+            label={t.branches.total}
+            value={data.data ? money(total) : "—"}
+            loading={data.isLoading}
+            trend={data.data && before ? <Trend change={percentChange(total, totalBefore)} comparison={comparison} /> : null}
+          />
           <KpiCard label={t.branches.best} value={rows[0] ? pickLocale(rows[0].branch_name, locale) : "—"} loading={data.isLoading} note={rows[0] ? money(rows[0].gmv) : undefined} />
-          <KpiCard label={t.branches.cancelled} value={data.data ? `${cancelled.toFixed(1)}%` : "—"} loading={data.isLoading} />
+          <KpiCard
+            label={t.branches.cancelled}
+            value={data.data ? `${cancelled.toFixed(1)}%` : "—"}
+            loading={data.isLoading}
+            trend={data.data && before ? <Trend change={pointChange(cancelled, cancelRate(before))} comparison={comparison} good="down" unit="points" /> : null}
+          />
         </>
       }
       chartTitle={t.branches.chart}
@@ -178,7 +212,19 @@ export function BranchesReport() {
           <p className="py-6 text-sm text-ink-secondary">{data.isError ? t.loadFailed : t.empty}</p>
         )
       }
-      table={<DataTable caption={t.items.branches.title} columns={columns} rows={rows} loading={data.isLoading} rowKey={(row) => row.branch_id} empty={t.empty} />}
+      table={
+        <DataTable
+          stack
+          caption={t.items.branches.title}
+          columns={columns}
+          rows={rows}
+          loading={data.isLoading}
+          rowKey={(row) => row.branch_id}
+          empty={t.empty}
+          // Opens that branch's sales for the same period.
+          onRowClick={(row) => router.push(`/app/reports/sales?${filterQuery(new URLSearchParams(), { range, branch: row.branch_id })}`)}
+        />
+      }
       canExport={rows.length > 0}
       onExport={() => {
         downloadCsv(
@@ -197,21 +243,21 @@ export function MenuReport() {
   const { locale } = useLocale();
   const filters = useAnalyticsFilters();
   const subtitle = useSubtitle(filters.range, filters.branchName);
-  const period = analyticsPeriod(filters.range);
-  const data = useQuery({
-    queryKey: ["reports", "menu", period, filters.branch],
-    queryFn: async () => {
-      const query = filters.branch ? { ...period, branch_id: filters.branch } : period;
-      const result = await browserApi.GET("/api/v1/analytics/menu-performance", { params: { query } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
-      return result.data;
-    },
+  const { current: data, previous, comparison } = usePeriodData("menu", filters.range, filters.branch, async (query) => {
+    const result = await browserApi.GET("/api/v1/analytics/menu-performance", { params: { query } });
+    if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
+    return result.data;
   });
   const money = (amount: string) => formatAmount(amount, undefined, locale);
   const top = data.data?.top_selling_items ?? [];
   const bottom = data.data?.bottom_selling_items ?? [];
   const categories = data.data?.category_breakdown ?? [];
   const sold = categories.reduce((sum, category) => sum + category.total_items_sold, 0);
+  // Categories cover every item sold, so their totals are complete; the top and bottom lists are capped.
+  const revenue = categories.reduce((sum, category) => sum + (Number(category.total_revenue) || 0), 0);
+  const soldBefore = previous?.category_breakdown.reduce((sum, category) => sum + category.total_items_sold, 0);
+  const revenueBefore = previous?.category_breakdown.reduce((sum, category) => sum + (Number(category.total_revenue) || 0), 0);
+  const trend = (change: number | null) => (data.data && previous ? <Trend change={change} comparison={comparison} /> : null);
   const rows = [...top.map((item) => ({ item, slow: false })), ...bottom.filter((item) => !top.some((entry) => entry.item_id === item.item_id)).map((item) => ({ item, slow: true }))];
   const columns: Column<(typeof rows)[number]>[] = [
     { key: "item", header: t.sales.item, strong: true, cell: ({ item }) => pickLocale(item.item_name, locale) },
@@ -228,10 +274,10 @@ export function MenuReport() {
       filters={<FilterBar date={{ value: filters.range, onChange: filters.setRange }} branch={filters.branchFilter} />}
       kpis={
         <>
-          <KpiCard label={t.menu.sold} value={data.data ? formatCount(sold, locale) : "—"} loading={data.isLoading} />
+          <KpiCard label={t.menu.sold} value={data.data ? formatCount(sold, locale) : "—"} loading={data.isLoading} trend={trend(percentChange(sold, soldBefore))} />
           <KpiCard label={t.menu.top} value={top[0] ? pickLocale(top[0].item_name, locale) : "—"} loading={data.isLoading} note={top[0] ? money(top[0].gross_revenue) : undefined} />
           <KpiCard label={t.menu.categories} value={data.data ? formatCount(categories.length, locale) : "—"} loading={data.isLoading} />
-          <KpiCard label={t.menu.slow} value={data.data ? formatCount(bottom.length, locale) : "—"} loading={data.isLoading} />
+          <KpiCard label={t.menu.avgPrice} value={data.data && sold > 0 ? formatAmount(revenue / sold, undefined, locale) : "—"} loading={data.isLoading} trend={trend(soldBefore ? percentChange(sold > 0 ? revenue / sold : null, (revenueBefore ?? 0) / soldBefore) : null)} note={data.data ? fill(t.menu.avgPriceNote, { amount: formatAmount(revenue, undefined, locale) }) : undefined} />
         </>
       }
       chartTitle={t.menu.chart}
@@ -250,7 +296,7 @@ export function MenuReport() {
           <p className="py-6 text-sm text-ink-secondary">{data.isError ? t.loadFailed : t.empty}</p>
         )
       }
-      table={<DataTable caption={t.items.menu.title} columns={columns} rows={rows} loading={data.isLoading} rowKey={({ item, slow }) => `${slow ? "slow" : "top"}-${item.item_id}`} empty={t.empty} />}
+      table={<DataTable stack caption={t.items.menu.title} columns={columns} rows={rows} loading={data.isLoading} rowKey={({ item, slow }) => `${slow ? "slow" : "top"}-${item.item_id}`} empty={t.empty} />}
       canExport={rows.length > 0}
       onExport={() => {
         downloadCsv(

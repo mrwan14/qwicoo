@@ -39,12 +39,15 @@ export function KpiCard({
   label,
   value,
   note,
+  trend,
   loading = false,
   className,
 }: {
   label: ReactNode;
   value: ReactNode;
   note?: ReactNode;
+  /** Change against an earlier period, shown under the value. */
+  trend?: ReactNode;
   loading?: boolean;
   className?: string;
 }) {
@@ -56,6 +59,7 @@ export function KpiCard({
       ) : (
         <p className="truncate text-[26px] leading-tight font-semibold text-ink tabular-nums sm:text-[32px]">{value}</p>
       )}
+      {trend && !loading ? trend : null}
       {note ? <p className="text-xs text-ink-secondary">{note}</p> : null}
     </div>
   );

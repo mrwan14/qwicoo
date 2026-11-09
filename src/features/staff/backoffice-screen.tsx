@@ -9,7 +9,6 @@ import { ScreenTitle } from "@/components/ops/page-header";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { BranchesBarChart, CategoryDonut, ItemsBarChart } from "@/features/staff/analytics-charts";
 import { AssistantUsage } from "@/features/staff/assistant/leads-screen";
-import { useMyAttendance } from "@/features/staff/attendance/clock";
 import { canSeeAssistantUsage } from "@/features/staff/assistant/access";
 import { LiveCount } from "@/components/ops/live-fact";
 import { Money } from "@/components/ops/money";
@@ -21,13 +20,10 @@ import { browserApi } from "@/lib/api/browser";
 import { formatMoney } from "@/lib/format/money";
 import { auditActionLabel, auditStatusLabel } from "@/lib/audit-labels";
 import { isUserRole, roleLabel } from "@/lib/auth/roles";
-import { fill } from "@/lib/i18n/dictionary";
 import { formatCairoDateTime } from "@/lib/format/time";
 import { useLocale } from "@/lib/i18n/locale-store";
-import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { analyticsCopy } from "@/lib/i18n/staff/analytics";
-import { attendanceCopy } from "@/lib/i18n/staff/attendance";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import type { components } from "@/lib/api/schema";
 import { drawerCloseFigures } from "@/features/staff/till";
@@ -35,53 +31,6 @@ import { useScope } from "@/stores/scope";
 
 const control = "h-11 w-full rounded-staff border px-3 text-sm";
 const square = "h-11 w-full border px-3 text-sm";
-
-function attendanceStatusLabel(status: string | null | undefined, labels: {
-  notCheckedIn: string;
-  onTime: string;
-  late: string;
-  absent: string;
-}): string {
-  const value = status?.trim().toUpperCase();
-  if (!value || value === "UNKNOWN") return labels.notCheckedIn;
-  if (value === "PRESENT") return labels.onTime;
-  if (value === "LATE") return labels.late;
-  if (value === "ABSENT") return labels.absent;
-  return status?.trim() || labels.notCheckedIn;
-}
-
-function attendanceHeading(name: string | null | undefined, status: string | null | undefined, labels: {
-  notCheckedIn: string;
-  onTime: string;
-  late: string;
-  absent: string;
-}): string {
-  const label = attendanceStatusLabel(status, labels);
-  const who = name?.trim();
-  return who ? `${who} · ${label}` : label;
-}
-
-const CAIRO_WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
-
-function TodayHoursNote({ hours, branchId }: { hours: components["schemas"]["OpeningHours"] | null | undefined; branchId: string | null }) {
-  const t = useStaffSection(attendanceCopy);
-  if (!branchId) return <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.chooseBranch}</p>;
-  const settings = (
-    <Link href={`/app/branches/${branchId}`} className="font-medium text-foreground underline-offset-2 hover:underline">
-      {t.branchSettings}
-    </Link>
-  );
-  if (!hours) {
-    return <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.noHoursBefore} {settings} {t.noHoursAfter}</p>;
-  }
-  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "Africa/Cairo", weekday: "short" }).format(new Date()).slice(0, 3).toLowerCase();
-  const key = CAIRO_WEEKDAYS.find((day) => day.startsWith(weekday)) ?? "mon";
-  const range = hours[key]?.[0];
-  if (!range) {
-    return <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.closedToday} {settings}.</p>;
-  }
-  return <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{fill(t.opensToday, { open: range.open.slice(0, 5), close: range.close.slice(0, 5) })} {settings}.</p>;
-}
 
 export function FinancialsScreen() {
   const t = useStaffSection(analyticsCopy).till;
@@ -313,199 +262,6 @@ export function ZReportScreen({ reportId }: { reportId: string }) {
       </dl>
       <button type="button" className="min-h-11 w-fit border px-4 text-sm print:hidden" onClick={() => window.print()}>{t.print}</button>
     </article>
-  );
-}
-
-const ATTENDANCE_RANGES = ["daily", "weekly", "monthly"] as const;
-
-export function AttendanceScreen() {
-  const t = useStaffSection(attendanceCopy);
-  const { locale } = useLocale();
-  const me = useStaffSession();
-  const branchId = useScope((state) => state.branchId);
-  const branches = useScope((state) => state.branches);
-  const watchedBranchIds = branches.length > 0 ? branches.map((branch) => branch.id) : branchId ? [branchId] : [];
-  const isAdmin = me?.role === "BRANCH_ADMIN";
-  const canReviewStaff =
-    me?.role === "SUPER_ADMIN" || me?.role === "BRAND_ADMIN" || me?.role === "BRANCH_ADMIN";
-  const canOverride = me?.role === "SUPER_ADMIN" || me?.role === "BRAND_ADMIN";
-  const [reason, setReason] = useState("");
-  const [logId, setLogId] = useState<string | null>(null);
-  const [range, setRange] = useState<(typeof ATTENDANCE_RANGES)[number]>("daily");
-  const hoursBranch = useQuery({
-    queryKey: ["branch", branchId],
-    enabled: Boolean(branchId) && isAdmin,
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/branches/{branch_id}", { params: { path: { branch_id: branchId ?? "" } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.branchFailed);
-      return result.data;
-    },
-  });
-  const { status, punch: punchClock } = useMyAttendance();
-  const logs = useQuery({
-    queryKey: ["attendance-logs", watchedBranchIds.join(","), range],
-    enabled: canReviewStaff && watchedBranchIds.length > 0,
-    queryFn: async () => {
-      const pages = await Promise.all(watchedBranchIds.map(async (id) => {
-        const result = await browserApi.GET("/api/v1/branches/{branch_id}/attendance-logs", {
-          params: { path: { branch_id: id }, query: { filter_type: range } },
-        });
-        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.logsFailed);
-        return result.data.records ?? [];
-      }));
-      return pages.flat().sort((left, right) => right.date.localeCompare(left.date) || left.employee_name.localeCompare(right.employee_name));
-    },
-  });
-  const txns = useQuery({
-    queryKey: ["cashier-txns", branchId],
-    enabled: canReviewStaff && Boolean(branchId),
-    queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/branches/{branch_id}/cashier-transactions", { params: { path: { branch_id: branchId ?? "" } } });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.transactionsFailed);
-      return result.data.records ?? [];
-    },
-  });
-  async function punch(kind: "in" | "out") {
-    if (await punchClock(kind)) void logs.refetch();
-  }
-  const override = useMutation({
-    mutationFn: async () => {
-      if (!logId) return;
-      const body: components["schemas"]["AttendanceManualOverrideRequest"] = { status: "PRESENT", reason };
-      const result = await browserApi.PATCH("/api/v1/attendance-logs/{log_id}/manual-override", {
-        params: { path: { log_id: logId } },
-        body,
-      });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.overrideFailed);
-    },
-    onSuccess: () => {
-      setLogId(null);
-      void logs.refetch();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
-  return (
-    <div className="grid gap-4">
-      <div className="grid gap-1">
-        <ScreenTitle>{t.title}</ScreenTitle>
-        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">
-          {t.intro}
-          {canReviewStaff ? ` ${t.introReview}` : ""}
-        </p>
-        {isAdmin && !hoursBranch.isLoading ? <TodayHoursNote hours={hoursBranch.data?.opening_hours} branchId={branchId} /> : null}
-      </div>
-      {status.isError ? (
-        <ErrorState body={status.error instanceof Error ? status.error.message : t.statusFailed} onRetry={() => void status.refetch()} />
-      ) : (
-        <p className="text-sm">
-          {status.isLoading
-            ? t.loadingYours
-            : attendanceHeading(status.data?.employee_name, status.data?.attendance?.status, t)}
-          {status.data?.attendance?.check_in ? ` · ${fill(t.inAt, { time: formatCairoDateTime(status.data.attendance.check_in, locale) })}` : ""}
-          {status.data?.attendance?.check_out ? ` · ${fill(t.outAt, { time: formatCairoDateTime(status.data.attendance.check_out, locale) })}` : ""}
-        </p>
-      )}
-      <div className="flex gap-2">
-        <button type="button" className="min-h-12 rounded-staff bg-primary px-4 text-sm text-primary-foreground" onClick={() => void punch("in")}>{t.checkIn}</button>
-        <button type="button" className="min-h-12 rounded-staff border px-4 text-sm" onClick={() => void punch("out")}>{t.checkOut}</button>
-      </div>
-      {canReviewStaff ? (
-      <>
-      <section className="grid gap-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="font-medium">{t.staffTitle}</h2>
-          <label className="grid gap-1 text-sm">
-            {t.period}
-            <select className={control} value={range} onChange={(event) => setRange(event.target.value as typeof range)}>
-              {ATTENDANCE_RANGES.map((item) => <option key={item} value={item}>{t.ranges[item]}</option>)}
-            </select>
-          </label>
-        </div>
-        {logs.isLoading ? <p className="text-sm text-ink-secondary">{t.loadingLogs}</p> : null}
-        {logs.isError ? <ErrorState body={logs.error instanceof Error ? logs.error.message : t.logsFailed} onRetry={() => void logs.refetch()} /> : null}
-        {!logs.isLoading && !logs.isError && watchedBranchIds.length === 0 ? <p className="text-sm text-ink-secondary">{t.chooseBranchLogs}</p> : null}
-        {!logs.isLoading && !logs.isError && watchedBranchIds.length > 0 && (logs.data ?? []).length === 0 ? <p className="text-sm text-ink-secondary">{t.nobody}</p> : null}
-        {(logs.data ?? []).length > 0 ? (
-          <div className="overflow-x-auto rounded-staff border bg-canvas">
-            <table className="w-full min-w-[720px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b text-ink-secondary">
-                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.person}</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.branch}</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.day}</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.arrived}</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.left}</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.status}</th>
-                  {canOverride ? <th scope="col" className="px-4 py-3 text-start font-medium">{t.action}</th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {(logs.data ?? []).map((log) => (
-                  <tr key={log.id} className="border-b align-middle last:border-b-0">
-                    <th scope="row" className="px-4 py-4 text-start font-medium">{log.employee_name}</th>
-                    <td className="px-4 py-4">{log.branch_name}</td>
-                    <td className="px-4 py-4">{log.date}</td>
-                    <td className="px-4 py-4">{log.check_in ? formatCairoDateTime(log.check_in, locale) : "—"}</td>
-                    <td className="px-4 py-4">{log.check_out ? formatCairoDateTime(log.check_out, locale) : "—"}</td>
-                    <td className="px-4 py-4">{attendanceStatusLabel(log.status, t)}</td>
-                    {canOverride ? (
-                      <td className="px-4 py-4">
-                        <button type="button" className="min-h-11 underline" onClick={() => setLogId(log.id)}>{t.correct}</button>
-                      </td>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </section>
-      <section className="grid gap-3">
-        <div>
-          <h2 className="font-medium">{t.paymentsTitle}</h2>
-          <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.paymentsHint}</p>
-        </div>
-        {txns.isLoading ? <p className="text-sm text-ink-secondary">{t.loadingPayments}</p> : null}
-        {txns.isError ? <QueryErrorState error={txns.error} screen={t.paymentsScreen} onRetry={() => void txns.refetch()} /> : null}
-        {!txns.isLoading && !txns.isError && (txns.data ?? []).length === 0 ? <p className="text-sm text-ink-secondary">{t.noPayments}</p> : null}
-        {(txns.data ?? []).length > 0 ? (
-          <div className="overflow-x-auto rounded-staff border bg-canvas">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b text-ink-secondary">
-                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.when}</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.method}</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.status}</th>
-                  <th scope="col" className="px-4 py-3 text-start font-medium">{t.amount}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(txns.data ?? []).map((txn) => (
-                  <tr key={txn.id} className="border-b align-middle last:border-b-0">
-                    <th scope="row" className="px-4 py-4 text-start font-medium">{formatCairoDateTime(txn.created_at, locale)}</th>
-                    <td className="px-4 py-4">
-                      {paymentMethodLabel(txn.payment_method)}
-                      {txn.transaction_reference ? <span className="mt-1 block text-ink-secondary">{txn.transaction_reference}</span> : null}
-                    </td>
-                    <td className="px-4 py-4">{paymentStatusLabel(txn.status)}</td>
-                    <td className="px-4 py-4 font-medium"><Money amount={String(txn.amount)} currency={txn.currency} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </section>
-      </>
-      ) : null}
-      {canOverride ? (
-        <>
-          <ConfirmDialog open={Boolean(logId)} onOpenChange={(open) => !open && setLogId(null)} title={t.correctTitle} description={t.correctBody} confirmLabel={t.correct} onConfirm={() => override.mutate()} />
-          {logId ? <textarea className="min-h-20 rounded-staff border px-3 py-2" placeholder={t.reason} value={reason} onChange={(event) => setReason(event.target.value)} /> : null}
-        </>
-      ) : null}
-    </div>
   );
 }
 

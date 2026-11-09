@@ -5880,6 +5880,20 @@ export interface components {
             id: string;
             /** Status */
             status: string;
+            /** User Id */
+            user_id?: string | null;
+            /** Role */
+            role?: string | null;
+            /** @description Check-in to check-out, once checked out. */
+            minutes_worked?: number | null;
+            /** @description Minutes after the shift start when the status is LATE. */
+            minutes_late?: number;
+            /** @description The check-out was filled in after a forgotten check-out. */
+            needs_review?: boolean;
+            /** Is Corrected */
+            is_corrected?: boolean;
+            /** Correction Reason */
+            correction_reason?: string | null;
         };
         /**
          * AttendanceLogListResponse
@@ -5902,6 +5916,10 @@ export interface components {
             reason: string;
             /** Status */
             status: string;
+            /** Check In At */
+            check_in_at?: string | null;
+            /** Check Out At */
+            check_out_at?: string | null;
         };
         /**
          * AttendanceStatusResponse

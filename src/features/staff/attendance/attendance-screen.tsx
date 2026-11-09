@@ -1,0 +1,415 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { cn } from "cn";
+import { Clock, LogIn, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
+import { Badge, type Tone } from "@/components/ops/kit/badge";
+import { Button } from "@/components/ops/kit/button";
+import { Card, KpiCard } from "@/components/ops/kit/card";
+import { DataTable, type Column } from "@/components/ops/kit/data-table";
+import { Field, Input, Textarea } from "@/components/ops/kit/field";
+import { SegmentedControl } from "@/components/ops/kit/segmented";
+import { SidePanel } from "@/components/ops/kit/side-panel";
+import { ScreenTitle } from "@/components/ops/page-header";
+import { ErrorState } from "@/components/ops/states";
+import { useStaffSession } from "@/components/ops/staff-session";
+import { asApiError } from "@/lib/api/error";
+import { browserApi } from "@/lib/api/browser";
+import type { components } from "@/lib/api/schema";
+import { fill } from "@/lib/i18n/dictionary";
+import { useLocale } from "@/lib/i18n/locale-store";
+import { attendanceCopy } from "@/lib/i18n/staff/attendance";
+import { commonCopy } from "@/lib/i18n/staff/common";
+import { useStaffSection } from "@/lib/i18n/staff/use-copy";
+import { roleLabel, isUserRole } from "@/lib/auth/roles";
+import { useScope } from "@/stores/scope";
+
+import { useMyAttendance } from "./clock";
+import { branchNow, clockOf, minutesSince, shiftTimes, splitMinutes } from "./time";
+
+type Log = components["schemas"]["AttendanceLogItem"];
+type Staff = components["schemas"]["StaffResponse"];
+type Range = "daily" | "weekly" | "monthly";
+type FixStatus = "PRESENT" | "LATE" | "ABSENT" | "EXCUSED";
+
+// Same roles as staff.attendanceReview / staff.attendanceOverride and the API's OVERRIDE_ROLES.
+const MANAGERS = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"]);
+const FRONTLINE = new Set(["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER"]);
+const ZONE = "Africa/Cairo";
+
+/** Ticks once a minute so "on shift for 3h 12m" stays current. */
+function useMinuteTick(): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  return now;
+}
+
+function statusTone(status: string): Tone {
+  if (status === "PRESENT") return "success";
+  if (status === "LATE") return "warning";
+  if (status === "ABSENT") return "danger";
+  return "neutral";
+}
+
+export function AttendanceScreen() {
+  const t = useStaffSection(attendanceCopy);
+  const me = useStaffSession();
+  const branchId = useScope((state) => state.branchId);
+  const branches = useScope((state) => state.branches);
+  const watched = branches.length > 0 ? branches.map((branch) => branch.id) : branchId ? [branchId] : [];
+  const canReview = MANAGERS.has(me?.role ?? "");
+  const canCorrect = canReview;
+
+  return (
+    <div className="grid gap-5">
+      <div className="grid gap-1">
+        <ScreenTitle>{t.title}</ScreenTitle>
+        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">
+          {t.intro}
+          {canReview ? ` ${t.introReview}` : ""}
+        </p>
+      </div>
+      <MyShift />
+      {canReview ? <TeamAttendance branchIds={watched} canCorrect={canCorrect} /> : null}
+    </div>
+  );
+}
+
+/** The signed-in person's shift: one button that is Clock in or Clock out. */
+function MyShift() {
+  const t = useStaffSection(attendanceCopy);
+  const { status, punch, punching, clockedIn, checkInAt } = useMyAttendance();
+  const now = useMinuteTick();
+  const data = status.data;
+  const record = data?.attendance;
+  const shift = data?.today_shift;
+  const done = Boolean(record?.check_in && record?.check_out);
+  const worked = checkInAt ? splitMinutes(minutesSince(checkInAt, now)) : null;
+
+  if (status.isError) {
+    return <ErrorState body={status.error instanceof Error ? status.error.message : t.statusFailed} onRetry={() => void status.refetch()} />;
+  }
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="grid gap-1">
+          <h2 className="text-sm font-semibold text-ink">{t.my.title}</h2>
+          {shift?.start_time && shift.end_time ? (
+            <p className="text-[13px] text-ink-secondary">
+              {fill(t.my.shift, { start: shift.start_time, end: shift.end_time, lateAfter: shift.late_after ?? shift.start_time })}
+            </p>
+          ) : null}
+          <p className="flex flex-wrap items-center gap-2 text-base font-semibold text-ink">
+            {status.isLoading ? (
+              <span className="text-sm font-normal text-ink-secondary">{t.loadingYours}</span>
+            ) : clockedIn && checkInAt ? (
+              <>
+                <span>{fill(t.my.onShift, { time: clockOf(checkInAt) })}</span>
+                {worked ? <span className="font-normal text-ink-secondary tabular-nums">· {fill(t.my.worked, { hours: worked.hours, minutes: worked.minutes })}</span> : null}
+              </>
+            ) : done ? (
+              <span>{fill(t.my.done, { start: clockOf(record?.check_in), end: clockOf(record?.check_out) })}</span>
+            ) : (
+              <span>{t.my.notIn}</span>
+            )}
+            {record?.status ? <Badge tone={statusTone(record.status)}>{record.status === "LATE" ? t.late : t.onTime}</Badge> : null}
+          </p>
+        </div>
+        {!done ? (
+          <Button size="touch" className="w-full sm:w-auto" variant={clockedIn ? "secondary" : "primary"} disabled={punching || status.isLoading} onClick={() => void punch(clockedIn ? "out" : "in")}>
+            {clockedIn ? <LogOut aria-hidden /> : <LogIn aria-hidden />}
+            {punching ? t.my.clocking : clockedIn ? t.my.clockOut : t.my.clockIn}
+          </Button>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
+function TeamAttendance({ branchIds, canCorrect }: { branchIds: string[]; canCorrect: boolean }) {
+  const t = useStaffSection(attendanceCopy);
+  const { locale } = useLocale();
+  const [range, setRange] = useState<Range>("daily");
+  const [fixing, setFixing] = useState<Log | null>(null);
+  const key = branchIds.join(",");
+
+  const logs = useQuery({
+    queryKey: ["attendance-logs", key, range],
+    enabled: branchIds.length > 0,
+    queryFn: async () => {
+      const pages = await Promise.all(
+        branchIds.map(async (id) => {
+          const result = await browserApi.GET("/api/v1/branches/{branch_id}/attendance-logs", {
+            params: { path: { branch_id: id }, query: { filter_type: range } },
+          });
+          if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.logsFailed);
+          return result.data.records ?? [];
+        }),
+      );
+      return pages.flat().sort((a, b) => b.date.localeCompare(a.date) || a.employee_name.localeCompare(b.employee_name));
+    },
+  });
+  // Who is expected today, to show who hasn't arrived yet.
+  const staff = useQuery({
+    queryKey: ["attendance-staff", key],
+    enabled: branchIds.length > 0,
+    queryFn: async () => {
+      const pages = await Promise.all(
+        branchIds.map(async (id) => {
+          const result = await browserApi.GET("/api/v1/branches/{branch_id}/staff", { params: { path: { branch_id: id } } });
+          if (!result.response.ok || !result.data) return [];
+          return result.data.records ?? [];
+        }),
+      );
+      const seen = new Map<string, Staff>();
+      for (const person of pages.flat()) if (person.is_active && FRONTLINE.has(person.role)) seen.set(person.id, person);
+      return [...seen.values()];
+    },
+  });
+
+  const rows = logs.data ?? [];
+  const today = branchNow(ZONE).day;
+  const todayRows = rows.filter((row) => row.date === today);
+
+  const roleName = (role: string | null | undefined) => (role && isUserRole(role) ? roleLabel(role, locale) : "");
+  const duration = (minutes: number | null | undefined) => {
+    if (minutes == null) return "—";
+    const { hours, minutes: rest } = splitMinutes(minutes);
+    return fill(t.my.worked, { hours, minutes: rest });
+  };
+  const statusText = (row: Log) =>
+    row.status === "PRESENT" ? t.log.onTime : row.status === "LATE" ? t.late : row.status === "ABSENT" ? t.absent : row.status === "EXCUSED" ? t.log.excused : row.status;
+  const dayLabel = (day: string) =>
+    new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
+
+  const columns: Column<Log>[] = [
+    {
+      key: "person",
+      header: t.person,
+      cell: (row) => (
+        <span className="grid gap-0.5">
+          <span className="font-medium text-ink">{row.employee_name}</span>
+          <span className="text-xs text-ink-secondary">{[roleName(row.role), branchIds.length > 1 ? row.branch_name : ""].filter(Boolean).join(" · ")}</span>
+        </span>
+      ),
+    },
+    ...(range === "daily" ? [] : [{ key: "day", header: t.day, cell: (row: Log) => dayLabel(row.date) }]),
+    { key: "in", header: t.arrived, cell: (row) => <span className="tabular-nums">{clockOf(row.check_in) || "—"}</span> },
+    { key: "out", header: t.left, cell: (row) => <span className="tabular-nums">{clockOf(row.check_out) || "—"}</span> },
+    { key: "hours", header: t.log.hours, align: "end", cell: (row) => <span className="tabular-nums">{duration(row.minutes_worked)}</span> },
+    {
+      key: "late",
+      header: t.log.lateBy,
+      align: "end",
+      cell: (row) => (row.minutes_late ? <span className="font-medium text-warning tabular-nums">{fill(t.log.lateMinutes, { minutes: row.minutes_late })}</span> : <span className="text-ink-secondary">—</span>),
+    },
+    {
+      key: "status",
+      header: t.status,
+      cell: (row) => (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <Badge tone={statusTone(row.status)}>{statusText(row)}</Badge>
+          {row.needs_review ? (
+            <span title={t.log.reviewHint}>
+              <Badge tone="info">{t.log.review}</Badge>
+            </span>
+          ) : null}
+          {row.is_corrected ? (
+            <span title={row.correction_reason ?? undefined} className="text-xs text-ink-secondary underline decoration-dotted underline-offset-2">
+              {t.log.corrected}
+            </span>
+          ) : null}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <TodayBoard today={today} rows={todayRows} staff={staff.data ?? []} loading={logs.isLoading || staff.isLoading} />
+      <section className="grid gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="grid gap-0.5">
+            <h2 className="text-sm font-semibold text-ink">{t.log.title}</h2>
+            {canCorrect && rows.length > 0 ? <p className="text-xs text-ink-secondary">{t.log.tapToCorrect}</p> : null}
+          </div>
+          <SegmentedControl<Range>
+            label={t.period}
+            value={range}
+            onValueChange={setRange}
+            items={(["daily", "weekly", "monthly"] as const).map((value) => ({ value, label: t.ranges[value] }))}
+          />
+        </div>
+        {logs.isError ? <ErrorState body={logs.error instanceof Error ? logs.error.message : t.logsFailed} onRetry={() => void logs.refetch()} /> : null}
+        {branchIds.length === 0 ? <p className="text-sm text-ink-secondary">{t.chooseBranchLogs}</p> : null}
+        {branchIds.length > 0 && !logs.isError ? (
+          <DataTable
+            caption={t.log.title}
+            columns={columns}
+            rows={rows}
+            rowKey={(row) => row.id}
+            onRowClick={canCorrect ? setFixing : undefined}
+            selectedKey={fixing?.id ?? null}
+            loading={logs.isLoading}
+            empty={t.log.nobody}
+          />
+        ) : null}
+      </section>
+      {fixing ? <CorrectionPanel key={fixing.id} log={fixing} onClose={() => setFixing(null)} /> : null}
+    </>
+  );
+}
+
+/** Who's in, who's late, who hasn't arrived, and what needs a manager's look. */
+function TodayBoard({ today, rows, staff, loading }: { today: string; rows: Log[]; staff: Staff[]; loading: boolean }) {
+  const t = useStaffSection(attendanceCopy);
+  const now = branchNow(ZONE, useMinuteTick());
+  const inNow = rows.filter((row) => row.check_in && !row.check_out).length;
+  const late = rows.filter((row) => row.status === "LATE").length;
+  const review = rows.filter((row) => row.needs_review).length;
+  const recorded = new Set(rows.map((row) => row.user_id).filter(Boolean));
+  const expected = staff
+    .filter((person) => !recorded.has(person.id))
+    .map((person) => ({ person, start: (person.shift_start_time ?? "10:00").slice(0, 5) }))
+    .sort((a, b) => a.start.localeCompare(b.start));
+  const missing = expected.filter((entry) => entry.start <= now.clock);
+  const upcoming = expected.filter((entry) => entry.start > now.clock);
+
+  return (
+    <section className="grid gap-3" aria-label={t.board.title}>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard label={t.board.inNow} value={String(inNow)} loading={loading} />
+        <KpiCard label={t.board.late} value={String(late)} loading={loading} />
+        <KpiCard label={t.board.notIn} value={String(missing.length)} loading={loading} />
+        <KpiCard label={t.board.review} value={String(review)} loading={loading} />
+      </div>
+      {!loading && today === now.day && expected.length > 0 ? (
+        <Card title={t.board.notInTitle}>
+          {missing.length === 0 ? <p className="text-sm text-ink-secondary">{t.board.everyoneIn}</p> : null}
+          <ul className="flex flex-wrap gap-2">
+            {[...missing, ...upcoming].map(({ person, start }) => {
+              const started = start <= now.clock;
+              return (
+                <li
+                  key={person.id}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[13px]",
+                    started ? "border-danger/30 bg-danger-bg text-ink" : "border-border bg-canvas text-ink-secondary",
+                  )}
+                >
+                  <Clock aria-hidden className="size-3.5" />
+                  <span className="font-medium">{person.full_name}</span>
+                  <span>{fill(started ? t.board.startedAt : t.board.startsAt, { time: start })}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      ) : null}
+    </section>
+  );
+}
+
+/** Fix a record: status, arrival and leave times, and a reason that is kept. */
+function CorrectionPanel({ log, onClose }: { log: Log; onClose: () => void }) {
+  const t = useStaffSection(attendanceCopy);
+  const common = useStaffSection(commonCopy);
+  const { locale } = useLocale();
+  const queryClient = useQueryClient();
+  const [status, setStatus] = useState<FixStatus>((["PRESENT", "LATE", "ABSENT", "EXCUSED"] as const).find((value) => value === log.status) ?? "PRESENT");
+  const [arrived, setArrived] = useState(clockOf(log.check_in));
+  const [left, setLeft] = useState(clockOf(log.check_out));
+  const [reason, setReason] = useState("");
+  const [tried, setTried] = useState(false);
+  const worked = status === "PRESENT" || status === "LATE";
+  const ready = reason.trim().length >= 5 && (!worked || Boolean(arrived));
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const times = worked ? shiftTimes(log.date, arrived, left, ZONE) : null;
+      const result = await browserApi.PATCH("/api/v1/attendance-logs/{log_id}/manual-override", {
+        params: { path: { log_id: log.id } },
+        body: {
+          status,
+          reason: reason.trim(),
+          check_in_at: times?.checkIn ?? null,
+          check_out_at: times?.checkOut ?? null,
+        },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.fix.failed);
+    },
+    onSuccess: async () => {
+      toast.success(t.fix.saved);
+      await queryClient.invalidateQueries({ queryKey: ["attendance-logs"] });
+      onClose();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const day = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${log.date}T00:00:00Z`));
+  return (
+    <SidePanel
+      open
+      onOpenChange={(open) => !open && onClose()}
+      title={fill(t.fix.title, { name: log.employee_name })}
+      description={day}
+      footer={
+        <div className="grid w-full gap-2">
+          {tried && !ready ? (
+            <p role="alert" className="text-xs text-danger">
+              {worked && !arrived ? t.fix.needArrived : t.fix.reasonHint}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={onClose}>
+              {common.cancel}
+            </Button>
+            <Button
+              disabled={save.isPending}
+              aria-disabled={!ready ? true : undefined}
+              className={!ready ? "opacity-60" : undefined}
+              onClick={() => (ready ? save.mutate() : setTried(true))}
+            >
+              {save.isPending ? t.fix.saving : t.fix.save}
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <div className="grid gap-1.5">
+        <span className="text-xs font-medium text-ink-secondary">{t.fix.statusLabel}</span>
+        <SegmentedControl<FixStatus>
+          label={t.fix.statusLabel}
+          value={status}
+          onValueChange={setStatus}
+          className="w-full [&>button]:flex-1 [&>button]:justify-center"
+          items={[
+            { value: "PRESENT", label: t.log.onTime },
+            { value: "LATE", label: t.late },
+            { value: "ABSENT", label: t.absent },
+            { value: "EXCUSED", label: t.log.excused },
+          ]}
+        />
+      </div>
+      {worked ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t.fix.arrived}>
+            <Input type="time" value={arrived} aria-invalid={tried && !arrived ? true : undefined} onChange={(event) => setArrived(event.target.value)} />
+          </Field>
+          <Field label={t.fix.left} hint={left && arrived && left <= arrived ? t.fix.leftHint : t.fix.stillOn}>
+            <Input type="time" value={left} onChange={(event) => setLeft(event.target.value)} />
+          </Field>
+        </div>
+      ) : null}
+      <Field label={t.fix.reason} hint={t.fix.reasonHint}>
+        <Textarea className="min-h-20" value={reason} onChange={(event) => setReason(event.target.value)} />
+      </Field>
+    </SidePanel>
+  );
+}

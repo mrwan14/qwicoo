@@ -1,5 +1,5 @@
 import { RoleGate } from "@/components/ops/screen";
-import { AttendanceScreen } from "@/features/staff/backoffice-screen";
+import { AttendanceScreen } from "@/features/staff/attendance/attendance-screen";
 
 export default function Page() {
   return (

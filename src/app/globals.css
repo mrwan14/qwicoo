@@ -13,6 +13,9 @@
   --font-heading: var(--font-geist-sans);
   --font-display: var(--font-fraunces);
   --font-arabic: var(--font-plex-arabic);
+  /* Motion for dialogs, sheets and panels: drawers glide and settle, popups pop and settle. */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-pop: cubic-bezier(0.16, 1, 0.3, 1);
   --color-ink: var(--ink);
   --color-canvas: var(--canvas);
   --color-sage: var(--sage);

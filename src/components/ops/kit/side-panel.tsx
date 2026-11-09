@@ -5,10 +5,11 @@ import { cn } from "cn";
 import { ChevronDown, X } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 
+import { useSmoothOpen } from "@/components/ui/use-smooth-open";
 import { kitCopy } from "@/lib/i18n/staff/kit";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 
-/** Add, edit and detail views slide in from the end side (left in Arabic) over a light scrim. */
+/** Add, edit and detail views slide in from the end side (left in Arabic) over a dimmed scrim. */
 export function SidePanel({
   open,
   onOpenChange,
@@ -31,13 +32,14 @@ export function SidePanel({
   children: ReactNode;
 }) {
   const t = useStaffSection(kitCopy);
+  const smooth = useSmoothOpen({ open, onOpenChange });
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root {...smooth}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-50 bg-scrim transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-scrim backdrop-blur-[2px] transition-opacity duration-300 ease-out data-ending-style:opacity-0 data-ending-style:duration-200 data-starting-style:opacity-0" />
         <Dialog.Popup
           className={cn(
-            "fixed inset-y-0 end-0 z-50 flex w-full flex-col border-s border-border bg-canvas text-ink shadow-panel outline-none transition-transform duration-200 ease-out data-ending-style:translate-x-full data-starting-style:translate-x-full rtl:data-ending-style:-translate-x-full rtl:data-starting-style:-translate-x-full",
+            "fixed inset-y-0 end-0 z-50 flex w-full flex-col border-s border-border bg-canvas text-ink shadow-panel outline-none will-change-transform transition-transform duration-[420ms] ease-drawer data-ending-style:duration-[260ms] data-ending-style:ease-in data-ending-style:translate-x-full data-starting-style:translate-x-full rtl:data-ending-style:-translate-x-full rtl:data-starting-style:-translate-x-full",
             size === "lg" ? "sm:max-w-[480px]" : "sm:max-w-[420px]",
           )}
         >
@@ -56,7 +58,7 @@ export function SidePanel({
               <X aria-hidden className="size-5" />
             </Dialog.Close>
           </header>
-          <div className="grid flex-1 content-start gap-5 overflow-y-auto p-5">{children}</div>
+          <div className="grid flex-1 content-start gap-5 overflow-y-auto overscroll-contain p-5">{children}</div>
           {footer ? (
             <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-4">{footer}</footer>
           ) : null}

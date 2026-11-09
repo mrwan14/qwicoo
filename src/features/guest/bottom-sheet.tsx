@@ -86,7 +86,7 @@ export function BottomSheet({
         style={{
           height: "min(92dvh, 100%)",
           maxHeight: "min(92dvh, 100%)",
-          ...(dragY ? { transform: `translateY(${dragY}px)` } : {}),
+          ...(dragY ? { transform: `translateY(${dragY}px)`, transitionDuration: "0ms" } : {}),
         }}
       >
         <div className="flex min-h-0 flex-1 flex-col">

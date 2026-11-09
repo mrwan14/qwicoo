@@ -4,6 +4,7 @@ import { AlertDialog } from "@base-ui/react/alert-dialog";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ops/kit/button";
+import { useSmoothOpen } from "@/components/ui/use-smooth-open";
 import { commonCopy } from "@/lib/i18n/staff/common";
 import { kitCopy } from "@/lib/i18n/staff/kit";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
@@ -28,11 +29,12 @@ export function ConfirmDialog({
 }) {
   const t = useStaffSection(kitCopy);
   const common = useStaffSection(commonCopy);
+  const smooth = useSmoothOpen({ open, onOpenChange });
   return (
-    <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
+    <AlertDialog.Root {...smooth}>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-scrim transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
-        <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-[400px] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-staff border border-border bg-canvas p-6 text-ink shadow-dialog outline-none transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0">
+        <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-scrim backdrop-blur-[2px] transition-opacity duration-250 ease-out data-ending-style:opacity-0 data-ending-style:duration-150 data-starting-style:opacity-0" />
+        <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-[400px] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-staff border border-border bg-canvas p-6 text-ink shadow-dialog outline-none transition-[opacity,scale,translate] duration-250 ease-pop data-starting-style:translate-y-[calc(-50%+8px)] data-starting-style:scale-[0.96] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-ending-style:duration-150 data-ending-style:ease-in">
           <AlertDialog.Title className="text-lg font-semibold text-ink">{title}</AlertDialog.Title>
           <AlertDialog.Description className="text-sm leading-normal text-ink-secondary">{body}</AlertDialog.Description>
           <div className="flex flex-wrap justify-end gap-2">

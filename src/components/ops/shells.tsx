@@ -73,10 +73,10 @@ function NavDrawer({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-50 bg-scrim transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 lg:hidden" />
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-scrim backdrop-blur-[2px] transition-opacity duration-300 ease-out data-ending-style:duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 lg:hidden" />
         <Dialog.Popup
           aria-label={t.mainNav}
-          className="fixed inset-y-0 start-0 z-50 flex w-[280px] max-w-[85vw] flex-col overflow-y-auto border-e border-border bg-subtle shadow-panel outline-none transition-transform duration-200 ease-out data-ending-style:-translate-x-full data-starting-style:-translate-x-full rtl:data-ending-style:translate-x-full rtl:data-starting-style:translate-x-full lg:hidden"
+          className="fixed inset-y-0 start-0 z-50 flex w-[280px] max-w-[85vw] flex-col overflow-y-auto border-e border-border bg-subtle shadow-panel outline-none will-change-transform transition-transform duration-[380ms] ease-drawer data-ending-style:duration-[240ms] data-ending-style:ease-in data-ending-style:-translate-x-full data-starting-style:-translate-x-full rtl:data-ending-style:translate-x-full rtl:data-starting-style:translate-x-full lg:hidden"
         >
           <SidebarContent
             entries={entries}

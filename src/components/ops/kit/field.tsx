@@ -94,7 +94,7 @@ export function Switch({
       onClick={() => onCheckedChange(!checked)}
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors after:absolute after:-inset-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-40",
-        checked ? "justify-end bg-ink" : "justify-start bg-border",
+        checked ? "justify-end bg-ink" : "justify-start bg-ink-secondary/35",
         className,
       )}
       {...props}

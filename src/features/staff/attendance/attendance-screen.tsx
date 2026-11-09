@@ -133,6 +133,8 @@ function MyShift() {
   const record = data?.attendance;
   const shift = data?.today_shift;
   const done = Boolean(record?.check_in && record?.check_out);
+  // A manager may have marked today absent or excused: no clocking, just say so.
+  const away = record?.status === "ABSENT" || record?.status === "EXCUSED";
   const worked = checkInAt ? splitMinutes(minutesSince(checkInAt, now)) : null;
   const tillOnly = data?.clock_mode === "TILL_ONLY";
   const [pinOpen, setPinOpen] = useState(false);
@@ -160,14 +162,16 @@ function MyShift() {
               </>
             ) : done ? (
               <span>{fill(t.my.done, { start: clockOf(record?.check_in), end: clockOf(record?.check_out) })}</span>
+            ) : away ? (
+              <span>{record?.status === "ABSENT" ? t.absent : t.log.excused}</span>
             ) : shift?.is_day_off ? (
               <span>{t.my.dayOff}</span>
             ) : (
               <span>{t.my.notIn}</span>
             )}
-            {record?.status ? <Badge tone={statusTone(record.status)}>{record.status === "LATE" ? t.late : t.onTime}</Badge> : null}
+            {record?.status && !away ? <Badge tone={statusTone(record.status)}>{record.status === "LATE" ? t.late : t.onTime}</Badge> : null}
           </p>
-          {tillOnly && !done ? <p className="text-[13px] text-ink-secondary">{t.my.tillOnly}</p> : null}
+          {tillOnly && !done && !away ? <p className="text-[13px] text-ink-secondary">{t.my.tillOnly}</p> : null}
           {data ? (
             <button type="button" onClick={() => setPinOpen(true)} className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-ink underline-offset-2 hover:underline">
               <KeyRound aria-hidden className="size-3.5" />
@@ -176,7 +180,7 @@ function MyShift() {
           ) : null}
         </div>
         {pinOpen ? <PinPanel onClose={() => setPinOpen(false)} /> : null}
-        {!done && !tillOnly ? (
+        {!done && !tillOnly && !away ? (
           <Button size="touch" className="w-full sm:w-auto" variant={clockedIn ? "secondary" : "primary"} disabled={punching || status.isLoading} onClick={() => void punch(clockedIn ? "out" : "in")}>
             {clockedIn ? <LogOut aria-hidden /> : <LogIn aria-hidden />}
             {punching ? t.my.clocking : clockedIn ? t.my.clockOut : t.my.clockIn}

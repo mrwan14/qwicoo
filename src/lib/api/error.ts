@@ -188,6 +188,14 @@ const CATALOG: Record<string, Catalog> = {
     en: "You can't set stock below what's held for open orders.",
     ar: "لا يمكن ضبط المخزون أقل مما هو محجوز للطلبات المفتوحة.",
   },
+  CHECK_IN_REQUIRED: {
+    en: "Enter the arrival time to mark someone on time or late.",
+    ar: "أدخل وقت الوصول لتسجيل الحضور أو التأخير.",
+  },
+  CHECK_OUT_BEFORE_CHECK_IN: {
+    en: "The leave time must be after the arrival time.",
+    ar: "وقت المغادرة يجب أن يكون بعد وقت الوصول.",
+  },
   CASH_DRAWER_NOT_OPEN: {
     en: "No cash drawer is open. Open the drawer to take or refund cash.",
     ar: "لا يوجد درج نقدية مفتوح. افتح الدرج لقبض النقدية أو ردها.",

@@ -584,6 +584,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/branches/{branch_id}/rota": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the branch rota
+         * @description Planned shifts and days off between two days (at most 62). People without an entry work their default shift.
+         */
+        get: operations["get_branch_rota_api_v1_branches__branch_id__rota_get"];
+        /**
+         * Set rota shifts
+         * @description Create or replace planned shifts (start and end HH:MM, or is_day_off) and clear entries back to the default shift. Everyone must work at the branch. SUPER_ADMIN, BRAND_ADMIN, and BRANCH_ADMIN for their own branches.
+         */
+        put: operations["update_branch_rota_api_v1_branches__branch_id__rota_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branches/{branch_id}/attendance-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get branch attendance rules
+         * @description Late after, early leave and overtime allowances in minutes. Null uses the default in `defaults`.
+         */
+        get: operations["get_branch_attendance_rules_api_v1_branches__branch_id__attendance_rules_get"];
+        /**
+         * Set branch attendance rules
+         * @description Replaces all three rules; send null to use the default. The late-after rule overrides each person's grace.
+         */
+        put: operations["update_branch_attendance_rules_api_v1_branches__branch_id__attendance_rules_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branches/{branch_id}/timesheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Branch timesheet
+         * @description Per person totals between two days (at most 62): hours, late, early leave, overtime, absences, days off.
+         */
+        get: operations["get_branch_timesheet_api_v1_branches__branch_id__timesheet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/branches/{branch_id}/attendance-logs": {
         parameters: {
             query?: never;
@@ -5864,6 +5932,8 @@ export interface components {
              * @description ISO-8601 check-out in the branch timezone, including the offset.
              */
             check_out?: string | null;
+            /** Correction Reason */
+            correction_reason?: string | null;
             /**
              * Date
              * Format: date
@@ -5878,22 +5948,56 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Is Corrected
+             * @default false
+             */
+            is_corrected: boolean;
+            /**
+             * Minutes Early Leave
+             * @description Minutes before the shift end, past the branch's early-leave allowance.
+             * @default 0
+             */
+            minutes_early_leave: number;
+            /**
+             * Minutes Late
+             * @description Minutes after the shift start when the status is LATE.
+             * @default 0
+             */
+            minutes_late: number;
+            /**
+             * Minutes Overtime
+             * @description Minutes worked past the shift length, once past the overtime allowance.
+             * @default 0
+             */
+            minutes_overtime: number;
+            /**
+             * Minutes Worked
+             * @description Check-in to check-out, once checked out.
+             */
+            minutes_worked?: number | null;
+            /**
+             * Needs Review
+             * @description The check-out was filled in after a forgotten check-out.
+             * @default false
+             */
+            needs_review: boolean;
+            /** Role */
+            role?: string | null;
+            /**
+             * Shift End
+             * @description Planned end that day (HH:MM).
+             */
+            shift_end?: string | null;
+            /**
+             * Shift Start
+             * @description Planned start that day (HH:MM), from the rota or default shift.
+             */
+            shift_start?: string | null;
             /** Status */
             status: string;
             /** User Id */
             user_id?: string | null;
-            /** Role */
-            role?: string | null;
-            /** @description Check-in to check-out, once checked out. */
-            minutes_worked?: number | null;
-            /** @description Minutes after the shift start when the status is LATE. */
-            minutes_late?: number;
-            /** @description The check-out was filled in after a forgotten check-out. */
-            needs_review?: boolean;
-            /** Is Corrected */
-            is_corrected?: boolean;
-            /** Correction Reason */
-            correction_reason?: string | null;
         };
         /**
          * AttendanceLogListResponse
@@ -5920,6 +6024,226 @@ export interface components {
             check_in_at?: string | null;
             /** Check Out At */
             check_out_at?: string | null;
+        };
+        /**
+         * AttendanceRules
+         * @description Branch attendance rules in minutes. Null means the default shown in `defaults`.
+         */
+        AttendanceRules: {
+            /** Early Leave Minutes */
+            early_leave_minutes?: number | null;
+            /** Late After Minutes */
+            late_after_minutes?: number | null;
+            /** Overtime After Minutes */
+            overtime_after_minutes?: number | null;
+        };
+        /** AttendanceRulesResponse */
+        AttendanceRulesResponse: {
+            defaults: components["schemas"]["AttendanceRules"];
+            /** Early Leave Minutes */
+            early_leave_minutes?: number | null;
+            /** Late After Minutes */
+            late_after_minutes?: number | null;
+            /** Overtime After Minutes */
+            overtime_after_minutes?: number | null;
+        };
+        /** RotaClear */
+        RotaClear: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** RotaResponse */
+        RotaResponse: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Shifts */
+            shifts: components["schemas"]["RotaShift"][];
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
+        /**
+         * RotaShift
+         * @description One planned shift, or a day off, for one person on one day.
+         */
+        RotaShift: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * End Time
+             * @description HH:MM at the branch; at or before start ends the next day.
+             */
+            end_time?: string | null;
+            /**
+             * Is Day Off
+             * @default false
+             */
+            is_day_off: boolean;
+            /** Note */
+            note?: string | null;
+            /**
+             * Start Time
+             * @description HH:MM at the branch.
+             */
+            start_time?: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** RotaShiftInput */
+        RotaShiftInput: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** End Time */
+            end_time?: string | null;
+            /**
+             * Is Day Off
+             * @default false
+             */
+            is_day_off: boolean;
+            /** Note */
+            note?: string | null;
+            /** Start Time */
+            start_time?: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /**
+         * RotaUpdateRequest
+         * @description Set shifts (create or replace) and clear entries back to the default shift.
+         */
+        RotaUpdateRequest: {
+            /** Clear */
+            clear?: components["schemas"]["RotaClear"][];
+            /** Shifts */
+            shifts?: components["schemas"]["RotaShiftInput"][];
+        };
+        /** TimesheetResponse */
+        TimesheetResponse: {
+            /**
+             * Branch Id
+             * Format: uuid
+             */
+            branch_id: string;
+            /** Branch Name */
+            branch_name: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Rows */
+            rows: components["schemas"]["TimesheetRow"][];
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
+        /** TimesheetRow */
+        TimesheetRow: {
+            /**
+             * Absent Count
+             * @default 0
+             */
+            absent_count: number;
+            /**
+             * Days Off
+             * @default 0
+             */
+            days_off: number;
+            /**
+             * Days Worked
+             * @default 0
+             */
+            days_worked: number;
+            /**
+             * Early Leave Count
+             * @default 0
+             */
+            early_leave_count: number;
+            /** Employee Email */
+            employee_email: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Excused Count
+             * @default 0
+             */
+            excused_count: number;
+            /**
+             * Late Count
+             * @default 0
+             */
+            late_count: number;
+            /**
+             * Minutes Early Leave
+             * @default 0
+             */
+            minutes_early_leave: number;
+            /**
+             * Minutes Late
+             * @default 0
+             */
+            minutes_late: number;
+            /**
+             * Minutes Overtime
+             * @default 0
+             */
+            minutes_overtime: number;
+            /**
+             * Minutes Scheduled
+             * @description Planned minutes on worked, late and absent days.
+             * @default 0
+             */
+            minutes_scheduled: number;
+            /**
+             * Minutes Worked
+             * @default 0
+             */
+            minutes_worked: number;
+            /**
+             * Needs Review Count
+             * @default 0
+             */
+            needs_review_count: number;
+            /**
+             * Open Count
+             * @description Shifts with a check-in but no check-out yet.
+             * @default 0
+             */
+            open_count: number;
+            /** Role */
+            role?: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
         };
         /**
          * AttendanceStatusResponse
@@ -15194,6 +15518,18 @@ export interface components {
         ShiftInfo: {
             /** End Time */
             end_time?: string | null;
+            /**
+             * From Rota
+             * @description Times come from the rota, not the default shift.
+             * @default false
+             */
+            from_rota: boolean;
+            /**
+             * Is Day Off
+             * @description The rota has this person off today.
+             * @default false
+             */
+            is_day_off: boolean;
             /** Late After */
             late_after?: string | null;
             /** Shift Hours */
@@ -20347,6 +20683,175 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccessPinResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_branch_rota_api_v1_branches__branch_id__rota_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RotaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_branch_rota_api_v1_branches__branch_id__rota_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RotaUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RotaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_branch_attendance_rules_api_v1_branches__branch_id__attendance_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRulesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_branch_attendance_rules_api_v1_branches__branch_id__attendance_rules_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceRules"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRulesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_branch_timesheet_api_v1_branches__branch_id__timesheet_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: never;
+            path: {
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimesheetResponse"];
                 };
             };
             /** @description Validation Error */

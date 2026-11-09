@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { branchNow, clockOf, minutesSince, nextDay, shiftTimes, splitMinutes, zonedIso } from "./time.ts";
+import { addDays, branchNow, clockOf, minutesSince, monthRange, nextDay, shiftTimes, splitMinutes, weekStart, zonedIso } from "./time.ts";
 
 test("a Cairo wall-clock time gets the offset for that date", () => {
   // Egypt is on summer time (UTC+3) in September and UTC+2 in January.
@@ -26,4 +26,13 @@ test("clock, durations and the branch's own day", () => {
   assert.equal(minutesSince("2026-09-20T10:00:00+03:00", Date.parse("2026-09-20T11:30:00+03:00")), 90);
   // 23:30 UTC on 20 Sep is already 21 Sep in Cairo.
   assert.deepEqual(branchNow("Africa/Cairo", Date.parse("2026-09-20T23:30:00Z")), { day: "2026-09-21", clock: "02:30" });
+});
+
+test("weeks start on Monday and months have their real length", () => {
+  assert.equal(weekStart("2026-11-09"), "2026-11-09"); // a Monday
+  assert.equal(weekStart("2026-11-15"), "2026-11-09"); // the Sunday after
+  assert.equal(addDays("2026-03-01", -1), "2026-02-28");
+  assert.deepEqual(monthRange("2026-11-09"), { start: "2026-11-01", end: "2026-11-30" });
+  assert.deepEqual(monthRange("2026-03-15", 1), { start: "2026-02-01", end: "2026-02-28" });
+  assert.deepEqual(monthRange("2026-01-10", 1), { start: "2025-12-01", end: "2025-12-31" });
 });

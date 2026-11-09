@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
-import { Clock, LogIn, LogOut } from "lucide-react";
+import { Clock, LogIn, LogOut, SlidersHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -28,12 +28,18 @@ import { roleLabel, isUserRole } from "@/lib/auth/roles";
 import { useScope } from "@/stores/scope";
 
 import { useMyAttendance } from "./clock";
+import { RotaView } from "./rota-view";
+import { RulesPanel } from "./rules-panel";
 import { branchNow, clockOf, minutesSince, shiftTimes, splitMinutes } from "./time";
+import { TimesheetView } from "./timesheet-view";
 
 type Log = components["schemas"]["AttendanceLogItem"];
 type Staff = components["schemas"]["StaffResponse"];
 type Range = "daily" | "weekly" | "monthly";
 type FixStatus = "PRESENT" | "LATE" | "ABSENT" | "EXCUSED";
+type View = "today" | "rota" | "timesheet";
+type Shift = components["schemas"]["RotaShift"];
+type Expected = { person: Staff; branchId: string };
 
 // Same roles as staff.attendanceReview / staff.attendanceOverride and the API's OVERRIDE_ROLES.
 const MANAGERS = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"]);
@@ -65,6 +71,10 @@ export function AttendanceScreen() {
   const watched = branches.length > 0 ? branches.map((branch) => branch.id) : branchId ? [branchId] : [];
   const canReview = MANAGERS.has(me?.role ?? "");
   const canCorrect = canReview;
+  // The rota, rules and timesheet are per branch: the one in scope, or the only one.
+  const oneBranch = branchId ?? (branches.length === 1 ? branches[0].id : null);
+  const [view, setView] = useState<View>("today");
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   return (
     <div className="grid gap-5">
@@ -76,7 +86,28 @@ export function AttendanceScreen() {
         </p>
       </div>
       <MyShift />
-      {canReview ? <TeamAttendance branchIds={watched} canCorrect={canCorrect} /> : null}
+      {canReview ? (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <SegmentedControl<View>
+              label={t.title}
+              value={view}
+              onValueChange={setView}
+              items={(["today", "rota", "timesheet"] as const).map((value) => ({ value, label: t.views[value] }))}
+            />
+            {canCorrect && oneBranch ? (
+              <Button size="field" variant="secondary" onClick={() => setRulesOpen(true)}>
+                <SlidersHorizontal aria-hidden />
+                {t.rules.button}
+              </Button>
+            ) : null}
+          </div>
+          {view === "today" ? <TeamAttendance branchIds={watched} canCorrect={canCorrect} /> : null}
+          {view === "rota" ? <RotaView branchId={oneBranch} canEdit={canCorrect} /> : null}
+          {view === "timesheet" ? <TimesheetView branchId={oneBranch} /> : null}
+          {rulesOpen && oneBranch ? <RulesPanel branchId={oneBranch} onClose={() => setRulesOpen(false)} /> : null}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -115,6 +146,8 @@ function MyShift() {
               </>
             ) : done ? (
               <span>{fill(t.my.done, { start: clockOf(record?.check_in), end: clockOf(record?.check_out) })}</span>
+            ) : shift?.is_day_off ? (
+              <span>{t.my.dayOff}</span>
             ) : (
               <span>{t.my.notIn}</span>
             )}
@@ -167,9 +200,28 @@ function TeamAttendance({ branchIds, canCorrect }: { branchIds: string[]; canCor
           return result.data.records ?? [];
         }),
       );
-      const seen = new Map<string, Staff>();
-      for (const person of pages.flat()) if (person.is_active && FRONTLINE.has(person.role)) seen.set(person.id, person);
+      const seen = new Map<string, Expected>();
+      pages.forEach((people, index) => {
+        for (const person of people) if (person.is_active && FRONTLINE.has(person.role)) seen.set(person.id, { person, branchId: branchIds[index] });
+      });
       return [...seen.values()];
+    },
+  });
+  // Today's rota: days off, planned start times, and which branches planned today.
+  const todayRota = useQuery({
+    queryKey: ["rota-today", key, branchNow(ZONE).day],
+    enabled: branchIds.length > 0,
+    queryFn: async () => {
+      const day = branchNow(ZONE).day;
+      const pages = await Promise.all(
+        branchIds.map(async (id) => {
+          const result = await browserApi.GET("/api/v1/branches/{branch_id}/rota", {
+            params: { path: { branch_id: id }, query: { start: day, end: day } },
+          });
+          return result.response.ok && result.data ? result.data.shifts.map((shift) => ({ ...shift, branchId: id })) : [];
+        }),
+      );
+      return pages.flat();
     },
   });
 
@@ -215,6 +267,8 @@ function TeamAttendance({ branchIds, canCorrect }: { branchIds: string[]; canCor
       cell: (row) => (
         <span className="flex flex-wrap items-center gap-1.5">
           <Badge tone={statusTone(row.status)}>{statusText(row)}</Badge>
+          {row.minutes_early_leave ? <Badge tone="warning">{fill(t.log.leftEarly, { minutes: row.minutes_early_leave })}</Badge> : null}
+          {row.minutes_overtime ? <Badge tone="info">{fill(t.log.overtime, { minutes: row.minutes_overtime })}</Badge> : null}
           {row.needs_review ? (
             <span title={t.log.reviewHint}>
               <Badge tone="info">{t.log.review}</Badge>
@@ -232,7 +286,7 @@ function TeamAttendance({ branchIds, canCorrect }: { branchIds: string[]; canCor
 
   return (
     <>
-      <TodayBoard today={today} rows={todayRows} staff={staff.data ?? []} loading={logs.isLoading || staff.isLoading} />
+      <TodayBoard today={today} rows={todayRows} staff={staff.data ?? []} rota={todayRota.data ?? []} loading={logs.isLoading || staff.isLoading} />
       <section className="grid gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="grid gap-0.5">
@@ -267,16 +321,35 @@ function TeamAttendance({ branchIds, canCorrect }: { branchIds: string[]; canCor
 }
 
 /** Who's in, who's late, who hasn't arrived, and what needs a manager's look. */
-function TodayBoard({ today, rows, staff, loading }: { today: string; rows: Log[]; staff: Staff[]; loading: boolean }) {
+function TodayBoard({
+  today,
+  rows,
+  staff,
+  rota,
+  loading,
+}: {
+  today: string;
+  rows: Log[];
+  staff: Expected[];
+  rota: (Shift & { branchId: string })[];
+  loading: boolean;
+}) {
   const t = useStaffSection(attendanceCopy);
   const now = branchNow(ZONE, useMinuteTick());
   const inNow = rows.filter((row) => row.check_in && !row.check_out).length;
   const late = rows.filter((row) => row.status === "LATE").length;
   const review = rows.filter((row) => row.needs_review).length;
   const recorded = new Set(rows.map((row) => row.user_id).filter(Boolean));
+  const planned = new Map(rota.map((shift) => [shift.user_id, shift]));
+  const plannedBranches = new Set(rota.filter((shift) => !shift.is_day_off).map((shift) => shift.branchId));
   const expected = staff
-    .filter((person) => !recorded.has(person.id))
-    .map((person) => ({ person, start: (person.shift_start_time ?? "10:00").slice(0, 5) }))
+    .filter(({ person, branchId }) => {
+      if (recorded.has(person.id)) return false;
+      const shift = planned.get(person.id);
+      if (shift?.is_day_off) return false;
+      return Boolean(shift) || !plannedBranches.has(branchId);
+    })
+    .map(({ person }) => ({ person, start: (planned.get(person.id)?.start_time ?? person.shift_start_time ?? "10:00").slice(0, 5) }))
     .sort((a, b) => a.start.localeCompare(b.start));
   const missing = expected.filter((entry) => entry.start <= now.clock);
   const upcoming = expected.filter((entry) => entry.start > now.clock);

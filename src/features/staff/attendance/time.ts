@@ -30,10 +30,31 @@ export function zonedIso(day: string, clock: string, timeZone: string): string {
   return `${day}T${pad(hour)}:${pad(minute)}:00${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
 }
 
-export function nextDay(day: string): string {
+/** "2026-11-09" moved by a number of days. */
+export function addDays(day: string, days: number): string {
   const [year, month, date] = day.split("-").map(Number);
-  const next = new Date(Date.UTC(year, month - 1, date + 1));
+  const next = new Date(Date.UTC(year, month - 1, date + days));
   return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
+}
+
+export function nextDay(day: string): string {
+  return addDays(day, 1);
+}
+
+/** The Monday of the week holding `day` (weeks run Monday to Sunday, like the API's weekly filter). */
+export function weekStart(day: string): string {
+  const [year, month, date] = day.split("-").map(Number);
+  const weekday = (new Date(Date.UTC(year, month - 1, date)).getUTCDay() + 6) % 7;
+  return addDays(day, -weekday);
+}
+
+/** First and last day of the month holding `day`, optionally a number of months before. */
+export function monthRange(day: string, monthsBack = 0): { start: string; end: string } {
+  const [year, month] = day.split("-").map(Number);
+  const first = new Date(Date.UTC(year, month - 1 - monthsBack, 1));
+  const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0));
+  const iso = (value: Date) => `${value.getUTCFullYear()}-${pad(value.getUTCMonth() + 1)}-${pad(value.getUTCDate())}`;
+  return { start: iso(first), end: iso(last) };
 }
 
 /** "HH:MM" of a timestamp at the branch, whatever offset the API sent it with. */

@@ -1,5 +1,6 @@
 "use client";
 
+import { can } from "@/lib/auth/permissions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MapPin, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -86,7 +87,7 @@ export function BranchScreen({ branchId }: { branchId: string }) {
   const branchTitle = branchRecord.display_name || branchRecord.slug;
 
   const canSeePin = Boolean(me && PIN_ROLES.includes(me.role));
-  const canSetOffline = Boolean(me && OFFLINE_ADMIN_ROLES.includes(me.role));
+  const canSetOffline = can(me?.role, "branch.offline");
   const visible = (item: BranchTab) => (item !== "pin" || canSeePin) && (item !== "offline" || canSetOffline);
   const tabs = GROUP_KEYS.filter((key) => GROUPS[key].some(visible)).map((key) => ({
     value: key,
@@ -538,7 +539,6 @@ function FinancialsForm({ branchId, settings }: { branchId: string; settings: co
   );
 }
 
-const OFFLINE_ADMIN_ROLES: readonly string[] = ["BRANCH_ADMIN", "REGIONAL_MANAGER", "BRAND_ADMIN", "SUPER_ADMIN"];
 
 function OfflineTab({ branchId }: { branchId: string }) {
   const t = useStaffSection(branchCopy);

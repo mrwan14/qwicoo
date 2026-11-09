@@ -1,7 +1,8 @@
+import { can } from "@/lib/auth/permissions";
 import type { UserRole } from "@/lib/auth/roles";
 
 export function canSeeAssistantUsage(role: UserRole): boolean {
-  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN";
+  return can(role, "assistant.usage");
 }
 
 export type AssistantBranch = { id: string; name: string };

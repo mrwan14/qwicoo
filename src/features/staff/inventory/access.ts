@@ -1,24 +1,19 @@
 /**
- * Inventory visibility. Mirrors RequireRoles in order-backend inventory routes.
+ * Inventory visibility. The roles live in `@/lib/auth/permissions`; mirror them in order-backend.
  * Hide the tab and deny the URL; do not wait for a 403.
  */
 
+import { can, rolesFor } from "@/lib/auth/permissions";
 import type { UserRole } from "@/lib/auth/roles";
 
-const READ: readonly UserRole[] = [
-  "SUPER_ADMIN",
-  "BRAND_ADMIN",
-  "REGIONAL_MANAGER",
-  "BRANCH_ADMIN",
-  "KITCHEN_STAFF",
-  "CASHIER",
-];
-const CATALOGUE_WRITE: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN"];
-const STOCK_WRITE: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"];
-const WASTE: readonly UserRole[] = [...STOCK_WRITE, "KITCHEN_STAFF", "CASHIER"];
-const REPORTS: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"];
+const READ = rolesFor("stock.view");
+const CATALOGUE_WRITE = rolesFor("stock.catalogue");
+const STOCK_WRITE = rolesFor("stock.write");
+const COUNT = rolesFor("stock.count");
+const WASTE = rolesFor("stock.waste");
+const REPORTS = rolesFor("stock.reports");
 
-export const INVENTORY_NAV_ROLES = READ;
+export const INVENTORY_NAV_ROLES = rolesFor("stock.open");
 
 /** Stock lives under /app/stock; units, import, jobs and rules under Settings → Stock; usage under Reports. */
 export const INVENTORY_HREFS: Record<InventoryPage, string> = {
@@ -67,7 +62,7 @@ const PAGE_ROLES: Record<InventoryPage, readonly UserRole[]> = {
   recipes: READ,
   suppliers: READ,
   purchaseOrders: READ,
-  counts: WASTE,
+  counts: COUNT,
   transfers: READ,
   import: CATALOGUE_WRITE,
   waste: WASTE,
@@ -82,7 +77,7 @@ function has(roles: readonly UserRole[], role: UserRole | null | undefined): boo
 }
 
 export function canOpenInventory(role: UserRole | null | undefined): boolean {
-  return has(READ, role);
+  return can(role, "stock.open");
 }
 
 export function canOpenInventoryPage(role: UserRole | null | undefined, page: InventoryPage): boolean {
@@ -109,32 +104,26 @@ export function canSeeReports(role: UserRole | null | undefined): boolean {
   return has(REPORTS, role);
 }
 
+/** Turning a shared stock item or supplier off stays with the brand. */
+export function canRetireCatalogue(role: UserRole | null | undefined): boolean {
+  return can(role, "stock.retire");
+}
+
 /** Central-kitchen writes are brand-level. Branch roles may read a kitchen in their brand. */
 export function canWriteCentralKitchen(role: UserRole | null | undefined): boolean {
-  return has(CATALOGUE_WRITE, role);
+  return can(role, "stock.centralKitchen");
 }
 
 export function canApproveTransfer(role: UserRole | null | undefined): boolean {
-  return has(["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER"], role);
+  return can(role, "stock.approveTransfer");
 }
 
 /** GET /api/v1/branches. Mirrors list_branches RequireRoles. Kitchen staff are not on it. */
-const BRANCH_LIST: readonly UserRole[] = [
-  "SUPER_ADMIN",
-  "BRAND_ADMIN",
-  "REGIONAL_MANAGER",
-  "BRANCH_ADMIN",
-  "CASHIER",
-  "WAITER",
-];
-
 export function canListBranches(role: UserRole | null | undefined): boolean {
-  return has(BRANCH_LIST, role);
+  return can(role, "branches.list");
 }
 
 /** GET /branches/{id}/staff. Mirrors STAFF_LIST_ROLES. */
-const STAFF_LIST: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"];
-
 export function canListStaff(role: UserRole | null | undefined): boolean {
-  return has(STAFF_LIST, role);
+  return can(role, "staff.list");
 }

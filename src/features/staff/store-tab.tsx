@@ -1,5 +1,6 @@
 "use client";
 
+import { can } from "@/lib/auth/permissions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
@@ -29,13 +30,13 @@ const button = "min-h-11 border bg-primary px-4 text-sm font-medium text-primary
 type StockRow = { onHand: string | null; held: string };
 
 function canEditStructure(role: UserRole | null | undefined, brandWide: boolean): boolean {
-  if (role === "SUPER_ADMIN" || role === "BRAND_ADMIN") return true;
-  if (role === "BRANCH_ADMIN") return !brandWide;
+  if (can(role, "menu.sharedItems")) return true;
+  if (can(role, "menu.manage")) return !brandWide;
   return false;
 }
 
 function canEditStock(role: UserRole | null | undefined): boolean {
-  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN" || role === "BRANCH_ADMIN";
+  return can(role, "menu.manage");
 }
 
 async function uploadImage(file: File, failed: string): Promise<string> {
@@ -108,7 +109,7 @@ export function StoreTab({
   const [available, setAvailable] = useState(true);
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [image, setImage] = useState<File | null>(null);
-  const [brandWide, setBrandWide] = useState(role === "SUPER_ADMIN" || role === "BRAND_ADMIN");
+  const [brandWide, setBrandWide] = useState(can(role, "menu.sharedItems"));
 
   function remember(next: SessionStoreItem[]) {
     writeSessionStoreItems(next);
@@ -149,7 +150,7 @@ export function StoreTab({
         },
       });
       if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.storeFailed);
-      return fromResponse(result.data, brandWide && (role === "SUPER_ADMIN" || role === "BRAND_ADMIN"));
+      return fromResponse(result.data, brandWide && can(role, "menu.sharedItems"));
     },
     onSuccess: (saved) => {
       const rest = items.filter((item) => item.id !== saved.id);
@@ -224,7 +225,7 @@ export function StoreTab({
     setAvailable(true);
     setCategoryId(categories[0]?.id ?? "");
     setImage(null);
-    setBrandWide(role === "SUPER_ADMIN" || role === "BRAND_ADMIN");
+    setBrandWide(can(role, "menu.sharedItems"));
     setOpen(true);
   }
 
@@ -304,7 +305,7 @@ export function StoreTab({
                   <div className="grid gap-1">
                     <h2 className="font-medium">{name}</h2>
                     {item.price ? <p className="text-sm tabular-nums"><Money amount={item.price} /></p> : null}
-                    {item.brandWide && role === "BRANCH_ADMIN" ? <p className="text-sm text-ink-secondary">{t.readOnlyBrand}</p> : null}
+                    {item.brandWide && !can(role, "menu.sharedItems") ? <p className="text-sm text-ink-secondary">{t.readOnlyBrand}</p> : null}
                   </div>
                     {item.imageUrl ? (
                       // Stored photos are on the upload host, which next/image is not set up to optimise.

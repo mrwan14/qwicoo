@@ -1,4 +1,5 @@
-import { ASSISTANT_ROLES, roleHome, type UserProfile, type UserRole } from "@/lib/auth/roles";
+import { rolesFor } from "@/lib/auth/permissions";
+import { roleHome, type UserProfile, type UserRole } from "@/lib/auth/roles";
 import { homeScopeOf } from "@/lib/auth/scope";
 import type { NavLabelKey } from "@/lib/i18n/staff/nav";
 
@@ -20,13 +21,6 @@ export function navKey(item: NavItem): string {
   return item.key ?? item.href;
 }
 
-const PLATFORM = ["SUPER_ADMIN"] as const satisfies readonly UserRole[];
-const BRAND_SCOPE = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER"] as const satisfies readonly UserRole[];
-const BRANCH_OPS = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"] as const satisfies readonly UserRole[];
-const INVENTORY = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN", "KITCHEN_STAFF", "CASHIER"] as const satisfies readonly UserRole[];
-
-const HOME = ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"] as const satisfies readonly UserRole[];
-
 export const NAV_ITEMS: readonly NavItem[] = [
   {
     href: "/app/home",
@@ -34,7 +28,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 3,
-    roles: [...HOME],
+    roles: rolesFor("home.view"),
   },
   {
     href: "/app/reports",
@@ -42,7 +36,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 9,
-    roles: [...BRANCH_OPS],
+    roles: rolesFor("reports.view"),
   },
   {
     href: "/app/settings",
@@ -50,7 +44,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "admin",
     phase: 7,
-    roles: [...HOME],
+    roles: rolesFor("settings.view"),
   },
   {
     href: "/app/brands",
@@ -58,7 +52,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "portfolio",
     shell: "admin",
     phase: 5,
-    roles: [...PLATFORM],
+    roles: rolesFor("platform.manage"),
   },
   {
     href: "/app/settings/staff/invites",
@@ -66,7 +60,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "portfolio",
     shell: "admin",
     phase: 7,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"],
+    roles: rolesFor("staff.invite"),
   },
   {
     href: "/app/features",
@@ -74,7 +68,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "portfolio",
     shell: "admin",
     phase: 5,
-    roles: [...PLATFORM],
+    roles: rolesFor("platform.manage"),
   },
   {
     href: "/app/delivery",
@@ -82,7 +76,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "portfolio",
     shell: "admin",
     phase: 5,
-    roles: [...PLATFORM],
+    roles: rolesFor("platform.manage"),
   },
   {
     href: "/app/partner-leads",
@@ -90,7 +84,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "portfolio",
     shell: "admin",
     phase: 6,
-    roles: [...PLATFORM],
+    roles: rolesFor("platform.manage"),
   },
   {
     href: "/app/settings/customers",
@@ -98,7 +92,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "admin",
     phase: 5,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN"],
+    roles: rolesFor("brand.customers"),
   },
   {
     href: "/app/menu",
@@ -106,7 +100,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "admin",
     phase: 2,
-    roles: [...BRANCH_OPS],
+    roles: rolesFor("menu.view"),
   },
   {
     href: "/app/stock",
@@ -114,7 +108,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "admin",
     phase: 8,
-    roles: [...INVENTORY],
+    roles: rolesFor("stock.open"),
   },
   {
     href: "/app/settings/tables-qr",
@@ -122,7 +116,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "admin",
     phase: 2,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"],
+    roles: rolesFor("tables.manage"),
   },
   {
     href: "/app/settings/staff",
@@ -130,7 +124,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "admin",
     phase: 5,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"],
+    roles: rolesFor("staff.manage"),
   },
   {
     href: "/app/floor",
@@ -138,7 +132,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "ops",
     phase: 3,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER", "WAITER"],
+    roles: rolesFor("floor.view"),
   },
   {
     href: "/app/floor/requests",
@@ -146,7 +140,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "ops",
     phase: 4,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "WAITER", "RUNNER"],
+    roles: rolesFor("requests.view"),
   },
   {
     href: "/app/pos",
@@ -154,7 +148,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "ops",
     phase: 3,
-    roles: [...BRANCH_OPS, "CASHIER"],
+    roles: rolesFor("pos.use"),
   },
   {
     href: "/app/orders",
@@ -162,7 +156,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "ops",
     phase: 3,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER"],
+    roles: rolesFor("orders.view"),
   },
   {
     href: "/app/orders/history",
@@ -170,7 +164,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "ops",
     phase: 4,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER"],
+    roles: rolesFor("orders.view"),
   },
   {
     href: "/app/orders/delivery",
@@ -178,7 +172,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "ops",
     phase: 3,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER"],
+    roles: rolesFor("orders.view"),
   },
   {
     href: "/app/kds",
@@ -186,7 +180,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "ops",
     phase: 3,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "KITCHEN_STAFF"],
+    roles: rolesFor("kitchen.view"),
   },
   {
     href: "/app/kds/expo",
@@ -194,7 +188,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "ops",
     phase: 3,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "KITCHEN_STAFF", "RUNNER"],
+    roles: rolesFor("handover.view"),
   },
   {
     href: "/app/orders/payments",
@@ -202,7 +196,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "admin",
     phase: 4,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "CASHIER"],
+    roles: rolesFor("orders.view"),
   },
   {
     href: "/app/offline-orders",
@@ -210,7 +204,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "brandOps",
     shell: "admin",
     phase: 4,
-    roles: [...BRANCH_OPS],
+    roles: rolesFor("offlineOrders.view"),
   },
   {
     href: "/app/dashboard",
@@ -218,7 +212,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 6,
-    roles: ["BRANCH_ADMIN"],
+    roles: rolesFor("branch.dashboard"),
   },
   {
     href: "/app/reports/sales",
@@ -226,7 +220,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 6,
-    roles: [...BRAND_SCOPE],
+    roles: rolesFor("reports.sales"),
   },
   {
     href: "/app/assistant",
@@ -234,7 +228,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 6,
-    roles: [...ASSISTANT_ROLES],
+    roles: rolesFor("assistant.use"),
   },
   {
     href: "/app/reports/till",
@@ -242,7 +236,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 6,
-    roles: ["SUPER_ADMIN", "BRANCH_ADMIN"],
+    roles: rolesFor("reports.till"),
   },
   {
     href: "/app/reports/attendance",
@@ -250,7 +244,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 9,
-    roles: ["BRANCH_ADMIN"],
+    roles: rolesFor("reports.attendance"),
   },
   {
     href: "/app/reports/payments",
@@ -258,7 +252,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 9,
-    roles: ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"],
+    roles: rolesFor("reports.payments"),
   },
   {
     href: "/app/settings/staff/attendance",
@@ -266,7 +260,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 7,
-    roles: ["BRANCH_ADMIN"],
+    roles: rolesFor("staff.attendance"),
   },
   {
     href: "/app/settings/brand",
@@ -274,7 +268,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "portfolio",
     shell: "admin",
     phase: 7,
-    roles: ["BRAND_ADMIN"],
+    roles: rolesFor("brand.settings"),
   },
   {
     href: "/app/settings/payments",
@@ -282,7 +276,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "portfolio",
     shell: "admin",
     phase: 7,
-    roles: ["BRAND_ADMIN"],
+    roles: rolesFor("brand.cardPayments"),
   },
   {
     href: "/app/attendance",
@@ -290,7 +284,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 6,
-    roles: ["BRANCH_ADMIN", "CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER"],
+    roles: rolesFor("attendance.clockIn"),
   },
   {
     href: "/app/audit",
@@ -298,7 +292,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: "insight",
     shell: "admin",
     phase: 6,
-    roles: [...PLATFORM],
+    roles: rolesFor("platform.manage"),
   },
 ];
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { rolesFor } from "@/lib/auth/permissions";
 import { useQuery } from "@tanstack/react-query";
 
 import { useStaffSession } from "@/components/ops/staff-session";
@@ -29,17 +30,10 @@ export type FloorTable = components["schemas"]["FloorTableLiveResponse"] & {
 export type FloorLive = Omit<components["schemas"]["FloorSummaryResponse"], "tables"> & { tables: FloorTable[] };
 
 /** Roles that see the pending-confirmation count on the Floor nav item. */
-export const PENDING_BADGE_ROLES: ReadonlySet<UserRole> = new Set(["CASHIER", "WAITER", "BRANCH_ADMIN", "BRAND_ADMIN"]);
+export const PENDING_BADGE_ROLES: ReadonlySet<UserRole> = new Set(rolesFor("orders.pendingBadge"));
 
 /** Roles offered Confirm / Reject on a pending table order. Kitchen never is. */
-export const CONFIRM_ROLES: ReadonlySet<UserRole> = new Set([
-  "CASHIER",
-  "WAITER",
-  "BRANCH_ADMIN",
-  "BRAND_ADMIN",
-  "REGIONAL_MANAGER",
-  "SUPER_ADMIN",
-]);
+export const CONFIRM_ROLES: ReadonlySet<UserRole> = new Set(rolesFor("orders.confirm"));
 
 export function needsConfirmation(table: Pick<FloorTable, "order_status">): boolean {
   return table.order_status === "PENDING_STAFF_CONFIRMATION";

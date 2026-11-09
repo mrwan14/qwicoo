@@ -1,3 +1,4 @@
+import { can } from "@/lib/auth/permissions";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 import type { UserRole } from "@/lib/auth/roles";
 
@@ -18,8 +19,6 @@ const DELIVERY_LABELS = {
 
 export type DeliveryStep = keyof typeof DELIVERY_LABELS;
 
-const ADMIN_CANCEL_ROLES = new Set<UserRole>(["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"]);
-const FRONT_OF_HOUSE = new Set<UserRole>(["CASHIER", "WAITER"]);
 
 export type CancelOffer = "hidden" | "reject" | "cancel" | "locked";
 
@@ -83,11 +82,11 @@ export function cancelOffer(role: UserRole | null | undefined, status: string | 
   if (!role) return "hidden";
   const current = (status ?? "").trim().toUpperCase();
   if (current === "PENDING_STAFF_CONFIRMATION") {
-    return ADMIN_CANCEL_ROLES.has(role) || FRONT_OF_HOUSE.has(role) ? "reject" : "hidden";
+    return can(role, "orders.confirm") ? "reject" : "hidden";
   }
   if (current === "SUBMITTED" || current === "PREPARING") {
-    if (ADMIN_CANCEL_ROLES.has(role)) return "cancel";
-    if (FRONT_OF_HOUSE.has(role)) return "locked";
+    if (can(role, "orders.cancel")) return "cancel";
+    if (can(role, "orders.confirm")) return "locked";
     return "hidden";
   }
   return "hidden";

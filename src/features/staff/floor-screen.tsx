@@ -1,5 +1,6 @@
 "use client";
 
+import { rolesFor } from "@/lib/auth/permissions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellRing, Plus } from "lucide-react";
 import { useState } from "react";
@@ -45,7 +46,7 @@ const control = "h-12 w-full rounded-staff border bg-background px-3 text-sm";
 const primaryButton =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 
-const ADD_TABLE_ROLES: ReadonlySet<UserRole> = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"]);
+const ADD_TABLE_ROLES: ReadonlySet<UserRole> = new Set(rolesFor("tables.add"));
 
 function AddTableDialog({ branchId }: { branchId: string }) {
   const t = useStaffSection(floorCopy);

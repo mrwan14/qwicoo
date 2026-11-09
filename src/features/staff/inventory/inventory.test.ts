@@ -7,6 +7,9 @@ import {
   canListBranches,
   canOpenInventory,
   canOpenInventoryPage,
+  canRetireCatalogue,
+  canWriteCatalogue,
+  canWriteCentralKitchen,
   INVENTORY_HREFS,
   inventoryPagesFor,
 } from "@/features/staff/inventory/access.ts";
@@ -39,23 +42,32 @@ test("waiter and runner have no inventory pages", () => {
   }
 });
 
-test("inventory pages follow the API role sets", () => {
-  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "stock"), true);
-  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "movements"), true);
+test("inventory pages follow the permission table", () => {
+  // Kitchen and cashier only get the stock pages their job needs.
+  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "stock"), false);
+  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "counts"), true);
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "waste"), true);
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "prep"), false);
-  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "import"), false);
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "reports"), false);
-  assert.equal(canOpenInventoryPage("CASHIER", "stock"), true);
+  assert.equal(canOpenInventoryPage("CASHIER", "stock"), false);
+  assert.equal(canOpenInventoryPage("CASHIER", "counts"), false);
   assert.equal(canOpenInventoryPage("CASHIER", "waste"), true);
-  assert.equal(canOpenInventoryPage("CASHIER", "prep"), false);
+  assert.equal(canOpenInventory("CASHIER"), true);
+  assert.equal(canOpenInventory("WAITER"), false);
+  // Branch admin runs the branch's stock, including the catalogue and import.
   assert.equal(canOpenInventoryPage("BRANCH_ADMIN", "prep"), true);
-  assert.equal(canOpenInventoryPage("BRANCH_ADMIN", "import"), false);
+  assert.equal(canOpenInventoryPage("BRANCH_ADMIN", "import"), true);
+  assert.equal(canWriteCatalogue("BRANCH_ADMIN"), true);
+  assert.equal(canRetireCatalogue("BRANCH_ADMIN"), false);
+  assert.equal(canRetireCatalogue("BRAND_ADMIN"), true);
+  assert.equal(canWriteCentralKitchen("BRANCH_ADMIN"), false);
   assert.equal(canOpenInventoryPage("BRAND_ADMIN", "import"), true);
+  // Regional manager is on hold, unchanged.
   assert.equal(canOpenInventoryPage("REGIONAL_MANAGER", "reports"), true);
   assert.equal(canOpenInventoryPage("REGIONAL_MANAGER", "import"), false);
+  // Every role with the Stock entry can open at least one Stock page.
   for (const role of ROLES) {
-    if (canOpenInventory(role)) assert.ok(inventoryPagesFor(role).includes("stock"));
+    if (canOpenInventory(role)) assert.ok(inventoryPagesFor(role).length > 0);
   }
 });
 
@@ -161,15 +173,16 @@ test("count review shows the payload variance, including an empty count", () => 
 });
 
 test("suppliers and purchase orders follow catalogue and stock roles", () => {
-  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "suppliers"), true);
-  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "purchaseOrders"), true);
+  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "suppliers"), false);
+  assert.equal(canOpenInventoryPage("BRANCH_ADMIN", "suppliers"), true);
+  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "purchaseOrders"), false);
   assert.equal(canOpenInventoryPage("WAITER", "purchaseOrders"), false);
   assert.ok(Object.values(INVENTORY_HREFS).includes("/app/stock/purchase-orders"));
   assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "counts"), true);
-  assert.equal(canOpenInventoryPage("CASHIER", "counts"), true);
+  assert.equal(canOpenInventoryPage("CASHIER", "counts"), false);
   assert.equal(canOpenInventoryPage("WAITER", "counts"), false);
   assert.ok(Object.values(INVENTORY_HREFS).includes("/app/stock/counts"));
-  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "transfers"), true);
+  assert.equal(canOpenInventoryPage("KITCHEN_STAFF", "transfers"), false);
   assert.equal(canApproveTransfer("BRANCH_ADMIN"), false);
   assert.equal(canApproveTransfer("REGIONAL_MANAGER"), true);
   assert.equal(canListBranches("KITCHEN_STAFF"), false);

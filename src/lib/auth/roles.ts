@@ -1,4 +1,5 @@
 import type { components } from "@/lib/api/schema";
+import { PERMISSIONS } from "@/lib/auth/permissions";
 import { currentLocale } from "@/lib/i18n/locale-store";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 import { commonCopy } from "@/lib/i18n/staff/common";
@@ -23,7 +24,7 @@ export function roleHome(role: UserRole): string {
 }
 
 /** Roles that may open Ask Qwicoo. Operational roles are intentionally absent. */
-export const ASSISTANT_ROLES = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"] as const satisfies readonly UserRole[];
+export const ASSISTANT_ROLES = PERMISSIONS["assistant.use"];
 
 export function canAskQwicoo(role: UserRole): boolean {
   return (ASSISTANT_ROLES as readonly UserRole[]).includes(role);

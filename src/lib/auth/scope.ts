@@ -1,3 +1,4 @@
+import { rolesFor } from "@/lib/auth/permissions";
 import { roleHome, type UserProfile, type UserRole } from "@/lib/auth/roles";
 
 /**
@@ -64,7 +65,7 @@ export function canOpenBrand(me: UserProfile, brandId: string): boolean {
 }
 
 /** Roles that may open a branch's settings page (profile, tables, PIN). */
-const BRANCH_SETTINGS_ROLES: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER", "BRANCH_ADMIN"];
+const BRANCH_SETTINGS_ROLES: readonly UserRole[] = rolesFor("branch.settings");
 
 export function canOpenBranch(me: UserProfile, branchId: string): boolean {
   if (!isUuid(branchId) || !BRANCH_SETTINGS_ROLES.includes(me.role)) return false;
@@ -87,7 +88,7 @@ export function queryInScope(me: UserProfile, query: { brand?: string | null; br
 }
 
 /** Roles allowed to see and rotate the table Access PIN (API `PIN_ROLES`). */
-export const PIN_ROLES: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"];
+export const PIN_ROLES: readonly UserRole[] = rolesFor("tables.pin");
 
 export function initials(name: string | null | undefined): string {
   const words = (name ?? "").trim().split(/\s+/).filter(Boolean);

@@ -1,8 +1,9 @@
 /**
- * Menu admin capability matrix (mirrors backend staff menu + catalog RBAC).
+ * Menu admin capabilities. Roles live in `@/lib/auth/permissions` (mirror them in the backend).
  * Hide controls the role cannot use; do not rely on 403s.
  */
 
+import { can } from "@/lib/auth/permissions";
 import type { UserRole } from "@/lib/auth/roles";
 import type { components } from "@/lib/api/schema";
 
@@ -15,27 +16,25 @@ export type MenuItemFlags = {
   brandCatalog?: boolean;
 };
 
-const MENU_ADMIN_ROLES: ReadonlySet<UserRole> = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"]);
-
 export function canOpenMenuAdmin(role: UserRole | null | undefined): boolean {
-  return Boolean(role && MENU_ADMIN_ROLES.has(role));
+  return can(role, "menu.manage");
 }
 
 export function canManageStations(role: UserRole | null | undefined): boolean {
-  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN" || role === "BRANCH_ADMIN";
+  return can(role, "menu.manage");
 }
 
 export function canAddCategory(role: UserRole | null | undefined): boolean {
-  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN" || role === "BRANCH_ADMIN";
+  return can(role, "menu.manage");
 }
 
 export function canAddItem(role: UserRole | null | undefined): boolean {
-  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN" || role === "BRANCH_ADMIN";
+  return can(role, "menu.manage");
 }
 
 /** Brand admins choose catalog scope; branch admins only create branch-local items. */
 export function canChooseItemScope(role: UserRole | null | undefined): boolean {
-  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN";
+  return can(role, "menu.sharedItems");
 }
 
 export function isBrandCatalogItem(flags: MenuItemFlags | null | undefined): boolean {
@@ -48,8 +47,8 @@ export function isBrandCatalogItem(flags: MenuItemFlags | null | undefined): boo
 
 /** Structural edit: name, delete, modifiers, base catalog price. */
 export function canEditItemStructure(role: UserRole | null | undefined, flags?: MenuItemFlags | null): boolean {
-  if (role === "SUPER_ADMIN" || role === "BRAND_ADMIN") return true;
-  if (role === "BRANCH_ADMIN") return !isBrandCatalogItem(flags);
+  if (can(role, "menu.sharedItems")) return true;
+  if (can(role, "menu.manage")) return !isBrandCatalogItem(flags);
   return false;
 }
 
@@ -62,16 +61,16 @@ export function canDeleteItem(role: UserRole | null | undefined, flags?: MenuIte
 }
 
 export function canDeleteCategory(role: UserRole | null | undefined): boolean {
-  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN" || role === "BRANCH_ADMIN";
+  return can(role, "menu.manage");
 }
 
 /** Availability / 86 and branch price overrides stay available to branch admins on brand items. */
 export function canToggleAvailability(role: UserRole | null | undefined): boolean {
-  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN" || role === "BRANCH_ADMIN";
+  return can(role, "menu.manage");
 }
 
 export function canEditBranchPrice(role: UserRole | null | undefined, _flags?: MenuItemFlags | null): boolean {
-  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN" || role === "BRANCH_ADMIN";
+  return can(role, "menu.manage");
 }
 
 /** Show the Stations tab at all. */

@@ -167,9 +167,14 @@ export function InventoryFrame({ page, children }: { page: InventoryPage; childr
   const reports = useStaffSection(reportsCopy);
   const me = useStaffSession();
   const allowed = Boolean(me && canOpenInventoryPage(me.role, page));
+  const router = useRouter();
+  // Cashier and kitchen open Stock on the one page their job needs (waste, counts) instead of a denial.
+  const fallback = me && !allowed ? STOCK_TABS.flatMap((entry) => entry.views).find((view) => canOpenInventoryPage(me.role, view)) : undefined;
   useEffect(() => {
-    if (me && !allowed) denyAccess();
-  }, [me, allowed]);
+    if (!me || allowed) return;
+    if (fallback && (page === "overview" || page === "stock")) router.replace(INVENTORY_HREFS[fallback]);
+    else denyAccess();
+  }, [me, allowed, fallback, page, router]);
   if (!me) return null;
   if (!allowed) return <LoadingState label={t.loading} />;
   const place = placeOf(page);

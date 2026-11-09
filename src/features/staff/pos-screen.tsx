@@ -1,5 +1,6 @@
 "use client";
 
+import { can } from "@/lib/auth/permissions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
 import { Banknote, Check, CreditCard, Minus, MoreHorizontal, Plus, Search, X } from "lucide-react";
@@ -253,7 +254,7 @@ export function PosScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const branchId = useScope((state) => state.branchId);
-  const storeRole = me?.role === "CASHIER" || me?.role === "BRANCH_ADMIN" || me?.role === "BRAND_ADMIN" || me?.role === "SUPER_ADMIN";
+  const storeRole = can(me?.role, "store.online");
   const probe = useQuery({
     queryKey: storeOnlineKey(branchId, "probe"),
     enabled: Boolean(branchId) && storeRole,

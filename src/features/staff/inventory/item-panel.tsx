@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ops/kit/button";
 import { Field, Input, Select, Switch } from "@/components/ops/kit/field";
 import { MoreOptions, PanelSection, SidePanel } from "@/components/ops/kit/side-panel";
+import { useStaffSession } from "@/components/ops/staff-session";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
@@ -17,6 +18,7 @@ import { pickLocale } from "@/lib/i18n/locale-text";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 
+import { canRetireCatalogue } from "./access";
 import { autoSku } from "./easy";
 
 type Ingredient = components["schemas"]["IngredientResponse"];
@@ -48,6 +50,7 @@ export function ItemPanel({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const listId = useId();
+  const canRetire = canRetireCatalogue(useStaffSession()?.role);
   const current = ingredient;
   const [nameEn, setNameEn] = useState(current?.name.en ?? "");
   const [nameAr, setNameAr] = useState(current && current.name.ar !== current.name.en ? current.name.ar : "");
@@ -174,7 +177,7 @@ export function ItemPanel({
           ) : null}
         </PanelSection>
 
-        <MoreOptions label={t.easy.moreOptions} summary={[t.easy.skuLabel, t.easy.prepLabel, current ? t.easy.activeLabel : null].filter(Boolean).join(", ")}>
+        <MoreOptions label={t.easy.moreOptions} summary={[t.easy.skuLabel, t.easy.prepLabel, current && canRetire ? t.easy.activeLabel : null].filter(Boolean).join(", ")}>
           <fieldset disabled={!canWrite} className="grid gap-4">
             {current ? null : (
               <Field label={t.easy.skuLabel} hint={t.easy.skuHint}>
@@ -188,7 +191,7 @@ export function ItemPanel({
             )}
             <ToggleRow label={t.easy.prepLabel} hint={t.easy.prepHint} checked={isPrep} onChange={setIsPrep} />
             {isPrep ? <ToggleRow label={t.ingredients.stockedPrep} hint={t.ingredients.stockedPrepHint} checked={deductAsPrep} onChange={setDeductAsPrep} /> : null}
-            {current ? <ToggleRow label={t.easy.activeLabel} hint={t.easy.activeHint} checked={active} onChange={setActive} /> : null}
+            {current && canRetire ? <ToggleRow label={t.easy.activeLabel} hint={t.easy.activeHint} checked={active} onChange={setActive} /> : null}
           </fieldset>
         </MoreOptions>
       </form>

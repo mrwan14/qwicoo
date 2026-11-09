@@ -1,3 +1,4 @@
+import { rolesFor } from "@/lib/auth/permissions";
 import type { UserRole } from "@/lib/auth/roles";
 import type { components } from "@/lib/api/schema";
 
@@ -8,14 +9,7 @@ export type OrderStatus = components["schemas"]["OrderStatus"];
  * Waiters only confirm or reject a pending order (403 on every other move).
  * Runners only hand a paid order over, and that control lives on Handover.
  */
-const FLOOR_MOVE_ROLES = new Set<UserRole>([
-  "CASHIER",
-  "BRANCH_ADMIN",
-  "BRAND_ADMIN",
-  "REGIONAL_MANAGER",
-  "SUPER_ADMIN",
-  "KITCHEN_STAFF",
-]);
+const FLOOR_MOVE_ROLES = new Set<UserRole>(rolesFor("orders.move"));
 
 /** DELIVERED and CLOSED are 409 PAYMENT_REQUIRED until the order is paid. SERVED is never a legal target. */
 const PAYMENT_GATED = new Set<OrderStatus>(["DELIVERED", "CLOSED"]);

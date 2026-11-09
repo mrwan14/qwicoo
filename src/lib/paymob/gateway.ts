@@ -1,14 +1,14 @@
+import { can } from "@/lib/auth/permissions";
+import { isUserRole } from "@/lib/auth/roles";
 import type { components } from "@/lib/api/schema";
 
-const SETTINGS_ROLES = new Set(["SUPER_ADMIN", "BRAND_ADMIN"]);
-const REFUND_ROLES = new Set(["CASHIER", "BRANCH_ADMIN", "REGIONAL_MANAGER", "BRAND_ADMIN", "SUPER_ADMIN"]);
 
 export function canManagePaymobGateway(role: string | null | undefined): boolean {
-  return role != null && SETTINGS_ROLES.has(role);
+  return isUserRole(role) && can(role, "paymob.manage");
 }
 
 export function canRefundPaymob(role: string | null | undefined): boolean {
-  return role != null && REFUND_ROLES.has(role);
+  return isUserRole(role) && can(role, "payments.refund");
 }
 
 /** Empty or masked input keeps the stored secret. A typed value replaces it. */

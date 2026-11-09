@@ -94,14 +94,16 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
   if (till && branchId) {
     const report = lastClose.data;
     const variance = Number(report?.cash_reconciliation?.cash_variance ?? 0) || 0;
+    // Closed without a count: there is no difference to show, and "Matches" would be wrong.
+    const counted = report?.cash_reconciliation?.declared_cash != null;
     const day = report?.business_date.slice(0, 10);
     tiles.push(
       <Tile key="till" href="/app/reports/till">
         <KpiCard
           label={t.snapshot.lastClose}
-          value={report ? money(variance) : "—"}
+          value={report && counted ? money(variance) : "—"}
           loading={lastClose.isLoading}
-          trend={report ? <Badge tone={variance < 0 ? "danger" : variance > 0 ? "warning" : "success"}>{variance < 0 ? t.snapshot.short : variance > 0 ? t.snapshot.over : t.snapshot.matches}</Badge> : null}
+          trend={report && !counted ? <Badge>{t.snapshot.notCounted}</Badge> : report ? <Badge tone={variance < 0 ? "danger" : variance > 0 ? "warning" : "success"}>{variance < 0 ? t.snapshot.short : variance > 0 ? t.snapshot.over : t.snapshot.matches}</Badge> : null}
           note={day ? rangeLabel(day, day, locale) : lastClose.isSuccess ? t.snapshot.noClose : undefined}
         />
       </Tile>,

@@ -52,15 +52,19 @@ export function TillReport() {
   const { range, setRange } = useReportFilters("yesterday", { carry: false });
   const { query: reports, rows, complete } = useZReports(range, { compare: false });
   const money = (amount: string | number) => formatAmount(amount, undefined, locale);
-  const counts = rows.filter((row) => row.cash_reconciliation?.declared_cash != null).length;
-  const counted = rows.reduce((sum, row) => sum + num(row.cash_reconciliation?.declared_cash), 0);
-  const difference = rows.reduce((sum, row) => sum + num(row.cash_reconciliation?.cash_variance), 0);
+  // A drawer closed without a count has no difference to report, so only counted days feed the cash numbers.
+  const isCounted = (row: (typeof rows)[number]) => row.cash_reconciliation?.declared_cash != null;
+  const countedRows = rows.filter(isCounted);
+  const counts = countedRows.length;
+  const counted = countedRows.reduce((sum, row) => sum + num(row.cash_reconciliation?.declared_cash), 0);
+  const difference = countedRows.reduce((sum, row) => sum + num(row.cash_reconciliation?.cash_variance), 0);
   // The API reports declared cash and the variance; what the drawer should have held is the one minus the other.
   const expected = counted - difference;
-  const float = rows.reduce((sum, row) => sum + num(row.cash_reconciliation?.opening_balance), 0);
-  const cashSales = rows.reduce((sum, row) => sum + num(row.payment_channels?.cash), 0);
-  const short = rows.filter((row) => num(row.cash_reconciliation?.cash_variance) < 0).length;
-  const over = rows.filter((row) => num(row.cash_reconciliation?.cash_variance) > 0).length;
+  const float = countedRows.reduce((sum, row) => sum + num(row.cash_reconciliation?.opening_balance), 0);
+  const cashSales = countedRows.reduce((sum, row) => sum + num(row.payment_channels?.cash), 0);
+  const short = countedRows.filter((row) => num(row.cash_reconciliation?.cash_variance) < 0).length;
+  const over = countedRows.filter((row) => num(row.cash_reconciliation?.cash_variance) > 0).length;
+  const anyCount = Boolean(reports.data && counts > 0);
   const varianceTone = (value: number): Tone => (value < 0 ? "danger" : value > 0 ? "warning" : "success");
 
   const columns: Column<ZReport>[] = [
@@ -83,6 +87,7 @@ export function TillReport() {
       key: "difference",
       header: t.till.differenceCol,
       cell: (row) => {
+        if (!isCounted(row)) return <Badge>{t.till.notCounted}</Badge>;
         const value = num(row.cash_reconciliation?.cash_variance);
         return <Badge tone={varianceTone(value)}>{value === 0 ? t.till.matchesBadge : money(value)}</Badge>;
       },
@@ -97,35 +102,39 @@ export function TillReport() {
       filters={<FilterBar date={{ value: range, onChange: setRange }} />}
       kpis={
         <>
-          <KpiCard label={t.till.expected} value={reports.data ? money(expected) : "—"} loading={reports.isLoading} note={t.till.expectedNote} />
-          <KpiCard label={t.till.counted} value={reports.data ? money(counted) : "—"} loading={reports.isLoading} note={t.till.countedNote} />
+          <KpiCard label={t.till.expected} value={anyCount ? money(expected) : "—"} loading={reports.isLoading} note={t.till.expectedNote} />
+          <KpiCard label={t.till.counted} value={anyCount ? money(counted) : "—"} loading={reports.isLoading} note={t.till.countedNote} />
           <KpiCard
             label={t.till.difference}
-            value={reports.data ? money(difference) : "—"}
+            value={anyCount ? money(difference) : "—"}
             loading={reports.isLoading}
-            note={reports.data ? (short ? (short === 1 ? t.till.shortOne : fill(t.till.short, { count: short })) : over ? (over === 1 ? t.till.overOne : fill(t.till.over, { count: over })) : t.till.matches) : undefined}
+            note={!reports.data ? undefined : !anyCount ? t.till.noneCounted : (short ? (short === 1 ? t.till.shortOne : fill(t.till.short, { count: short })) : over ? (over === 1 ? t.till.overOne : fill(t.till.over, { count: over })) : t.till.matches)}
           />
           <KpiCard label={t.till.closed} value={reports.data ? formatCount(rows.length, locale) : "—"} loading={reports.isLoading} note={reports.data ? fill(t.till.closedNote, { count: counts }) : undefined} />
         </>
       }
       chartTitle={t.till.addsUp}
       chart={
-        <dl className="grid gap-3 text-sm">
-          {[
-            [t.till.float, float],
-            [t.till.cashSales, cashSales],
-            [t.till.otherMoves, expected - float - cashSales],
-          ].map(([label, value]) => (
-            <div key={String(label)} className="flex items-center justify-between gap-3">
-              <dt className="text-ink-secondary">{label}</dt>
-              <dd className="text-ink tabular-nums">{money(Number(value))}</dd>
+        !anyCount ? (
+          <p className="py-6 text-sm text-ink-secondary">{reports.isError ? t.loadFailed : rows.length ? t.till.noneCountedBody : t.empty}</p>
+        ) : (
+          <dl className="grid gap-3 text-sm">
+            {[
+              [t.till.float, float],
+              [t.till.cashSales, cashSales],
+              [t.till.otherMoves, expected - float - cashSales],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="flex items-center justify-between gap-3">
+                <dt className="text-ink-secondary">{label}</dt>
+                <dd className="text-ink tabular-nums">{money(Number(value))}</dd>
+              </div>
+            ))}
+            <div className="flex items-center justify-between gap-3 border-t border-border pt-3 font-semibold">
+              <dt>{t.till.result}</dt>
+              <dd className="tabular-nums">{money(expected)}</dd>
             </div>
-          ))}
-          <div className="flex items-center justify-between gap-3 border-t border-border pt-3 font-semibold">
-            <dt>{t.till.result}</dt>
-            <dd className="tabular-nums">{money(expected)}</dd>
-          </div>
-        </dl>
+          </dl>
+        )
       }
       table={<DataTable stack caption={t.items.till.title} columns={columns} rows={rows} loading={reports.isLoading} rowKey={(row) => row.id} empty={reports.isError ? t.loadFailed : t.empty} />}
       canExport={rows.length > 0}

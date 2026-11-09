@@ -46,6 +46,11 @@ export function useReportFilters(fallback: Exclude<DatePreset, "custom"> = "toda
     [pathname, router],
   );
 
+  // A report opened from a link or a bookmark hands its period on too, not only one picked here.
+  useEffect(() => {
+    if (params.get("range")) remember(filterOnly(params));
+  }, [params]);
+
   const restored = useRef(false);
   useEffect(() => {
     if (restored.current) return;

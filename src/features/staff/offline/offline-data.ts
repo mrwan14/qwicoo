@@ -23,7 +23,8 @@ export const offlineQueryKeys = {
 
 export function fetchMenu(branchId: string): Promise<MenuTree> {
   return withOfflineCopy(offlineKeys.menu(branchId), async () => {
-    const result = await browserApi.GET("/api/v1/menu/tree", { params: { query: { branch_id: branchId } } });
+    // live_only: the till sells what guests can order now, so a Lunch menu's categories wait until lunch.
+    const result = await browserApi.GET("/api/v1/menu/tree", { params: { query: { branch_id: branchId, live_only: true } } });
     if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, "Menu failed");
     return result.data;
   });

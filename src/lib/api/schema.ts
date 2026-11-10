@@ -2857,6 +2857,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/menus/{menu_id}/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Menu Categories
+         * @description Replace the branch categories a menu shows while it is live. A category in no menu always shows on the guest menu and the till. A category in a menu shows only while one of its menus is live; when no menu is live the full menu shows. Every category must belong to one of the brand's branches (404 CATEGORY_NOT_FOUND).
+         */
+        put: operations["set_menu_categories_api_v1_menus__menu_id__categories_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/menus/items/{item_id}/combo-components": {
         parameters: {
             query?: never;
@@ -4526,6 +4546,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pos/promo/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a promo code on the till
+         * @description Staff. What a promo code takes off the ticket before it is sent, using the same rules as checkout: the code's brand, dates, total uses and minimum order. On a dine-in table with an open unpaid order, that order's items count toward the subtotal. Writes nothing. Errors are the promo reason codes (404 PROMO_CODE_NOT_FOUND, 409 PROMO_CODE_EXPIRED, PROMO_CODE_MIN_ORDER_NOT_MET, PROMO_CODE_USAGE_LIMIT_REACHED, PROMO_CODE_ALREADY_ON_ORDER).
+         */
+        post: operations["preview_pos_promo_api_v1_pos_promo_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pos/orders/checkout": {
         parameters: {
             query?: never;
@@ -4982,7 +5022,7 @@ export interface paths {
         put?: never;
         /**
          * Submit Shared Cart as Order
-         * @description Atomically snapshot the cart at If-Match version, create a guest order, clear the cart, and bump version. A concurrent second submit returns 409.
+         * @description Atomically snapshot the cart at If-Match version, create a guest order, clear the cart, and bump version. A concurrent second submit returns 409. Optional body promo_code applies a promo exactly as the quote does; a code that cannot be used is rejected before the cart is claimed, so the cart stays as it was.
          */
         post: operations["submit_session_cart_api_v1_sessions__session_id__cart_submit_post"];
         delete?: never;
@@ -7884,6 +7924,17 @@ export interface components {
          * CartResponse
          * @description Authoritative snapshot of the shared table cart.
          */
+        /**
+         * CartSubmitRequest
+         * @description Optional body for submitting the shared cart.
+         */
+        CartSubmitRequest: {
+            /**
+             * Promo Code
+             * @description Optional promo code, the one the guest applied on the quote. The discount comes off the item subtotal before tax and the service fee. A code that cannot be used returns the same error as the quote, and the cart is left as it was.
+             */
+            promo_code?: string | null;
+        };
         CartResponse: {
             /** Items */
             items: components["schemas"]["CartItemResponse"][];
@@ -10611,6 +10662,17 @@ export interface components {
             station: components["schemas"]["KitchenStation"];
         };
         /**
+         * MenuCategoriesUpdate
+         * @description Replace the categories a menu shows while it is live.
+         */
+        MenuCategoriesUpdate: {
+            /**
+             * Category Ids
+             * @description Branch category ids; an empty list clears them
+             */
+            category_ids?: string[];
+        };
+        /**
          * MenuCreate
          * @description Payload for provisioning an organizational menu.
          */
@@ -10634,10 +10696,38 @@ export interface components {
             schedule_rules?: components["schemas"]["ScheduleRulesSchema"] | null;
         };
         /**
+         * MenuComboItemResponse
+         * @description One item inside a combo, as the guest menu shows it.
+         */
+        MenuComboItemResponse: {
+            /**
+             * Item Id
+             * Format: uuid
+             * @description The item that is part of the combo
+             */
+            item_id: string;
+            /**
+             * Quantity
+             * @description How many of that item the combo includes
+             * @default 1
+             */
+            quantity: number;
+        };
+        /**
          * MenuItemResponse
          * @description Catalog item with pricing, station routing, allergens, and nested modifier groups.
          */
         MenuItemResponse: {
+            /**
+             * Combo Items
+             * @description For a COMBO item, the active items inside it. Empty for other items.
+             */
+            combo_items?: components["schemas"]["MenuComboItemResponse"][];
+            /**
+             * Combo Regular Price
+             * @description For a COMBO item, what its items cost when bought separately at this branch (sum of branch price x quantity). Null when it is not a combo, it has no items, or one of its items is no longer on sale.
+             */
+            combo_regular_price?: string | null;
             /**
              * Allergens
              * @description Allergen classification tags
@@ -10736,44 +10826,55 @@ export interface components {
          */
         MenuResponse: {
             /**
-             * Brand Id
-             * Format: uuid
-             */
-            brand_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Deleted At */
-            deleted_at?: string | null;
-            /**
              * Id
              * Format: uuid
              */
             id: string;
-            /** Is Active */
-            is_active: boolean;
             /**
-             * Items Count
-             * @default 0
+             * Brand Id
+             * Format: uuid
              */
-            items_count: number;
-            /** Menu Type */
-            menu_type: string;
+            brand_id: string;
             /** Name Ar */
             name_ar: string;
             /** Name En */
             name_en: string;
+            /** Menu Type */
+            menu_type: string;
+            /** Is Active */
+            is_active: boolean;
             /** Schedule Rules */
             schedule_rules?: {
                 [key: string]: unknown;
             } | null;
             /**
+             * Items Count
+             * @default 0
+             */
+            items_count: number;
+            /**
+             * Category Ids
+             * @description Branch categories this menu shows while it is live. Empty means the menu does not filter.
+             */
+            category_ids?: string[];
+            /**
+             * Is Live
+             * @description Active and inside its schedule right now, in the branch's local time.
+             * @default false
+             */
+            is_live: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
+            /** Deleted At */
+            deleted_at?: string | null;
         };
         /**
          * MenuTreeResponse
@@ -13368,22 +13469,49 @@ export interface components {
             table_freed: boolean;
         };
         /**
+         * POSPromoPreviewRequest
+         * @description What a code would take off the ticket the cashier is building.
+         */
+        POSPromoPreviewRequest: {
+            /** Promo Code */
+            promo_code: string;
+            /** @default DINE_IN */
+            order_type: components["schemas"]["OrderType"];
+            /**
+             * Table Id
+             * @description Dine-in table. Its open unpaid order's items count toward the subtotal, as at checkout.
+             */
+            table_id?: string | null;
+            /**
+             * Subtotal
+             * @description Item subtotal of the lines on the ticket.
+             */
+            subtotal: number | string;
+        };
+        /**
+         * POSPromoPreviewResponse
+         * @description The discount checkout will apply. Checkout prices the items again and is the final word.
+         */
+        POSPromoPreviewResponse: {
+            /** Code */
+            code: string;
+            /** Discount Type */
+            discount_type: string;
+            /** Discount Amount */
+            discount_amount: string;
+            /**
+             * Eligible Subtotal
+             * @description Ticket subtotal plus the table's open order, if any.
+             */
+            eligible_subtotal: string;
+            /** Currency */
+            currency: string;
+        };
+        /**
          * POSCheckoutRequest
          * @description Staff POS payload to place a Dine-In or Takeaway order at counter or table-side.
          */
         POSCheckoutRequest: {
-            /**
-             * Customer Notes
-             * @description Customer notes or special requests
-             */
-            customer_notes?: string | null;
-            /** @description Settlement tender type for immediate payment (e.g. CASH, POS_TERMINAL, CARD_TERMINAL). Required for TAKEAWAY. */
-            immediate_payment?: components["schemas"]["PaymentMethod"] | null;
-            /**
-             * Items
-             * @description List of catalog items with customizations
-             */
-            items: components["schemas"]["OrderItemInput"][];
             /**
              * @description Fulfillment channel: DINE_IN requires table_id; TAKEAWAY requires immediate_payment
              * @default DINE_IN
@@ -13394,6 +13522,23 @@ export interface components {
              * @description Target physical table UUID. Required when order_type is DINE_IN.
              */
             table_id?: string | null;
+            /**
+             * Items
+             * @description List of catalog items with customizations
+             */
+            items: components["schemas"]["OrderItemInput"][];
+            /** @description Settlement tender type for immediate payment (e.g. CASH, POS_TERMINAL, CARD_TERMINAL). Required for TAKEAWAY. */
+            immediate_payment?: components["schemas"]["PaymentMethod"] | null;
+            /**
+             * Customer Notes
+             * @description Customer notes or special requests
+             */
+            customer_notes?: string | null;
+            /**
+             * Promo Code
+             * @description Optional promo code. The discount comes off the order's item subtotal before tax and the service fee. On a table that already has an open order, it applies to the whole order. A table order can carry one code: a different code is 409 PROMO_CODE_ALREADY_ON_ORDER.
+             */
+            promo_code?: string | null;
         };
         /**
          * PartnerLeadItem
@@ -31612,6 +31757,8 @@ export interface operations {
     get_menu_tree_api_v1_menu_tree_get: {
         parameters: {
             query?: {
+                /** @description Leave off categories whose brand menus are not live right now. Defaults to true for a guest table session and false for staff, so menu editors still see every category; the till sends true. */
+                live_only?: boolean | null;
                 /** @description Optional branch ID when authorized as staff or fallback */
                 branch_id?: string | null;
             };
@@ -31681,6 +31828,8 @@ export interface operations {
                 active_at?: string | null;
                 /** @description When true, only returns active menus */
                 active_only?: boolean;
+                /** @description Branch whose local time decides is_live. Defaults to the brand's first active branch. */
+                branch_id?: string | null;
             };
             header?: never;
             path?: never;
@@ -31761,6 +31910,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_menu_categories_api_v1_menus__menu_id__categories_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                menu_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MenuCategoriesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MenuResponse"];
                 };
             };
             /** @description Validation Error */
@@ -39936,6 +40120,39 @@ export interface operations {
             };
         };
     };
+    preview_pos_promo_api_v1_pos_promo_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["POSPromoPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["POSPromoPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     checkout_pos_order_api_v1_pos_orders_checkout_post: {
         parameters: {
             query?: never;
@@ -40706,7 +40923,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CartSubmitRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             201: {

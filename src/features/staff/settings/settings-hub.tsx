@@ -1,18 +1,6 @@
 "use client";
 
-import {
-  Building2,
-  ClipboardList,
-  CreditCard,
-  Package,
-  QrCode,
-  ShieldCheck,
-  Store,
-  Truck,
-  Users,
-  UserRound,
-  type LucideIcon,
-} from "lucide-react";
+import { Building2, ClipboardList, CreditCard, Package, QrCode, ShieldCheck, Store, Truck, Users, UserRound, type LucideIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/ops/kit/empty-state";
 import { LinkGroup, LinkRow } from "@/components/ops/kit/link-list";
@@ -46,7 +34,7 @@ export function SettingsHub() {
 
   return (
     <RoleGate href="/app/settings">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6">
+      <div className="settings-soft mx-auto grid w-full max-w-5xl grid-cols-1 gap-6">
         <PageHeader title={t.title} subtitle={t.subtitle} />
         {links.length === 0 ? (
           <EmptyState icon={ClipboardList} title={t.nothing} />
@@ -58,13 +46,7 @@ export function SettingsHub() {
               return (
                 <LinkGroup key={group} label={t.groups[group]}>
                   {rows.map((link) => (
-                    <LinkRow
-                      key={link.item}
-                      href={link.href}
-                      icon={ICONS[link.item]}
-                      title={t.items[link.item].title}
-                      description={t.items[link.item].body}
-                    />
+                    <LinkRow key={link.item} href={link.href} icon={ICONS[link.item]} title={t.items[link.item].title} description={t.items[link.item].body} />
                   ))}
                 </LinkGroup>
               );

@@ -1,15 +1,19 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Coffee, Search, Users } from "lucide-react";
+import { Menu, Search, Users, X } from "lucide-react";
 import { Logo } from "@/components/ops/logo";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { guestCopy } from "@/features/guest/copy";
 import { GuestAboutPanel, GuestDrawer, type GuestDrawerAction } from "@/features/guest/guest-drawer";
-import { BillSheet, WaiterSheet } from "@/features/guest/service-sheets";
+import { PayBillSheet } from "@/features/guest/pay-bill-sheet";
+import { refreshGuestToken } from "@/features/guest/visit-api";
+import { WaiterSheet } from "@/features/guest/service-sheets";
 import { GuestSkeleton, OrderingPausedNotice, isGuestUnreachable, useOrderingPaused } from "@/features/guest/ordering-status";
-import { guestTableToken, isGuestSessionGone, recoverGuestSession } from "@/features/guest/session";
-import { mergeGuestBranding, sameBranding } from "@/lib/guest/branding";
+import { themeFor, themeStyle, useGuestThemeProps } from "@/features/guest/theme-style";
+import { guestTableToken, isGuestSessionGone, markVisitEnded, recoverGuestSession } from "@/features/guest/session";
+import { brandDisplayName, mergeGuestBranding, sameBranding } from "@/lib/guest/branding";
+import type { GuestTheme } from "@/lib/guest/theme";
 import { mediaUrl } from "@/lib/media";
 import { useGuest } from "@/stores/guest";
 
@@ -34,49 +38,101 @@ export function useMenuChrome() {
 }
 
 function MenuTopBar() {
-  const { t } = useGuestCopy();
+  const { t, locale, setLocale } = useGuestCopy();
   const openDrawer = useOpenGuestDrawer();
   const { searchOpen, toggleSearch } = useMenuChrome();
   const placeLabel = useGuestPlaceLabel();
   const branding = useGuest((state) => state.branding);
-  const branchName = useGuest((state) => state.session?.branchName ?? null);
-  const tableNumber = useGuest((state) => state.session?.tableNumber);
+  const brandName = useBrandName();
+  const branchName = useGuest((state) => state.session?.branchName ?? state.tablePreview?.branchName ?? null);
+  const tableNumber = useGuest((state) => state.session?.tableNumber ?? state.tablePreview?.tableNumber);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [coverFailed, setCoverFailed] = useState(false);
   const logo = branding?.logoUrl && !logoFailed ? mediaUrl(branding.logoUrl) : null;
+  const cover = branding?.coverUrl && !coverFailed ? mediaUrl(branding.coverUrl) : null;
+  const name = brandName || branchName || t.restaurant;
+  const initials = name.trim().slice(0, 1).toUpperCase();
 
   return (
-    <header className="flex items-center gap-3 px-5 py-2">
-      <button type="button" className="guest-menu-avatar guest-motion" aria-label={t.openMenu} onClick={openDrawer}>
-        {logo ? (
+    <header className="guest-hero" data-cover={cover ? "true" : "false"}>
+      <div className="guest-hero-band" aria-hidden>
+        {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt="" className="size-full object-cover" onError={() => setLogoFailed(true)} />
-        ) : (
-          <Coffee className="size-5" aria-hidden />
-        )}
-      </button>
-      <div className="min-w-0 flex-1">
-        <p className="guest-menu-name truncate">{branding?.name || branchName || t.restaurant}</p>
-        {branchName && branding?.name && branchName !== branding.name ? (
-          <p className="truncate text-[11px] leading-[13px] text-[var(--guest-faint)]">{branchName}</p>
+          <img src={cover} alt="" onError={() => setCoverFailed(true)} />
         ) : null}
       </div>
-      {tableNumber ? (
-        <span className="guest-badge guest-badge-place shrink-0 gap-1.5">
-          <Users className="size-3" aria-hidden />
-          {placeLabel}
+      <div className="guest-hero-actions">
+        <button type="button" className="guest-hero-btn guest-motion" aria-label={t.openMenu} onClick={openDrawer}>
+          <Menu className="size-5" aria-hidden />
+        </button>
+        <span className="flex-1" />
+        <button
+          type="button"
+          className="guest-hero-btn guest-hero-lang guest-motion"
+          aria-label={t.changeLanguage}
+          onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
+        >
+          {t.language}
+        </button>
+        <button
+          type="button"
+          className="guest-hero-btn guest-motion"
+          aria-label={searchOpen ? t.closeSearch : t.openSearch}
+          aria-pressed={searchOpen}
+          onClick={toggleSearch}
+        >
+          {searchOpen ? <X className="size-5" aria-hidden /> : <Search className="size-5" aria-hidden />}
+        </button>
+      </div>
+      <div className="guest-hero-id">
+        <span className="guest-hero-logo">
+          {logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logo} alt="" onError={() => setLogoFailed(true)} />
+          ) : (
+            <span aria-hidden>{initials}</span>
+          )}
         </span>
-      ) : null}
-      <button
-        type="button"
-        className="guest-menu-search guest-motion"
-        aria-label={t.searchMenu}
-        aria-pressed={searchOpen}
-        onClick={toggleSearch}
-      >
-        <Search className="size-[18px]" aria-hidden />
-      </button>
+        <div className="min-w-0 flex-1">
+          <h1 className="guest-hero-name" dir="auto">
+            {name}
+          </h1>
+          <p className="guest-hero-meta">
+            {branchName && branchName !== name ? <span className="truncate">{branchName}</span> : null}
+            {tableNumber ? (
+              <span className="guest-hero-table">
+                <Users className="size-3.5" aria-hidden />
+                {placeLabel}
+              </span>
+            ) : null}
+          </p>
+        </div>
+      </div>
     </header>
   );
+}
+
+/** The restaurant's theme as CSS variables, also mirrored on body so portaled sheets match. */
+export function useGuestTheme(): GuestTheme {
+  const branding = useGuest((state) => state.branding);
+  const theme = useMemo(() => themeFor(branding), [branding]);
+  useEffect(() => {
+    const body = document.body;
+    for (const [name, value] of Object.entries(theme.vars)) body.style.setProperty(name, value);
+    body.dataset.guestDark = theme.dark ? "true" : "false";
+    return () => {
+      for (const name of Object.keys(theme.vars)) body.style.removeProperty(name);
+      delete body.dataset.guestDark;
+    };
+  }, [theme]);
+  return theme;
+}
+
+/** Restaurant name in the guest's language. */
+export function useBrandName(): string | null {
+  const locale = useGuest((state) => state.locale);
+  const branding = useGuest((state) => state.branding);
+  return brandDisplayName(branding, locale);
 }
 
 export function useGuestCopy() {
@@ -88,7 +144,7 @@ export function useGuestCopy() {
 
 export function useGuestPlaceLabel() {
   const { t } = useGuestCopy();
-  const tableNumber = useGuest((state) => state.session?.tableNumber);
+  const tableNumber = useGuest((state) => state.session?.tableNumber ?? state.tablePreview?.tableNumber);
   return useMemo(() => {
     if (tableNumber) return t.tableLabel.replace("{n}", tableNumber);
     return t.driveThruLabel;
@@ -136,9 +192,10 @@ export function LineDetails({ modifiers, note }: { modifiers: readonly string[];
 
 function BrandHeader() {
   const branding = useGuest((state) => state.branding);
+  const brandName = useBrandName();
   const branchName = useGuest((state) => state.session?.branchName ?? null);
   const [logoFailed, setLogoFailed] = useState(false);
-  const name = branding?.name ?? branchName;
+  const name = brandName ?? branchName;
   const branchCaption = branding?.name && branchName && branchName !== branding.name ? branchName : null;
   if (!name) {
     return <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-2xl" />;
@@ -148,13 +205,15 @@ function BrandHeader() {
   return (
     <span className="inline-flex min-w-0 items-center gap-2.5">
       {logo ? (
-        <span className="guest-thumb flex size-9 shrink-0 items-center justify-center overflow-hidden bg-[var(--guest-sunken)] text-xs font-bold text-[var(--guest-ink)]">
+        <span className="guest-brand-logo size-9">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} alt="" className="size-full object-contain p-0.5" onError={() => setLogoFailed(true)} />
+          <img src={logo} alt="" onError={() => setLogoFailed(true)} />
         </span>
       ) : null}
       <span className="min-w-0">
-        <span className="guest-display block truncate text-[1.25rem]">{name}</span>
+        <span className="guest-display block truncate text-[1.25rem]" dir="auto">
+          {name}
+        </span>
         {branchCaption ? <span className="guest-caption block truncate">{branchCaption}</span> : null}
       </span>
     </span>
@@ -192,10 +251,24 @@ export function RejoinTable({ message }: { message?: string }) {
   );
 }
 
-/** Recovers a dropped guest cookie using the stored table token. */
-export function GuestResume({ children }: { children: ReactNode }) {
+/**
+ * Recovers a dropped guest cookie using the stored table token. With allowPreview, a guest who
+ * scanned a QR but hasn't joined yet still sees the page (the menu browses without a session).
+ */
+/** The visit closed: the table page shows thanks and the receipt; other pages go there. */
+function EndedVisitRedirect({ children }: { children: ReactNode }) {
+  const { t } = useGuestCopy();
+  const onTablePage = typeof window !== "undefined" && window.location.pathname === "/order/track";
+  useEffect(() => {
+    if (!onTablePage) window.location.replace("/order/track");
+  }, [onTablePage]);
+  return onTablePage ? children : <GuestSkeleton label={t.loading} />;
+}
+
+export function GuestResume({ children, allowPreview = false }: { children: ReactNode; allowPreview?: boolean }) {
   const { t } = useGuestCopy();
   const session = useGuest((state) => state.session);
+  const endedVisit = useGuest((state) => state.endedVisit);
   const [ready, setReady] = useState(() => Boolean(useGuest.getState().session));
   const [failed, setFailed] = useState(false);
 
@@ -216,16 +289,12 @@ export function GuestResume({ children }: { children: ReactNode }) {
 
   if (!ready) return <GuestSkeleton label={t.rejoining} />;
   if (session) return children;
+  if (allowPreview && (useGuest.getState().tableToken ?? guestTableToken())) return children;
+  if (endedVisit) return <EndedVisitRedirect>{children}</EndedVisitRedirect>;
   return <RejoinTable message={failed ? t.sessionGone : undefined} />;
 }
 
-export function GuestQueryError({
-  error,
-  onRetry,
-}: {
-  error: unknown;
-  onRetry: () => void;
-}) {
+export function GuestQueryError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   const { t } = useGuestCopy();
   const gone = isGuestSessionGone(error);
   const paused = useOrderingPaused();
@@ -265,15 +334,16 @@ export function GuestQueryError({
   return (
     <div role="alert" className="guest-alert guest-alert-error grid gap-3">
       <h2 className="guest-display text-xl">{t.oopsTitle}</h2>
-      <p className="guest-body">
-        {gone && sessionLive ? t.oops : error instanceof Error ? error.message : t.oops}
-      </p>
+      <p className="guest-body">{gone && sessionLive ? t.oops : error instanceof Error ? error.message : t.oops}</p>
       <button type="button" className={guestPrimaryButton} onClick={onRetry}>
         {t.retry}
       </button>
     </div>
   );
 }
+
+/** Renew well before the 3-hour guest token runs out. */
+const GUEST_TOKEN_REFRESH_MS = 40 * 60 * 1000;
 
 export function GuestShell({
   children,
@@ -292,6 +362,8 @@ export function GuestShell({
   menu?: boolean;
 }) {
   const { t, locale, dir, setLocale } = useGuestCopy();
+  const theme = useGuestTheme();
+  const portalTheme = useGuestThemeProps();
   const paused = useOrderingPaused();
   const placeLabel = useGuestPlaceLabel();
   const tableNumber = useGuest((state) => state.session?.tableNumber);
@@ -304,6 +376,18 @@ export function GuestShell({
   useEffect(() => {
     void useGuest.persist.rehydrate();
   }, []);
+
+  // The guest login lasts a few hours; renew it while the table visit is open so long dinners stay signed in.
+  const liveSessionId = useGuest((state) => state.session?.sessionId ?? null);
+  useEffect(() => {
+    if (!liveSessionId) return;
+    const timer = window.setInterval(() => {
+      void refreshGuestToken().then((result) => {
+        if (result === "ended") markVisitEnded();
+      });
+    }, GUEST_TOKEN_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [liveSessionId]);
 
   function onDrawerAction(action: GuestDrawerAction) {
     if (action === "about") {
@@ -322,86 +406,73 @@ export function GuestShell({
 
   return (
     <MenuChromeContext.Provider value={{ searchOpen, toggleSearch: () => setSearchOpen((open) => !open) }}>
-    <OpenDrawerContext.Provider value={() => setDrawerOpen(true)}>
-    <div dir={dir} lang={locale} className="guest-theme min-h-dvh">
-      <div className="guest-phone">
-        {menu ? <MenuTopBar /> : null}
-        {header && !menu ? <header className="flex items-center justify-between gap-2.5 px-5 pb-1.5 pt-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            {!neutral ? (
-              <button
-                type="button"
-                className="guest-icon-btn guest-motion shrink-0"
-                aria-label={t.openMenu}
-                onClick={() => setDrawerOpen(true)}
-              >
-                <span aria-hidden className="flex flex-col gap-[5px]">
-                  <span className="block h-[2px] w-4 rounded-full bg-current" />
-                  <span className="block h-[2px] w-4 rounded-full bg-current" />
-                  <span className="block h-[2px] w-4 rounded-full bg-current" />
-                </span>
-              </button>
-            ) : null}
-            {neutral ? <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-xl" /> : <BrandHeader />}
-          </div>
-          {!neutral && tableNumber ? (
-            <span className="guest-badge guest-badge-place shrink-0">{placeLabel}</span>
-          ) : null}
-          <button
-            type="button"
-            className="guest-lang guest-motion shrink-0"
-            onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
-          >
-            {t.language}
-          </button>
-        </header> : null}
-        <div
-          className={
-            menu
-              ? "grid min-w-0 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
-              : header
-              ? "grid min-w-0 gap-3 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1"
-              : "flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4"
-          }
-        >
-          {paused ? <OrderingPausedNotice /> : null}
-          <div className={header ? undefined : "flex min-h-0 flex-1 flex-col"}>
-            {resume ? <GuestResume>{children}</GuestResume> : children}
-          </div>
-        </div>
-      </div>
-      {!neutral ? (
-        <>
-          <GuestDrawer
-            open={drawerOpen}
-            onOpenChange={setDrawerOpen}
-            onAction={onDrawerAction}
-            placeLabel={placeLabel}
-          />
-          <Sheet open={aboutOpen} onOpenChange={setAboutOpen}>
-            <SheetContent
-              side="bottom"
-              showCloseButton={false}
-              className="guest-theme guest-sheet guest-phone mx-auto max-h-[90dvh] w-full border-0 p-0"
-            >
-              <div className="flex justify-center pt-3">
-                <div className="guest-sheet-handle" aria-hidden />
-              </div>
-              <SheetTitle className="sr-only">{t.about}</SheetTitle>
-              <GuestAboutPanel placeLabel={placeLabel} />
-              <div className="guest-sheet-footer">
-                <button type="button" className={guestSecondaryButton} onClick={() => setAboutOpen(false)}>
-                  {t.close}
+      <OpenDrawerContext.Provider value={() => setDrawerOpen(true)}>
+        <div dir={dir} lang={locale} className="guest-theme min-h-dvh" data-dark={theme.dark ? "true" : "false"} style={themeStyle(theme)}>
+          <div className="guest-phone">
+            {menu ? <MenuTopBar /> : null}
+            {header && !menu ? (
+              <header className="flex items-center justify-between gap-2.5 px-5 pb-1.5 pt-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                  {!neutral ? (
+                    <button type="button" className="guest-icon-btn guest-motion shrink-0" aria-label={t.openMenu} onClick={() => setDrawerOpen(true)}>
+                      <span aria-hidden className="flex flex-col gap-[5px]">
+                        <span className="block h-[2px] w-4 rounded-full bg-current" />
+                        <span className="block h-[2px] w-4 rounded-full bg-current" />
+                        <span className="block h-[2px] w-4 rounded-full bg-current" />
+                      </span>
+                    </button>
+                  ) : null}
+                  {neutral ? <Logo markClassName="size-7 text-[var(--guest-orange)]" wordClassName="text-xl" /> : <BrandHeader />}
+                </div>
+                {!neutral && tableNumber ? <span className="guest-badge guest-badge-place shrink-0">{placeLabel}</span> : null}
+                <button type="button" className="guest-lang guest-motion shrink-0" onClick={() => setLocale(locale === "ar" ? "en" : "ar")}>
+                  {t.language}
                 </button>
+              </header>
+            ) : null}
+            <div
+              className={
+                menu
+                  ? "grid min-w-0 px-4 pb-[calc(7rem+env(safe-area-inset-bottom))]"
+                  : header
+                    ? "grid min-w-0 gap-3 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-1"
+                    : "flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4"
+              }
+            >
+              {paused ? <OrderingPausedNotice /> : null}
+              <div className={header ? undefined : "flex min-h-0 flex-1 flex-col"}>
+                {resume ? <GuestResume allowPreview={menu}>{children}</GuestResume> : children}
               </div>
-            </SheetContent>
-          </Sheet>
-          <WaiterSheet open={waiterOpen} onOpenChange={setWaiterOpen} />
-          <BillSheet open={billOpen} onOpenChange={setBillOpen} />
-        </>
-      ) : null}
-    </div>
-    </OpenDrawerContext.Provider>
+            </div>
+          </div>
+          {!neutral ? (
+            <>
+              <GuestDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onAction={onDrawerAction} placeLabel={placeLabel} />
+              <Sheet open={aboutOpen} onOpenChange={setAboutOpen}>
+                <SheetContent
+                  side="bottom"
+                  showCloseButton={false}
+                  {...portalTheme}
+                  className="guest-theme guest-sheet guest-phone mx-auto max-h-[90dvh] w-full border-0 p-0"
+                >
+                  <div className="flex justify-center pt-3">
+                    <div className="guest-sheet-handle" aria-hidden />
+                  </div>
+                  <SheetTitle className="sr-only">{t.about}</SheetTitle>
+                  <GuestAboutPanel placeLabel={placeLabel} />
+                  <div className="guest-sheet-footer">
+                    <button type="button" className={guestSecondaryButton} onClick={() => setAboutOpen(false)}>
+                      {t.close}
+                    </button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+              <WaiterSheet open={waiterOpen} onOpenChange={setWaiterOpen} />
+              <PayBillSheet open={billOpen} onOpenChange={setBillOpen} />
+            </>
+          ) : null}
+        </div>
+      </OpenDrawerContext.Provider>
     </MenuChromeContext.Provider>
   );
 }

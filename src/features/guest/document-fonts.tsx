@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 
-/** Puts guest font variables on `body` so portaled toasts can use Cairo and Inter. */
+/** Puts guest font variables on `body` so portaled toasts can use the guest fonts. */
 export function GuestDocumentFonts({ className, children }: { className: string; children: ReactNode }) {
   useEffect(() => {
     const names = className.split(/\s+/).filter(Boolean);

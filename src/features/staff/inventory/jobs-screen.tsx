@@ -42,18 +42,20 @@ export function JobsScreen() {
       {jobs.isError ? <QueryErrorState error={jobs.error} screen={t.tabs.jobs} onRetry={() => void jobs.refetch()} /> : null}
       {jobs.data && jobs.data.length === 0 ? <EmptyState title={t.jobs.empty} body={t.jobs.detail} /> : null}
       {jobs.data && jobs.data.length > 0 ? (
-        <div className="overflow-x-auto bg-canvas">
+        <div className="overflow-x-auto rounded-[16px] border border-border bg-canvas">
           <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead>
-              <tr className="border-b">
+              <tr className="border-b border-border bg-subtle/60">
                 {[t.jobs.order, t.jobs.kind, t.jobs.attempts, t.jobs.error, t.jobs.next].map((label) => (
-                  <th key={label} className="px-3 py-2 text-start font-medium">{label}</th>
+                  <th key={label} className="px-3 py-2 text-start font-medium">
+                    {label}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {jobs.data.map((job) => (
-                <tr key={job.id} className="border-b">
+                <tr key={job.id} className="border-b border-border last:border-b-0">
                   <td className="px-3 py-2 font-mono text-xs">{job.order_id}</td>
                   <td className="px-3 py-2">{job.kind}</td>
                   <td className="px-3 py-2 tabular-nums">{formatQty(job.attempts, locale)}</td>

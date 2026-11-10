@@ -11,6 +11,7 @@ import { dateFilter } from "@/components/ops/kit/date-range";
 import { formatAmount } from "@/components/ops/kit/money";
 import { cairoInclusiveRange } from "@/features/staff/inventory/qty";
 import { browserApi } from "@/lib/api/browser";
+import { fetchWalkouts } from "@/lib/api/visit-reports";
 import { fill } from "@/lib/i18n/dictionary";
 import { formatCount } from "@/lib/i18n/format";
 import { useLocale } from "@/lib/i18n/locale-store";
@@ -48,6 +49,18 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
     }) as const;
   const now = useQuery(dashboard("today", analyticsPeriod(today)));
   const before = useQuery({ ...dashboard("before", { period: "custom", start_date: comparison.from, end_date: comparison.to }), enabled: sales && now.isSuccess });
+
+  // Today's walk-outs ride under the orders tile, only when there were any.
+  const walkouts = useQuery({
+    queryKey: ["reports", "snapshot", "walkouts", branchId, today.from],
+    enabled: sales,
+    retry: false,
+    queryFn: () => {
+      const end = new Date(`${today.to}T00:00:00Z`);
+      end.setUTCDate(end.getUTCDate() + 1);
+      return fetchWalkouts({ branchId, start: `${today.from}T00:00:00Z`, end: end.toISOString() }, t.loadFailed);
+    },
+  });
 
   const lastClose = useQuery({
     queryKey: ["reports", "snapshot", "z", branchId],
@@ -97,6 +110,11 @@ export function HubSnapshot({ sales, till, stock, branchId }: { sales: boolean; 
         value={kpis ? formatCount(kpis.total_orders, locale) : "—"}
         loading={now.isLoading}
         extra={trend(kpis?.total_orders, before.data?.total_orders)}
+        note={
+          walkouts.data && walkouts.data.count > 0
+            ? fill(t.snapshot.walkoutsNote, { count: walkouts.data.count, amount: money(walkouts.data.amount) })
+            : undefined
+        }
       />,
     );
   }

@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, ShieldAlert, CircleCheck } from "lucide-react";
+import { KeyRound, MapPin } from "lucide-react";
 
+import { BottomSheet } from "@/features/guest/bottom-sheet";
 import type { guestCopy } from "@/features/guest/copy";
 import { GuestKeypad } from "@/features/guest/keypad";
+import { GuestMotionSkeleton } from "@/features/guest/guest-motion";
 import {
   decideAfterApiError,
   decideAfterGeolocation,
@@ -15,8 +17,7 @@ import {
   type JoinAction,
 } from "@/features/guest/presence-join";
 import { sessionStillValid, toGuestSession } from "@/features/guest/session";
-import { GuestMotionSkeleton, GuestWelcome } from "@/features/guest/guest-motion";
-import { guestPrimaryButton, useGuestCopy } from "@/features/guest/shell";
+import { guestPrimaryButton, useBrandName, useGuestCopy } from "@/features/guest/shell";
 import type { components } from "@/lib/api/schema";
 import { mergeGuestBranding } from "@/lib/guest/branding";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -24,7 +25,7 @@ import { useGuest } from "@/stores/guest";
 
 type PresenceResponse = Omit<components["schemas"]["TableSessionResponse"], "session_token">;
 type GuestText = (typeof guestCopy)[keyof typeof guestCopy];
-type Step = "landing" | "permission" | "pin" | "blocked" | "joined";
+type Step = "ask" | "pin";
 
 const PIN_LENGTH = 6;
 
@@ -45,25 +46,13 @@ function locationBlockedMessage(reason: "denied" | "timeout" | "unavailable" | "
   return t.locationUnavailable;
 }
 
-function fill(template: string, values: Record<string, string>) {
-  return Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, value), template);
-}
-
-export function PresenceForm({ token }: { token: string }) {
+/**
+ * Scanning a table QR opens the menu straight away. The QR is remembered so the guest can
+ * browse; joining the table (location or PIN) waits until they add something.
+ */
+export function TableEntry({ token }: { token: string }) {
   const router = useRouter();
-  const { t, locale, setLocale } = useGuestCopy();
-  const setSession = useGuest((state) => state.setSession);
-  const storedToken = useGuest((state) => state.tableToken);
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
-  const [step, setStep] = useState<Step>("landing");
-  const [checkingReturn, setCheckingReturn] = useState(true);
-  const [preview, setPreview] = useState<{ branchName: string; tableNumber: string } | null>(null);
-  const [previewSettled, setPreviewSettled] = useState(false);
-  const [joined, setJoined] = useState<{ tableNumber: string; place: string } | null>(null);
-
-  const place = preview?.branchName || t.restaurant;
+  const { t } = useGuestCopy();
 
   useEffect(() => {
     let cancelled = false;
@@ -71,49 +60,58 @@ export function PresenceForm({ token }: { token: string }) {
       await useGuest.persist.rehydrate();
       if (cancelled) return;
       const state = useGuest.getState();
-      if (state.tableToken === token && state.session && (await sessionStillValid())) {
+      // Guests get Arabic unless their phone is in English, until they pick a language themselves.
+      if (!state.localeChosen && typeof navigator !== "undefined") {
+        const english = (navigator.languages?.[0] ?? navigator.language ?? "").toLowerCase().startsWith("en");
+        useGuest.setState({ locale: english ? "en" : "ar" });
+      }
+      const sameTable = state.tableToken === token;
+      if (sameTable && state.session && (await sessionStillValid())) {
         if (!cancelled) router.replace("/order");
         return;
       }
-      if (!cancelled) setCheckingReturn(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, storedToken, router]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const response = await fetch("/api/guest/api/v1/qr/verify", {
-          method: "POST",
-          headers: { "content-type": "application/json", "accept-language": locale },
-          body: JSON.stringify({ token }),
+      if (!sameTable || state.endedVisit) {
+        // A new table, or a new visit at the same table: fresh "Guest N", no leftover receipt.
+        useGuest.setState({
+          session: null,
+          tablePreview: null,
+          cashRequestedOrderId: null,
+          endedVisit: null,
+          guestName: "",
+          ...(sameTable ? {} : { branding: null }),
         });
-        if (!response.ok || cancelled) return;
-        const payload = (await response.json()) as components["schemas"]["QRVerificationResponse"];
-        if (!payload.is_valid || cancelled) return;
-        const branchName = pickLocale(payload.branch_name, locale);
-        setPreview({
-          branchName,
-          tableNumber: payload.table_number ? String(payload.table_number) : "",
-        });
-      } catch {
-        // The landing still works without a label. Joining still requires location or the PIN.
-      } finally {
-        if (!cancelled) setPreviewSettled(true);
       }
+      useGuest.getState().setTableToken(token);
+      if (!cancelled) router.replace("/order");
     })();
     return () => {
       cancelled = true;
     };
-  }, [token, locale]);
+  }, [router, token]);
+
+  return <GuestMotionSkeleton label={t.loading} />;
+}
+
+/** Location first, PIN as the fallback. Calls onJoined once a verified table session exists. */
+function usePresenceJoin(token: string | null, onJoined: () => void) {
+  const { t, locale } = useGuestCopy();
+  const [step, setStep] = useState<Step>("ask");
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+
+  function reset() {
+    setStep("ask");
+    setPin("");
+    setError("");
+    setPending(false);
+  }
 
   async function submit(
     action: JoinAction,
     coords?: { latitude: number; longitude: number; accuracy_m: number | null },
   ) {
+    if (!token) return;
     setPending(true);
     setError("");
     const body: components["schemas"]["TablePresenceVerifyRequest"] = {
@@ -141,27 +139,21 @@ export function PresenceForm({ token }: { token: string }) {
       if (!response.ok) {
         const effect = decideAfterApiError(payload.code, pin.trim());
         if (effect.type === "show_outside") {
-          setStep("blocked");
           setError(t.outside);
           return;
         }
         if (effect.type === "api_error") {
-          if (effect.revealPin && step !== "pin") setStep("blocked");
           setError(joinErrorMessage(effect.code, t));
           return;
         }
         setError(joinErrorMessage(payload.code, t));
         return;
       }
-      const session = toGuestSession(payload);
-      setSession(session);
-      useGuest.getState().setTableToken(token);
-      useGuest.getState().setBranding(mergeGuestBranding(null, payload));
-      const branding = useGuest.getState().branding;
-      const tableNumber = session.tableNumber || preview?.tableNumber || "";
-      const joinedPlace = [branding?.name, session.branchName || preview?.branchName].filter(Boolean).join(" · ");
-      setJoined({ tableNumber, place: joinedPlace });
-      setStep("joined");
+      const state = useGuest.getState();
+      state.setSession(toGuestSession(payload));
+      state.setTableToken(token);
+      state.setBranding(mergeGuestBranding(state.branding, payload));
+      onJoined();
     } catch {
       setError(t.orderingPausedJoin);
     } finally {
@@ -169,7 +161,10 @@ export function PresenceForm({ token }: { token: string }) {
     }
   }
 
-  function applyGeoEffect(action: JoinAction, outcome: ReturnType<typeof geoOutcomeFromPosition> | ReturnType<typeof geoOutcomeFromPositionError> | { kind: "unsupported" }) {
+  function applyGeoEffect(
+    action: JoinAction,
+    outcome: ReturnType<typeof geoOutcomeFromPosition> | ReturnType<typeof geoOutcomeFromPositionError> | { kind: "unsupported" },
+  ) {
     const effect = decideAfterGeolocation(action, outcome, pin.trim());
     if (effect.type === "submit") {
       void submit(effect.action, effect.coords);
@@ -180,33 +175,27 @@ export function PresenceForm({ token }: { token: string }) {
       return;
     }
     setPending(false);
-    if (effect.type === "location_blocked") {
-      setStep("blocked");
-      setError(locationBlockedMessage(effect.reason, t));
-    }
+    if (effect.type === "location_blocked") setError(locationBlockedMessage(effect.reason, t));
   }
 
-  function locate(action: JoinAction) {
+  function locate() {
     setPending(true);
     setError("");
     if (!navigator.geolocation) {
-      applyGeoEffect(action, { kind: "unsupported" });
+      applyGeoEffect("verify", { kind: "unsupported" });
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      (position) =>
         applyGeoEffect(
-          action,
+          "verify",
           geoOutcomeFromPosition({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
           }),
-        );
-      },
-      (err) => {
-        applyGeoEffect(action, geoOutcomeFromPositionError(err?.code));
-      },
+        ),
+      (err) => applyGeoEffect("verify", geoOutcomeFromPositionError(err?.code)),
       { enableHighAccuracy: true, timeout: 8000 },
     );
   }
@@ -218,202 +207,123 @@ export function PresenceForm({ token }: { token: string }) {
     void submit(effect.action);
   }
 
-  if (checkingReturn || !previewSettled) {
-    return <GuestMotionSkeleton label={t.verifying} />;
-  }
+  return { step, setStep, pin, setPin, error, setError, pending, locate, joinWithPin, reset };
+}
+
+/** "Confirm you're at {restaurant}": the one-time presence check, raised by the first add. */
+export function JoinTableSheet({
+  open,
+  onOpenChange,
+  onJoined,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onJoined: () => void;
+}) {
+  const { t, locale } = useGuestCopy();
+  const token = useGuest((state) => state.tableToken);
+  const preview = useGuest((state) => state.tablePreview);
+  const brandName = useBrandName();
+  const place = brandName || preview?.branchName || t.restaurant;
+  const join = usePresenceJoin(token, () => {
+    onOpenChange(false);
+    onJoined();
+  });
+  const { reset } = join;
+  const wasOpen = useRef(open);
+
+  useEffect(() => {
+    if (open && !wasOpen.current) reset();
+    wasOpen.current = open;
+  }, [open, reset]);
+
+  const table = preview?.tableNumber;
+  const body = table ? t.joinBody.replace("{n}", table) : t.joinBodyNoTable;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6">
-      <div className="flex items-center justify-between">
-        {step === "landing" || step === "joined" ? (
-          <span />
-        ) : (
-          <button type="button" className="guest-icon-btn guest-motion" aria-label={t.back} onClick={() => setStep("landing")}>
-            <Chevron />
+    <BottomSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={join.step === "pin" ? t.joinPinTitle : t.joinTitle.replace("{place}", place)}
+      titleHidden
+      footer={
+        join.step === "pin" ? (
+          <button
+            type="button"
+            className={`${guestPrimaryButton} w-full`}
+            disabled={join.pending || join.pin.trim().length !== PIN_LENGTH}
+            onClick={join.joinWithPin}
+          >
+            {join.pending ? t.verifying : t.confirmPin}
           </button>
-        )}
-        <button type="button" className="guest-lang guest-motion" onClick={() => setLocale(locale === "ar" ? "en" : "ar")}>
-          {t.language}
-        </button>
-      </div>
-
-      {step === "landing" ? (
-        <Landing
-          welcome={t.presenceTitle}
-          place={preview?.branchName}
-          body={t.presenceBody}
-          tableNumber={preview?.tableNumber}
-          tableLabel={t.tableLabel}
-          openMenu={t.openMenu}
-          poweredBy={t.poweredBy}
-          onOpen={() => {
-            setError("");
-            setStep("permission");
-          }}
-        />
-      ) : null}
-
-      {step === "permission" ? (
-        <Prompt
-          icon={<MapPin aria-hidden className="size-10 text-[var(--guest-orange-deep)]" />}
-          tone="accent"
-          title={t.confirmHere}
-          body={fill(t.shareLocationBody, { place })}
-          error={error}
-          primary={pending ? t.verifying : t.shareLocation}
-          primaryDisabled={pending}
-          onPrimary={() => locate("verify")}
-          secondary={t.enterPinInstead}
-          onSecondary={() => {
-            setError("");
-            setStep("pin");
-          }}
-        />
-      ) : null}
-
-      {step === "pin" ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-6">
-          <div className="grid gap-2">
-            <h1 className="guest-display guest-display-lg">{t.enterPin}</h1>
-            <p className="guest-body">{t.pinAsk}</p>
-          </div>
-          <GuestKeypad value={pin} onChange={setPin} length={PIN_LENGTH} disabled={pending} />
-          {error ? <p role="alert" className="guest-alert guest-alert-error text-sm">{error}</p> : null}
-          <div className="mt-auto">
+        ) : (
+          <div className="grid gap-1">
+            <button type="button" className={`${guestPrimaryButton} w-full`} disabled={join.pending} onClick={join.locate}>
+              <MapPin className="size-5" aria-hidden />
+              {join.pending ? t.verifying : join.error ? t.joinTryAgain : t.shareLocation}
+            </button>
             <button
               type="button"
-              className={guestPrimaryButton}
-              disabled={pending || pin.trim().length !== PIN_LENGTH}
-              onClick={joinWithPin}
+              className="min-h-12 text-[15px] font-semibold text-[var(--guest-brand-text)]"
+              onClick={() => {
+                join.setError("");
+                join.setStep("pin");
+              }}
             >
-              {pending ? t.verifying : t.confirmPin}
+              {t.joinUsePin}
             </button>
           </div>
-        </div>
-      ) : null}
-
-      {step === "blocked" ? (
-        <Prompt
-          icon={<ShieldAlert aria-hidden className="size-10 text-[var(--guest-error)]" />}
-          tone="error"
-          title={t.blockedTitle}
-          body={error || fill(t.blockedBody, { place })}
-          primary={pending ? t.verifying : t.retry}
-          primaryDisabled={pending}
-          onPrimary={() => locate("verify")}
-          secondary={t.enterPin}
-          onSecondary={() => {
-            setError("");
-            setStep("pin");
-          }}
-        />
-      ) : null}
-
-      {step === "joined" && joined ? (
-        <Prompt
-          icon={<CircleCheck aria-hidden className="size-10 text-[var(--guest-sage)]" />}
-          tone="ok"
-          title={fill(t.joinedTitle, { n: joined.tableNumber })}
-          body={joined.place}
-          primary={t.seeMenu}
-          onPrimary={() => router.push("/order")}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function Chevron() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5 rtl:scale-x-[-1]" fill="none" aria-hidden>
-      <path d="M14.5 6.5 9 12l5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function Landing({
-  welcome,
-  place,
-  body,
-  tableNumber,
-  tableLabel,
-  openMenu,
-  poweredBy,
-  onOpen,
-}: {
-  welcome: string;
-  place?: string;
-  body: string;
-  tableNumber?: string;
-  tableLabel: string;
-  openMenu: string;
-  poweredBy: string;
-  onOpen: () => void;
-}) {
-  return (
-    <GuestWelcome
-      kicker={place ? welcome : undefined}
-      title={place || welcome}
-      body={place ? undefined : body}
-      badge={tableNumber ? fill(tableLabel, { n: tableNumber }) : undefined}
+        )
+      }
     >
-      <button type="button" className={guestPrimaryButton} onClick={onOpen}>
-        {openMenu}
-      </button>
-      <p className="text-center text-[11px] text-[var(--guest-faint)]">{poweredBy}</p>
-    </GuestWelcome>
+      {join.step === "pin" ? (
+        <div className="grid gap-5 pb-2">
+          <div className="grid gap-1.5 text-center">
+            <span className="guest-join-icon mx-auto">
+              <KeyRound className="size-7" aria-hidden />
+            </span>
+            <h2 className="guest-sheet-title">{t.joinPinTitle}</h2>
+            <p className="guest-body text-[15px]">{t.joinPinBody}</p>
+          </div>
+          <GuestKeypad value={join.pin} onChange={join.setPin} length={PIN_LENGTH} disabled={join.pending} />
+          {join.error ? (
+            <p role="alert" className="guest-alert guest-alert-error text-sm">
+              {join.error}
+            </p>
+          ) : null}
+          <button type="button" className="min-h-11 text-sm font-semibold text-[var(--guest-quiet)]" onClick={() => join.setStep("ask")}>
+            {t.back}
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-4 pb-2 text-center" lang={locale}>
+          <span className="guest-join-icon mx-auto">
+            <MapPin className="size-7" aria-hidden />
+          </span>
+          <div className="grid gap-1.5">
+            <h2 className="guest-sheet-title">{t.joinTitle.replace("{place}", place)}</h2>
+            <p className="guest-body text-[15px] leading-relaxed">{body}</p>
+          </div>
+          {join.error ? (
+            <p role="alert" className="guest-alert guest-alert-error text-start text-sm">
+              {join.error}
+            </p>
+          ) : null}
+        </div>
+      )}
+    </BottomSheet>
   );
 }
 
-function Prompt({
-  icon,
-  tone,
-  title,
-  body,
-  error,
-  primary,
-  primaryDisabled,
-  onPrimary,
-  secondary,
-  onSecondary,
-}: {
-  icon: ReactNode;
-  tone: "accent" | "error" | "ok";
-  title: string;
-  body: string;
-  error?: string;
-  primary: string;
-  primaryDisabled?: boolean;
-  onPrimary: () => void;
-  secondary?: string;
-  onSecondary?: () => void;
-}) {
-  const circle =
-    tone === "error"
-      ? "bg-[var(--guest-error-soft)]"
-      : tone === "ok"
-        ? "bg-[var(--guest-success-soft)]"
-        : "bg-[var(--guest-orange-soft)]";
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-2 text-center">
-        <div className={`flex size-[8.75rem] items-center justify-center rounded-full ${circle}`}>{icon}</div>
-        <div className="grid gap-2">
-          <h1 className="guest-display guest-display-lg">{title}</h1>
-          {body ? <p className="guest-body">{body}</p> : null}
-        </div>
-        {error ? <p role="alert" className="guest-alert guest-alert-error text-start text-sm">{error}</p> : null}
-      </div>
-      <div className="grid gap-3">
-        <button type="button" className={guestPrimaryButton} disabled={primaryDisabled} onClick={onPrimary}>
-          {primary}
-        </button>
-        {secondary && onSecondary ? (
-          <button type="button" className="min-h-11 text-[15px] font-semibold text-[var(--guest-orange-deep)]" onClick={onSecondary}>
-            {secondary}
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
+/** Branch and table for the header before the guest joins, from the QR preview. */
+export function previewFromQr(
+  payload: { branch_id: string; table_number: string; branch_name: unknown; ordering_paused?: unknown },
+  locale: "en" | "ar",
+) {
+  return {
+    branchId: payload.branch_id,
+    tableNumber: String(payload.table_number ?? ""),
+    branchName: pickLocale(payload.branch_name as Parameters<typeof pickLocale>[0], locale),
+    orderingPaused: payload.ordering_paused === true,
+  };
 }

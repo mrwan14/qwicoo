@@ -1,9 +1,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Coffee, Croissant, Flame, Leaf, Plus, Sandwich, ShoppingBag, Sparkles, type LucideIcon } from "lucide-react";
+import { ChevronRight, ShoppingBag } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { toast } from "sonner";
 
 import { Money } from "@/components/ops/money";
@@ -11,19 +11,21 @@ import {
   addGuestCartItem,
   isCartConflict,
   patchGuestCartItem,
+  lineBelongsToGuest,
   removeGuestCartItem,
   type GuestCartItem,
 } from "@/features/guest/cart-client";
 import { branchUnitPrice, quotedOrderTotal } from "@/features/guest/guest-prices";
 import { itemNeedsOptions } from "@/features/guest/item-options";
-import { ItemSheet, NicknameSheet } from "@/features/guest/item-sheet";
+import { ItemSheet } from "@/features/guest/item-sheet";
+import { AddControl, FeaturedCard, ItemRow, badgeLabels, isFeaturedItem } from "@/features/guest/menu-parts";
 import { GuestReveal } from "@/features/guest/guest-motion";
 import { GuestSkeleton, useOrderingPaused } from "@/features/guest/ordering-status";
+import { JoinTableSheet, previewFromQr } from "@/features/guest/presence-form";
 import { rememberPaymobOffer, resumeIfSessionGone } from "@/features/guest/session";
 import {
   GuestQueryError,
   PresenceNote,
-  guestField,
   guestSecondaryButton,
   useAbsorbBranding,
   useGuestCopy,
@@ -32,161 +34,29 @@ import {
 import { useCartActivity } from "@/features/guest/use-cart-activity";
 import { useCategoryScrollSpy } from "@/features/guest/use-category-scrollspy";
 import { useGuestOrderQuote, type QuoteItemInput } from "@/features/guest/use-guest-quote";
-import { useSharedCart } from "@/features/guest/use-shared-cart";
+import { ensureGuestName, latestCartVersion, useSharedCart } from "@/features/guest/use-shared-cart";
 import { asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import type { components } from "@/lib/api/schema";
+import { comboSaving } from "@/lib/combo-saving";
+import { formatMoney } from "@/lib/format/money";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { mediaUrl } from "@/lib/media";
 import { useGuest } from "@/stores/guest";
 
 type MenuItem = components["schemas"]["MenuItemResponse"];
 
+/** Id of the Offers section the guest menu builds from every combo. Not a real category id. */
+const OFFERS_SECTION_ID = "offers";
+
+const isComboItem = (item: MenuItem) => item.item_type.toUpperCase() === "COMBO";
+
 function optionName(value: unknown, locale: "en" | "ar") {
   return pickLocale(value, locale);
 }
 
-/** Painted on the element so the circle stays visible even if a width rule clips it. */
-function guestAddStyle(disabled: boolean): CSSProperties {
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxSizing: "border-box",
-    width: 44,
-    height: 44,
-    minWidth: 44,
-    minHeight: 44,
-    padding: 0,
-    border: "none",
-    borderRadius: 999,
-    background: disabled ? "var(--guest-tint)" : "var(--guest-orange)",
-    color: disabled ? "var(--guest-faint)" : "var(--guest-on-accent)",
-    boxShadow: disabled ? "none" : "0 6px 14px color-mix(in srgb, var(--guest-orange) 35%, transparent)",
-    fontSize: 24,
-    lineHeight: 1,
-    flexShrink: 0,
-    cursor: disabled ? "not-allowed" : "pointer",
-  };
-}
+const qty = (line: GuestCartItem | undefined) => line?.quantity ?? 0;
 
-const ROW_TONES = [
-  { bg: "var(--guest-success-soft)", color: "var(--guest-sage)", Icon: Leaf },
-  { bg: "var(--guest-orange-soft)", color: "var(--guest-orange)", Icon: Croissant },
-  { bg: "var(--guest-tint)", color: "var(--guest-quiet)", Icon: Sandwich },
-] as const;
-
-function rowTone(index: number, soldOut: boolean) {
-  if (soldOut) return { bg: "var(--guest-tint)", color: "var(--guest-faint)", Icon: Sandwich };
-  return ROW_TONES[index % ROW_TONES.length];
-}
-
-function itemBadge(item: MenuItem): "popular" | "fresh" | null {
-  const extra = item as MenuItem & { tags?: string[] | null; dietary_badges?: string[] | null };
-  const tags = [...(extra.tags ?? []), ...(extra.dietary_badges ?? [])].map((tag) => tag.toLowerCase());
-  if (tags.some((tag) => tag.includes("popular") || tag.includes("best"))) return "popular";
-  if (tags.some((tag) => tag === "new" || tag.includes("fresh"))) return "fresh";
-  return null;
-}
-
-function DishCard({
-  featured,
-  soldOut,
-  image,
-  title,
-  description,
-  badge,
-  signature,
-  popular,
-  fresh,
-  price,
-  qty,
-  tone,
-  action,
-}: {
-  featured: boolean;
-  soldOut: boolean;
-  image: string | null;
-  title: string;
-  description: string;
-  badge: "popular" | "fresh" | null;
-  signature: string;
-  popular: string;
-  fresh: string;
-  price: ReactNode;
-  qty: number;
-  tone: { bg: string; color: string; Icon: LucideIcon };
-  action: ReactNode;
-}) {
-  const qtyMark =
-    qty > 0 ? (
-      <span className="guest-pill absolute end-2.5 top-2.5 z-10 flex size-5 items-center justify-center bg-[var(--guest-orange)] text-[10px] font-bold text-white">
-        {qty}
-      </span>
-    ) : null;
-  if (featured) {
-    return (
-      <li className="guest-item-card" data-featured="true" data-soldout={soldOut ? "true" : "false"}>
-        <div className="guest-feature-media">
-          {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={image} alt="" className="absolute inset-0 size-full object-cover" />
-          ) : (
-            <Coffee className="size-11" aria-hidden />
-          )}
-          <span className="guest-badge guest-badge-signature absolute start-2.5 top-2.5">★ {signature}</span>
-          {qtyMark}
-        </div>
-        <div className="guest-feature-body">
-          <p className="guest-feature-title">{title}</p>
-          {description ? <p className="guest-row-copy line-clamp-2">{description}</p> : null}
-          <div className="mt-1 flex items-center justify-between gap-3">
-            <div className="min-w-0">{price}</div>
-            {action}
-          </div>
-        </div>
-      </li>
-    );
-  }
-  const Icon = tone.Icon;
-  return (
-    <li className="guest-item-card" data-soldout={soldOut ? "true" : "false"}>
-      <div className="guest-thumb relative size-[84px] shrink-0" style={{ background: tone.bg, color: tone.color }}>
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="size-full object-cover" />
-        ) : (
-          <Icon className="size-7" aria-hidden />
-        )}
-        {qty > 0 ? (
-          <span className="guest-pill absolute -end-1.5 -top-1.5 z-10 flex size-5 items-center justify-center bg-[var(--guest-orange)] text-[10px] font-bold text-white">
-            {qty}
-          </span>
-        ) : null}
-      </div>
-      <div className="guest-item-copy grid gap-1">
-        <p className="guest-row-title">{title}</p>
-        {description ? <p className="guest-row-copy line-clamp-2">{description}</p> : null}
-        {badge === "popular" ? (
-          <span className="guest-badge guest-badge-popular w-fit">
-            <Flame className="size-2.5" aria-hidden />
-            {popular}
-          </span>
-        ) : null}
-        {badge === "fresh" ? <span className="guest-badge guest-badge-fresh w-fit">{fresh}</span> : null}
-        {price}
-      </div>
-      {action}
-    </li>
-  );
-}
-
-function lineBelongsToGuest(line: GuestCartItem, guestId: string | null, guestName: string) {
-  if (guestId && line.guest_id && line.guest_id === guestId) return true;
-  const name = guestName.trim().toLowerCase();
-  if (!name) return false;
-  return (line.nickname || line.guest_name || "").trim().toLowerCase() === name;
-}
 
 function simpleLineForItem(
   items: readonly GuestCartItem[],
@@ -218,14 +88,10 @@ export function MenuScreen() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
-  const [pendingAfterName, setPendingAfterName] = useState<
-    { mode: "quick"; itemId: string } | { mode: "options"; itemId: string } | null
-  >(null);
-  const [nameOpen, setNameOpen] = useState(false);
   const optionsTriggerRef = useRef<HTMLElement | null>(null);
-  const pendingRef = useRef<{ mode: "quick"; itemId: string } | { mode: "options"; itemId: string } | null>(null);
-  const savingName = useRef(false);
   const tapOrigin = useRef<{ x: number; y: number } | null>(null);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const pendingJoin = useRef<{ mode: "quick"; itemId: string } | { run: () => void } | null>(null);
   const tapStamp = useRef(0);
   const paused = useOrderingPaused();
 
@@ -260,7 +126,36 @@ export function MenuScreen() {
     },
   });
 
-  useAbsorbBranding(branchMenu.data);
+  // Before joining, the menu comes from the scanned QR (read-only, no session).
+  const tableToken = useGuest((state) => state.tableToken);
+  const preview = useQuery({
+    queryKey: ["guest-qr-menu", tableToken, locale],
+    enabled: !session && Boolean(tableToken),
+    staleTime: 60_000,
+    queryFn: async () => {
+      const response = await fetch("/api/guest/api/v1/qr/menu", {
+        method: "POST",
+        headers: { "content-type": "application/json", "accept-language": locale },
+        body: JSON.stringify({ token: tableToken }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw asApiError(payload, response, t.oops, locale);
+      return payload as {
+        branch_id: string;
+        table_number: string;
+        branch_name: unknown;
+        tree: NonNullable<typeof menu.data>;
+        branch_menu: NonNullable<typeof branchMenu.data>;
+      };
+    },
+  });
+  const menuData = menu.data ?? preview.data?.tree;
+  const branchData = branchMenu.data ?? preview.data?.branch_menu;
+  useEffect(() => {
+    if (preview.data) useGuest.getState().setTablePreview(previewFromQr(preview.data, locale));
+  }, [locale, preview.data]);
+
+  useAbsorbBranding(branchData);
   useEffect(() => {
     rememberPaymobOffer(menu.data);
     rememberPaymobOffer(branchMenu.data);
@@ -276,37 +171,50 @@ export function MenuScreen() {
 
   const branchPrices = useMemo(() => {
     const prices = new Map<string, string>();
-    for (const category of branchMenu.data?.categories ?? []) {
+    for (const category of branchData?.categories ?? []) {
       for (const item of category.items ?? []) {
         prices.set(item.id, branchUnitPrice({ base_price: item.base_price, final_price: item.final_price }));
       }
     }
     return prices;
-  }, [branchMenu.data]);
+  }, [branchData]);
 
   const items = useMemo(() => {
     const list: MenuItem[] = [];
-    for (const category of menu.data?.categories ?? []) {
+    for (const category of menuData?.categories ?? []) {
       for (const item of category.items ?? []) list.push(item);
     }
     return list;
-  }, [menu.data]);
+  }, [menuData]);
+  const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
 
   const query = search.trim().toLowerCase();
   const filteredCategories = useMemo(() => {
-    return (menu.data?.categories ?? [])
-      .map((category) => ({
-        ...category,
-        items: (category.items ?? []).filter((item) => matchesSearch(item, query, locale)),
-      }))
-      .filter((category) => (category.items?.length ?? 0) > 0);
-  }, [locale, menu.data?.categories, query]);
+    // Every combo is pulled into one Offers section at the top, whatever category staff filed it under.
+    const offers: MenuItem[] = [];
+    const regular = (menuData?.categories ?? []).map((category) => ({
+      ...category,
+      items: (category.items ?? []).filter((item) => {
+        if (!matchesSearch(item, query, locale)) return false;
+        if (isComboItem(item)) {
+          offers.push(item);
+          return false;
+        }
+        return true;
+      }),
+    }));
+    const offersSection =
+      offers.length > 0 && menuData
+        ? [{ ...regular[0], id: OFFERS_SECTION_ID, branch_id: menuData.branch_id, name: t.offers, display_order: -1, image_url: null, items: offers }]
+        : [];
+    return [...offersSection, ...regular.filter((category) => (category.items?.length ?? 0) > 0)];
+  }, [locale, menuData, query, t.offers]);
 
   const categoryIds = useMemo(() => filteredCategories.map((category) => category.id), [filteredCategories]);
   const { activeId: activeCategoryId, registerTab, scrollToCategory } = useCategoryScrollSpy(categoryIds);
 
   const active = items.find((item) => item.id === activeId) ?? null;
-  const currency = branchMenu.data?.currency || "EGP";
+  const currency = branchData?.currency || "EGP";
   const cartQuoteItems = useMemo<QuoteItemInput[] | null>(() => {
     const lines = cart.data?.items ?? [];
     if (lines.length === 0) return null;
@@ -322,6 +230,7 @@ export function MenuScreen() {
 
   const quickAdd = useMutation({
     mutationFn: async (item: MenuItem) => {
+      await nameGuest();
       const name = useGuest.getState().guestName.trim();
       const price = branchPrices.get(item.id);
       if (!price) throw new Error(t.validate);
@@ -335,15 +244,12 @@ export function MenuScreen() {
         notes: null,
         modifiers: [],
       };
-      const latest =
-        queryClient.getQueryData<{ version?: number }>(["guest-cart", session?.sessionId])?.version ??
-        cart.data?.version ??
-        1;
-      return addGuestCartItem(session?.sessionId ?? "", latest, body, locale, t.oops);
+      const latest = await latestCartVersion(queryClient, locale, t.oops);
+      return addGuestCartItem(useGuest.getState().session?.sessionId ?? "", latest, body, locale, t.oops);
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["guest-cart", session?.sessionId], data);
-      toast.success(t.added);
+      queryClient.setQueryData(["guest-cart", useGuest.getState().session?.sessionId], data);
+      // No toast: the stepper, the count and the order bar already confirm the add.
     },
     onError: (error: Error) => {
       void resumeIfSessionGone(error).then(async (gone) => {
@@ -360,17 +266,14 @@ export function MenuScreen() {
 
   const adjustQty = useMutation({
     mutationFn: async ({ line, next }: { line: GuestCartItem; next: number }) => {
-      const version =
-        queryClient.getQueryData<{ version?: number }>(["guest-cart", session?.sessionId])?.version ??
-        cart.data?.version ??
-        1;
+      const version = await latestCartVersion(queryClient, locale, t.oops);
       if (next <= 0) {
-        return removeGuestCartItem(session?.sessionId ?? "", line.id, version, locale, t.oops);
+        return removeGuestCartItem(useGuest.getState().session?.sessionId ?? "", line.id, version, locale, t.oops);
       }
-      return patchGuestCartItem(session?.sessionId ?? "", line.id, version, next, locale, t.oops);
+      return patchGuestCartItem(useGuest.getState().session?.sessionId ?? "", line.id, version, next, locale, t.oops);
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["guest-cart", session?.sessionId], data);
+      queryClient.setQueryData(["guest-cart", useGuest.getState().session?.sessionId], data);
     },
     onError: (error: Error) => {
       void resumeIfSessionGone(error).then(async (gone) => {
@@ -395,23 +298,38 @@ export function MenuScreen() {
     if (item) quickAdd.mutate(item);
   }
 
+  /** Browsing needs nothing; the first add asks the guest to confirm they're at the table. */
   function requireNameThen(next: { mode: "quick"; itemId: string } | { mode: "options"; itemId: string }) {
-    if (guestName.trim()) {
-      openOrAdd(next);
+    if (!useGuest.getState().session) {
+      if (next.mode === "options") {
+        // Looking at an item is still browsing: open it; adding from the sheet asks to join.
+        window.setTimeout(() => setActiveId(next.itemId), 0);
+        return;
+      }
+      pendingJoin.current = next;
+      window.setTimeout(() => setJoinOpen(true), 0);
       return;
     }
-    pendingRef.current = next;
-    setPendingAfterName(next);
-    window.setTimeout(() => setNameOpen(true), 0);
+    nameAndGo(next);
   }
 
-  function onNicknameSaved() {
-    savingName.current = true;
-    const pending = pendingRef.current ?? pendingAfterName;
-    pendingRef.current = null;
-    setPendingAfterName(null);
-    if (!pending) return;
-    openOrAdd(pending);
+  /** No name prompt: a guest who hasn't picked a name becomes the next free "Guest N" (renamable in the cart). */
+  const nameGuest = () => ensureGuestName(queryClient, locale, t.oops, t.defaultGuest);
+
+  function nameAndGo(next: { mode: "quick"; itemId: string } | { mode: "options"; itemId: string }) {
+    // Quick adds name the guest inside the mutation, after the cart has loaded.
+    if (next.mode === "options") void nameGuest();
+    openOrAdd(next);
+  }
+
+  /** The item sheet's add: join the table first when needed, then add with a name. */
+  function beforeSheetAdd(add: () => void) {
+    if (useGuest.getState().session) {
+      void nameGuest().then(add);
+      return;
+    }
+    pendingJoin.current = { run: () => void nameGuest().then(add) };
+    setJoinOpen(true);
   }
 
   function onAddPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
@@ -439,17 +357,20 @@ export function MenuScreen() {
     run();
   }
 
-  if (!session) return null;
-  if (menu.isLoading || branchMenu.isLoading) return <GuestSkeleton label={t.loading} />;
-  if (menu.isError) {
-    return <GuestQueryError error={menu.error} onRetry={() => void menu.refetch()} />;
-  }
-  if (branchMenu.isError) {
-    return <GuestQueryError error={branchMenu.error} onRetry={() => void branchMenu.refetch()} />;
+  if (!menuData || !branchData) {
+    if (session && menu.isError) return <GuestQueryError error={menu.error} onRetry={() => void menu.refetch()} />;
+    if (session && branchMenu.isError) {
+      return <GuestQueryError error={branchMenu.error} onRetry={() => void branchMenu.refetch()} />;
+    }
+    if (!session && preview.isError) return <GuestQueryError error={preview.error} onRetry={() => void preview.refetch()} />;
+    return <GuestSkeleton label={t.loading} />;
   }
 
+  const tap = { onPointerDown: onAddPointerDown, onPointerUp: onAddPointerUp, onClick: onAddClick };
+  const addLabels = { add: t.add, fewer: t.fewer, more: t.more };
+
   return (
-    <div className="grid min-w-0 max-w-full gap-0">
+    <div className="grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-0">
       <PresenceNote />
       {remoteNote ? (
         <p role="status" className="mb-3 guest-card px-4 py-3 text-sm">
@@ -457,48 +378,30 @@ export function MenuScreen() {
         </p>
       ) : null}
 
-      {!searchOpen && !query ? (
-        <div className="guest-promo">
-          <span className="guest-promo-icon" aria-hidden>
-            <Sparkles className="size-[18px]" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-semibold leading-4">{t.promoTitle}</span>
-            <span className="mt-0.5 block truncate text-[11px] leading-[13px] text-[var(--guest-quiet)]">{t.promoBody}</span>
-          </span>
-          <ChevronRight className="size-[18px] shrink-0 rtl:-scale-x-100" aria-hidden />
-        </div>
-      ) : null}
-
-      <div className="sticky top-0 z-20 -mx-5 min-w-0 max-w-[calc(100%+2.5rem)] bg-[var(--guest-canvas)] px-5 pb-2 pt-2">
+      <div className="guest-menu-sticky">
         {searchOpen ? (
-          <label className="guest-search mb-2.5 block">
+          <label className="guest-search-bar">
             <span className="sr-only">{t.searchMenu}</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden className="size-[18px] shrink-0 text-[var(--guest-quiet)]">
+              <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" />
+              <path d="M16.2 16.2 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
             <input
               ref={searchRef}
-              className={guestField}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={t.searchMenu}
               autoComplete="off"
+              enterKeyHint="search"
             />
             {search ? (
-              <button
-                type="button"
-                className="absolute end-1 top-1/2 z-10 inline-flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center px-3 text-xs font-semibold text-[var(--guest-quiet)]"
-                onClick={() => setSearch("")}
-              >
+              <button type="button" className="guest-search-clear" onClick={() => setSearch("")}>
                 {t.clearSearch}
               </button>
-            ) : (
-              <svg className="guest-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" />
-                <path d="M16.2 16.2 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            )}
+            ) : null}
           </label>
         ) : null}
-        <div className="guest-cat-strip flex gap-2.5 overflow-x-auto" role="tablist" aria-label={t.menu}>
+        <div className="guest-cat-strip flex gap-2 overflow-x-auto" role="tablist" aria-label={t.menu}>
           {filteredCategories.map((category) => {
             const active = activeCategoryId === category.id;
             return (
@@ -520,160 +423,129 @@ export function MenuScreen() {
       </div>
 
       {filteredCategories.length === 0 ? (
-        <div className="grid gap-3 py-16 text-center">
-          <p className="guest-display guest-display-lg">{t.searchEmpty}</p>
+        <div className="grid justify-items-center gap-4 py-16 text-center">
+          <p className="guest-title">{t.noResults.replace("{q}", search.trim())}</p>
           <button type="button" className={guestSecondaryButton} onClick={() => setSearch("")}>
             {t.clearSearch}
           </button>
         </div>
       ) : (
-        <GuestReveal className="mt-3 grid gap-3.5" stagger={0.05} y={12}>
-          {filteredCategories.map((category) => (
-            <section
-              key={category.id}
-              id={`cat-${category.id}`}
-              data-guest-reveal
-              className="scroll-mt-16 grid gap-3.5"
-            >
-              <h2 className="sr-only">{optionName(category.name, locale)}</h2>
-              <ul className="grid gap-3.5">
-                {(category.items ?? []).map((item, itemIndex) => {
-                  const image = mediaUrl(item.image_url);
-                  const title = optionName(item.name, locale);
-                  const description = item.description ? optionName(item.description, locale) : "";
-                  const needsOptions = itemNeedsOptions(item);
-                  const ownLine = simpleLineForItem(
-                    cart.data?.items ?? [],
-                    item.id,
-                    session.guestId,
-                    guestName,
-                  );
-                  const qty = ownLine?.quantity ?? 0;
-                  const soldOut = !item.is_available;
-                  const featured =
-                    !query &&
-                    category.id === filteredCategories[0]?.id &&
-                    item.is_available &&
-                    item.id === (filteredCategories[0]?.items ?? []).find((entry) => entry.is_available)?.id;
-                  const price = (
-                    <>
-                      {branchPrices.get(item.id) ? (
-                        <p
-                          className={
-                            featured
-                              ? "guest-price guest-price-accent text-base leading-none"
-                              : "guest-price guest-row-price leading-none"
-                          }
-                          dir="ltr"
-                        >
-                          <Money amount={branchPrices.get(item.id) ?? ""} currency={currency} locale={locale} />
-                        </p>
-                      ) : (
-                        <p className="guest-caption">{t.validate}</p>
-                      )}
-                      {needsOptions && !soldOut ? (
-                        <p className="guest-caption mt-1 text-[var(--guest-orange-deep)]">* {t.requiredOptions}</p>
-                      ) : null}
-                    </>
-                  );
-                  const action = soldOut ? (
-                    <span className="guest-badge guest-badge-soldout shrink-0">{t.unavailable}</span>
-                  ) : (
-                    <div className="guest-item-action">
-                              {needsOptions ? (
-                                <button
-                                  type="button"
-                                  className="guest-add guest-motion"
-                                  style={guestAddStyle(paused)}
-                                  aria-label={t.chooseOptions}
-                                  disabled={paused}
-                                  ref={(node) => {
-                                    optionsTriggerRef.current = node;
-                                  }}
-                                  onPointerDown={onAddPointerDown}
-                                  onPointerUp={(event) =>
-                                    onAddPointerUp(event, () => requireNameThen({ mode: "options", itemId: item.id }))
-                                  }
-                                  onClick={(event) =>
-                                    onAddClick(event, () => requireNameThen({ mode: "options", itemId: item.id }))
-                                  }
-                                >
-                                  <Plus className="size-5" aria-hidden />
-                                </button>
-                              ) : qty > 0 && ownLine ? (
-                                <div className="guest-stepper">
-                                  <button
-                                    type="button"
-                                    aria-label={t.fewer}
-                                    disabled={adjustQty.isPending || paused}
-                                    onPointerDown={onAddPointerDown}
-                                    onPointerUp={(event) =>
-                                      onAddPointerUp(event, () => adjustQty.mutate({ line: ownLine, next: qty - 1 }))
-                                    }
-                                    onClick={(event) =>
-                                      onAddClick(event, () => adjustQty.mutate({ line: ownLine, next: qty - 1 }))
-                                    }
-                                  >
-                                    −
-                                  </button>
-                                  <span>{qty}</span>
-                                  <button
-                                    type="button"
-                                    aria-label={t.more}
-                                    disabled={adjustQty.isPending || paused || quickAdd.isPending}
-                                    onPointerDown={onAddPointerDown}
-                                    onPointerUp={(event) =>
-                                      onAddPointerUp(event, () => adjustQty.mutate({ line: ownLine, next: qty + 1 }))
-                                    }
-                                    onClick={(event) =>
-                                      onAddClick(event, () => adjustQty.mutate({ line: ownLine, next: qty + 1 }))
-                                    }
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="guest-add guest-motion"
-                                  style={guestAddStyle(paused || quickAdd.isPending)}
-                                  aria-label={t.add}
-                                  disabled={paused || quickAdd.isPending}
-                                  onPointerDown={onAddPointerDown}
-                                  onPointerUp={(event) =>
-                                    onAddPointerUp(event, () => requireNameThen({ mode: "quick", itemId: item.id }))
-                                  }
-                                  onClick={(event) =>
-                                    onAddClick(event, () => requireNameThen({ mode: "quick", itemId: item.id }))
-                                  }
-                                >
-                                  <Plus className="size-5" aria-hidden />
-                                </button>
-                              )}
-                    </div>
-                  );
-                  return (
-                    <DishCard
-                      key={item.id}
-                      featured={Boolean(featured)}
-                      soldOut={soldOut}
-                      image={image}
-                      title={title}
-                      description={description && description !== title ? description : ""}
-                      badge={featured ? null : itemBadge(item)}
-                      signature={t.signature}
-                      popular={t.popular}
-                      fresh={t.fresh}
-                      price={price}
-                      qty={qty}
-                      tone={rowTone(itemIndex, soldOut)}
-                      action={action}
-                    />
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
+        <GuestReveal className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-7" stagger={0.05} y={12}>
+          {filteredCategories.map((category) => {
+            // Sold-out items sink to the end of their section; a "signature" item leads it.
+            const list = [...(category.items ?? [])].sort((a, b) => Number(!a.is_available) - Number(!b.is_available));
+            const hero = query ? null : list.find((item) => item.is_available && isFeaturedItem(item.dietary_badges));
+            const rows = hero ? list.filter((item) => item !== hero) : list;
+
+            const render = (item: MenuItem) => {
+              const image = mediaUrl(item.image_url);
+              const title = optionName(item.name, locale);
+              const rawDescription = item.description ? optionName(item.description, locale) : "";
+              const needsOptions = itemNeedsOptions(item);
+              const ownLine = simpleLineForItem(cart.data?.items ?? [], item.id, session?.guestId ?? null, guestName);
+              const ownTotal = (cart.data?.items ?? [])
+                .filter((line) => line.item_id === item.id && lineBelongsToGuest(line, session?.guestId ?? null, guestName))
+                .reduce((sum, line) => sum + line.quantity, 0);
+              const soldOut = !item.is_available;
+              const saving = comboSaving(branchPrices.get(item.id), item.combo_regular_price);
+              const includes = (item.combo_items ?? [])
+                .map((part) => {
+                  const name = optionName(itemsById.get(part.item_id)?.name, locale);
+                  return name && part.quantity > 1 ? `${part.quantity}× ${name}` : name;
+                })
+                .filter(Boolean)
+                .join(" + ");
+              const description = includes
+                ? t.comboIncludes.replace("{items}", includes)
+                : rawDescription && rawDescription !== title
+                  ? rawDescription
+                  : "";
+              const deal = saving && saving.percent > 0 && !soldOut ? t.comboSave.replace("{n}", String(saving.percent)) : null;
+              const price = branchPrices.get(item.id) ? (
+                <span className="flex flex-wrap items-baseline gap-x-2" dir="ltr">
+                  <span className="guest-price">
+                    <Money amount={branchPrices.get(item.id) ?? ""} currency={currency} locale={locale} />
+                  </span>
+                  {saving ? (
+                    <span className="guest-price-was">
+                      <span className="sr-only">{t.comboWas} </span>
+                      <Money amount={saving.regular} currency={currency} locale={locale} />
+                    </span>
+                  ) : null}
+                </span>
+              ) : (
+                <span className="guest-caption">{t.validate}</span>
+              );
+              const note = saving ? (
+                <p className="guest-deal-note">{t.comboSaveAmount.replace("{amount}", formatMoney(saving.saving, currency, locale))}</p>
+              ) : null;
+              const openSheet = () => requireNameThen({ mode: "options", itemId: item.id });
+              const action = (
+                <AddControl
+                  qty={needsOptions ? ownTotal : qty(ownLine)}
+                  disabled={paused}
+                  busy={quickAdd.isPending || adjustQty.isPending}
+                  labels={needsOptions ? { ...addLabels, add: t.chooseOptions } : addLabels}
+                  tap={tap}
+                  triggerRef={(node) => {
+                    if (needsOptions && node) optionsTriggerRef.current = node;
+                  }}
+                  onAdd={needsOptions ? openSheet : () => requireNameThen({ mode: "quick", itemId: item.id })}
+                  onLess={!needsOptions && ownLine ? () => adjustQty.mutate({ line: ownLine, next: ownLine.quantity - 1 }) : undefined}
+                  onMore={!needsOptions && ownLine ? () => adjustQty.mutate({ line: ownLine, next: ownLine.quantity + 1 }) : undefined}
+                />
+              );
+              return { image, title, description, soldOut, price, note, deal, action, openSheet };
+            };
+
+            return (
+              <section key={category.id} id={`cat-${category.id}`} data-guest-reveal className="grid min-w-0 scroll-mt-[7.5rem] grid-cols-[minmax(0,1fr)] gap-3">
+                <header className="guest-section-title">
+                  <h2>{optionName(category.name, locale)}</h2>
+                  <span>{t.itemCount.replace("{n}", String(list.length))}</span>
+                </header>
+                {hero
+                  ? (() => {
+                      const view = render(hero);
+                      return (
+                        <FeaturedCard
+                          title={view.title}
+                          description={view.description}
+                          image={view.image}
+                          label={t.signature}
+                          price={view.price}
+                          action={view.action}
+                          onOpen={view.openSheet}
+                        />
+                      );
+                    })()
+                  : null}
+                {rows.length > 0 ? (
+                  <ul className="guest-list">
+                    {rows.map((item) => {
+                      const view = render(item);
+                      return (
+                        <ItemRow
+                          key={item.id}
+                          title={view.title}
+                          description={view.description}
+                          image={view.image}
+                          badges={badgeLabels(item.dietary_badges, locale)}
+                          price={view.price}
+                          note={view.note}
+                          deal={view.deal}
+                          soldOut={view.soldOut}
+                          soldOutLabel={t.soldOutToday}
+                          action={view.action}
+                          onOpen={view.openSheet}
+                        />
+                      );
+                    })}
+                  </ul>
+                ) : null}
+              </section>
+            );
+          })}
         </GuestReveal>
       )}
 
@@ -691,19 +563,22 @@ export function MenuScreen() {
         branchPrice={active ? branchPrices.get(active.id) ?? null : null}
         cartVersion={cart.data?.version ?? 1}
         triggerRef={optionsTriggerRef}
+        onBeforeAdd={beforeSheetAdd}
       />
 
-      <NicknameSheet
-        open={nameOpen}
+      <JoinTableSheet
+        open={joinOpen}
         onOpenChange={(open) => {
-          setNameOpen(open);
-          if (!open && !savingName.current) {
-            pendingRef.current = null;
-            setPendingAfterName(null);
-          }
-          savingName.current = false;
+          setJoinOpen(open);
+          if (!open && !useGuest.getState().session) pendingJoin.current = null;
         }}
-        onSaved={onNicknameSaved}
+        onJoined={() => {
+          const next = pendingJoin.current;
+          pendingJoin.current = null;
+          // Give the new session a tick to reach the queries, then do what the guest tapped.
+          if (!next) return;
+          window.setTimeout(() => ("run" in next ? next.run() : nameAndGo(next)), 0);
+        }}
       />
 
       {cartCount > 0 ? (
@@ -729,7 +604,7 @@ export function MenuScreen() {
                 ) : null}
               </span>
               <span className="guest-cart-go text-sm font-semibold">
-                {t.viewCart}
+                {t.viewOrder}
                 <ChevronRight className="size-4 rtl:-scale-x-100" aria-hidden />
               </span>
             </Link>

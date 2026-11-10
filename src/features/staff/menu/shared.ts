@@ -132,3 +132,19 @@ export function findItem(tree: components["schemas"]["MenuTreeResponse"] | undef
   }
   return null;
 }
+
+/** Brand menus (on and off), with is_live worked out in the current branch's local time. */
+export function useBrandMenus(failed: string, enabled = true) {
+  const brandId = useScope((state) => state.brandId);
+  const branchId = useScope((state) => state.branchId);
+  return useQuery({
+    queryKey: ["menus", brandId, branchId, "all"],
+    enabled: enabled && Boolean(brandId),
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/menus", { params: { query: { active_only: false, branch_id: branchId ?? undefined } } });
+      if (result.response.status === 404) return [];
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, failed);
+      return result.data;
+    },
+  });
+}

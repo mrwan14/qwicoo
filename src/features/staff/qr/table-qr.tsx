@@ -1,8 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Copy, Download } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,12 +16,11 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 type Table = components["schemas"]["TableDetailResponse"];
 type QrText = (typeof qrCopy)["en"];
 
-/** Shared by Settings → Tables & QR and the branch Tables tab so both stay in step. */
 /** Side by side when the card has room, stacked when it doesn't. */
 const actionRow = "flex flex-wrap gap-2 [&>button]:flex-1 [&>button]:basis-28";
 
 export const qrButton =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-staff border border-border bg-canvas px-2.5 text-sm whitespace-nowrap text-ink hover:bg-subtle [&_svg]:shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:text-disabled disabled:hover:bg-canvas";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-border bg-canvas px-4 text-sm whitespace-nowrap text-ink hover:bg-subtle [&_svg]:shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:text-disabled disabled:hover:bg-canvas";
 
 export async function copyText(text: string, success: string, failed: string) {
   try {
@@ -42,7 +41,12 @@ export function saveBlob(blob: Blob, filename: string) {
 }
 
 function fileSafe(value: string) {
-  return value.trim().replace(/[^a-z0-9-_]+/gi, "-").replace(/^-+|-+$/g, "") || "table";
+  return (
+    value
+      .trim()
+      .replace(/[^a-z0-9-_]+/gi, "-")
+      .replace(/^-+|-+$/g, "") || "table"
+  );
 }
 
 export function tableQrFilename(table: Pick<Table, "table_number">) {
@@ -116,65 +120,8 @@ export function DownloadAllQrButton({ tableIds }: { tableIds: string[] | null })
   );
 }
 
-/** Guest link line plus Copy link and Download. The PNG loads on the first Download tap. */
-export function TableQrActions({ table }: { table: Table }) {
-  const t = useStaffSection(qrCopy);
-  const queryClient = useQueryClient();
-  const link = useTableQrLink(table.id);
-  const download = useMutation({
-    mutationFn: async () => {
-      const blob = await queryClient.fetchQuery(tableQrImageQuery(table.id, t));
-      saveBlob(blob, tableQrFilename(table));
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
-  return (
-    <div className="grid gap-2">
-      <GuestLinkLine link={link} />
-      <div className={actionRow}>
-        <button
-          type="button"
-          className={qrButton}
-          disabled={!link.data}
-          onClick={() => link.data && void copyText(link.data, fill(t.copied, { label: t.guestLink }), t.copyFailed)}
-        >
-          <Copy aria-hidden className="size-4" />
-          {t.copyLink}
-        </button>
-        <button type="button" className={qrButton} disabled={download.isPending} onClick={() => download.mutate()}>
-          <Download aria-hidden className="size-4" />
-          {download.isPending ? t.preparing : t.download}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function GuestLinkLine({ link }: { link: ReturnType<typeof useTableQrLink> }) {
-  const t = useStaffSection(qrCopy);
-  if (link.data) {
-    return (
-      <code dir="ltr" className="block truncate rounded-staff bg-subtle px-3 py-2 text-start text-xs text-ink" title={link.data}>
-        {link.data}
-      </code>
-    );
-  }
-  if (link.isError) {
-    return (
-      <p role="alert" className="flex flex-wrap items-center gap-x-2 text-sm text-danger">
-        {link.error.message}
-        <button type="button" className="text-ink underline underline-offset-4" onClick={() => void link.refetch()}>
-          {t.retry}
-        </button>
-      </p>
-    );
-  }
-  return <Skeleton className="h-9 w-full" />;
-}
-
 /** Settings → Tables & QR card: the printable preview with the same actions. */
-export function TableQrCard({ table }: { table: Table }) {
+export function TableQrCard({ table, status, detail }: { table: Table; status?: ReactNode; detail?: string }) {
   const t = useStaffSection(qrCopy);
   const link = useTableQrLink(table.id);
   const image = useTableQrImage(table.id);
@@ -189,12 +136,15 @@ export function TableQrCard({ table }: { table: Table }) {
   const error = image.error ?? link.error;
 
   return (
-    <article className="grid gap-3 rounded-staff border border-border bg-canvas p-4">
-      <header className="flex items-baseline justify-between gap-2">
-        <h3 className="text-[length:var(--text-20)] font-semibold">{fill(t.tableTitle, { number: table.table_number })}</h3>
-        <span className="truncate text-xs text-ink-secondary">{table.zone_name}</span>
+    <article className="grid gap-3 rounded-[14px] border border-border bg-canvas p-4 transition-shadow hover:shadow-[0_4px_14px_rgb(0_0_0/0.06)]">
+      <header className="flex items-start justify-between gap-2">
+        <div className="grid min-w-0 gap-0.5">
+          <h3 className="text-lg leading-tight font-semibold">{fill(t.tableTitle, { number: table.table_number })}</h3>
+          <span className="truncate text-xs text-ink-secondary">{detail ?? table.zone_name}</span>
+        </div>
+        {status}
       </header>
-      <div className="grid aspect-square place-items-center overflow-hidden rounded-staff border bg-white">
+      <div className="mx-auto grid aspect-square w-full max-w-[200px] place-items-center overflow-hidden rounded-[12px] border border-border bg-white p-2">
         {src ? (
           // Blob URLs from the QR export are not a remote image host, so next/image cannot optimize them.
           // eslint-disable-next-line @next/next/no-img-element
@@ -206,7 +156,7 @@ export function TableQrCard({ table }: { table: Table }) {
         )}
       </div>
       {link.data ? (
-        <code className="line-clamp-2 rounded-staff bg-muted px-3 py-2 text-xs break-all" title={link.data}>
+        <code dir="ltr" className="block truncate rounded-[10px] bg-subtle px-3 py-2 text-start text-xs" title={link.data}>
           {link.data}
         </code>
       ) : link.isLoading ? (
@@ -214,7 +164,12 @@ export function TableQrCard({ table }: { table: Table }) {
       ) : null}
       {error instanceof Error ? <p className="text-sm text-danger">{error.message}</p> : null}
       <div className={actionRow}>
-        <button type="button" className={qrButton} disabled={!link.data} onClick={() => link.data && void copyText(link.data, fill(t.copied, { label: t.guestLink }), t.copyFailed)}>
+        <button
+          type="button"
+          className={qrButton}
+          disabled={!link.data}
+          onClick={() => link.data && void copyText(link.data, fill(t.copied, { label: t.guestLink }), t.copyFailed)}
+        >
           <Copy aria-hidden className="size-4" />
           {t.copyLink}
         </button>

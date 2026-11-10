@@ -1,6 +1,8 @@
 import { inventoryErrorCatalog } from "@/features/staff/inventory/errors";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
+import { invalidFields, withFields } from "./invalid-fields";
+
 type Catalog = {
   en: string;
   /** Guest-facing Arabic copy. Matches the API catalog so a translated reply maps back to its code. */
@@ -537,10 +539,18 @@ export class ApiError extends Error {
   }
 }
 
+/** The API's own machine code (e.g. PROMO_CODE_EXPIRED), even when this file has no copy for it. */
+function apiCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const value = "code" in error ? error.code : null;
+  return typeof value === "string" && /^[A-Z][A-Z0-9_]{2,63}$/.test(value) ? value : null;
+}
+
 export function asApiError(error: unknown, response: Response, fallback: string, locale: LocaleCode = "en"): ApiError {
   const raw = rawDetail(error);
-  const code = errorCode(raw) ?? (response.status === 410 ? "GUEST_SESSION_ENDED" : null);
-  return new ApiError(response.status, friendlyMessage(raw ?? code, fallback, locale), code);
+  const code = errorCode(raw) ?? apiCode(error) ?? (response.status === 410 ? "GUEST_SESSION_ENDED" : null);
+  const message = friendlyMessage(raw ?? code, fallback, locale);
+  return new ApiError(response.status, code === "INPUT_VALIDATION_FAILED" ? withFields(message, invalidFields(error)) : message, code);
 }
 
 /** The API refused this caller's role, as opposed to a scope, network, or data problem. */

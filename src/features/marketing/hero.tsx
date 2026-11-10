@@ -1,6 +1,9 @@
 "use client";
 
+import { MessageCircle } from "lucide-react";
+
 import { AnimatedLogo, usePrefersReducedMotion } from "@/components/brand/animated-logo";
+import { OPEN_ASSISTANT_EVENT, whatsappHref } from "@/features/marketing/contact";
 import { landingCopy } from "@/features/marketing/copy";
 import { withoutMotion } from "@/features/marketing/motion";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
@@ -64,31 +67,38 @@ export function Hero({ locale }: { locale: LocaleCode }) {
           detail={t.chips.grill.detail}
         />
 
-        <div className="relative z-[1] mx-auto w-[min(720px,80vw)]">
+        <div className="relative z-[1] mx-auto w-[min(340px,62vw)]">
           <AnimatedLogo />
         </div>
-        <h1 className="relative z-[1] mx-auto mt-8 max-w-[740px] text-[clamp(20px,2.1vw,29px)] leading-snug font-medium text-ink">
-          {t.titleLead} <b className="font-semibold text-signal-new">{t.titleNew}</b> {t.titleTo}{" "}
-          <b className="font-semibold text-[var(--cooking-text)]">{t.titleCooking}</b> {t.titleTo}{" "}
-          <b className="font-semibold text-sage-deep">{t.titleReady}</b> {t.titleTail}
-        </h1>
+        <p className="relative z-[1] mt-6 text-xs font-bold tracking-[0.14em] text-sage-deep uppercase">{t.eyebrow}</p>
+        <h1 className="qw-display relative z-[1] mx-auto mt-4 max-w-[980px] text-[clamp(32px,4.4vw,64px)] leading-[1.05] text-ink">{t.title}</h1>
+        <p className="relative z-[1] mx-auto mt-5 max-w-[680px] text-[clamp(16px,1.5vw,20px)] leading-relaxed text-quiet">{t.subtitle}</p>
         <div className="relative z-[1] mt-8 flex flex-wrap justify-center gap-3">
           <a href="#partner" className={`inline-flex min-h-[52px] items-center bg-ink px-6 text-[15px] font-semibold text-canvas ${FOCUS}`}>
             {t.primary}
           </a>
           <a
-            href="#partner"
+            href={whatsappHref(landingCopy[locale].partner.waMessage)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-flex min-h-[52px] items-center gap-2 bg-[#1f7a4d] px-6 text-[15px] font-semibold text-white ${FOCUS}`}
+          >
+            <MessageCircle aria-hidden className="size-5" />
+            {t.whatsapp}
+          </a>
+          <button
+            type="button"
             className={`inline-flex min-h-[52px] items-center border-2 border-ink bg-transparent px-6 text-[15px] font-semibold text-ink ${FOCUS}`}
+            onClick={() => window.dispatchEvent(new Event(OPEN_ASSISTANT_EVENT))}
           >
             {t.ask}
-          </a>
+          </button>
         </div>
-        <ul className="relative z-[1] mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] text-quiet">
-          <Signal swatch="bg-signal-new" label={t.signals.new} />
-          <Signal swatch="bg-signal-wip" label={t.signals.cooking} />
-          <Signal swatch="bg-signal-done" label={t.signals.ready} />
+        <ul className="relative z-[1] mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] font-medium text-quiet">
+          <Signal swatch="bg-signal-done" label={t.signals.commission} />
+          <Signal swatch="bg-signal-wip" label={t.signals.setup} />
+          <Signal swatch="bg-signal-new" label={t.signals.devices} />
           <li>{t.signals.languages}</li>
-          <li>{t.signals.prices}</li>
         </ul>
       </div>
 
@@ -127,7 +137,7 @@ function Chip({
 }) {
   return (
     <p
-      className={`absolute z-[2] items-center gap-2.5 border border-ink px-3.5 py-2.5 text-[13px] font-semibold whitespace-nowrap max-[900px]:px-2 max-[900px]:py-1.5 max-[900px]:text-[11px] max-[900px]:shadow-[4px_4px_0_var(--ink)] ${dark ? "bg-ink text-canvas shadow-[6px_6px_0_var(--sage)]" : "bg-white text-ink shadow-[6px_6px_0_var(--ink)]"} ${className}`}
+      className={`absolute z-[2] items-center gap-2.5 max-[600px]:!hidden border border-ink px-3.5 py-2.5 text-[13px] font-semibold whitespace-nowrap max-[900px]:px-2 max-[900px]:py-1.5 max-[900px]:text-[11px] max-[900px]:shadow-[4px_4px_0_var(--ink)] ${dark ? "bg-ink text-canvas shadow-[6px_6px_0_var(--sage)]" : "bg-white text-ink shadow-[6px_6px_0_var(--ink)]"} ${className}`}
     >
       <i aria-hidden className={`inline-block size-3 ${tone}`} />
       <Mixed>{label}</Mixed>

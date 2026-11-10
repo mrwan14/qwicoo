@@ -4,37 +4,27 @@ import { useEffect, useRef } from "react";
 
 import { AnswerBlock } from "@/components/assistant/answer-block";
 import type { AssistantAnswerView } from "@/components/assistant/model";
+import { AskQwicooMark } from "@/components/brand/ask-mark";
 
 export type ChatMessage =
   | { id: string; role: "user"; content: string }
   | { id: string; role: "assistant"; answer: AssistantAnswerView; receivedAt?: number };
 
+/** Chat bubbles: the visitor on the end side in ink, Qwicoo on the start side with its mark. */
 export function MessageList({
   messages,
   pending,
   typingLabel,
-  pendingStep,
   youLabel,
   assistantLabel,
   sourcesLabel,
-  scopeLabel,
-  liveLabel,
-  updatedTemplate,
-  askAgainLabel,
-  onAskAgain,
 }: {
   messages: ChatMessage[];
   pending: boolean;
   typingLabel: string;
-  pendingStep?: string;
   youLabel: string;
   assistantLabel: string;
   sourcesLabel: string;
-  scopeLabel?: string;
-  liveLabel?: string;
-  updatedTemplate?: string;
-  askAgainLabel?: string;
-  onAskAgain?: () => void;
 }) {
   const end = useRef<HTMLLIElement>(null);
 
@@ -43,40 +33,34 @@ export function MessageList({
   }, [messages, pending]);
 
   return (
-    <ol className="grid content-start gap-3">
+    <ol className="grid content-start gap-4">
       {messages.map((message) =>
         message.role === "user" ? (
-          <li key={message.id} className="asst-fade ms-auto max-w-[80%] border border-qw-line bg-canvas px-3.5 py-2.5 text-sm font-medium text-ink">
+          <li key={message.id} className="asst-rise ms-auto max-w-[85%] rounded-[18px] rounded-ee-[6px] bg-brand px-4 py-2.5 text-sm text-on-brand">
             <span className="sr-only">{youLabel}: </span>
-            <p className="whitespace-pre-wrap leading-6">{message.content}</p>
+            <p className="leading-6 whitespace-pre-wrap">{message.content}</p>
           </li>
         ) : (
-          <li key={message.id} className="me-auto w-full max-w-full">
-            <span className="sr-only">{assistantLabel}: </span>
-            <AnswerBlock
-              answer={message.answer}
-              sourcesLabel={sourcesLabel}
-              receivedAt={message.receivedAt}
-              scopeLabel={scopeLabel}
-              liveLabel={liveLabel}
-              updatedTemplate={updatedTemplate}
-              askAgainLabel={askAgainLabel}
-              onAskAgain={onAskAgain}
-            />
+          <li key={message.id} className="asst-rise flex items-start gap-2.5">
+            <AskQwicooMark size={28} className="mt-0.5" />
+            <div className="qw-chat-answer min-w-0 flex-1 rounded-[18px] rounded-ss-[6px] bg-[var(--chat-surface,#fff)] px-4 py-3 shadow-[0_1px_2px_rgb(0_0_0/0.06)] ring-1 ring-qw-line">
+              <span className="sr-only">{assistantLabel}: </span>
+              <AnswerBlock answer={message.answer} sourcesLabel={sourcesLabel} />
+            </div>
           </li>
         ),
       )}
       {pending ? (
-        <li className="asst-fade me-auto grid gap-2" role="status">
-          <div className="asst-bar w-24" />
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <li className="asst-rise flex items-center gap-2.5" role="status">
+          <AskQwicooMark size={28} thinking />
+          <span className="inline-flex items-center gap-1.5 rounded-[18px] rounded-ss-[6px] bg-[var(--chat-surface,#fff)] px-4 py-3.5 ring-1 ring-qw-line">
             <span className="inline-flex items-center gap-1" aria-hidden>
               <i className="asst-dot" />
               <i className="asst-dot" />
               <i className="asst-dot" />
             </span>
-            <span>{pendingStep ?? typingLabel}</span>
-          </div>
+            <span className="sr-only">{typingLabel}</span>
+          </span>
         </li>
       ) : null}
       <li ref={end} aria-hidden className="h-0" />

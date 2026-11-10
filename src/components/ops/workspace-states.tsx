@@ -4,26 +4,44 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { AnimatedLogo } from "@/components/brand/animated-logo";
+import { LOGO_SURFACE } from "@/components/brand/logo-assets";
 import { Button } from "@/components/ops/kit/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { commonCopy } from "@/lib/i18n/staff/common";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { DENIED_PARAM } from "@/lib/auth/scope";
 import { endStaffSession } from "@/lib/auth/session-client";
 
+// The login page's Qwicoo surface: warm canvas with the landing page's 72px line grid.
+// The animated logo blends with `darken`, so it needs LOGO_SURFACE behind it.
+const BRAND_SURFACE = {
+  backgroundColor: LOGO_SURFACE,
+  backgroundImage: "linear-gradient(var(--qw-line) 1px, transparent 1px), linear-gradient(90deg, var(--qw-line) 1px, transparent 1px)",
+  backgroundSize: "72px 72px",
+};
+
+/** The three Qwicoo signal colours (new · in progress · done), pulsing in turn. */
+const DOTS = ["bg-signal-new", "bg-signal-wip", "bg-signal-done"] as const;
+
 /** Shown until `/auth/me` resolves, so no dashboard renders before the scope is known. */
 export function WorkspaceLoading() {
   const t = useStaffSection(commonCopy);
   return (
-    <main className="grid min-h-dvh place-items-center bg-subtle px-6">
-      <div role="status" aria-live="polite" className="grid w-full max-w-xs justify-items-center gap-5">
-        <span className="flex size-10 items-center justify-center rounded-staff bg-ink font-title text-xl font-semibold text-on-ink motion-safe:animate-pulse">
-          <span aria-hidden>Q</span>
-        </span>
-        <p className="text-base font-medium text-ink">{t.workspaceReady}</p>
-        <div className="grid w-full gap-2">
-          <Skeleton className="h-2.5 w-full rounded-staff" />
-          <Skeleton className="h-2.5 w-2/3 justify-self-center rounded-staff" />
+    <main className="grid min-h-dvh place-items-center px-6" style={BRAND_SURFACE}>
+      <div role="status" aria-live="polite" className="grid w-full max-w-sm justify-items-center gap-6">
+        {/* Play only the settle at the end of the logo animation, as the QR splash does. */}
+        <AnimatedLogo className="w-[min(280px,70vw)]" startAt={2.1} />
+        <div className="grid justify-items-center gap-3">
+          <p className="text-base font-medium text-ink">{t.workspaceReady}</p>
+          <span aria-hidden className="flex items-center gap-2">
+            {DOTS.map((dot, index) => (
+              <i
+                key={dot}
+                className={`size-2.5 ${dot} motion-safe:animate-pulse`}
+                style={{ animationDelay: `${index * 200}ms` }}
+              />
+            ))}
+          </span>
         </div>
       </div>
     </main>
@@ -36,7 +54,7 @@ export function NoWorkspace() {
   return (
     <main className="grid min-h-dvh place-items-center bg-subtle px-4">
       <div className="grid w-full max-w-[400px] gap-5 rounded-staff border border-border bg-canvas p-8">
-        <span className="flex size-9 items-center justify-center rounded-staff bg-ink font-title text-xl font-semibold text-on-ink">
+        <span className="flex size-9 items-center justify-center rounded-staff bg-brand font-title text-xl font-semibold text-on-brand">
           <span aria-hidden>Q</span>
         </span>
         <div className="grid gap-1.5">

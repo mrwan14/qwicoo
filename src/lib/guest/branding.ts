@@ -7,8 +7,14 @@
  */
 export type GuestBranding = {
   name: string | null;
+  /** Arabic restaurant name, when the brand has one. */
+  nameAr?: string | null;
   logoUrl: string | null;
+  /** Wide photo behind the menu header. */
+  coverUrl?: string | null;
   accent: string | null;
+  /** Restaurant theme: a preset id, or custom brand/background colours. */
+  theme?: { preset: string | null; brand: string | null; background: string | null } | null;
 };
 
 /** Warm page background (`--background`). Brand accents must hold 3:1 against it. */
@@ -63,9 +69,18 @@ function fromOne(payload: unknown): Partial<GuestBranding> {
   if (!root) return {};
   const brand = record(root.brand);
   const theme = record(root.theme_config) ?? record(brand?.theme_config);
+  const guestTheme = record(root.brand_theme) ?? record(root.guest_theme);
+  const chosen = guestTheme
+    ? { preset: text(guestTheme.preset), brand: text(guestTheme.brand_color), background: text(guestTheme.background_color) }
+    : theme && (theme.preset || theme.background_color)
+      ? { preset: text(theme.preset), brand: text(theme.primary_color), background: text(theme.background_color) }
+      : undefined;
   return {
     name: text(root.brand_name) ?? text(brand?.name) ?? undefined,
+    nameAr: text(root.brand_name_ar) ?? undefined,
     logoUrl: text(root.brand_logo_url) ?? text(brand?.logo_url) ?? text(root.logo_url) ?? undefined,
+    coverUrl: text(root.brand_cover_url) ?? text(root.cover_image_url) ?? text(brand?.cover_image_url) ?? undefined,
+    theme: chosen,
     accent:
       usableAccent(root.accent_color) ??
       usableAccent(root.brand_accent_color) ??
@@ -77,16 +92,32 @@ function fromOne(payload: unknown): Partial<GuestBranding> {
 
 /** Later payloads fill gaps left by earlier ones; they never erase a known value. */
 export function mergeGuestBranding(current: GuestBranding | null, ...payloads: unknown[]): GuestBranding {
-  const next: GuestBranding = { name: null, logoUrl: null, accent: null, ...current };
+  const next: GuestBranding = { name: null, nameAr: null, logoUrl: null, coverUrl: null, accent: null, theme: null, ...current };
   for (const payload of payloads) {
     const found = fromOne(payload);
     next.name ??= found.name ?? null;
+    next.nameAr ??= found.nameAr ?? null;
     next.logoUrl ??= found.logoUrl ?? null;
+    next.coverUrl ??= found.coverUrl ?? null;
     next.accent ??= found.accent ?? null;
+    next.theme ??= found.theme ?? null;
   }
   return next;
 }
 
 export function sameBranding(a: GuestBranding | null, b: GuestBranding | null): boolean {
-  return a?.name === b?.name && a?.logoUrl === b?.logoUrl && a?.accent === b?.accent;
+  return (
+    a?.name === b?.name &&
+    a?.nameAr === b?.nameAr &&
+    a?.logoUrl === b?.logoUrl &&
+    a?.coverUrl === b?.coverUrl &&
+    a?.accent === b?.accent &&
+    JSON.stringify(a?.theme ?? null) === JSON.stringify(b?.theme ?? null)
+  );
+}
+
+/** The restaurant's name in the guest's language, falling back to the other one. */
+export function brandDisplayName(branding: GuestBranding | null, locale: "en" | "ar"): string | null {
+  if (!branding) return null;
+  return (locale === "ar" ? branding.nameAr || branding.name : branding.name || branding.nameAr) ?? null;
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getGuestCart, isCartConflict } from "@/features/guest/cart-client";
+import { getGuestCart, isCartConflict, nextGuestName, type GuestCartItem } from "@/features/guest/cart-client";
 import { useGuestCopy } from "@/features/guest/shell";
 import { usePollingInterval } from "@/hooks/use-page-visible";
 import { useGuest } from "@/stores/guest";
@@ -49,4 +49,38 @@ export function useSharedCart() {
     dismissRemoteNote,
     noteConflict,
   };
+}
+
+/**
+ * The table cart's current version for a write. Right after joining, the shared cart may
+ * already hold other guests' items, so fetch it once instead of guessing version 1.
+ */
+export async function latestCartVersion(
+  queryClient: QueryClient,
+  locale: "en" | "ar",
+  fallback: string,
+): Promise<number> {
+  const sessionId = useGuest.getState().session?.sessionId;
+  if (!sessionId) return 1;
+  const cached = queryClient.getQueryData<{ version?: number }>(["guest-cart", sessionId]);
+  if (cached?.version != null) return cached.version;
+  const fresh = await queryClient.fetchQuery({
+    queryKey: ["guest-cart", sessionId],
+    queryFn: () => getGuestCart(sessionId, locale, fallback),
+  });
+  return fresh.version ?? 1;
+}
+
+/** Give a guest who hasn't picked a name the next free "Guest N", after loading the table's cart. */
+export async function ensureGuestName(
+  queryClient: QueryClient,
+  locale: "en" | "ar",
+  fallback: string,
+  template: string,
+): Promise<void> {
+  if (useGuest.getState().guestName.trim()) return;
+  await latestCartVersion(queryClient, locale, fallback);
+  const sessionId = useGuest.getState().session?.sessionId;
+  const lines = queryClient.getQueryData<{ items?: GuestCartItem[] }>(["guest-cart", sessionId])?.items ?? [];
+  if (!useGuest.getState().guestName.trim()) useGuest.getState().setGuestName(nextGuestName(lines, template));
 }

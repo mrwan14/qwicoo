@@ -24,12 +24,31 @@
 
 @keyframes asst-dot {
   0%,
+  80%,
   100% {
-    opacity: 0.25;
+    opacity: 0.35;
+    transform: translateY(0);
   }
-  50% {
+  40% {
     opacity: 1;
+    transform: translateY(-3px);
   }
+}
+
+/* Messages and suggestions rise in softly. */
+@keyframes asst-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.asst-rise {
+  animation: asst-rise-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .asst-fade {
@@ -37,18 +56,22 @@
 }
 
 .asst-dot {
-  width: 7px;
-  height: 7px;
-  background: var(--amber);
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--orange);
   animation: asst-dot 1.2s ease-in-out infinite;
 }
 
+/* The three dots use the order colours: new, cooking, ready. */
 .asst-dot:nth-child(2) {
-  animation-delay: 0.2s;
+  background: var(--amber);
+  animation-delay: 0.15s;
 }
 
 .asst-dot:nth-child(3) {
-  animation-delay: 0.4s;
+  background: var(--sage);
+  animation-delay: 0.3s;
 }
 
 .asst-bar {
@@ -58,7 +81,53 @@
   animation: asst-fade-in 150ms ease both;
 }
 
+/* The floating chat opens from the launcher corner. */
+@keyframes asst-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.qw-chat-pop {
+  transform-origin: bottom right;
+  animation: asst-pop-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+[dir="rtl"] .qw-chat-pop {
+  transform-origin: bottom left;
+}
+
+/* Answers inside the public chat bubble: no inner frame, soft tables and source pills. */
+.qw-chat-answer article {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.qw-chat-answer table {
+  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--qw-line);
+}
+
+.qw-chat-answer thead tr {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+.qw-chat-answer article span.border {
+  border-radius: 999px;
+  padding-inline: 10px;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .qw-chat-pop,
+  .asst-rise,
   .asst-fade,
   .asst-dot,
   .asst-bar {

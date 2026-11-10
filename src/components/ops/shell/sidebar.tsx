@@ -46,21 +46,21 @@ const ICONS: Record<SidebarKey, LucideIcon> = {
   audit: ShieldCheck,
 };
 
-/** Ink square with the brand's first letter, or its logo when one is uploaded. */
+/** Ink square with the brand's first letter, or its logo (filling the square, centred) when one is uploaded. */
 export function BrandMark({ name, logoUrl, size = "md" }: { name: string; logoUrl?: string | null; size?: "sm" | "md" }) {
   const [failed, setFailed] = useState(false);
   const logo = logoUrl && !failed ? mediaUrl(logoUrl) : null;
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden rounded-staff bg-ink font-title font-semibold text-on-ink",
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-staff bg-brand font-title font-semibold text-on-brand",
         size === "sm" ? "size-7 text-base" : "size-8 text-lg",
         logo && "border border-border bg-canvas",
       )}
     >
       {logo ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={logo} alt="" className="size-full object-contain" onError={() => setFailed(true)} />
+        <img src={logo} alt="" className="block size-full max-w-none object-cover object-center" onError={() => setFailed(true)} />
       ) : (
         <span aria-hidden>{initials(name).slice(0, 1)}</span>
       )}
@@ -91,12 +91,15 @@ function SidebarLink({
   entry,
   active,
   badge,
+  badgeLabel,
   collapsed,
   onNavigate,
 }: {
   entry: SidebarEntry;
   active: boolean;
   badge?: number;
+  /** What the count means, for screen readers. Defaults to "to confirm". */
+  badgeLabel?: string;
   collapsed: boolean;
   onNavigate?: () => void;
 }) {
@@ -114,7 +117,7 @@ function SidebarLink({
       className={cn(
         "relative flex min-h-9 items-center gap-3 rounded-staff px-2.5 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus",
         collapsed && "justify-center px-0",
-        active ? "bg-ink font-semibold text-on-ink shadow-card" : "text-ink-secondary hover:bg-well hover:text-ink",
+        active ? "bg-brand font-semibold text-on-brand shadow-card" : "text-ink-secondary hover:bg-well hover:text-ink",
       )}
     >
       <Icon aria-hidden className="size-[18px] shrink-0" />
@@ -122,12 +125,12 @@ function SidebarLink({
       {badge ? (
         <span
           className={cn(
-            "inline-flex min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-xs leading-5 font-semibold text-on-ink",
+            "inline-flex min-w-5 items-center justify-center rounded-full bg-danger-fill px-1.5 text-xs leading-5 font-semibold text-white",
             collapsed && "absolute -end-1 -top-1 min-w-4 px-1 text-[10px] leading-4",
           )}
         >
           <span aria-hidden>{badge > 99 ? "99+" : badge}</span>
-          <span className="sr-only">{`${badge} ${common.toConfirm}`}</span>
+          <span className="sr-only">{badgeLabel ?? `${badge} ${common.toConfirm}`}</span>
         </span>
       ) : null}
     </Link>
@@ -147,7 +150,7 @@ function SubNav({ links, onNavigate }: { links: readonly SidebarSubLink[]; onNav
             className={cn(
               "relative flex min-h-8 items-center rounded-staff px-2.5 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus",
               link.active
-                ? "bg-well font-semibold text-ink before:absolute before:-start-[11px] before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-full before:bg-ink"
+                ? "bg-brand-tint font-semibold text-brand-ink before:absolute before:-start-[11px] before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-full before:bg-brand"
                 : "text-ink-secondary hover:bg-well hover:text-ink",
             )}
           >
@@ -163,6 +166,7 @@ export function SidebarContent({
   entries,
   activeKey,
   badges = {},
+  badgeLabels = {},
   subnav = {},
   collapsed = false,
   onToggleCollapsed,
@@ -173,6 +177,7 @@ export function SidebarContent({
   entries: readonly SidebarEntry[];
   activeKey: SidebarKey | null;
   badges?: Partial<Record<SidebarKey, number>>;
+  badgeLabels?: Partial<Record<SidebarKey, string>>;
   /** Pages listed under the active entry. */
   subnav?: Partial<Record<SidebarKey, readonly SidebarSubLink[]>>;
   /** Icons only, with the label as a tooltip. */
@@ -194,7 +199,14 @@ export function SidebarContent({
     const children = active && !collapsed ? subnav[entry.key] : undefined;
     return (
       <div key={entry.key} className="grid">
-        <SidebarLink entry={entry} active={active} badge={badges[entry.key]} collapsed={collapsed} onNavigate={onNavigate} />
+        <SidebarLink
+          entry={entry}
+          active={active}
+          badge={badges[entry.key]}
+          badgeLabel={badgeLabels[entry.key]}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
         {children?.length ? <SubNav links={children} onNavigate={onNavigate} /> : null}
       </div>
     );

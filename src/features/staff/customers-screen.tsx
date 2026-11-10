@@ -18,7 +18,8 @@ import { customersCopy } from "@/lib/i18n/staff/customers";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
-const field = "h-11 w-full border bg-background px-3 text-sm";
+const field =
+  "h-11 w-full rounded-[10px] border border-border bg-background px-3 text-sm outline-none transition-colors hover:border-ink-secondary/50 focus-visible:border-ink";
 
 export function CustomersScreen() {
   const t = useStaffSection(customersCopy);
@@ -27,7 +28,7 @@ export function CustomersScreen() {
   const isSuper = me?.role === "SUPER_ADMIN";
   const scopedBrand = useScope((state) => state.brandId);
   const [pickedBrand, setPickedBrand] = useState<string | null>(null);
-  const brandId = isSuper ? (pickedBrand ?? scopedBrand) : me?.brand_id ?? scopedBrand;
+  const brandId = isSuper ? (pickedBrand ?? scopedBrand) : (me?.brand_id ?? scopedBrand);
   const brands = useQuery({
     queryKey: ["brands", "qwicoo-customers"],
     enabled: isSuper,
@@ -56,9 +57,7 @@ export function CustomersScreen() {
 
   const change = useMutation({
     mutationFn: async (input: { id: string; blocked: boolean }) => {
-      const path = input.blocked
-        ? "/api/v1/staff/mobile-customers/{customer_id}/block"
-        : "/api/v1/staff/mobile-customers/{customer_id}/unblock";
+      const path = input.blocked ? "/api/v1/staff/mobile-customers/{customer_id}/block" : "/api/v1/staff/mobile-customers/{customer_id}/unblock";
       const result = await browserApi.POST(path, {
         params: { path: { customer_id: input.id }, query: { brand_id: brandId } },
       });
@@ -84,44 +83,57 @@ export function CustomersScreen() {
           <select className={field} value={brandId ?? ""} onChange={(event) => setPickedBrand(event.target.value)}>
             <option value="">{t.chooseBrand}</option>
             {(brands.data ?? []).map((brand) => (
-              <option key={brand.id} value={brand.id}>{brand.name}</option>
+              <option key={brand.id} value={brand.id}>
+                {brand.name}
+              </option>
             ))}
           </select>
         </label>
       ) : null}
-      {!brandId ? <EmptyState title={t.chooseBrand} body="" /> : (
+      {!brandId ? (
+        <EmptyState title={t.chooseBrand} body="" />
+      ) : (
         <>
           <form
-            className="flex flex-wrap items-end gap-2"
+            className="flex flex-wrap items-center gap-2"
             onSubmit={(event) => {
               event.preventDefault();
               setQ(draft.trim());
             }}
           >
-            <label className="grid min-w-64 flex-1 gap-1 text-sm">
-              {t.search}
+            <label className="min-w-64 flex-1 text-sm">
+              <span className="sr-only">{t.search}</span>
               <input className={field} value={draft} placeholder={t.searchPlaceholder} onChange={(event) => setDraft(event.target.value)} />
             </label>
-            <button type="submit" className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground">{t.search}</button>
+            <button type="submit" className="min-h-11 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              {t.search}
+            </button>
           </form>
           {customers.isLoading ? <LoadingState label={t.loading} /> : null}
           {customers.isError ? <QueryErrorState error={customers.error} screen={t.title} onRetry={() => void customers.refetch()} /> : null}
           {customers.data && customers.data.length === 0 ? <EmptyState title={t.empty} body="" /> : null}
           {customers.data && customers.data.length > 0 ? (
-            <ul className="grid gap-2">
+            <ul className="grid divide-y divide-border overflow-hidden rounded-[16px] border border-border bg-canvas">
               {customers.data.map((customer) => (
-                <li key={customer.customer_id} className="grid gap-1 border bg-canvas p-3 text-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-medium">{customer.full_name}</p>
-                    <StatusChip tone={customer.status === "blocked" ? "soldout" : "available"}>
-                      {customer.status === "blocked" ? t.blocked : t.active}
-                    </StatusChip>
+                <li key={customer.customer_id} className="grid items-center gap-2 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-4">
+                  <div className="grid min-w-0 gap-0.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{customer.full_name}</p>
+                      <StatusChip tone={customer.status === "blocked" ? "soldout" : "available"}>
+                        {customer.status === "blocked" ? t.blocked : t.active}
+                      </StatusChip>
+                    </div>
+                    <p className="truncate text-ink-secondary">
+                      {customer.email} · {customer.phone}
+                    </p>
                   </div>
-                  <p className="text-ink-secondary">{customer.email} · {customer.phone}</p>
-                  <p className="tabular-nums">{fill(t.orders, { count: customer.order_count })}{customer.last_order_at ? ` · ${formatCairoDateTime(customer.last_order_at, locale)}` : ""}</p>
+                  <p className="text-ink-secondary tabular-nums">
+                    {fill(t.orders, { count: customer.order_count })}
+                    {customer.last_order_at ? ` · ${formatCairoDateTime(customer.last_order_at, locale)}` : ""}
+                  </p>
                   <button
                     type="button"
-                    className="min-h-11 w-fit border px-3"
+                    className="min-h-9 w-fit rounded-full border border-border px-4 text-[13px] font-medium hover:bg-subtle"
                     onClick={() => setPending({ id: customer.customer_id, blocked: customer.status !== "blocked" })}
                   >
                     {customer.status === "blocked" ? t.unblock : t.block}
@@ -134,13 +146,17 @@ export function CustomersScreen() {
       )}
       <ConfirmDialog
         open={pending !== null}
-        onOpenChange={(open) => { if (!open) setPending(null); }}
+        onOpenChange={(open) => {
+          if (!open) setPending(null);
+        }}
         title={pending?.blocked ? t.blockTitle : t.unblockTitle}
         description={pending?.blocked ? t.blockBody : t.unblockBody}
         confirmLabel={pending?.blocked ? t.block : t.unblock}
         destructive={pending?.blocked}
         pending={change.isPending}
-        onConfirm={() => { if (pending) change.mutate(pending); }}
+        onConfirm={() => {
+          if (pending) change.mutate(pending);
+        }}
       />
     </div>
   );

@@ -8,9 +8,9 @@ export const buttonClass = cva(
   {
     variants: {
       variant: {
-        primary: "border-ink bg-ink text-on-ink hover:bg-ink/85 disabled:border-disabled disabled:bg-disabled",
+        primary: "border-brand bg-brand text-on-brand hover:bg-brand/85 disabled:border-disabled disabled:bg-disabled",
         secondary: "border-border bg-canvas text-ink hover:bg-subtle disabled:bg-canvas disabled:text-disabled",
-        danger: "border-danger bg-danger text-on-ink hover:bg-danger/90 disabled:border-disabled disabled:bg-disabled",
+        danger: "border-danger-fill bg-danger-fill text-white hover:bg-danger-fill/90 disabled:border-disabled disabled:bg-disabled",
         ghost: "border-transparent bg-transparent text-ink hover:bg-subtle disabled:bg-transparent disabled:text-disabled",
         dangerGhost:
           "border-transparent bg-transparent font-medium text-danger hover:bg-danger-bg disabled:bg-transparent disabled:text-disabled",

@@ -4,6 +4,7 @@ import { Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { PasswordToggle } from "@/components/auth/password-toggle";
 import { Button } from "@/components/ops/kit/button";
 import { Field, Input } from "@/components/ops/kit/field";
 import { fill } from "@/lib/i18n/dictionary";
@@ -21,6 +22,7 @@ export function LoginForm() {
   const { locale } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [lockUntil, setLockUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -85,16 +87,27 @@ export function LoginForm() {
         />
       </Field>
       <Field label={t.shared.password}>
-        <Input
-          icon={Lock}
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="[&_input]:h-[46px]"
-        />
+        <div className="relative">
+          <Input
+            icon={Lock}
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="[&_input]:h-[46px] [&_input]:pe-11"
+          />
+          <PasswordToggle
+            shown={showPassword}
+            onToggle={() => setShowPassword((value) => !value)}
+            showLabel={t.shared.showPassword}
+            hideLabel={t.shared.hidePassword}
+          />
+        </div>
       </Field>
       <div className="flex justify-end">
         <Link

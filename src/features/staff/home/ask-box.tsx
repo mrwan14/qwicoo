@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowUp, Sparkles } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { useState } from "react";
 
+import { AskQwicooMark } from "@/components/brand/ask-mark";
 import { Card } from "@/components/ops/kit/card";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { starterKeys } from "@/features/staff/assistant/access";
@@ -27,7 +28,7 @@ export function AskBox({ className }: { className?: string }) {
       className={className}
       title={
         <span className="inline-flex items-center gap-2">
-          <Sparkles aria-hidden className="size-4" />
+          <AskQwicooMark size={22} />
           {t.title}
         </span>
       }
@@ -64,7 +65,7 @@ export function AskBox({ className }: { className?: string }) {
           type="submit"
           aria-label={t.send}
           disabled={!text.trim()}
-          className="absolute end-1.5 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-staff bg-ink text-on-ink disabled:bg-disabled"
+          className="absolute end-1.5 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-staff bg-brand text-on-brand disabled:bg-disabled"
         >
           <ArrowUp aria-hidden className="size-4" />
         </button>

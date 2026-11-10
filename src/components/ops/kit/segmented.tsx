@@ -44,7 +44,7 @@ export function SegmentedControl<T extends string>({
             }}
             className={cn(
               "inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-staff px-3 text-[13px] font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus",
-              active ? "bg-ink text-on-ink" : "text-ink hover:bg-subtle",
+              active ? "bg-brand text-on-brand" : "text-ink hover:bg-subtle",
             )}
           >
             {Icon ? <Icon aria-hidden className={cn("size-3.5", active ? "text-on-ink" : "text-ink-secondary")} /> : null}

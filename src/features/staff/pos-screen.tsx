@@ -26,8 +26,11 @@ import { StatusChip } from "@/components/ops/status-chip";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { fetchStoreOnlineNew, storeOnlineKey } from "@/features/staff/alerts/queries";
 import { printReceipt } from "@/features/staff/orders/receipt";
+import { DrawerStrip } from "@/features/staff/pos/drawer-strip";
+import { useSlashFocus } from "@/hooks/use-slash-focus";
 import { storeOnlineAvailable } from "@/features/staff/pos/store-online-api";
 import { StoreOnlineTab } from "@/features/staff/pos/store-online-tab";
+import { TicketPromo, useTicketPromo } from "@/features/staff/pos/ticket-promo";
 import {
   ALL_CATEGORIES,
   choiceRule,
@@ -273,6 +276,9 @@ export function PosScreen() {
     queryFn: () => fetchStoreOnlineNew(locale),
   });
   const [query, setQuery] = useState("");
+  // Till keyboard: "/" jumps to search, Enter adds the item when the search leaves exactly one.
+  const searchRef = useRef<HTMLInputElement>(null);
+  useSlashFocus(searchRef);
   const [categoryId, setCategoryId] = useState(ALL_CATEGORIES);
   const [lines, setLines] = useState<Line[]>([]);
   const [orderType, setOrderType] = useState<components["schemas"]["OrderType"]>("TAKEAWAY");
@@ -281,6 +287,7 @@ export function PosScreen() {
   const [ticketOpen, setTicketOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [promoCode, setPromoCode] = useState<string | null>(null);
   const [configuring, setConfiguring] = useState<MenuItem | null>(null);
   const online = useNetwork((state) => state.online);
   const tables = useQuery({
@@ -300,6 +307,7 @@ export function PosScreen() {
       pendingItems: () => linesRef.current.reduce((sum, line) => sum + line.quantity, 0),
       close: () => {
         setLines([]);
+        setPromoCode(null);
         setTicketOpen(false);
         setConfiguring(null);
       },
@@ -318,6 +326,21 @@ export function PosScreen() {
 
   // Card and online payments need the network; offline the till takes cash only.
   const effectiveTender: components["schemas"]["PaymentMethod"] = online ? tender : "CASH";
+
+  const ticketSubtotal = centsToMoney(lines.reduce((sum, line) => sum + moneyToCents(line.subtotal), 0));
+  const promo = useTicketPromo({
+    code: promoCode,
+    branchId,
+    subtotal: ticketSubtotal,
+    orderType,
+    tableId,
+    online,
+    hasLines: lines.length > 0,
+  });
+  // Codes need the server; an offline sale goes to the till's queue without one.
+  useEffect(() => {
+    if (!online) setPromoCode(null);
+  }, [online]);
   // Cash needs an open drawer (the backend refuses it otherwise). Offline sales skip this: they
   // sync into the drawer that was open at the time.
   const queryClient = useQueryClient();
@@ -458,6 +481,7 @@ export function PosScreen() {
         table_id: orderType === "DINE_IN" ? tableId : null,
         immediate_payment: effectiveTender,
         customer_notes: null,
+        promo_code: promo.code && promo.preview ? promo.code : null,
         items: lines.map((line) => ({
           item_id: line.itemId,
           quantity: line.quantity,
@@ -494,6 +518,7 @@ export function PosScreen() {
     onSuccess: (order) => {
       setConfirmation(order);
       setLines([]);
+      setPromoCode(null);
       if (order.offlineId) toast.success(fill(t.savedTillToast, { number: order.offlineNumber ?? "" }));
       else toast.success(order.pickup != null ? fill(t.sentPickup, { number: order.pickup }) : t.orderSent);
     },
@@ -530,13 +555,16 @@ export function PosScreen() {
   if (!viewingStore && menu.isLoading) return <LoadingState label={t.loading} />;
   if (!viewingStore && menu.isError) return <QueryErrorState error={menu.error} screen={t.screen} onRetry={() => void menu.refetch()} />;
 
-  const total = centsToMoney(lines.reduce((sum, line) => sum + moneyToCents(line.subtotal), 0));
-  const sendDisabled = lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim()) || needsDrawer;
+  // The discount comes off before tax; the server's total on the confirmation is the final word.
+  const discount = promo.preview ? moneyToCents(String(promo.preview.discount_amount)) : 0;
+  const total = centsToMoney(Math.max(0, moneyToCents(ticketSubtotal) - discount));
+  const sendDisabled =
+    lines.length === 0 || checkout.isPending || (orderType === "DINE_IN" && !tableId.trim()) || needsDrawer || promo.blocksSend;
 
   const pill = (active: boolean) =>
     cn(
       "inline-flex min-h-12 shrink-0 items-center gap-2 rounded-staff border px-4 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:text-disabled",
-      active ? "border-ink bg-ink text-on-ink shadow-card" : "border-transparent bg-canvas text-ink shadow-card hover:border-ink/20",
+      active ? "border-brand bg-brand text-on-brand shadow-card" : "border-transparent bg-canvas text-ink shadow-card hover:border-ink/20",
     );
 
   const ticket = (
@@ -563,7 +591,7 @@ export function PosScreen() {
             aria-checked={orderType === value}
             className={cn(
               "min-h-12 rounded-staff text-[15px] font-medium focus-visible:outline-2 focus-visible:outline-focus",
-              orderType === value ? "bg-ink text-on-ink" : "text-ink hover:bg-subtle",
+              orderType === value ? "bg-brand text-on-brand" : "text-ink hover:bg-subtle",
             )}
             onClick={() => setOrderType(value)}
           >
@@ -616,6 +644,15 @@ export function PosScreen() {
       )}
       {orderType === "DINE_IN" && tableId ? <PaymobPosCheckout tableId={tableId} online={online} /> : null}
       <div className="grid gap-2 border-t border-border pt-3">
+        {lines.length > 0 ? (
+          <TicketPromo
+            state={promo}
+            online={online}
+            ticketSubtotal={ticketSubtotal}
+            onApply={setPromoCode}
+            onRemove={() => setPromoCode(null)}
+          />
+        ) : null}
         <p className="flex items-baseline justify-between text-lg font-semibold">
           <span>{t.total}</span>
           <span className="tabular-nums">
@@ -700,6 +737,16 @@ export function PosScreen() {
           placeholder={t.searchItems}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          ref={searchRef}
+          aria-keyshortcuts="/"
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || !itemSearch) return;
+            const matches = sections.flatMap((section) => section.items).filter((item) => item.is_available);
+            if (matches.length !== 1) return;
+            event.preventDefault();
+            addItem(matches[0]);
+            setQuery("");
+          }}
           autoFocus
         />
         {sections.length === 0 ? (
@@ -764,17 +811,22 @@ export function PosScreen() {
 
   return (
     <div className="grid gap-4">
-      {storeShown ? (
-        <div className="flex gap-2 overflow-x-auto">
-          <button type="button" aria-pressed={!viewingStore} className={pill(!viewingStore)} onClick={() => openTab("sale")}>
-            {t.newSale}
-          </button>
-          <button type="button" aria-pressed={viewingStore} className={pill(viewingStore)} onClick={() => openTab("store-online")}>
-            {t.storeOnlineTab}
-            {newStoreOrders.data ? <span className="tabular-nums">{newStoreOrders.data.length}</span> : null}
-          </button>
-        </div>
-      ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {storeShown ? (
+          <div className="flex gap-2 overflow-x-auto">
+            <button type="button" aria-pressed={!viewingStore} className={pill(!viewingStore)} onClick={() => openTab("sale")}>
+              {t.newSale}
+            </button>
+            <button type="button" aria-pressed={viewingStore} className={pill(viewingStore)} onClick={() => openTab("store-online")}>
+              {t.storeOnlineTab}
+              {newStoreOrders.data ? <span className="tabular-nums">{newStoreOrders.data.length}</span> : null}
+            </button>
+          </div>
+        ) : (
+          <span />
+        )}
+        <DrawerStrip online={online} />
+      </div>
       {viewingStore ? <StoreOnlineTab /> : sale}
     </div>
   );
@@ -797,7 +849,7 @@ function ItemGrid({ items, onAdd }: { items: MenuItem[]; onAdd: (item: MenuItem)
             className="group grid content-start gap-2.5 rounded-staff bg-canvas p-2 text-start text-ink shadow-card ring-1 ring-black/5 transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-card-hover hover:ring-ink/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:shadow-none"
             onClick={() => onAdd(item)}
           >
-            {/* The whole photo shows (contain, not cover) on a tinted well, so dishes are never cut off. */}
+            {/* The photo fills the whole tile (cover), so there is no empty band around it; the well only shows behind the initial. */}
             <span className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-staff bg-well">
               {image ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -805,7 +857,7 @@ function ItemGrid({ items, onAdd }: { items: MenuItem[]; onAdd: (item: MenuItem)
                   src={image}
                   alt=""
                   loading="lazy"
-                  className="h-full w-full object-contain transition-transform duration-200 group-enabled:group-hover:scale-[1.03] group-disabled:opacity-50 group-disabled:grayscale"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-enabled:group-hover:scale-[1.03] group-disabled:opacity-50 group-disabled:grayscale"
                 />
               ) : (
                 <span aria-hidden className="text-4xl font-semibold text-ink/25 group-disabled:text-ink/15">
@@ -1038,7 +1090,7 @@ function ChoiceMark({ single, checked, blocked }: { single: boolean; checked: bo
       className={cn(
         "inline-flex size-5 shrink-0 items-center justify-center border-[1.5px]",
         single ? "rounded-full" : "rounded-[4px]",
-        checked ? "border-ink bg-ink text-on-ink" : blocked ? "border-border bg-subtle" : "border-disabled bg-canvas",
+        checked ? "border-brand bg-brand text-on-brand" : blocked ? "border-border bg-subtle" : "border-disabled bg-canvas",
       )}
     >
       {checked ? single ? <span className="size-2 rounded-full bg-on-ink" /> : <Check className="size-3.5" strokeWidth={3} /> : null}

@@ -62,55 +62,63 @@ export function ImportScreen() {
   return (
     <InventoryFrame page="import">
       <PageHeader title={t.import.title} detail={t.import.detail} />
-      <p className="text-sm text-ink-secondary">{t.import.columns}</p>
-      {warehouses.data && warehouses.data.length > 0 ? (
-        <WarehouseSelect warehouses={warehouses.data} value={selected} onChange={setWarehouseId} />
-      ) : null}
-      <label className="grid max-w-lg gap-1 text-sm">
-        <span>{t.import.file}</span>
-        <input
-          className={control}
-          type="file"
-          accept=".csv,text/csv"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (!file) return;
-            void file.text().then((text) => {
-              setCsvText(text);
-              setRows(null);
-            });
-          }}
-        />
-      </label>
-      <div className="flex gap-2">
-        <button type="button" className={secondaryButton} disabled={!csvText || preview.isPending} onClick={() => preview.mutate()}>{t.import.preview}</button>
-        <button type="button" className={primaryButton} disabled={!allowed || commit.isPending} onClick={() => commit.mutate()}>{t.import.commit}</button>
-      </div>
-      {rows && !allowed ? <p className="text-sm text-danger">{t.import.blocked}</p> : null}
-      {rows && rows.length > 0 ? (
-        <div className="overflow-x-auto bg-canvas">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b">
-                {[t.import.line, t.import.sku, t.import.action, t.import.message].map((label) => (
-                  <th key={label} className="px-3 py-2 text-start font-medium">{label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.line} className="border-b">
-                  <td className="px-3 py-2 tabular-nums">{row.line}</td>
-                  <td className="px-3 py-2">{row.sku}</td>
-                  <td className="px-3 py-2">{t.import.actions[row.action]}</td>
-                  <td className="px-3 py-2">{row.message ?? ""}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="grid gap-4 rounded-[16px] border border-border bg-canvas p-5">
+        <p className="rounded-[12px] bg-subtle px-4 py-3 text-xs leading-5 text-ink-secondary">{t.import.columns}</p>
+        <div className="grid items-end gap-3 lg:grid-cols-2">
+          {warehouses.data && warehouses.data.length > 0 ? <WarehouseSelect warehouses={warehouses.data} value={selected} onChange={setWarehouseId} /> : null}
+          <label className="grid gap-1 text-sm">
+            <span>{t.import.file}</span>
+            <input
+              className={`${control} py-2 file:me-3 file:rounded-full file:border-0 file:bg-subtle file:px-3 file:py-1 file:text-[13px] file:font-medium`}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                void file.text().then((text) => {
+                  setCsvText(text);
+                  setRows(null);
+                });
+              }}
+            />
+          </label>
         </div>
-      ) : null}
-      {!rows ? <p className="text-sm text-ink-secondary">{t.import.empty}</p> : null}
+        <div className="flex gap-2 border-t border-border pt-4">
+          <button type="button" className={secondaryButton} disabled={!csvText || preview.isPending} onClick={() => preview.mutate()}>
+            {t.import.preview}
+          </button>
+          <button type="button" className={primaryButton} disabled={!allowed || commit.isPending} onClick={() => commit.mutate()}>
+            {t.import.commit}
+          </button>
+        </div>
+        {rows && !allowed ? <p className="text-sm text-danger">{t.import.blocked}</p> : null}
+        {rows && rows.length > 0 ? (
+          <div className="overflow-x-auto rounded-[12px] border border-border bg-canvas">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b">
+                  {[t.import.line, t.import.sku, t.import.action, t.import.message].map((label) => (
+                    <th key={label} className="px-3 py-2 text-start font-medium">
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.line} className="border-b">
+                    <td className="px-3 py-2 tabular-nums">{row.line}</td>
+                    <td className="px-3 py-2">{row.sku}</td>
+                    <td className="px-3 py-2">{t.import.actions[row.action]}</td>
+                    <td className="px-3 py-2">{row.message ?? ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        {!rows ? <p className="text-sm text-ink-secondary">{t.import.empty}</p> : null}
+      </section>
     </InventoryFrame>
   );
 }

@@ -1,9 +1,12 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, ArrowRight, Check } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ops/kit/badge";
 import { Button } from "@/components/ops/kit/button";
 import { ConfirmDialog } from "@/components/ops/kit/confirm-dialog";
 import { Field, Input, Select, Switch, Textarea } from "@/components/ops/kit/field";
@@ -11,6 +14,7 @@ import { formatAmount } from "@/components/ops/kit/money";
 import { MoreOptions, PanelSection, SidePanel } from "@/components/ops/kit/side-panel";
 import { useStaffSession } from "@/components/ops/staff-session";
 import {
+  canAddItem,
   canChooseItemScope,
   canDeleteItem,
   canEditBranchPrice,
@@ -19,9 +23,12 @@ import {
   isBrandCatalogItem,
   type MenuItemFlags,
 } from "@/features/staff/menu-permissions";
+import { comboStationLabel, isCombo } from "@/features/staff/catalog-screen";
+import { ChoicesEditor, ChoicesSummary } from "@/features/staff/menu/choices-editor";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { comboRegularPrice, comboSaving } from "@/lib/combo-saving";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -37,6 +44,8 @@ import {
   rememberBrandCatalogId,
   uploadMenuImage,
   useBranchTrees,
+  useBrandMenus,
+  useMenuTree,
   type MenuItem,
   type Station,
 } from "./shared";
@@ -88,18 +97,28 @@ export function ItemPanel({
     [scopeBranches, branchId, t.scopeThisBranch],
   );
   const trees = useBranchTrees(open && editing && branchPrices, t.menuFailed);
+  const brandMenus = useBrandMenus(t.menus.loadFailed, open);
 
   const [en, setEn] = useState("");
   const [ar, setAr] = useState("");
   const [price, setPrice] = useState("10.00");
   const [categoryId, setCategoryId] = useState(defaultCategoryId);
+  // Which on-menus the chosen category belongs to, so staff know why an item is hidden at some hours.
+  const menusForCategory = (brandMenus.data ?? []).filter((menu) => menu.is_active && (menu.category_ids ?? []).includes(categoryId));
+  const categoryMenusHint =
+    (brandMenus.data ?? []).length === 0 || !categoryId
+      ? undefined
+      : menusForCategory.length > 0
+        ? fill(t.menus.onMenus, { names: menusForCategory.map((menu) => (locale === "ar" ? menu.name_ar || menu.name_en : menu.name_en)).join(", ") })
+        : t.menus.inNoMenu;
   const [station, setStation] = useState<Station>("HOT_KITCHEN");
   const [image, setImage] = useState<File | null>(null);
   const [scope, setScope] = useState<"ALL_BRANCHES" | "THIS_BRANCH">(chooseScope ? "ALL_BRANCHES" : "THIS_BRANCH");
   const [descEn, setDescEn] = useState("");
   const [descAr, setDescAr] = useState("");
   const [maxPerOrder, setMaxPerOrder] = useState("");
-  const [rows, setRows] = useState<Record<string, BranchRow>>({});
+  // Only what staff changed per branch; anything left alone follows the brand price.
+  const [rows, setRows] = useState<Record<string, Partial<BranchRow>>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Fill the form whenever another item (or Add) opens.
@@ -132,8 +151,12 @@ export function ItemPanel({
     });
     return result;
   }, [branches, item, trees]);
-  const row = (id: string) => rows[id] ?? saved[id] ?? { price: "", available: true };
-  const setRow = (id: string, change: Partial<BranchRow>) => setRows((current) => ({ ...current, [id]: { ...row(id), ...change } }));
+  // A branch with no price of its own shows the brand price, and keeps following it while the form is edited.
+  const row = (id: string): BranchRow => ({
+    price: rows[id]?.price ?? (saved[id]?.price || price),
+    available: rows[id]?.available ?? saved[id]?.available ?? true,
+  });
+  const setRow = (id: string, change: Partial<BranchRow>) => setRows((current) => ({ ...current, [id]: { ...current[id], ...change } }));
 
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ["menu-tree"] });
@@ -141,11 +164,16 @@ export function ItemPanel({
 
   async function saveBranches(itemId: string) {
     for (const branch of branches) {
-      const next = rows[branch.id];
+      if (!rows[branch.id]) continue;
+      const next = row(branch.id);
       const before = saved[branch.id];
-      if (!next || (before && next.price === before.price && next.available === before.available)) continue;
+      // The brand price (or an empty box) saves as "no branch price", so the branch keeps following the brand.
+      const override = !next.price.trim() || sameNumber(next.price, price) ? null : next.price.trim();
+      const beforeOverride = before?.price || null;
+      const samePrice = override === null ? beforeOverride === null : beforeOverride !== null && sameNumber(override, beforeOverride);
+      if (before && samePrice && next.available === before.available) continue;
       const body: components["schemas"]["BranchMenuOverrideUpdate"] = {
-        price_override: next.price.trim() || null,
+        price_override: override,
         is_available: next.available,
         is_visible: true,
       };
@@ -268,9 +296,46 @@ export function ItemPanel({
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const pending = create.isPending || update.isPending;
+  // A branch admin cannot change a shared item, so they can take a copy that only this branch uses,
+  // and the shared one is hidden here so guests don't see both.
+  const canCopyForBranch = editing && !structure && canAddItem(role) && Boolean(branchId);
+  const copyForBranch = useMutation({
+    mutationFn: async (): Promise<string | null> => {
+      if (!item || !branchId) return null;
+      const body: components["schemas"]["StaffItemCreate"] = {
+        category_id: item.category_id,
+        name: names(localized(item.name, "en"), localized(item.name, "ar")),
+        base_price: String(item.base_price),
+        station: (item.station as Station | undefined) ?? "HOT_KITCHEN",
+        is_available: true,
+        item_type: "PREPARED",
+        ...(item.description ? { description: names(localized(item.description, "en"), localized(item.description, "ar")) } : {}),
+        ...(item.image_url ? { image_url: item.image_url } : {}),
+        ...(item.max_per_order != null ? { max_per_order: item.max_per_order } : {}),
+      };
+      const result = await browserApi.POST("/api/v1/staff/menu/items", { body });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotCreateItem);
+      const copyId = (result.data as { id?: string } | undefined)?.id ?? null;
+      const hide = await browserApi.PATCH("/api/v1/menu/branches/{branch_id}/items/{item_id}/override", {
+        params: { path: { branch_id: branchId, item_id: item.id } },
+        body: { price_override: null, is_available: item.is_available, is_visible: false },
+        middleware: [asBranch(branchId)],
+      });
+      if (!hide.response.ok) toast.error(t.copyHideFailed);
+      return copyId;
+    },
+    onSuccess: (copyId) => {
+      toast.success(t.copyMade);
+      refresh();
+      onCreated(copyId);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const pending = create.isPending || update.isPending || copyForBranch.isPending;
   const basePrice = formatAmount(price || "0", undefined, locale);
   const canDelete = editing && canDeleteItem(role, flags);
+  const combo = editing && item !== null && isCombo(item);
 
   return (
     <>
@@ -310,7 +375,19 @@ export function ItemPanel({
             else create.mutate();
           }}
         >
-          {!structure ? <p className="rounded-staff bg-subtle p-3 text-[13px] text-ink-secondary">{t.brandCatalogReadOnly}</p> : null}
+          {!structure ? (
+            <div className="grid gap-2.5 rounded-staff bg-subtle p-3 text-[13px] text-ink-secondary">
+              <p>{t.brandCatalogReadOnly}</p>
+              {canCopyForBranch ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{t.copyHint}</span>
+                  <Button variant="secondary" size="sm" disabled={pending} onClick={() => copyForBranch.mutate()}>
+                    {copyForBranch.isPending ? t.saving : t.copyForBranch}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <fieldset disabled={!structure} className="grid grid-cols-1 gap-4 disabled:opacity-70 sm:grid-cols-2">
             <Field label={t.englishName} className="sm:col-span-1">
               <Input value={en} onChange={(event) => setEn(event.target.value)} required={!editing} />
@@ -321,7 +398,7 @@ export function ItemPanel({
             <Field label={t.priceEgp} hint={basePrice}>
               <Input inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} required />
             </Field>
-            <Field label={t.category}>
+            <Field label={t.category} hint={categoryMenusHint}>
               <Select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} required>
                 <option value="">{categories.length === 0 ? t.addCategoryFirst : t.chooseCategory}</option>
                 {categories.map((category) => (
@@ -361,17 +438,26 @@ export function ItemPanel({
             ) : null}
           </fieldset>
 
+          {combo && item ? (
+            <PanelSection title={t.combosHub.components} hint={t.combosHub.sheetHint}>
+              <ComboDetails comboId={item.id} price={price} />
+            </PanelSection>
+          ) : null}
+
+          {/* Combos are built from items, so choices only show on a combo that already has some. */}
+          {combo && (item?.modifier_groups ?? []).length === 0 ? null : (
           <PanelSection title={t.panel.choices} hint={t.panel.choicesHint}>
             {editing && item ? (
               canEditModifiers(role, flags) ? (
-                <Choices item={item} onDone={refresh} />
+                <ChoicesEditor itemId={item.id} groups={item.modifier_groups ?? []} onDone={refresh} />
               ) : (
-                <ChoiceList item={item} />
+                <ChoicesSummary groups={item.modifier_groups ?? []} />
               )
             ) : (
               <p className="text-[13px] text-ink-secondary">{t.panel.saveFirst}</p>
             )}
           </PanelSection>
+          )}
 
           {branchPrices && branches.length > 0 ? (
             <PanelSection title={t.panel.perBranch} hint={fill(t.panel.perBranchHint, { price: basePrice })}>
@@ -387,7 +473,6 @@ export function ItemPanel({
                     <Input
                       className="h-[38px] w-[110px]"
                       inputMode="decimal"
-                      placeholder={String(Number(price) || "")}
                       aria-label={`${branch.name} ${t.panel.branchPrice}`}
                       value={row(branch.id).price}
                       onChange={(event) => setRow(branch.id, { price: event.target.value })}
@@ -432,136 +517,118 @@ export function ItemPanel({
   );
 }
 
-function ChoiceList({ item }: { item: MenuItem }) {
+/** Read-only view of a combo: its items, what they cost separately, and what guests save at `price`. */
+function ComboDetails({ comboId, price }: { comboId: string; price: string }) {
+  const t = useStaffSection(menuCopy);
   const { locale } = useLocale();
-  return (
-    <ul className="grid gap-3">
-      {(item.modifier_groups ?? []).map((group) => (
-        <li key={group.id} className="grid gap-1 text-sm">
-          <span className="font-medium text-ink">{group.name}</span>
-          {(group.options ?? []).map((option) => (
-            <span key={option.id} className="flex justify-between text-ink-secondary">
-              {option.name}
-              <span className="tabular-nums">+{formatAmount(option.price_delta, undefined, locale)}</span>
-            </span>
-          ))}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** Modifier groups and options, using the staff menu modifier calls. */
-function Choices({ item, onDone }: { item: MenuItem; onDone: () => void }) {
-  const t = useStaffSection(menuCopy);
-  const groups = item.modifier_groups ?? [];
-  const [groupEn, setGroupEn] = useState("");
-  const [groupAr, setGroupAr] = useState("");
-
-  const createGroup = useMutation({
-    mutationFn: async () => {
-      const body: components["schemas"]["StaffModifierGroupCreate"] = {
-        name: names(groupEn, groupAr || groupEn),
-        min_choices: 0,
-        max_choices: 1,
-        is_required: false,
-      };
-      const result = await browserApi.POST("/api/v1/staff/menu/items/{item_id}/modifier-groups", { params: { path: { item_id: item.id } }, body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotAddGroup);
+  const tree = useMenuTree(t.menuFailed);
+  // Same query key as the Combos tab, so edits there show here without a reload.
+  const parts = useQuery({
+    queryKey: ["combo", comboId],
+    queryFn: async () => {
+      const result = await browserApi.GET("/api/v1/menus/items/{item_id}/combo-components", { params: { path: { item_id: comboId } } });
+      if (!result.response.ok || !result.data) return [];
+      return result.data;
     },
-    onSuccess: () => {
-      toast.success(t.modifierGroupAdded);
-      setGroupEn("");
-      setGroupAr("");
-      onDone();
-    },
-    onError: (error: Error) => toast.error(error.message),
   });
 
+  const categories = tree.data?.categories ?? [];
+  const itemById = new Map(categories.flatMap((category) => category.items ?? []).map((entry) => [entry.id, entry]));
+  const rows = parts.data ?? [];
+  const money = (amount: string) => formatAmount(amount, undefined, locale);
+  const regular = comboRegularPrice(rows.map((row) => ({ price: itemById.get(row.component_item_id)?.base_price, quantity: row.quantity })));
+  const priceValid = Number.isFinite(Number(price)) && Number(price) > 0;
+  const saving = priceValid ? comboSaving(price, regular) : null;
+  const soldOut = rows.map((row) => itemById.get(row.component_item_id)).find((entry) => entry && !entry.is_available);
+
+  const problems: string[] = [];
+  if (rows.length === 1) problems.push(t.combosHub.needTwo);
+  if (rows.length > 0 && regular === null) problems.push(t.combosHub.unknownPart);
+  if (rows.length > 0 && regular !== null && priceValid && !saving) problems.push(t.combosHub.noSaving);
+  if (soldOut) problems.push(fill(t.combosHub.soldOutPart, { name: pickLocale(soldOut.name, locale) }));
+
+  const editLink = (
+    <Link
+      href={`/app/menu/combos?combo=${comboId}`}
+      className="inline-flex w-fit items-center gap-1.5 rounded-staff text-[13px] font-medium text-ink underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+    >
+      {t.combosHub.editInCombos}
+      <ArrowRight aria-hidden className="size-3.5 rtl:-scale-x-100" />
+    </Link>
+  );
+
+  if (parts.isPending || tree.isPending) return <p className="text-[13px] text-ink-secondary">{t.combosHub.loadingParts}</p>;
+  if (rows.length === 0) {
+    return (
+      <div className="grid gap-2">
+        <p className="text-[13px] text-ink-secondary">{t.combosHub.noComponents}</p>
+        {editLink}
+      </div>
+    );
+  }
+
   return (
-    <div className="grid gap-4">
-      {groups.map((group) => (
-        <ChoiceGroup key={group.id} group={group} onDone={onDone} />
-      ))}
-      <div className="grid gap-2 rounded-staff border border-dashed border-border p-3">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Input aria-label={t.panel.groupName} placeholder={t.panel.groupName} value={groupEn} onChange={(event) => setGroupEn(event.target.value)} />
-          <Input aria-label={t.panel.groupNameAr} placeholder={t.panel.groupNameAr} dir="rtl" value={groupAr} onChange={(event) => setGroupAr(event.target.value)} />
-          <Button variant="secondary" size="field" className="w-fit" disabled={!groupEn.trim() || createGroup.isPending} onClick={() => createGroup.mutate()}>
-            {t.panel.addGroup}
-          </Button>
+    <div className="grid gap-3">
+      <ul className="rounded-staff border border-border px-3">
+        {rows.map((part) => {
+          const entry = itemById.get(part.component_item_id);
+          const name = pickLocale(entry?.name ?? part.component_name, locale) || part.component_item_id.slice(0, 8);
+          const category = entry ? pickLocale(categories.find((value) => value.id === entry.category_id)?.name, locale) : "";
+          return (
+            <li key={part.id} className="flex min-h-12 items-center justify-between gap-3 border-b border-border py-2 text-sm last:border-b-0">
+              <span className="grid min-w-0">
+                <span className="flex items-center gap-2 font-medium text-ink">
+                  {part.quantity > 1 ? <span className="tabular-nums">{part.quantity}×</span> : null}
+                  <span className="truncate">{name}</span>
+                  {entry && !entry.is_available ? <Badge tone="danger">{t.soldOut}</Badge> : null}
+                </span>
+                <span className="text-xs text-ink-secondary">
+                  {comboStationLabel(part.target_station, t.comboStations)}
+                  {category ? ` · ${category}` : null}
+                </span>
+              </span>
+              {entry ? <span className="shrink-0 tabular-nums text-ink">{money((Number(entry.base_price) * part.quantity).toFixed(2))}</span> : null}
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="grid gap-2 rounded-staff bg-well p-3 text-sm">
+        <div className="flex items-center justify-between">
+          <span className="text-ink-secondary">{t.combosHub.separately}</span>
+          <span className={saving ? "tabular-nums text-ink-secondary line-through" : "tabular-nums text-ink"}>{regular ? money(regular) : "—"}</span>
         </div>
+        <div className="flex items-center justify-between font-semibold text-ink">
+          <span>{t.combosHub.comboPrice}</span>
+          <span className="tabular-nums">{priceValid ? money(price) : "—"}</span>
+        </div>
+        {saving ? (
+          <div className="flex items-center justify-between gap-3 rounded-staff bg-success-bg px-3 py-2.5 text-ink">
+            <span className="flex items-center gap-2 font-semibold">
+              <Check aria-hidden className="size-4 text-success" />
+              {fill(t.combosHub.guestsSave, { amount: money(saving.saving) })}
+            </span>
+            {saving.percent > 0 ? (
+              <span className="rounded-full bg-success px-2.5 py-1 text-xs font-bold text-on-ink tabular-nums">
+                {fill(t.combosHub.percentOff, { percent: saving.percent })}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
-    </div>
-  );
-}
 
-function ChoiceGroup({ group, onDone }: { group: components["schemas"]["ModifierGroupResponse"]; onDone: () => void }) {
-  const t = useStaffSection(menuCopy);
-  const [name, setName] = useState("");
-  const [delta, setDelta] = useState("0.00");
-  const createOption = useMutation({
-    mutationFn: async () => {
-      const body: components["schemas"]["StaffModifierOptionCreate"] = { name: names(name, name), price_delta: delta || "0.00", is_available: true };
-      const result = await browserApi.POST("/api/v1/staff/menu/modifier-groups/{group_id}/options", { params: { path: { group_id: group.id } }, body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotAddOption);
-    },
-    onSuccess: () => {
-      toast.success(t.optionAdded);
-      setName("");
-      setDelta("0.00");
-      onDone();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-  return (
-    <div className="grid gap-2">
-      <p className="text-sm font-medium text-ink">{group.name}</p>
-      {(group.options ?? []).map((option) => (
-        <OptionRow key={option.id} option={option} onDone={onDone} />
-      ))}
-      <div className="flex gap-2">
-        <Input className="min-w-0 flex-1" placeholder={t.panel.choiceName} aria-label={t.panel.choiceName} value={name} onChange={(event) => setName(event.target.value)} />
-        <Input className="w-24" inputMode="decimal" aria-label={t.panel.choicePrice} value={delta} onChange={(event) => setDelta(event.target.value)} />
-        <Button variant="secondary" size="field" disabled={!name.trim() || createOption.isPending} onClick={() => createOption.mutate()}>
-          {t.panel.addChoice}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function OptionRow({ option, onDone }: { option: components["schemas"]["ModifierOptionResponse"]; onDone: () => void }) {
-  const t = useStaffSection(menuCopy);
-  const [delta, setDelta] = useState(option.price_delta);
-  const edited = !sameNumber(delta, option.price_delta);
-  const save = useMutation({
-    mutationFn: async () => {
-      const body: components["schemas"]["StaffModifierOptionUpdate"] = { price_delta: delta };
-      const result = await browserApi.PATCH("/api/v1/staff/menu/modifier-options/{option_id}", { params: { path: { option_id: option.id } }, body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotSaveOption);
-    },
-    onSuccess: () => {
-      toast.success(t.optionSaved);
-      onDone();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      <span className="min-w-0 flex-1 truncate text-ink">{option.name}</span>
-      <Input
-        className="h-[38px] w-24"
-        inputMode="decimal"
-        aria-label={fill(t.priceChangeFor, { name: option.name })}
-        value={delta}
-        onChange={(event) => setDelta(event.target.value)}
-      />
-      {edited ? (
-        <Button variant="secondary" size="sm" disabled={save.isPending} onClick={() => save.mutate()}>
-          {save.isPending ? t.saving : t.saveOption}
-        </Button>
+      {problems.length > 0 ? (
+        <ul className="grid gap-1.5">
+          {problems.map((problem) => (
+            <li key={problem} className="flex items-start gap-2 rounded-staff bg-warning-bg px-3 py-2 text-[13px] text-ink">
+              <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+              {problem}
+            </li>
+          ))}
+        </ul>
       ) : null}
+
+      {editLink}
     </div>
   );
 }

@@ -26,7 +26,7 @@ export function BarChart({
         {bars.map((bar) => (
           <div key={bar.key} className="flex h-full min-w-0 flex-1 flex-col justify-end" title={`${bar.label}: ${format(bar.value)}`}>
             <div
-              className={cn("w-full rounded-t-staff", bar.highlight ? "bg-ink" : "bg-ink-secondary/25")}
+              className={cn("w-full rounded-t-staff", bar.highlight ? "bg-brand" : "bg-ink-secondary/25")}
               style={{ height: max > 0 ? `${Math.max((bar.value / max) * 100, bar.value > 0 ? 2 : 0)}%` : 0 }}
             />
           </div>
@@ -68,7 +68,7 @@ export function MeterList({ rows, className }: { rows: readonly Meter[]; classNa
             {row.detail ? <span className="shrink-0 text-ink tabular-nums">{row.detail}</span> : null}
           </div>
           <div aria-hidden className="h-1.5 overflow-hidden rounded-full bg-subtle">
-            <div className="h-full rounded-full bg-ink" style={{ width: max > 0 ? `${(row.value / max) * 100}%` : 0 }} />
+            <div className="h-full rounded-full bg-brand" style={{ width: max > 0 ? `${(row.value / max) * 100}%` : 0 }} />
           </div>
           {row.note ? <span className="text-xs text-ink-secondary">{row.note}</span> : null}
         </li>

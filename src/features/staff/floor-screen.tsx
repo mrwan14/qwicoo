@@ -15,6 +15,7 @@ import { formatAmount } from "@/components/ops/kit/money";
 import { ScreenTitle } from "@/components/ops/page-header";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { occupancyTone, StatusChip, toneSurface } from "@/components/ops/status-chip";
+import { isStale, seatedShort } from "@/features/staff/floor/seated";
 import { navForUser } from "@/lib/nav";
 import { requestsCopy } from "@/lib/i18n/staff/requests";
 import { EmptyState, ErrorState, LoadingState, QueryErrorState } from "@/components/ops/states";
@@ -154,11 +155,6 @@ function AddTableDialog({ branchId }: { branchId: string }) {
   );
 }
 
-function seatedFor(minutes: number, one: string, many: string): string {
-  if (minutes <= 0) return "";
-  return minutes === 1 ? one : fill(many, { minutes });
-}
-
 function modifierNames(modifiers: { [key: string]: unknown }[] | null | undefined): string[] {
   return (modifiers ?? [])
     .map((modifier) => {
@@ -238,7 +234,8 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
     queryFn: () => getStaffOrder(selected?.active_order_id ?? ""),
   });
   const isPaid = orderDetail.data?.is_paid === true || selected?.order_status === "PAID" || selected?.order_status === "CLOSED";
-  const moves = floorStatusOptions(me?.role, selected?.order_status, isPaid);
+  // Every table order is dine-in: it can be served before it's paid.
+  const moves = floorStatusOptions(me?.role, selected?.order_status, isPaid, true);
   const due = showAmountDue(selected?.order_status, isPaid);
   const amount = orderDetail.data?.total_amount ?? (selected?.order_total != null ? String(selected.order_total) : null);
   const moveTo = moves.includes(status) ? status : moves[0];
@@ -274,8 +271,12 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const data = floor.data;
   if (!data) return <ErrorState title={t.unavailable} body={t.unavailableBody} onRetry={() => void floor.refetch()} />;
 
+  // Food ready means someone has to take it out, so it counts too.
   const needsYou = (table: FloorTable) =>
-    needsConfirmation(table) || table.current_state === "BILL_REQUESTED" || table.pending_service_requests_count > 0;
+    needsConfirmation(table) ||
+    table.current_state === "BILL_REQUESTED" ||
+    table.pending_service_requests_count > 0 ||
+    table.order_status === "READY";
   const counts = {
     all: data.tables.length,
     needs: data.tables.filter(needsYou).length,
@@ -352,7 +353,7 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
                   setRejecting(false);
                   setReason("");
                   const current = table.order_status;
-                  const options = floorStatusOptions(me?.role, current, current === "PAID" || current === "CLOSED");
+                  const options = floorStatusOptions(me?.role, current, current === "PAID" || current === "CLOSED", true);
                   if (options[0]) setStatus(options[0]);
                 }}
               >
@@ -370,9 +371,19 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
                 {free ? (
                   <span className="text-[13px] text-ink-secondary">{t.board.freeTable}</span>
                 ) : (
-                  <Badge tone={pending ? "warning" : badge.tone} className="w-fit">
-                    {pending ? t.board.toConfirm : badge.label}
-                  </Badge>
+                  <span className="flex items-center justify-between gap-2">
+                    <Badge tone={pending ? "warning" : badge.tone} className="w-fit">
+                      {pending ? t.board.toConfirm : badge.label}
+                    </Badge>
+                    {table.occupancy_duration_minutes > 0 ? (
+                      <span
+                        className={`shrink-0 text-xs tabular-nums ${isStale(table.occupancy_duration_minutes) ? "font-semibold text-warning" : "text-ink-secondary"}`}
+                        title={fill(isStale(table.occupancy_duration_minutes) ? t.openFor : t.seatedFor, { time: seatedShort(table.occupancy_duration_minutes, locale) })}
+                      >
+                        {seatedShort(table.occupancy_duration_minutes, locale)}
+                      </span>
+                    ) : null}
+                  </span>
                 )}
               </button>
             );
@@ -396,10 +407,15 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
                 <span className="text-sm text-ink-secondary">
                   {[
                     `${selected.capacity} ${selected.capacity === 1 ? t.seat : t.seats}`,
-                    seatedFor(selected.occupancy_duration_minutes, t.seatedOne, t.seatedMany),
+                    selected.occupancy_duration_minutes > 0 ? fill(t.seatedFor, { time: seatedShort(selected.occupancy_duration_minutes, locale) }) : "",
                   ].filter(Boolean).join(" · ")}
                 </span>
               </div>
+              {isStale(selected.occupancy_duration_minutes) ? (
+                <p className="rounded-staff border border-warning/40 bg-warning-bg px-3.5 py-3 text-sm text-ink">
+                  {fill(t.staleHint, { time: seatedShort(selected.occupancy_duration_minutes, locale) })}
+                </p>
+              ) : null}
               {needsConfirmation(selected) && selected.active_order_id ? (
                 <PendingOrder
                   table={selected}
@@ -433,7 +449,14 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
                   {due ? (
                     <p className={hint}>{t.unpaidHint}</p>
                   ) : null}
-                  {moves.length > 0 && moveTo ? (
+                  {moves.length === 1 && moveTo && moveTo in t.nextStep ? (
+                    // One next step: one big button pinned to the bottom of the sheet, within thumb reach.
+                    <div className="sticky bottom-0 -mx-1 bg-canvas px-1 pt-2 pb-1">
+                      <Button type="submit" size="touch" className="w-full" disabled={transition.isPending || moveTo === selected.order_status}>
+                        {transition.isPending ? t.updating : t.nextStep[moveTo as keyof typeof t.nextStep]}
+                      </Button>
+                    </div>
+                  ) : moves.length > 0 && moveTo ? (
                     <>
                       <label className="grid gap-1 text-sm">
                         {t.moveTo}

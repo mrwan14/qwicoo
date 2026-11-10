@@ -54,6 +54,7 @@ const en = {
   },
 } as const;
 
+    waste: "Waste",
 const ar = {
   mainNav: "التنقل الرئيسي",
   openNav: "فتح القائمة",
@@ -109,3 +110,4 @@ const ar = {
 } as const;
 
 export const shellCopy = defineDictionary(en, ar);
+    waste: "الهدر",

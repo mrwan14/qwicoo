@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 
 import { buttonClass } from "@/components/ops/kit/button";
 import { PageHeader } from "@/components/ops/kit/page-header";
@@ -18,7 +18,7 @@ import { deliveryBoardCopy } from "@/lib/i18n/staff/delivery-board";
 import { ordersCopy } from "@/lib/i18n/staff/orders";
 import { paymentsCopy } from "@/lib/i18n/staff/payments";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
-import { navForUser } from "@/lib/nav";
+import { isFrontlineRole, navForUser } from "@/lib/nav";
 import { useScope } from "@/stores/scope";
 
 import { cairoToday, deliveryBoardQuery, liveOrdersQuery, pendingPaymentsQuery } from "./queries";
@@ -44,6 +44,11 @@ export function OrdersHub({ tab, view = "list", children }: { tab: OrdersTab; vi
   const branchId = useScope((state) => state.branchId);
   const today = useMemo(() => cairoToday(), []);
   const allowed = new Set(me ? navForUser(me, branchId).map((item) => item.href) : []);
+  // Front-line roles have Tables as its own screen, so the List / Tables switch here would be a second copy.
+  const tablesHere = allowed.has("/app/floor") && !(me && isFrontlineRole(me.role));
+  useEffect(() => {
+    if (view === "tables" && me && !tablesHere) router.replace("/app/floor");
+  }, [view, me, tablesHere, router]);
 
   const live = useQuery({ ...liveOrdersQuery(branchId, today, t.loadFailed, locale), refetchInterval: 15_000 });
   const pending = useQuery({ ...pendingPaymentsQuery(branchId, payments.loadFailed, locale), enabled: Boolean(branchId) && allowed.has("/app/orders/payments") });
@@ -92,7 +97,7 @@ export function OrdersHub({ tab, view = "list", children }: { tab: OrdersTab; vi
             count: counts[item.value],
           }))}
         />
-        {tab === "live" && allowed.has("/app/floor") ? (
+        {tab === "live" && tablesHere ? (
           <SegmentedControl
             label={t.hub.view}
             value={view}

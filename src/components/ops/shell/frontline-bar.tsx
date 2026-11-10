@@ -45,6 +45,8 @@ export function useScreenTitle() {
   return (item: NavItem, role: UserRole) => {
     const key = SCREEN_TITLES[item.href];
     if (key === "expo" && role === "RUNNER") return t.screens.ready;
+    // A cashier can only record waste, so "Stock" would promise more than the screen does.
+    if (key === "stock" && role === "CASHIER") return t.screens.waste;
     return key ? t.screens[key] : nav[item.labelKey];
   };
 }

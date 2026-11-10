@@ -289,12 +289,12 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const callMinutes = call ? Math.max(0, Math.floor((Date.now() - new Date(call.created_at).getTime()) / 60000)) : 0;
 
   return (
-    <div className="grid grid-cols-1 gap-3">
+    <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-4">
       {embedded ? null : (
-        <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <ScreenTitle>{t.board.title}</ScreenTitle>
           <div className="flex items-center gap-3">
-            <p className="text-sm text-ink-secondary">{fill(t.board.inUse, { used: data.occupied_tables, total: data.total_tables })}</p>
+            <p className="rounded-staff bg-well px-2.5 py-1 text-[13px] font-medium text-ink tabular-nums">{fill(t.board.inUse, { used: data.occupied_tables, total: data.total_tables })}</p>
             {canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : null}
           </div>
         </div>
@@ -335,7 +335,7 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
           action={canAddTable && branchId ? <AddTableDialog branchId={branchId} /> : undefined}
         />
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {tables.map((table) => {
             const pending = needsConfirmation(table);
             const open = table.table_id === selectedId;
@@ -347,7 +347,8 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
                 key={table.table_id}
                 type="button"
                 aria-pressed={open}
-                className={`grid min-h-[104px] content-between gap-2 rounded-staff p-3.5 text-start text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${free ? "border border-border bg-subtle" : needsYou(table) || open ? "border-2 border-ink bg-canvas" : "border border-border bg-canvas"}`}
+                // Busy tables are raised white cards; free ones sit back as dashed tiles, so the eye goes to work first.
+                className={`grid min-h-[104px] content-between gap-2 rounded-staff p-3.5 text-start text-ink transition-[border-color,box-shadow,translate] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus motion-reduce:transition-none ${free ? "border border-dashed border-border bg-subtle hover:border-ink-secondary hover:bg-canvas" : `bg-canvas shadow-card hover:-translate-y-0.5 hover:shadow-card-hover motion-reduce:hover:translate-y-0 ${needsYou(table) || open ? "border-2 border-ink" : "border border-border hover:border-ink"}`}`}
                 onClick={() => {
                   setSelectedId(table.table_id);
                   setRejecting(false);

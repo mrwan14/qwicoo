@@ -1,22 +1,11 @@
-import { Cairo, Fraunces, Inter } from "next/font/google";
+import localFont from "next/font/local";
 
-const guestDisplay = Fraunces({
-  variable: "--font-guest-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
+// Self-hosted (see src/app/layout.tsx): builds don't fetch Google Fonts.
+const guestDisplay = localFont({ src: "../../fonts/fraunces.woff2", variable: "--font-guest-display", weight: "100 900", display: "swap" });
 
-const guestBody = Inter({
-  variable: "--font-guest-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
+const guestBody = localFont({ src: "../../fonts/inter.woff2", variable: "--font-guest-body", weight: "100 900", display: "swap" });
 
-const guestArabic = Cairo({
-  variable: "--font-guest-arabic",
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700"],
-});
+const guestArabic = localFont({ src: "../../fonts/cairo.woff2", variable: "--font-guest-arabic", weight: "200 1000", display: "swap" });
 
 /** Shared by the guest layout and the Paymob result page, which lives outside that layout. */
 export const guestFontClassName = `${guestDisplay.variable} ${guestBody.variable} ${guestArabic.variable}`;

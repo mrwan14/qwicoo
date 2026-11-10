@@ -1,35 +1,29 @@
 import type { Metadata } from "next";
-import { Archivo_Black, Fraunces, Geist, Geist_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
+import localFont from "next/font/local";
 
 import { AppProviders } from "@/components/ops/app-providers";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// Fonts are self-hosted from src/fonts (Latin, plus Arabic where needed) so builds never fetch
+// Google Fonts: Next 15's next/font/google breaks on Google's extensionless /l/font URLs.
+const geistSans = localFont({ src: "../fonts/geist.woff2", variable: "--font-geist-sans", weight: "100 900", display: "swap" });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistMono = localFont({ src: "../fonts/geist-mono.woff2", variable: "--font-geist-mono", weight: "100 900", display: "swap" });
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-});
+const fraunces = localFont({ src: "../fonts/fraunces.woff2", variable: "--font-fraunces", weight: "100 900", display: "swap" });
 
-const archivo = Archivo_Black({
-  variable: "--font-archivo",
-  subsets: ["latin"],
-  weight: "400",
-});
+const archivo = localFont({ src: "../fonts/archivo-black-regular.woff2", variable: "--font-archivo", weight: "400", display: "swap" });
 
-const plexArabic = IBM_Plex_Sans_Arabic({
+const plexArabic = localFont({
+  src: [
+    { path: "../fonts/plex-sans-arabic-regular.woff2", weight: "400" },
+    { path: "../fonts/plex-sans-arabic-medium.woff2", weight: "500" },
+    { path: "../fonts/plex-sans-arabic-semibold.woff2", weight: "600" },
+    { path: "../fonts/plex-sans-arabic-bold.woff2", weight: "700" },
+  ],
   variable: "--font-plex-arabic",
-  subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {

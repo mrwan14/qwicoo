@@ -103,11 +103,16 @@ export function DeliveryBoard() {
     <div className="grid grid-cols-1 gap-4">
       <p className="text-sm text-ink-secondary">{t.hint}</p>
       {needsDrawer ? (
-        <p className="rounded-staff border border-border bg-subtle px-4 py-3 text-sm">
-          <Link href="/app/reports/till" className={`${button} inline-flex items-center`}>{t.openTill}</Link>
+        <p className="flex flex-wrap items-center justify-between gap-3 rounded-staff border border-warning/40 bg-warning-bg px-4 py-3 text-sm text-ink">
+          {t.drawerClosed}
+          <Link href="/app/pos" className={`${button} inline-flex items-center`}>{t.openTill}</Link>
         </p>
       ) : null}
-      <div className="grid gap-4 lg:grid-cols-3">
+      {rows.length === 0 ? (
+        // One clear empty state instead of three identical empty columns.
+        <EmptyState title={t.allEmptyTitle} body={t.allEmptyBody} />
+      ) : null}
+      <div className={rows.length === 0 ? "hidden" : "grid gap-4 lg:grid-cols-3"}>
         {COLUMNS.map((column) => {
           const cards = rows.filter((order) => order.deliveryStatus === column);
           return (

@@ -7,6 +7,9 @@ const en = {
   loading: "Loading deliveries",
   loadFailed: "Could not load deliveries",
   empty: "Nothing in this column.",
+  allEmptyTitle: "No deliveries right now",
+  allEmptyBody: "Delivery orders appear here once they're packed for a driver.",
+  drawerClosed: "Cash on delivery needs an open cash drawer.",
   order: "Order {number}",
   paid: "Paid",
   unpaid: "Unpaid",
@@ -29,7 +32,7 @@ const en = {
   confirmDelivered: "Mark delivered",
   back: "Not yet",
   moveFailed: "Could not update this delivery",
-  openTill: "Open the till",
+  openTill: "Open the drawer in Point of sale",
   orders: "Today's orders",
 } as const;
 
@@ -40,6 +43,9 @@ const ar = {
   loading: "جارٍ تحميل التوصيل",
   loadFailed: "تعذّر تحميل طلبات التوصيل",
   empty: "لا شيء في هذا العمود.",
+  allEmptyTitle: "لا توجد طلبات توصيل الآن",
+  allEmptyBody: "تظهر طلبات التوصيل هنا عند تجهيزها للسائق.",
+  drawerClosed: "الدفع عند الاستلام يحتاج درج نقدية مفتوحًا.",
   order: "طلب {number}",
   paid: "مدفوع",
   unpaid: "غير مدفوع",
@@ -62,7 +68,7 @@ const ar = {
   confirmDelivered: "تأكيد التسليم",
   back: "ليس بعد",
   moveFailed: "تعذّر تحديث هذا الطلب",
-  openTill: "افتح الصندوق",
+  openTill: "افتح الدرج من نقطة البيع",
   orders: "طلبات اليوم",
 } as const;
 

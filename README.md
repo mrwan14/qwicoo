@@ -28,7 +28,9 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on pu
 2. Lint: `npm run lint`. Warnings are reported but do not fail the run.
 3. Typecheck: `npx tsc --noEmit`
 4. Unit tests: `npm test`
-5. Production build: `npx next build`. This uses webpack, because the Turbopack build (`npm run build`) fails on the Google fonts download.
+5. Production build: `npx next build` (webpack).
+
+Fonts are self-hosted in `src/fonts`, so builds never download from Google Fonts. Google sometimes returns font URLs that `next/font/google` can't handle to build machines, which made CI builds fail. See `src/fonts/README.md`.
 
 CI sets `NEXT_PUBLIC_API_BASE_URL` and `API_BASE_URL` to the placeholder `https://api.example.invalid`, so no backend or secrets are needed. To run the same checks locally:
 

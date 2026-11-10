@@ -1,35 +1,55 @@
 import type { Metadata } from "next";
-import { Archivo_Black, Fraunces, Geist, Geist_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
+import localFont from "next/font/local";
 
 import { AppProviders } from "@/components/ops/app-providers";
 
+import "../fonts/fallbacks.css";
 import "./globals.css";
 
-const geistSans = Geist({
+// Self-hosted copies of the Google Fonts files (see src/fonts/README.md), so builds never fetch from Google.
+// Each falls back to a face in src/fonts/fallbacks.css with the metrics next/font/google used.
+const geistSans = localFont({
+  src: "../fonts/geist-latin.woff2",
+  weight: "100 900",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  fallback: ["Geist Fallback"],
+  adjustFontFallback: false,
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "../fonts/geist-mono-latin.woff2",
+  weight: "100 900",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  fallback: ["Geist Mono Fallback"],
+  adjustFontFallback: false,
 });
 
-const fraunces = Fraunces({
+const fraunces = localFont({
+  src: "../fonts/fraunces-latin.woff2",
+  weight: "100 900",
   variable: "--font-fraunces",
-  subsets: ["latin"],
+  fallback: ["Fraunces Fallback"],
+  adjustFontFallback: false,
 });
 
-const archivo = Archivo_Black({
-  variable: "--font-archivo",
-  subsets: ["latin"],
+const archivo = localFont({
+  src: "../fonts/archivo-black-latin-400.woff2",
   weight: "400",
+  variable: "--font-archivo",
+  fallback: ["Archivo Black Fallback"],
+  adjustFontFallback: false,
 });
 
-const plexArabic = IBM_Plex_Sans_Arabic({
+const plexArabic = localFont({
+  src: [
+    { path: "../fonts/ibm-plex-sans-arabic-arabic-400.woff2", weight: "400" },
+    { path: "../fonts/ibm-plex-sans-arabic-arabic-500.woff2", weight: "500" },
+    { path: "../fonts/ibm-plex-sans-arabic-arabic-600.woff2", weight: "600" },
+    { path: "../fonts/ibm-plex-sans-arabic-arabic-700.woff2", weight: "700" },
+  ],
   variable: "--font-plex-arabic",
-  subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
+  fallback: ["IBM Plex Sans Arabic Fallback"],
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {

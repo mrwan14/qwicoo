@@ -43,6 +43,6 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      # Webpack build, not the Turbopack `npm run build`, which fails on Google fonts.
+      # Webpack production build. Fonts are self-hosted (src/fonts), so this never calls Google Fonts.
       - name: Build
         run: npx next build

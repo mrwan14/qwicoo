@@ -1,22 +1,41 @@
-import { Cairo, Fraunces, Inter } from "next/font/google";
+import localFont from "next/font/local";
 
-const guestDisplay = Fraunces({
+import "./guest-fonts.css";
+
+// Self-hosted copies of the Google Fonts files (see src/fonts/README.md). All three are variable fonts.
+const guestDisplay = localFont({
+  src: "../../fonts/fraunces-latin.woff2",
+  weight: "500 700",
   variable: "--font-guest-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  fallback: ["Fraunces Fallback"],
+  adjustFontFallback: false,
 });
 
-const guestBody = Inter({
+const guestBody = localFont({
+  src: "../../fonts/inter-latin.woff2",
+  weight: "400 700",
   variable: "--font-guest-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  fallback: ["Inter Fallback"],
+  adjustFontFallback: false,
 });
 
-const guestArabic = Cairo({
-  variable: "--font-guest-arabic",
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700"],
+// Google ships Cairo as an Arabic file and a Latin file. next/font/local cannot give each its own
+// unicode-range, so they load as two faces and guest-fonts.css joins them into --font-guest-arabic.
+const guestArabicScript = localFont({
+  src: "../../fonts/cairo-arabic.woff2",
+  weight: "400 700",
+  variable: "--font-guest-arabic-script",
+  // No fallback here: Latin characters must fall through to the Latin face, not to Arial.
+  adjustFontFallback: false,
+});
+
+const guestArabicLatin = localFont({
+  src: "../../fonts/cairo-latin.woff2",
+  weight: "400 700",
+  variable: "--font-guest-arabic-latin",
+  fallback: ["Cairo Fallback"],
+  adjustFontFallback: false,
 });
 
 /** Shared by the guest layout and the Paymob result page, which lives outside that layout. */
-export const guestFontClassName = `${guestDisplay.variable} ${guestBody.variable} ${guestArabic.variable}`;
+export const guestFontClassName = `guest-fonts ${guestDisplay.variable} ${guestBody.variable} ${guestArabicScript.variable} ${guestArabicLatin.variable}`;

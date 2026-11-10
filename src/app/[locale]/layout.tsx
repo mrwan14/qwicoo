@@ -1,17 +1,22 @@
-import { Baloo_Bhaijaan_2, Nunito } from "next/font/google";
+import localFont from "next/font/local";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
-const guestDisplay = Nunito({
+// Self-hosted copies of the Google Fonts files (see src/fonts/README.md). Both are variable fonts.
+const guestDisplay = localFont({
+  src: "../../fonts/nunito-latin.woff2",
+  weight: "600 800",
   variable: "--font-guest-display",
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  fallback: ["Nunito Fallback"],
+  adjustFontFallback: false,
 });
 
-const guestArabic = Baloo_Bhaijaan_2({
+const guestArabic = localFont({
+  src: "../../fonts/baloo-bhaijaan-2-arabic.woff2",
+  weight: "400 700",
   variable: "--font-guest-arabic",
-  subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
+  fallback: ["Baloo Bhaijaan 2 Fallback"],
+  adjustFontFallback: false,
 });
 
 export function generateStaticParams() {

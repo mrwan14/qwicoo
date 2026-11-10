@@ -50,3 +50,7 @@ next-env.d.ts
 /store-online-frontend-prompt.md
 .agents/hooks.json
 .cursor/hooks.json
+
+# Local test logins and design files, never committed
+/local-logins.txt
+/qwicoo-dashboard.pen

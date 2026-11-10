@@ -13,6 +13,7 @@ import { SidebarContent, type SidebarSubLink } from "@/components/ops/shell/side
 import { UserMenu } from "@/components/ops/shell/user-menu";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { AlertControls } from "@/features/staff/alerts/alert-controls";
+import { useReadyCount } from "@/features/staff/alerts/ready-count";
 import { HeaderClock } from "@/features/staff/attendance/header-clock";
 import { AskQwicooButton } from "@/features/staff/assistant/ask-qwicoo";
 import { StaffConnectionBanner } from "@/features/staff/offline/staff-connection-banner";
@@ -214,6 +215,7 @@ function AdminShell({ children }: { children: ReactNode }) {
 function FrontlineShell({ children }: { children: ReactNode }) {
   const me = useStaffSession();
   const activeBranchId = useScope((state) => state.branchId);
+  const ready = useReadyCount();
   const pending = usePendingConfirmationCount();
   if (!me) return null;
 
@@ -223,8 +225,9 @@ function FrontlineShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col bg-canvas text-ink">
       <SkipLink />
       <ConnectionBanner items={items} />
-      <FrontlineBar screens={screens} badges={pending ? { "/app/floor": pending } : {}} />
-      <main id="main" className="grid flex-1 grid-cols-1 content-start p-4 md:p-5">
+      <FrontlineBar screens={screens} badges={{ ...(pending ? { "/app/floor": pending } : {}), ...(ready ? { "/app/kds/expo": ready } : {}) }} />
+      {/* Bottom room on phones so the sound pill (and dev overlay) never covers the last button. */}
+      <main id="main" className="grid flex-1 grid-cols-1 content-start p-4 pb-24 md:p-5 md:pb-20">
         {children}
       </main>
     </div>

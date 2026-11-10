@@ -3,10 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
 import { Check, CheckCircle2, KeyRound } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
+import { seatedShort } from "@/features/staff/floor/seated";
 import { isDeliveryFulfillment, optionalRecordString, staffOrderStatus } from "@/features/staff/delivery";
 
 import { ScreenTitle } from "@/components/ops/page-header";
@@ -33,6 +34,18 @@ import { useNetwork } from "@/lib/offline/network";
 import { useScope } from "@/stores/scope";
 
 import { OfflineStage, OfflineTickets } from "./offline/offline-tickets";
+
+/** Ready food left longer than this is probably going cold: the time turns amber. */
+const COLD_AFTER_MINUTES = 5;
+
+function useNow(every = 30_000): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), every);
+    return () => window.clearInterval(id);
+  }, [every]);
+  return now;
+}
 
 type ExpoOrder = components["schemas"]["KDSExpoOrderResponse"];
 
@@ -110,6 +123,7 @@ export function ExpoScreen() {
   const branchId = useScope((state) => state.branchId);
   const [token, setToken] = useState("");
   const [codeOpen, setCodeOpen] = useState(false);
+  const now = useNow();
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [noteEditor, setNoteEditor] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -207,7 +221,13 @@ export function ExpoScreen() {
 
   const cards = (orders.data ?? [])
     .map((order) => ({ order, number: displayNumber(order, t.table), lines: cardLines(order, locale) }))
-    .filter((card) => card.number || card.lines.length > 0);
+    .filter((card) => card.number || card.lines.length > 0)
+    // Ready food first, the one waiting longest at the top; then what's still cooking.
+    .sort(
+      (a, b) =>
+        Number(b.order.status === "READY") - Number(a.order.status === "READY") ||
+        Date.parse(a.order.ready_at ?? a.order.created_at) - Date.parse(b.order.ready_at ?? b.order.created_at),
+    );
   const readyCount = cards.filter((card) => card.order.status === "READY").length;
 
   return (
@@ -268,12 +288,17 @@ export function ExpoScreen() {
               locale,
             });
             const pack = optionalRecordString(order, "store_pack_status");
+            const readyMinutes = order.ready_at ? Math.max(0, Math.floor((now - Date.parse(order.ready_at)) / 60000)) : 0;
             return (
               <li key={order.order_id} className={cn("grid content-start gap-3 rounded-staff border bg-canvas p-4 text-ink", ready ? "border-ink" : "border-border")}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="grid gap-0.5">
                     <p className="text-xl font-semibold tabular-nums">{number ?? t.noNumber}</p>
-                    <p className="text-[13px] text-ink-secondary">
+                    <p className="text-[13px] text-ink-secondary tabular-nums">
+                      {/* Two cards for the same table need telling apart: the short order number does that. */}
+                      <bdi dir="ltr">
+                        {fill(t.orderShort, { number: order.pickup_number != null ? String(order.pickup_number) : order.order_id.slice(0, 4).toUpperCase() })}
+                      </bdi>
                       {[
                         order.pickup_bay != null ? fill(t.bay, { number: order.pickup_bay }) : null,
                         dishesLeft ? fill(t.dishesReady, { ready: order.ready_ticket_items, total: order.total_ticket_items }) : null,
@@ -282,10 +307,17 @@ export function ExpoScreen() {
                           : null,
                       ]
                         .filter(Boolean)
-                        .join(" · ")}
+                        .map((part) => ` · ${part}`)
+                        .join("")}
                     </p>
                   </div>
-                  <Badge tone={ready ? "success" : "warning"}>{status}</Badge>
+                  {ready && order.ready_at ? (
+                    <span className={cn("shrink-0 pt-1 text-[13px] tabular-nums", readyMinutes > COLD_AFTER_MINUTES ? "font-semibold text-warning" : "text-ink-secondary")}>
+                      {readyMinutes < 1 ? t.readyJustNow : fill(t.readyFor, { time: seatedShort(readyMinutes, locale) })}
+                    </span>
+                  ) : null}
+                  {/* The runner's list is all ready food, so a "Ready" badge on every card says nothing. */}
+                  {runnerOnly && ready ? null : <Badge tone={ready ? "success" : "warning"}>{status}</Badge>}
                 </div>
                 {order.customer_notes?.trim() ? (
                   <p className="rounded-staff bg-warning-bg px-3 py-2 text-[13px]">
@@ -381,7 +413,7 @@ export function ExpoScreen() {
                   <p className="rounded-staff bg-warning-bg px-3 py-2 text-[13px]">{t.paymentDue}</p>
                 ) : ready ? (
                   <div className="grid gap-2">
-                    {!order.is_paid ? <p className="text-[13px] text-ink-secondary">{t.dineInUnpaid}</p> : null}
+                    {!order.is_paid ? <Badge tone="warning" className="w-fit">{t.unpaidTag}</Badge> : null}
                     <Button size="touch" className="w-full" disabled={handingOver} onClick={() => handOver.mutate(order.order_id)}>
                       <Check aria-hidden />
                       {handingOver ? t.handingOver : runnerOnly ? t.delivered : t.guestHasFood}

@@ -32,6 +32,7 @@ import { useScope } from "@/stores/scope";
 import { useMyAttendance } from "./clock";
 import { ClockBody, shiftState } from "./clock-panel";
 import { MyWeek } from "./my-week";
+import { ATTENDANCE_MANAGERS, TILL_ROLES } from "./roles";
 import { PinPanel } from "./pin-panel";
 import { RotaView } from "./rota-view";
 import { RulesPanel } from "./rules-panel";
@@ -48,7 +49,7 @@ type Shift = components["schemas"]["RotaShift"];
 type Expected = { person: Staff; branchId: string };
 
 // Same roles as staff.attendanceReview / staff.attendanceOverride and the API's OVERRIDE_ROLES.
-const MANAGERS = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"]);
+const MANAGERS = ATTENDANCE_MANAGERS;
 const FRONTLINE = new Set(["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER"]);
 const ZONE = "Africa/Cairo";
 
@@ -83,7 +84,8 @@ export function AttendanceScreen() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const params = useSearchParams();
   const [tillOpen, setTillOpen] = useState(false);
-  const askedTill = params.get("till") === "1";
+  const tillHere = Boolean(oneBranch) && TILL_ROLES.has(me?.role ?? "");
+  const askedTill = tillHere && params.get("till") === "1";
   useEffect(() => {
     if (askedTill) setTillOpen(true);
   }, [askedTill]);
@@ -94,7 +96,7 @@ export function AttendanceScreen() {
         title={t.title}
         subtitle={`${t.intro}${canReview ? ` ${t.introReview}` : ""}`}
         actions={
-          oneBranch ? (
+          tillHere ? (
             <Button size="field" variant="secondary" onClick={() => setTillOpen(true)}>
               <Store aria-hidden />
               {t.till.button}
@@ -103,10 +105,10 @@ export function AttendanceScreen() {
         }
       />
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <MyShift tillHref={oneBranch ? "/app/attendance?till=1" : null} />
+        <MyShift tillHref={tillHere ? "/app/attendance?till=1" : null} />
         <MyWeek />
       </div>
-      {tillOpen && oneBranch ? <TillClockPanel branchId={oneBranch} canManagePins={canCorrect} onClose={() => setTillOpen(false)} /> : null}
+      {tillOpen && tillHere && oneBranch ? <TillClockPanel branchId={oneBranch} canManagePins={canCorrect} onClose={() => setTillOpen(false)} /> : null}
       {canReview ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">

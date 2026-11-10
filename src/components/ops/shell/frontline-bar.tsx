@@ -14,6 +14,7 @@ import { useLocaleToggle, useLogOut } from "@/components/ops/shell/user-menu";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { AlertControls } from "@/features/staff/alerts/alert-controls";
 import { useMyAttendance } from "@/features/staff/attendance/clock";
+import { TILL_ROLES } from "@/features/staff/attendance/roles";
 import { ClockChip } from "@/features/staff/attendance/clock-panel";
 import { cairoTime } from "@/features/staff/home/numbers";
 import { roleLabel, type UserRole } from "@/lib/auth/roles";
@@ -77,7 +78,8 @@ export function FrontlineBar({ screens, badges = {} }: { screens: readonly NavIt
   const since = attendance.checkInAt ? fill(t.clockedIn, { time: cairoTime(attendance.checkInAt, locale) }) : null;
   const who = `${me.full_name} · ${roleLabel(me.role)}`;
   const place = identity.branchName ? `${identity.name} · ${identity.branchName}` : identity.name;
-  const tillHref = "/app/attendance?till=1";
+  // Only the cashier's till offers Till clock; others are told to use the till, without a link to it.
+  const tillHref = TILL_ROLES.has(me.role) ? "/app/attendance?till=1" : null;
   const switcher = screens.length > 1;
 
   const screenItems = screens.map((item) => {

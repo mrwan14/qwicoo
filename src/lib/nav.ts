@@ -352,6 +352,7 @@ export type SidebarKey =
   | "orders"
   | "menu"
   | "stock"
+  | "attendance"
   | "reports"
   | "settings"
   | "brands"
@@ -391,6 +392,8 @@ const BUSINESS_SIDEBAR: readonly SidebarDef[] = [
   },
   { key: "menu", members: ["/app/menu"] },
   { key: "stock", members: ["/app/stock"] },
+  // Branch managers check the team's attendance every day; staff reach theirs from the clock chip.
+  { key: "attendance", members: ["/app/attendance"] },
   { key: "reports", members: ["/app/reports", "/app/reports/sales", "/app/reports/till", "/app/reports/attendance", "/app/reports/payments"] },
   {
     key: "settings",

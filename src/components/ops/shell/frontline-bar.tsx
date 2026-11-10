@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { Check, ChevronDown, Clock, Languages, LogOut, Menu as MenuIcon } from "lucide-react";
+import { Check, ChevronDown, Languages, LogOut, Menu as MenuIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -14,6 +14,7 @@ import { useLocaleToggle, useLogOut } from "@/components/ops/shell/user-menu";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { AlertControls } from "@/features/staff/alerts/alert-controls";
 import { useMyAttendance } from "@/features/staff/attendance/clock";
+import { ClockChip } from "@/features/staff/attendance/clock-panel";
 import { cairoTime } from "@/features/staff/home/numbers";
 import { roleLabel, type UserRole } from "@/lib/auth/roles";
 import { fill } from "@/lib/i18n/dictionary";
@@ -74,8 +75,7 @@ export function FrontlineBar({ screens, badges = {} }: { screens: readonly NavIt
   const since = attendance.checkInAt ? fill(t.clockedIn, { time: cairoTime(attendance.checkInAt, locale) }) : null;
   const who = `${me.full_name} · ${roleLabel(me.role)}`;
   const place = identity.branchName ? `${identity.name} · ${identity.branchName}` : identity.name;
-  const clockLabel = attendance.clockedIn ? t.clockOut : t.clockIn;
-  const punch = () => void attendance.punch(attendance.clockedIn ? "out" : "in");
+  const tillHref = "/app/attendance?till=1";
   const switcher = screens.length > 1;
 
   const screenItems = screens.map((item) => {
@@ -103,6 +103,7 @@ export function FrontlineBar({ screens, badges = {} }: { screens: readonly NavIt
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1 text-ink md:hidden">
+        {canClock ? <ClockChip attendance={attendance} tillHref={tillHref} compact /> : null}
         <AlertControls />
         <Menu>
           <MenuTrigger
@@ -118,12 +119,6 @@ export function FrontlineBar({ screens, badges = {} }: { screens: readonly NavIt
                 {screenItems}
                 <MenuSeparator />
               </>
-            ) : null}
-            {canClock ? (
-              <MenuItem onClick={punch} disabled={attendance.punching}>
-                <Clock aria-hidden />
-                {clockLabel}
-              </MenuItem>
             ) : null}
             <MenuItem onClick={localeToggle.toggle}>
               <Languages aria-hidden />
@@ -161,28 +156,11 @@ export function FrontlineBar({ screens, badges = {} }: { screens: readonly NavIt
         ) : null}
       </div>
       <div className="hidden shrink-0 items-center gap-3 md:flex">
-        {since ? (
-          <Badge tone="success" className="hidden text-[13px] lg:inline-flex">
-            {since}
-          </Badge>
-        ) : canClock && attendance.status.isSuccess ? (
-          <Badge className="hidden text-[13px] lg:inline-flex">{t.notClockedIn}</Badge>
-        ) : null}
+        {canClock ? <ClockChip attendance={attendance} tillHref={tillHref} /> : null}
         <div className="flex items-center text-ink">
           <AlertControls />
         </div>
         <span className="hidden max-w-48 truncate text-[15px] text-ink-secondary lg:inline">{who}</span>
-        {canClock ? (
-          <button
-            type="button"
-            className={cn(buttonClass({ variant: "secondary", size: "sm" }), "min-h-10 px-3.5 text-sm")}
-            disabled={attendance.punching}
-            onClick={punch}
-          >
-            <Clock aria-hidden />
-            {clockLabel}
-          </button>
-        ) : null}
         <button
           type="button"
           lang={localeToggle.lang}

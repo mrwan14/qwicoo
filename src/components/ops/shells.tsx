@@ -13,6 +13,7 @@ import { SidebarContent, type SidebarSubLink } from "@/components/ops/shell/side
 import { UserMenu } from "@/components/ops/shell/user-menu";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { AlertControls } from "@/features/staff/alerts/alert-controls";
+import { HeaderClock } from "@/features/staff/attendance/header-clock";
 import { AskQwicooButton } from "@/features/staff/assistant/ask-qwicoo";
 import { StaffConnectionBanner } from "@/features/staff/offline/staff-connection-banner";
 import { useSidebarSubnav } from "@/features/staff/sidebar-subnav";
@@ -186,6 +187,7 @@ function AdminShell({ children }: { children: ReactNode }) {
           <div className="ms-auto flex min-w-0 items-center gap-2 sm:gap-3">
             <AskQwicooButton />
             <BranchSwitcher className="min-w-0" />
+            <HeaderClock items={items} />
             <div className="flex items-center text-ink">
               <AlertControls />
             </div>

@@ -2,6 +2,7 @@
 
 import { cn } from "cn";
 import {
+  CalendarClock,
   BookOpen,
   ChartColumn,
   House,
@@ -34,6 +35,7 @@ const ICONS: Record<SidebarKey, LucideIcon> = {
   orders: Receipt,
   menu: BookOpen,
   stock: Package,
+  attendance: CalendarClock,
   reports: ChartColumn,
   settings: Settings,
   brands: Store,

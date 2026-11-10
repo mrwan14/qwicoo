@@ -2,7 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
-import { Clock, KeyRound, LogIn, LogOut, SlidersHorizontal, Store } from "lucide-react";
+import { Clock, KeyRound, SlidersHorizontal, Store } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -28,10 +29,11 @@ import { roleLabel, isUserRole } from "@/lib/auth/roles";
 import { useScope } from "@/stores/scope";
 
 import { useMyAttendance } from "./clock";
+import { ClockBody } from "./clock-panel";
 import { PinPanel } from "./pin-panel";
 import { RotaView } from "./rota-view";
 import { RulesPanel } from "./rules-panel";
-import { branchNow, clockOf, minutesSince, shiftTimes, splitMinutes } from "./time";
+import { branchNow, clockOf, shiftTimes, splitMinutes } from "./time";
 import { TillClockPanel } from "./till-clock-panel";
 import { TimesheetView } from "./timesheet-view";
 
@@ -77,7 +79,12 @@ export function AttendanceScreen() {
   const oneBranch = branchId ?? (branches.length === 1 ? branches[0].id : null);
   const [view, setView] = useState<View>("today");
   const [rulesOpen, setRulesOpen] = useState(false);
+  const params = useSearchParams();
   const [tillOpen, setTillOpen] = useState(false);
+  const askedTill = params.get("till") === "1";
+  useEffect(() => {
+    if (askedTill) setTillOpen(true);
+  }, [askedTill]);
 
   return (
     <div className="grid gap-5">
@@ -88,7 +95,7 @@ export function AttendanceScreen() {
           {canReview ? ` ${t.introReview}` : ""}
         </p>
       </div>
-      <MyShift />
+      <MyShift tillHref={oneBranch ? "/app/attendance?till=1" : null} />
       {oneBranch ? (
         <div className="flex flex-wrap items-center gap-2">
           <Button size="field" variant="secondary" onClick={() => setTillOpen(true)}>
@@ -124,69 +131,31 @@ export function AttendanceScreen() {
   );
 }
 
-/** The signed-in person's shift: one button that is Clock in or Clock out. */
-function MyShift() {
+/** The signed-in person's shift: the same body as the top-bar clock panel, plus the till PIN link. */
+function MyShift({ tillHref }: { tillHref: string | null }) {
   const t = useStaffSection(attendanceCopy);
-  const { status, punch, punching, clockedIn, checkInAt } = useMyAttendance();
-  const now = useMinuteTick();
-  const data = status.data;
-  const record = data?.attendance;
-  const shift = data?.today_shift;
-  const done = Boolean(record?.check_in && record?.check_out);
-  // A manager may have marked today absent or excused: no clocking, just say so.
-  const away = record?.status === "ABSENT" || record?.status === "EXCUSED";
-  const worked = checkInAt ? splitMinutes(minutesSince(checkInAt, now)) : null;
-  const tillOnly = data?.clock_mode === "TILL_ONLY";
+  const attendance = useMyAttendance();
+  const { status } = attendance;
   const [pinOpen, setPinOpen] = useState(false);
 
   if (status.isError) {
     return <ErrorState body={status.error instanceof Error ? status.error.message : t.statusFailed} onRetry={() => void status.refetch()} />;
   }
   return (
-    <Card>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="grid gap-1">
-          <h2 className="text-sm font-semibold text-ink">{t.my.title}</h2>
-          {shift?.start_time && shift.end_time ? (
-            <p className="text-[13px] text-ink-secondary">
-              {fill(t.my.shift, { start: shift.start_time, end: shift.end_time, lateAfter: shift.late_after ?? shift.start_time })}
-            </p>
-          ) : null}
-          <p className="flex flex-wrap items-center gap-2 text-base font-semibold text-ink">
-            {status.isLoading ? (
-              <span className="text-sm font-normal text-ink-secondary">{t.loadingYours}</span>
-            ) : clockedIn && checkInAt ? (
-              <>
-                <span>{fill(t.my.onShift, { time: clockOf(checkInAt) })}</span>
-                {worked ? <span className="font-normal text-ink-secondary tabular-nums">· {fill(t.my.worked, { hours: worked.hours, minutes: worked.minutes })}</span> : null}
-              </>
-            ) : done ? (
-              <span>{fill(t.my.done, { start: clockOf(record?.check_in), end: clockOf(record?.check_out) })}</span>
-            ) : away ? (
-              <span>{record?.status === "ABSENT" ? t.absent : t.log.excused}</span>
-            ) : shift?.is_day_off ? (
-              <span>{t.my.dayOff}</span>
-            ) : (
-              <span>{t.my.notIn}</span>
-            )}
-            {record?.status && !away ? <Badge tone={statusTone(record.status)}>{record.status === "LATE" ? t.late : t.onTime}</Badge> : null}
-          </p>
-          {tillOnly && !done && !away ? <p className="text-[13px] text-ink-secondary">{t.my.tillOnly}</p> : null}
-          {data ? (
+    <Card className="max-w-xl">
+      <ClockBody
+        attendance={attendance}
+        tillHref={tillHref}
+        footer={
+          status.data ? (
             <button type="button" onClick={() => setPinOpen(true)} className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-ink underline-offset-2 hover:underline">
               <KeyRound aria-hidden className="size-3.5" />
-              {data.has_till_pin ? t.my.changePin : t.my.setPin}
+              {status.data.has_till_pin ? t.my.changePin : t.my.setPin}
             </button>
-          ) : null}
-        </div>
-        {pinOpen ? <PinPanel onClose={() => setPinOpen(false)} /> : null}
-        {!done && !tillOnly && !away ? (
-          <Button size="touch" className="w-full sm:w-auto" variant={clockedIn ? "secondary" : "primary"} disabled={punching || status.isLoading} onClick={() => void punch(clockedIn ? "out" : "in")}>
-            {clockedIn ? <LogOut aria-hidden /> : <LogIn aria-hidden />}
-            {punching ? t.my.clocking : clockedIn ? t.my.clockOut : t.my.clockIn}
-          </Button>
-        ) : null}
-      </div>
+          ) : null
+        }
+      />
+      {pinOpen ? <PinPanel onClose={() => setPinOpen(false)} /> : null}
     </Card>
   );
 }

@@ -6443,46 +6443,6 @@ export interface components {
             people: components["schemas"]["TillRosterPerson"][];
         };
         /**
-         * AttendanceStatusResponse
-         * @description Complete attendance status for the current employee today.
-         */
-        AttendanceStatusResponse: {
-            attendance: components["schemas"]["AttendanceInfo"];
-            /** Branch Name */
-            branch_name: string;
-            /**
-             * Clock Mode
-             * @description ANY (phone or till) or TILL_ONLY at this branch.
-             * @default ANY
-             */
-            clock_mode: string;
-            /**
-             * Date
-             * Format: date
-             */
-            date: string;
-            /**
-             * Employee Id
-             * Format: uuid
-             */
-            employee_id: string;
-            /** Employee Name */
-            employee_name: string;
-            /**
-             * Has Till Pin
-             * @description This person has set a till clock-in PIN.
-             * @default false
-             */
-            has_till_pin: boolean;
-            today_shift: components["schemas"]["ShiftInfo"];
-        };
-        /**
-         * AuditLogListResponse
-         * @description Paginated collection of audit log entries.
-         */
-        AuditLogListResponse: {
-            /** Items */
-        /**
          * MyWeekDay
          * @description One day of the signed-in person's week: the plan, and what happened.
          */
@@ -6565,6 +6525,46 @@ export interface components {
              */
             today: string;
         };
+        /**
+         * AttendanceStatusResponse
+         * @description Complete attendance status for the current employee today.
+         */
+        AttendanceStatusResponse: {
+            attendance: components["schemas"]["AttendanceInfo"];
+            /** Branch Name */
+            branch_name: string;
+            /**
+             * Clock Mode
+             * @description ANY (phone or till) or TILL_ONLY at this branch.
+             * @default ANY
+             */
+            clock_mode: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Has Till Pin
+             * @description This person has set a till clock-in PIN.
+             * @default false
+             */
+            has_till_pin: boolean;
+            today_shift: components["schemas"]["ShiftInfo"];
+        };
+        /**
+         * AuditLogListResponse
+         * @description Paginated collection of audit log entries.
+         */
+        AuditLogListResponse: {
+            /** Items */
             items: components["schemas"]["AuditLogResponse"][];
             /** Total */
             total: number;
@@ -21302,6 +21302,40 @@ export interface operations {
             };
         };
     };
+    get_my_week_api_v1_attendance_my_week_get: {
+        parameters: {
+            query?: {
+                /** @description Any day in the week to show; defaults to today. */
+                start?: string | null;
+            };
+            header?: {
+                "X-Branch-ID"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyWeekResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_branch_attendance_logs_api_v1_branches__branch_id__attendance_logs_get: {
         parameters: {
             query?: {
@@ -21447,40 +21481,6 @@ export interface operations {
                 branch_id: string;
             };
             cookie?: never;
-    get_my_week_api_v1_attendance_my_week_get: {
-        parameters: {
-            query?: {
-                /** @description Any day in the week to show; defaults to today. */
-                start?: string | null;
-            };
-            header?: {
-                "X-Branch-ID"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MyWeekResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
         };
         requestBody?: never;
         responses: {

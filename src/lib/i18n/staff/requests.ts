@@ -1,15 +1,21 @@
 import { defineDictionary } from "@/lib/i18n/dictionary";
 
 const en = {
-  screen: "Requests",
-  loading: "Loading requests",
+  screen: "Waiter calls",
+  loading: "Loading waiter calls",
   queueFailed: "Queue failed",
   updateFailed: "Update failed",
   escalateFailed: "Escalate failed",
   escalated: "Escalated {count}",
-  title: "Requests",
-  escalate: "Escalate overdue",
-  empty: "No open requests.",
+  title: "Waiter calls",
+  intro: "Guests call from the table QR. Take a call so others know it's handled, then mark it done.",
+  escalate: "Escalate {count} overdue",
+  empty: "No calls right now",
+  emptyBody: "When a guest asks for something from their table, it shows up here with the table number.",
+  waiting: "{time} ago",
+  justNow: "just now",
+  overdue: "Overdue",
+  escalatedBadge: "Escalated",
   table: "Table",
   tableNumber: "Table {number}",
   type: {
@@ -31,22 +37,28 @@ const en = {
     DISMISSED: "Dismissed",
   },
   action: {
-    ACKNOWLEDGED: "Acknowledge",
-    COMPLETED: "Complete",
+    ACKNOWLEDGED: "I'm on it",
+    COMPLETED: "Done",
     DISMISSED: "Dismiss",
   },
 } as const;
 
 const ar = {
-  screen: "الطلبات",
-  loading: "جارٍ تحميل الطلبات",
+  screen: "نداءات النادل",
+  loading: "جارٍ تحميل النداءات",
   queueFailed: "تعذّر تحميل الطلبات",
   updateFailed: "تعذّر التحديث",
   escalateFailed: "تعذّر التصعيد",
   escalated: "تم تصعيد {count}",
-  title: "الطلبات",
-  escalate: "تصعيد المتأخر",
-  empty: "لا توجد طلبات مفتوحة.",
+  title: "نداءات النادل",
+  intro: "ينادي الضيوف من رمز QR على الطاولة. استلم النداء ليعرف الآخرون أنه قيد التنفيذ، ثم أتمّه.",
+  escalate: "تصعيد {count} متأخر",
+  empty: "لا توجد نداءات الآن",
+  emptyBody: "عندما يطلب ضيف شيئًا من طاولته، يظهر هنا مع رقم الطاولة.",
+  waiting: "منذ {time}",
+  justNow: "الآن",
+  overdue: "متأخر",
+  escalatedBadge: "تم التصعيد",
   table: "طاولة",
   tableNumber: "طاولة {number}",
   type: {
@@ -68,9 +80,9 @@ const ar = {
     DISMISSED: "أُغلق",
   },
   action: {
-    ACKNOWLEDGED: "استلام",
-    COMPLETED: "إتمام",
-    DISMISSED: "إغلاق",
+    ACKNOWLEDGED: "سأتولاه",
+    COMPLETED: "تم",
+    DISMISSED: "تجاهل",
   },
 } as const;
 

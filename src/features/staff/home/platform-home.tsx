@@ -133,7 +133,7 @@ export function PlatformHome() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <KpiCard
           label={t.platform.kpis.brands}
           value={brands.data ? formatCount(brands.data.total, locale) : "—"}
@@ -166,6 +166,7 @@ export function PlatformHome() {
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <Card title={t.platform.brands.title} action={<CardLink href="/app/brands">{t.platform.brands.link}</CardLink>}>
           <DataTable
+            stack
             caption={t.platform.brands.title}
             columns={columns}
             rows={items}

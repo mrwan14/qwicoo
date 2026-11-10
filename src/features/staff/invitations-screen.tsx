@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { ScreenTitle } from "@/components/ops/page-header";
@@ -96,6 +96,10 @@ export function InvitationsScreen({ title }: { title: string }) {
       return data?.items ?? [];
     },
   });
+  // One brand: nothing to choose, so pick it.
+  useEffect(() => {
+    if (isSuper && !brandId && brands.data?.length === 1) setBrandId(brands.data[0].id);
+  }, [isSuper, brandId, brands.data]);
 
   const brandBranches = useQuery({
     queryKey: ["brand-branches", brandId],

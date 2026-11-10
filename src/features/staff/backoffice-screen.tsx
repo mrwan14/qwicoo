@@ -9,11 +9,13 @@ import { ScreenTitle } from "@/components/ops/page-header";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { BranchesBarChart, CategoryDonut, ItemsBarChart } from "@/features/staff/analytics-charts";
 import { AssistantUsage } from "@/features/staff/assistant/leads-screen";
+import { isBackgroundAction } from "@/features/staff/audit-filter";
 import { canSeeAssistantUsage } from "@/features/staff/assistant/access";
 import { LiveCount } from "@/components/ops/live-fact";
 import { Money } from "@/components/ops/money";
 import { StatusChip } from "@/components/ops/status-chip";
 import { ErrorState, LoadingState, QueryErrorState, RoleUnavailableState } from "@/components/ops/states";
+import { Switch } from "@/components/ops/kit/field";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { asApiError, isRoleDenied } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -366,14 +368,22 @@ export function AuditScreen() {
   const { locale } = useLocale();
   const [action, setAction] = useState("");
   const [role, setRole] = useState("");
+  const [showBackground, setShowBackground] = useState(false);
   const logs = useQuery({
-    queryKey: ["audit"],
+    queryKey: ["audit", showBackground],
     queryFn: async () => {
-      const result = await browserApi.GET("/api/v1/audit/logs", {
-        params: { query: { limit: 50 } },
-      });
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.failed);
-      return result.data;
+      // Heartbeats can fill every page, so when they're hidden keep reading older pages
+      // (up to 500 entries) until there are 50 things people did.
+      const items: components["schemas"]["AuditLogListResponse"]["items"] = [];
+      for (let page = 0; page < (showBackground ? 1 : 5); page += 1) {
+        const result = await browserApi.GET("/api/v1/audit/logs", {
+          params: { query: { limit: showBackground ? 50 : 100, offset: page * 100 } },
+        });
+        if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.failed);
+        items.push(...(showBackground ? result.data.items : result.data.items.filter((item) => !isBackgroundAction(item.action))));
+        if (items.length >= 50 || result.data.items.length < 100) break;
+      }
+      return { items: items.slice(0, 50) };
     },
   });
   const actionNeedle = action.trim().toLowerCase();
@@ -386,7 +396,16 @@ export function AuditScreen() {
   });
   return (
     <div className="grid gap-3">
-      <ScreenTitle>{t.title}</ScreenTitle>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="grid gap-1">
+          <ScreenTitle>{t.title}</ScreenTitle>
+          <p className="text-sm text-ink-secondary">{t.intro}</p>
+        </div>
+        <label className="inline-flex items-center gap-2 text-sm text-ink">
+          <Switch checked={showBackground} onCheckedChange={setShowBackground} aria-label={t.showBackground} />
+          {t.showBackground}
+        </label>
+      </div>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
           {t.what}

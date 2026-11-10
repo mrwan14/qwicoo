@@ -1,13 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { ScreenTitle } from "@/components/ops/page-header";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ops/kit/menu";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
@@ -391,6 +392,10 @@ export function FeaturesScreen() {
       return result.data.items;
     },
   });
+  // One brand: nothing to choose, so pick it.
+  useEffect(() => {
+    if (!brandId && brands.data?.length === 1) focusPlatform({ brandId: brands.data[0].id, branchId: null });
+  }, [brandId, brands.data, focusPlatform]);
   const platform = useQuery({
     queryKey: ["features-platform"],
     queryFn: async () => {
@@ -475,37 +480,6 @@ export function FeaturesScreen() {
         <p className={`mt-1 max-w-2xl ${hint}`}>{t.intro}</p>
       </header>
 
-      <form
-        className="grid max-w-3xl gap-4 rounded-staff bg-canvas p-4 border border-border"
-        onSubmit={(event) => {
-          event.preventDefault();
-          create.mutate();
-        }}
-      >
-        <div>
-          <h2 className="text-lg font-semibold">{t.addTitle}</h2>
-          <p className={hint}>{t.addHint}</p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm">
-            {t.key}
-            <span className={hint}>{t.keyHint}</span>
-            <input className={control} value={key} onChange={(event) => setKey(event.target.value)} required />
-          </label>
-          <label className="grid gap-1 text-sm">
-            {t.name}
-            <span className={hint}>{t.nameHint}</span>
-            <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
-          </label>
-        </div>
-        <button className={primaryButton} type="submit" disabled={create.isPending} aria-describedby="add-feature-hint">
-          <Plus aria-hidden className="size-4" />
-          {create.isPending ? t.adding : t.addButton}
-        </button>
-        <p id="add-feature-hint" className={hint}>
-          {t.addDescribed}
-        </p>
-      </form>
 
       <section className="grid max-w-3xl gap-3">
         <div>
@@ -575,14 +549,21 @@ export function FeaturesScreen() {
                     {feature.is_core ? (
                       <span className="text-sm text-ink-secondary">{t.core}</span>
                     ) : (
-                      <button
-                        type="button"
-                        className="inline-flex min-h-11 items-center rounded-staff border border-danger/30 px-4 text-sm font-medium text-danger hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-                        disabled={remove.isPending}
-                        onClick={() => setRemoveKey(feature.id)}
-                      >
-                        {t.delete}
-                      </button>
+                      // Deleting a feature is drastic, so it sits behind a menu (and still asks first).
+                      <Menu>
+                        <MenuTrigger
+                          aria-label={fill(t.moreFor, { name: feature.name_en })}
+                          className="inline-flex size-11 items-center justify-center rounded-staff text-ink-secondary outline-none hover:bg-well hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"
+                        >
+                          <MoreHorizontal aria-hidden className="size-5" />
+                        </MenuTrigger>
+                        <MenuContent align="end">
+                          <MenuItem className="text-danger" disabled={remove.isPending} onClick={() => setRemoveKey(feature.id)}>
+                            <Trash2 aria-hidden />
+                            {t.delete}
+                          </MenuItem>
+                        </MenuContent>
+                      </Menu>
                     )}
                   </div>
                 </li>
@@ -642,6 +623,41 @@ export function FeaturesScreen() {
           </ul>
         ) : null}
       </section>
+      {/* Adding a platform feature is a rare, developer-side job: tucked away below the daily work. */}
+      <details className="group max-w-3xl rounded-staff border border-border bg-canvas">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-ink">
+          <Plus aria-hidden className="size-4 transition-transform group-open:rotate-45" />
+          {t.addTitle}
+        </summary>
+      <form
+        className="grid gap-4 border-t border-border p-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          create.mutate();
+        }}
+      >
+        <p className={hint}>{t.addHint}</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm">
+            {t.key}
+            <span className={hint}>{t.keyHint}</span>
+            <input className={control} value={key} onChange={(event) => setKey(event.target.value)} required />
+          </label>
+          <label className="grid gap-1 text-sm">
+            {t.name}
+            <span className={hint}>{t.nameHint}</span>
+            <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
+          </label>
+        </div>
+        <button className={primaryButton} type="submit" disabled={create.isPending} aria-describedby="add-feature-hint">
+          <Plus aria-hidden className="size-4" />
+          {create.isPending ? t.adding : t.addButton}
+        </button>
+        <p id="add-feature-hint" className={hint}>
+          {t.addDescribed}
+        </p>
+      </form>
+      </details>
     </div>
   );
 }

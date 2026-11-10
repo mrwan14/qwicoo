@@ -732,6 +732,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/my-week": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get my week
+         * @description The signed-in person's own shifts, punches and hours for the week (Monday to Sunday) containing `start`, or this week.
+         */
+        get: operations["get_my_week_api_v1_attendance_my_week_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/branches/{branch_id}/attendance-logs": {
         parameters: {
             query?: never;
@@ -6462,6 +6482,89 @@ export interface components {
          */
         AuditLogListResponse: {
             /** Items */
+        /**
+         * MyWeekDay
+         * @description One day of the signed-in person's week: the plan, and what happened.
+         */
+        MyWeekDay: {
+            /** Check In */
+            check_in?: string | null;
+            /** Check Out */
+            check_out?: string | null;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * End Time
+             * @description Planned end, HH:MM at the branch.
+             */
+            end_time?: string | null;
+            /**
+             * From Rota
+             * @description True when the rota set this day; otherwise it is the usual shift.
+             * @default false
+             */
+            from_rota: boolean;
+            /**
+             * Is Day Off
+             * @default false
+             */
+            is_day_off: boolean;
+            /**
+             * Minutes Late
+             * @default 0
+             */
+            minutes_late: number;
+            /** Minutes Worked */
+            minutes_worked?: number | null;
+            /**
+             * Start Time
+             * @description Planned start, HH:MM at the branch. None on a day off.
+             */
+            start_time?: string | null;
+            /**
+             * Status
+             * @description PRESENT, LATE, ABSENT or EXCUSED once the day has a record.
+             */
+            status?: string | null;
+        };
+        /**
+         * MyWeekResponse
+         * @description The signed-in person's own week, Monday to Sunday. Nobody else's shifts are included.
+         */
+        MyWeekResponse: {
+            /** Branch Name */
+            branch_name: string;
+            /** Days */
+            days: components["schemas"]["MyWeekDay"][];
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * Minutes Scheduled
+             * @default 0
+             */
+            minutes_scheduled: number;
+            /**
+             * Minutes Worked
+             * @default 0
+             */
+            minutes_worked: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+        };
             items: components["schemas"]["AuditLogResponse"][];
             /** Total */
             total: number;
@@ -21344,6 +21447,40 @@ export interface operations {
                 branch_id: string;
             };
             cookie?: never;
+    get_my_week_api_v1_attendance_my_week_get: {
+        parameters: {
+            query?: {
+                /** @description Any day in the week to show; defaults to today. */
+                start?: string | null;
+            };
+            header?: {
+                "X-Branch-ID"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyWeekResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
         };
         requestBody?: never;
         responses: {

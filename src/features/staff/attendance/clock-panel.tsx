@@ -131,7 +131,7 @@ export function ClockBody({ attendance, tillHref, heading = true, footer }: { at
   let headline: string;
   if (attendance.status.isLoading) headline = "…";
   else if (clockedIn && checkInAt) headline = fill(t.onShift, { time: time(checkInAt) });
-  else if (done) headline = fill(t.done, { start: time(record?.check_in), end: time(record?.check_out) });
+  else if (done) headline = fill(t.done, { start: `\u2066${time(record?.check_in)}`, end: `${time(record?.check_out)}\u2069` });
   else if (away === "ABSENT") headline = t.absent;
   else if (away === "EXCUSED") headline = t.excused;
   else if (shift?.is_day_off) headline = t.dayOff;
@@ -139,7 +139,7 @@ export function ClockBody({ attendance, tillHref, heading = true, footer }: { at
 
   const shiftLine =
     shift?.start_time && shift.end_time && !shift.is_day_off
-      ? fill(t.today, { start: shift.start_time, end: shift.end_time, lateAfter: shift.late_after ?? shift.start_time })
+      ? fill(t.today, { start: `\u2066${shift.start_time}`, end: `${shift.end_time}\u2069`, lateAfter: shift.late_after ?? shift.start_time })
       : shift?.is_day_off
         ? null
         : t.noShift;

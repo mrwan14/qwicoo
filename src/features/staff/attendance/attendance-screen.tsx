@@ -30,6 +30,7 @@ import { useScope } from "@/stores/scope";
 
 import { useMyAttendance } from "./clock";
 import { ClockBody } from "./clock-panel";
+import { MyWeek } from "./my-week";
 import { PinPanel } from "./pin-panel";
 import { RotaView } from "./rota-view";
 import { RulesPanel } from "./rules-panel";
@@ -95,7 +96,10 @@ export function AttendanceScreen() {
           {canReview ? ` ${t.introReview}` : ""}
         </p>
       </div>
-      <MyShift tillHref={oneBranch ? "/app/attendance?till=1" : null} />
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <MyShift tillHref={oneBranch ? "/app/attendance?till=1" : null} />
+        <MyWeek />
+      </div>
       {oneBranch ? (
         <div className="flex flex-wrap items-center gap-2">
           <Button size="field" variant="secondary" onClick={() => setTillOpen(true)}>

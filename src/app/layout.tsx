@@ -3,53 +3,27 @@ import localFont from "next/font/local";
 
 import { AppProviders } from "@/components/ops/app-providers";
 
-import "../fonts/fallbacks.css";
 import "./globals.css";
 
-// Self-hosted copies of the Google Fonts files (see src/fonts/README.md), so builds never fetch from Google.
-// Each falls back to a face in src/fonts/fallbacks.css with the metrics next/font/google used.
-const geistSans = localFont({
-  src: "../fonts/geist-latin.woff2",
-  weight: "100 900",
-  variable: "--font-geist-sans",
-  fallback: ["Geist Fallback"],
-  adjustFontFallback: false,
-});
+// Fonts are self-hosted from src/fonts (Latin, plus Arabic where needed) so builds never fetch
+// Google Fonts: Next 15's next/font/google breaks on Google's extensionless /l/font URLs.
+const geistSans = localFont({ src: "../fonts/geist.woff2", variable: "--font-geist-sans", weight: "100 900", display: "swap" });
 
-const geistMono = localFont({
-  src: "../fonts/geist-mono-latin.woff2",
-  weight: "100 900",
-  variable: "--font-geist-mono",
-  fallback: ["Geist Mono Fallback"],
-  adjustFontFallback: false,
-});
+const geistMono = localFont({ src: "../fonts/geist-mono.woff2", variable: "--font-geist-mono", weight: "100 900", display: "swap" });
 
-const fraunces = localFont({
-  src: "../fonts/fraunces-latin.woff2",
-  weight: "100 900",
-  variable: "--font-fraunces",
-  fallback: ["Fraunces Fallback"],
-  adjustFontFallback: false,
-});
+const fraunces = localFont({ src: "../fonts/fraunces.woff2", variable: "--font-fraunces", weight: "100 900", display: "swap" });
 
-const archivo = localFont({
-  src: "../fonts/archivo-black-latin-400.woff2",
-  weight: "400",
-  variable: "--font-archivo",
-  fallback: ["Archivo Black Fallback"],
-  adjustFontFallback: false,
-});
+const archivo = localFont({ src: "../fonts/archivo-black-regular.woff2", variable: "--font-archivo", weight: "400", display: "swap" });
 
 const plexArabic = localFont({
   src: [
-    { path: "../fonts/ibm-plex-sans-arabic-arabic-400.woff2", weight: "400" },
-    { path: "../fonts/ibm-plex-sans-arabic-arabic-500.woff2", weight: "500" },
-    { path: "../fonts/ibm-plex-sans-arabic-arabic-600.woff2", weight: "600" },
-    { path: "../fonts/ibm-plex-sans-arabic-arabic-700.woff2", weight: "700" },
+    { path: "../fonts/plex-sans-arabic-regular.woff2", weight: "400" },
+    { path: "../fonts/plex-sans-arabic-medium.woff2", weight: "500" },
+    { path: "../fonts/plex-sans-arabic-semibold.woff2", weight: "600" },
+    { path: "../fonts/plex-sans-arabic-bold.woff2", weight: "700" },
   ],
   variable: "--font-plex-arabic",
-  fallback: ["IBM Plex Sans Arabic Fallback"],
-  adjustFontFallback: false,
+  display: "swap",
 });
 
 export const metadata: Metadata = {

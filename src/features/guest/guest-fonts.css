@@ -1,4 +1,0 @@
-/* Cairo arrives as two faces (Arabic, Latin); the guest CSS reads them as one stack. */
-.guest-fonts {
-  --font-guest-arabic: var(--font-guest-arabic-script), var(--font-guest-arabic-latin);
-}

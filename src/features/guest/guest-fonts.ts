@@ -1,41 +1,11 @@
 import localFont from "next/font/local";
 
-import "./guest-fonts.css";
+// Self-hosted (see src/app/layout.tsx): builds don't fetch Google Fonts.
+const guestDisplay = localFont({ src: "../../fonts/fraunces.woff2", variable: "--font-guest-display", weight: "100 900", display: "swap" });
 
-// Self-hosted copies of the Google Fonts files (see src/fonts/README.md). All three are variable fonts.
-const guestDisplay = localFont({
-  src: "../../fonts/fraunces-latin.woff2",
-  weight: "500 700",
-  variable: "--font-guest-display",
-  fallback: ["Fraunces Fallback"],
-  adjustFontFallback: false,
-});
+const guestBody = localFont({ src: "../../fonts/inter.woff2", variable: "--font-guest-body", weight: "100 900", display: "swap" });
 
-const guestBody = localFont({
-  src: "../../fonts/inter-latin.woff2",
-  weight: "400 700",
-  variable: "--font-guest-body",
-  fallback: ["Inter Fallback"],
-  adjustFontFallback: false,
-});
-
-// Google ships Cairo as an Arabic file and a Latin file. next/font/local cannot give each its own
-// unicode-range, so they load as two faces and guest-fonts.css joins them into --font-guest-arabic.
-const guestArabicScript = localFont({
-  src: "../../fonts/cairo-arabic.woff2",
-  weight: "400 700",
-  variable: "--font-guest-arabic-script",
-  // No fallback here: Latin characters must fall through to the Latin face, not to Arial.
-  adjustFontFallback: false,
-});
-
-const guestArabicLatin = localFont({
-  src: "../../fonts/cairo-latin.woff2",
-  weight: "400 700",
-  variable: "--font-guest-arabic-latin",
-  fallback: ["Cairo Fallback"],
-  adjustFontFallback: false,
-});
+const guestArabic = localFont({ src: "../../fonts/cairo.woff2", variable: "--font-guest-arabic", weight: "200 1000", display: "swap" });
 
 /** Shared by the guest layout and the Paymob result page, which lives outside that layout. */
-export const guestFontClassName = `guest-fonts ${guestDisplay.variable} ${guestBody.variable} ${guestArabicScript.variable} ${guestArabicLatin.variable}`;
+export const guestFontClassName = `${guestDisplay.variable} ${guestBody.variable} ${guestArabic.variable}`;

@@ -43,6 +43,6 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      # Webpack production build. Fonts are self-hosted (src/fonts), so this never calls Google Fonts.
+      # Webpack production build. Fonts are self-hosted in src/fonts, so this never calls Google Fonts.
       - name: Build
         run: npx next build

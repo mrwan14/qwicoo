@@ -1,13 +1,7 @@
 import localFont from "next/font/local";
 
 /** Staff body font. Page titles use Fraunces, already loaded by the root layout. */
-// Self-hosted copy of the Google Fonts file (see src/fonts/README.md). Inter is a variable font.
-const staffBody = localFont({
-  src: "../../../fonts/inter-latin.woff2",
-  weight: "400 600",
-  variable: "--font-staff-body",
-  fallback: ["Inter Fallback"],
-  adjustFontFallback: false,
-});
+// Self-hosted (see src/app/layout.tsx): builds don't fetch Google Fonts.
+const staffBody = localFont({ src: "../../../fonts/inter.woff2", variable: "--font-staff-body", weight: "100 900", display: "swap" });
 
 export const staffFontClassName = staffBody.variable;

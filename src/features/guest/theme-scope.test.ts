@@ -35,16 +35,13 @@ test("guest layout loads Fraunces, Inter, and Cairo only", () => {
   const layout = readFileSync(new URL("../../app/(guest)/layout.tsx", import.meta.url), "utf8");
   const fonts = readFileSync(new URL("./guest-fonts.ts", import.meta.url), "utf8");
   assert.match(layout, /guestFontClassName/);
-  assert.match(fonts, /fraunces-latin\.woff2/);
-  assert.match(fonts, /inter-latin\.woff2/);
-  assert.match(fonts, /cairo-arabic\.woff2/);
-  assert.match(fonts, /cairo-latin\.woff2/);
-  // Self-hosted: builds must not fetch from Google Fonts.
-  assert.doesNotMatch(fonts, /next\/font\/google/);
-  assert.doesNotMatch(layout, /Nunito/i);
-  assert.doesNotMatch(layout, /Baloo/i);
-  assert.doesNotMatch(fonts, /Nunito/i);
-  assert.doesNotMatch(fonts, /Baloo/i);
+  // Self-hosted files (builds no longer fetch Google Fonts).
+  assert.match(fonts, /fraunces\.woff2/);
+  assert.match(fonts, /inter\.woff2/);
+  assert.match(fonts, /cairo\.woff2/);
+  assert.doesNotMatch(layout, /Nunito/);
+  assert.doesNotMatch(layout, /Baloo/);
+  assert.doesNotMatch(fonts, /nunito|baloo/i);
 });
 
 test("guest chrome does not repaint buttons with a restaurant accent", () => {

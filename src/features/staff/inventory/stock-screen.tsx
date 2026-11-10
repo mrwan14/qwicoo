@@ -144,7 +144,9 @@ export function StockScreen() {
     return [...stock.data, ...missing];
   }, [stock.data, ingredients.data]);
   const unstocked = useMemo(() => new Set(all.filter((row) => !stock.data?.some((item) => item.ingredient_id === row.ingredient_id)).map((row) => row.ingredient_id)), [all, stock.data]);
-  const needs = needsAttention(all);
+  // Switched-off items aren't ordered any more, so they don't belong in "need ordering".
+  const inactive = useMemo(() => new Set((ingredients.data ?? []).filter((item) => !item.is_active).map((item) => item.id)), [ingredients.data]);
+  const needs = needsAttention(all.filter((row) => !inactive.has(row.ingredient_id)));
 
   const needle = query.trim().toLowerCase();
   const rows = all.filter((item) => {

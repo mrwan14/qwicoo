@@ -152,24 +152,27 @@ export function BrandHome() {
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid min-w-0 grid-cols-1 gap-4">
-          <Panel
-            title={t.brand.branches.title}
-            icon={Building2}
-            action={canReport && branches.length > 1 ? <PanelLink href={reportHref("/app/reports/branches")}>{t.brand.branches.link}</PanelLink> : undefined}
-          >
-            <DataTable
-              stack
-              flush
-              caption={t.brand.branches.title}
-              columns={columns}
-              rows={ranking}
-              rowKey={(row) => row.branch_id}
-              loading={data.isLoading}
-              empty={t.brand.branches.empty}
-              // A branch row opens that branch's sales for the same period.
-              onRowClick={canReport ? (row) => router.push(reportHref("/app/reports/sales", { branch: row.branch_id })) : undefined}
-            />
-          </Panel>
+          {/* Comparing branches needs two; with one, the KPIs above already say it all. */}
+          {branches.length > 1 ? (
+            <Panel
+              title={t.brand.branches.title}
+              icon={Building2}
+              action={canReport && branches.length > 1 ? <PanelLink href={reportHref("/app/reports/branches")}>{t.brand.branches.link}</PanelLink> : undefined}
+            >
+              <DataTable
+                stack
+                flush
+                caption={t.brand.branches.title}
+                columns={columns}
+                rows={ranking}
+                rowKey={(row) => row.branch_id}
+                loading={data.isLoading}
+                empty={t.brand.branches.empty}
+                // A branch row opens that branch's sales for the same period.
+                onRowClick={canReport ? (row) => router.push(reportHref("/app/reports/sales", { branch: row.branch_id })) : undefined}
+              />
+            </Panel>
+          ) : null}
 
           <Panel title={t.brand.menu.categories} icon={LayoutGrid}>
             {data.isLoading ? (

@@ -57,6 +57,7 @@ export function KdsScreen() {
   const branchId = useScope((state) => state.branchId);
   const [sound, setSound] = useSoundSetting();
   const [stationFilter, setStationFilter] = useState<string>("ALL");
+  const [laneTab, setLaneTab] = useState<Lane | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -142,6 +143,10 @@ export function KdsScreen() {
   const lanes: Record<Lane, typeof visible> = { new: [], preparing: [], ready: [] };
   for (const ticket of visible) lanes[laneOf(ticket)].push(ticket);
 
+  // Until someone picks a tab, show the busiest lane (New on a tie).
+  const busiest = LANES.reduce((best, lane) => (lanes[lane].length > lanes[best].length ? lane : best), LANES[0]);
+  const shownLane = laneTab ?? busiest;
+
   return (
     <div className="grid grid-cols-1 gap-4">
       <h1 className="sr-only">{t.title}</h1>
@@ -156,7 +161,7 @@ export function KdsScreen() {
                 aria-pressed={active}
                 className={cn(
                   "inline-flex min-h-12 shrink-0 items-center rounded-staff border px-4 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
-                  active ? "border-ink bg-ink text-on-ink" : "border-border bg-canvas text-ink hover:bg-subtle",
+                  active ? "border-brand bg-brand text-on-brand" : "border-border bg-canvas text-ink hover:bg-subtle",
                 )}
                 onClick={() => setStationFilter(station)}
               >
@@ -194,10 +199,30 @@ export function KdsScreen() {
         </div>
       </div>
       <OfflineTickets stage="kitchen" />
-      <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+      {/* Portrait tablets and phones: one lane at a time behind tabs with counts. Landscape keeps three columns. */}
+      <div role="tablist" aria-label={t.board.lanesLabel} className="grid grid-cols-3 gap-1 rounded-staff bg-well p-1 md:landscape:hidden">
         {LANES.map((lane) => (
-          <section key={lane} className="grid content-start gap-3 rounded-staff bg-subtle p-3">
-            <h2 className="flex items-center justify-between px-1 text-base font-semibold text-ink">
+          <button
+            key={lane}
+            type="button"
+            role="tab"
+            aria-selected={lane === shownLane}
+            onClick={() => setLaneTab(lane)}
+            className={cn(
+              "inline-flex min-h-12 items-center justify-center gap-2 rounded-[calc(var(--radius-staff)-2px)] text-[15px] font-medium transition-colors",
+              lane === shownLane ? "bg-canvas text-ink shadow-card" : "text-ink-secondary hover:text-ink",
+            )}
+          >
+            {t.board.columns[lane]}
+            <span className="tabular-nums">{lanes[lane].length}</span>
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 items-start gap-4 md:landscape:grid-cols-3">
+        {LANES.map((lane) => (
+          <section key={lane} className={cn("grid content-start gap-3 rounded-staff bg-subtle p-3", lane !== shownLane && "hidden md:landscape:grid")}>
+            {/* In portrait the tab already names the lane. */}
+            <h2 className="hidden items-center justify-between px-1 text-base font-semibold text-ink md:landscape:flex">
               {t.board.columns[lane]}
               <span className="text-ink-secondary tabular-nums">{lanes[lane].length}</span>
             </h2>

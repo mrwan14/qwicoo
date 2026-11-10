@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { MAX_RECHIMES, RECHIME_MS, rechimeKey, tickRechimes, type ChimeEntry } from "./rechime.ts";
+import { MAX_RECHIMES, RECHIME_MS, dueRechimes, rechimeKey, tickRechimes, type ChimeEntry } from "./rechime.ts";
 
 function entry(last: number, count = 0, ackId = "order-1"): ChimeEntry {
   return { ackId, last, count };
@@ -36,4 +36,12 @@ test("a kitchen ticket still chimes from its sub-ticket and stops when the order
   const pending = new Map<string, ChimeEntry>([[key, { ackId: "order-9", last: 0, count: 0 }]]);
   assert.equal(tickRechimes(pending, new Set([key]), new Set(), RECHIME_MS), true);
   assert.equal(tickRechimes(pending, new Set([key]), new Set(["order-9"]), RECHIME_MS * 2), false);
+});
+
+test("a guest request repeats with its own tone until it is handled", () => {
+  const key = rechimeKey("service", "req-1");
+  const pending = new Map<string, ChimeEntry>([[key, { ackId: "req-1", last: 0, count: 0, tone: "request" }]]);
+  assert.deepEqual(dueRechimes(pending, new Set([key]), new Set(), RECHIME_MS).map((due) => due.tone), ["request"]);
+  assert.deepEqual(dueRechimes(pending, new Set(), new Set(), RECHIME_MS * 2), []);
+  assert.equal(pending.has(key), false);
 });

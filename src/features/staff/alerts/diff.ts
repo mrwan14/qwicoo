@@ -22,7 +22,8 @@ export type AlertKind =
   | "handover-ready"
   | "store-online";
 
-export type ToneKind = "new" | "ready";
+/** `new`: an order or ticket arrived. `ready`: food is ready. `request`: a guest wants someone. `payment`: money is waiting. */
+export type ToneKind = "new" | "ready" | "request" | "payment";
 
 export type FloorRow = {
   table_id: string;
@@ -89,6 +90,8 @@ export type AlertEvent = {
   tone: ToneKind;
   /** Raw detail for the toast (request type, payment method). */
   detail?: string | null;
+  /** Raw table number when the event belongs to a table, for "My tables". */
+  table?: string | null;
 };
 
 export type Source = keyof Snapshot;
@@ -102,7 +105,7 @@ const ROLE_KINDS: Record<AlertRole, readonly AlertKind[]> = {
   WAITER: ["confirmation", "floor-status", "service-request"],
   KITCHEN_STAFF: ["kitchen-ticket"],
   RUNNER: ["handover-ready"],
-  REGIONAL_MANAGER: [],
+  REGIONAL_MANAGER: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready", "store-online"],
   SUPER_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready", "store-online"],
   BRAND_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready", "store-online"],
   BRANCH_ADMIN: ["confirmation", "floor-status", "payment", "service-request", "kitchen-ticket", "handover-ready", "store-online"],
@@ -118,10 +121,18 @@ const KIND_SOURCE: Record<AlertKind, Source> = {
   "store-online": "storeOnline",
 };
 
-export const ADMIN_ROLES: ReadonlySet<AlertRole> = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN"]);
-export const OPS_ALERT_ROLES: ReadonlySet<AlertRole> = new Set(["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER", "REGIONAL_MANAGER"]);
+/** Roles that hear alerts only after turning them on (managers watching a branch). */
+export const ADMIN_ROLES: ReadonlySet<AlertRole> = new Set(["SUPER_ADMIN", "BRAND_ADMIN", "BRANCH_ADMIN", "REGIONAL_MANAGER"]);
+/** Frontline roles: alerts are always on. */
+export const OPS_ALERT_ROLES: ReadonlySet<AlertRole> = new Set(["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER"]);
 
-export type AlertAudience = { role: AlertRole; branchId: string | null; adminOptIn?: boolean };
+export type AlertAudience = {
+  role: AlertRole;
+  branchId: string | null;
+  adminOptIn?: boolean;
+  /** Table numbers this person covers on this device. Empty or missing means every table. */
+  tables?: readonly string[];
+};
 
 export function alertsActive(audience: AlertAudience): boolean {
   if (ADMIN_ROLES.has(audience.role)) return Boolean(audience.adminOptIn);
@@ -160,11 +171,13 @@ function floorEvents(prev: FloorRow[], next: FloorRow[]): AlertEvent[] {
     const had = before.has(orderId);
     const old = before.get(orderId);
     if (had && old === status) continue;
-    const base = { entityId: orderId, status, place: placeLabel(row), branchId: row.branch_id ?? null };
+    const base = { entityId: orderId, status, place: placeLabel(row), branchId: row.branch_id ?? null, table: row.table_number || null };
+    // Only the two moments someone has to act on: confirm a new order, and take food out.
+    // Other steps (preparing, served, paid) show on the floor without a sound.
     if (status === CONFIRM_STATUS) {
       events.push({ ...base, kind: "confirmation", tone: "new" });
-    } else {
-      events.push({ ...base, kind: "floor-status", tone: READY_STATUSES.has(status) ? "ready" : "new" });
+    } else if (READY_STATUSES.has(status)) {
+      events.push({ ...base, kind: "floor-status", tone: "ready" });
     }
   }
   return events;
@@ -187,6 +200,7 @@ function diffSource(source: Source, prev: Snapshot, next: Snapshot): AlertEvent[
         place: placeLabel(row),
         branchId: row.branch_id ?? null,
         tone: "new" as const,
+        table: row.table_number || null,
       }));
     case "expo": {
       const before = new Map(prev.expo!.map((row) => [row.order_id, row.status]));
@@ -208,8 +222,9 @@ function diffSource(source: Source, prev: Snapshot, next: Snapshot): AlertEvent[
         status: "NEW",
         place: placeLabel(row),
         branchId: row.branch_id ?? null,
-        tone: "new" as const,
+        tone: "request" as const,
         detail: row.request_type,
+        table: row.table_number || null,
       }));
     case "payments": {
       // Dine-in payments carry no table number; borrow it from the floor when that queue is watched.
@@ -220,8 +235,9 @@ function diffSource(source: Source, prev: Snapshot, next: Snapshot): AlertEvent[
         status: row.status ?? "PENDING",
         place: placeLabel({ pickup_number: row.pickup_number, table_number: tableOf.get(row.order_id) ?? null }),
         branchId: row.branch_id ?? null,
-        tone: "new" as const,
+        tone: "payment" as const,
         detail: row.payment_method ?? null,
+        table: tableOf.get(row.order_id) ?? null,
       }));
     }
     case "storeOnline":
@@ -285,10 +301,13 @@ export function diffSnapshots(
     if (!prev[source] || !next[source]) continue;
     events.push(...diffSource(source, prev, next));
   }
-  // TODO(waiter-scope): floor data carries no table assignment yet, so waiters hear every table in the branch.
+  // The server has no table assignment, so "My tables" is picked per device. Events with no table
+  // (pickup, takeaway) always pass.
+  const tables = audience.tables && audience.tables.length > 0 ? new Set(audience.tables) : null;
   return events.filter((event) => {
     if (!kinds.has(event.kind)) return false;
     if (event.branchId && audience.branchId && event.branchId !== audience.branchId) return false;
+    if (tables && event.table && !tables.has(event.table)) return false;
     return !isIgnored(ignore, event, now);
   });
 }
@@ -302,8 +321,11 @@ export function groupForToasts(events: AlertEvent[], cap = TOAST_CAP): { shown: 
   return { shown: events.slice(0, cap), more: Math.max(0, events.length - cap) };
 }
 
-/** One tone per poll; `ready` wins over `new`. */
-export function toneFor(events: AlertEvent[]): ToneKind | null {
+/** Most urgent first: a guest waiting for someone, then money, then food ready, then new work. */
+const TONE_ORDER: readonly ToneKind[] = ["request", "payment", "ready", "new"];
+
+/** One tone per poll: the most urgent one. */
+export function toneFor(events: readonly { tone: ToneKind }[]): ToneKind | null {
   if (events.length === 0) return null;
-  return events.some((event) => event.tone === "ready") ? "ready" : "new";
+  return TONE_ORDER.find((tone) => events.some((event) => event.tone === tone)) ?? null;
 }

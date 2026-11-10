@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { PasswordToggle } from "@/components/auth/password-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +51,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   const { locale } = useLocale();
   const [state, setState] = useState<PreviewState>({ kind: "loading" });
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -163,37 +165,53 @@ export function ResetPasswordForm({ token }: { token: string }) {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="reset-password">{t.reset.newPassword}</Label>
-        <Input
-          id="reset-password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={MIN_PASSWORD_LENGTH}
-          maxLength={MAX_PASSWORD_LENGTH}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="h-11"
-        />
+        <div className="relative">
+          <Input
+            id="reset-password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            minLength={MIN_PASSWORD_LENGTH}
+            maxLength={MAX_PASSWORD_LENGTH}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="h-11 pe-11"
+          />
+          <PasswordToggle
+            shown={showPassword}
+            onToggle={() => setShowPassword((value) => !value)}
+            showLabel={t.shared.showPassword}
+            hideLabel={t.shared.hidePassword}
+          />
+        </div>
         <p className="text-xs text-muted-foreground">
           {fill(t.reset.lengthHint, { min: MIN_PASSWORD_LENGTH, max: MAX_PASSWORD_LENGTH })}
         </p>
       </div>
       <div className="grid gap-2">
         <Label htmlFor="reset-confirm">{t.shared.confirmPassword}</Label>
-        <Input
-          id="reset-confirm"
-          name="confirm_password"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={MIN_PASSWORD_LENGTH}
-          maxLength={MAX_PASSWORD_LENGTH}
-          value={confirm}
-          onChange={(event) => setConfirm(event.target.value)}
-          aria-invalid={confirm.length > 0 && password !== confirm}
-          className="h-11"
-        />
+        <div className="relative">
+          <Input
+            id="reset-confirm"
+            name="confirm_password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            minLength={MIN_PASSWORD_LENGTH}
+            maxLength={MAX_PASSWORD_LENGTH}
+            value={confirm}
+            onChange={(event) => setConfirm(event.target.value)}
+            aria-invalid={confirm.length > 0 && password !== confirm}
+            className="h-11 pe-11"
+          />
+          <PasswordToggle
+            shown={showPassword}
+            onToggle={() => setShowPassword((value) => !value)}
+            showLabel={t.shared.showPassword}
+            hideLabel={t.shared.hidePassword}
+          />
+        </div>
         {confirm.length > 0 && password !== confirm ? (
           <p className="text-xs text-muted-foreground">{t.reset.mismatch}</p>
         ) : null}

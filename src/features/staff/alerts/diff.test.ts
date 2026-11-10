@@ -71,8 +71,43 @@ test("cap of three toasts plus and N more", () => {
   const grouped = groupForToasts(events);
   assert.equal(grouped.shown.length, 3);
   assert.equal(grouped.more, 2);
-  assert.equal(toneFor(events), "new");
+  assert.equal(toneFor(events), "request");
   assert.equal(toneFor([]), null);
+});
+
+test("floor only beeps to confirm a new order and when food is ready", () => {
+  const at = (status: string) => ({ floor: [{ table_id: "t1", table_number: "4", active_order_id: "o1", order_status: status }] });
+  assert.deepEqual(diffSnapshots(at("PENDING_STAFF_CONFIRMATION"), at("PREPARING"), all("CASHIER")), []);
+  assert.deepEqual(diffSnapshots(at("READY"), at("DELIVERED"), all("WAITER")), []);
+  assert.deepEqual(diffSnapshots(at("DELIVERED"), at("PAID"), all("CASHIER")), []);
+  assert.deepEqual(diffSnapshots(at("PREPARING"), at("READY"), all("WAITER")).map((e) => e.kind), ["floor-status"]);
+});
+
+test("each alert type has its own tone, the most urgent wins", () => {
+  const tone = (snapshot: Snapshot, role: AlertAudience["role"]) => toneFor(diffSnapshots(empty, snapshot, all(role)));
+  assert.equal(tone({ ...empty, kitchen: busy.kitchen }, "KITCHEN_STAFF"), "new");
+  assert.equal(tone({ ...empty, payments: busy.payments }, "CASHIER"), "payment");
+  assert.equal(tone({ ...empty, service: busy.service }, "WAITER"), "request");
+  assert.equal(tone({ ...empty, expo: busy.expo }, "RUNNER"), "ready");
+  assert.equal(tone(busy, "CASHIER"), "payment");
+  assert.equal(tone(busy, "WAITER"), "request");
+});
+
+test("my tables: a waiter hears only their tables, and pickup orders always", () => {
+  const service = [
+    { id: "a", table_number: "2", request_type: "CALL_WAITER" },
+    { id: "b", table_number: "5", request_type: "BILL_REQUEST" },
+  ];
+  const mine = all("WAITER", { tables: ["5"] });
+  assert.deepEqual(diffSnapshots({ service: [] }, { service }, mine).map((e) => e.entityId), ["b"]);
+  assert.equal(diffSnapshots({ service: [] }, { service }, all("WAITER", { tables: [] })).length, 2);
+  const kitchen = [{ sub_ticket_id: "k1", order_id: "o1", pickup_number: 7 }];
+  assert.equal(diffSnapshots({ kitchen: [] }, { kitchen }, all("KITCHEN_STAFF", { tables: ["5"] })).length, 1);
+});
+
+test("a regional manager can turn alerts on like an admin", () => {
+  assert.deepEqual(diffSnapshots(empty, busy, all("REGIONAL_MANAGER")), []);
+  assert.equal(diffSnapshots(empty, busy, all("REGIONAL_MANAGER", { adminOptIn: true })).length, 6);
 });
 
 test("role filtering", () => {

@@ -157,8 +157,8 @@ self.addEventListener("push", (event) => {
         body: data.body || "",
         tag: data.tag || undefined,
         renotify: Boolean(data.tag),
-        icon: "/icon.svg",
-        badge: "/icon.svg",
+        icon: "/brand/icon-192.png",
+        badge: "/brand/icon-192.png",
         data: { url: data.url || "/app" },
       });
     })(),

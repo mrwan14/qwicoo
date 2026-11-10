@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
 import { Banknote, Lock, LockOpen } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ops/kit/button";
@@ -12,7 +12,7 @@ import { Field, Input, Textarea } from "@/components/ops/kit/field";
 import { formatAmount } from "@/components/ops/kit/money";
 import { SidePanel } from "@/components/ops/kit/side-panel";
 import { cairoTime } from "@/features/staff/home/numbers";
-import { asApiError } from "@/lib/api/error";
+import { ApiError, asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
 import { fill } from "@/lib/i18n/dictionary";
@@ -94,6 +94,9 @@ function ClosePanel({ open, onClose, t }: { open: boolean; onClose: () => void; 
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [closed, setClosed] = useState<Session | null>(null);
+  // The API asks for a note when the count is off by more than 10, without saying by how much.
+  const [noteNeeded, setNoteNeeded] = useState(false);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const mutation = useMutation({
     mutationFn: async (amount: string) => {
       const result = await browserApi.POST("/api/v1/financials/drawer/close", {
@@ -106,13 +109,21 @@ function ClosePanel({ open, onClose, t }: { open: boolean; onClose: () => void; 
       setClosed(session);
       void client.invalidateQueries({ queryKey: ["drawer"] });
     },
-    onError: (failure: Error) => setError(failure.message),
+    onError: (failure: Error) => {
+      if (failure instanceof ApiError && failure.code === "DRAWER_NOTE_REQUIRED") {
+        setNoteNeeded(true);
+        noteRef.current?.focus();
+        return;
+      }
+      setError(failure.message);
+    },
   });
   const finish = () => {
     setCash("");
     setNote("");
     setClosed(null);
     setError(null);
+    setNoteNeeded(false);
     onClose();
   };
   const submit = () => {
@@ -187,8 +198,15 @@ function ClosePanel({ open, onClose, t }: { open: boolean; onClose: () => void; 
               className="h-14 text-xl tabular-nums"
             />
           </Field>
-          <Field label={t.note}>
-            <Textarea rows={3} placeholder={t.notePlaceholder} value={note} onChange={(event) => setNote(event.target.value)} />
+          <Field label={noteNeeded ? t.noteRequired : t.note} error={noteNeeded && !note.trim() ? t.noteNeeded : undefined}>
+            <Textarea
+              ref={noteRef}
+              rows={3}
+              placeholder={t.notePlaceholder}
+              value={note}
+              aria-invalid={noteNeeded && !note.trim() ? true : undefined}
+              onChange={(event) => setNote(event.target.value)}
+            />
           </Field>
         </div>
       )}

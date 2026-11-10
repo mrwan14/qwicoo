@@ -20,6 +20,28 @@ The dev server listens on `http://localhost:3001`. The API builds invitation lin
 
 `npm run smoke` logs in through the local app as the App Admin, checks the auth, brand, branch, and invitation reads, and hits the public routes. Set `SMOKE_BASE` if the app is not on `http://127.0.0.1:3001`; `SMOKE_ADMIN_EMAIL` / `SMOKE_ADMIN_PASSWORD` override the account; `SMOKE_STAFF_EMAIL` / `SMOKE_STAFF_PASSWORD` enable the staff menu read.
 
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on pushes to `main` and `dev`, using Node 22. A pull request should not be merged until it passes. The checks, in order:
+
+1. `npm ci`
+2. Lint: `npm run lint`. Warnings are reported but do not fail the run.
+3. Typecheck: `npx tsc --noEmit`
+4. Unit tests: `npm test`
+5. Production build: `npx next build`. This uses webpack, because the Turbopack build (`npm run build`) fails on the Google fonts download.
+
+CI sets `NEXT_PUBLIC_API_BASE_URL` and `API_BASE_URL` to the placeholder `https://api.example.invalid`, so no backend or secrets are needed. To run the same checks locally:
+
+```bash
+npm ci
+npm run lint
+npx tsc --noEmit
+npm test
+NEXT_PUBLIC_API_BASE_URL=https://api.example.invalid npx next build
+```
+
+Use Node 22.6 or later: the test script needs `--experimental-strip-types`.
+
 ## Entry routes
 
 - `/` is the public landing page. It is English by default and Arabic (RTL) at `?lang=ar`; the header switch links between the two and the page metadata follows the language.

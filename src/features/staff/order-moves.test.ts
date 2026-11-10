@@ -3,9 +3,13 @@ import { test } from "node:test";
 
 import { floorStatusOptions, showAmountDue } from "./order-moves.ts";
 
-test("a waiter cannot move an order from the floor dropdown", () => {
+test("a waiter only serves ready food", () => {
   assert.deepEqual(floorStatusOptions("WAITER", "SUBMITTED", true), []);
-  assert.deepEqual(floorStatusOptions("WAITER", "READY", true), []);
+  assert.deepEqual(floorStatusOptions("WAITER", "PREPARING", true, true), []);
+  assert.deepEqual(floorStatusOptions("WAITER", "READY", true), ["DELIVERED"]);
+  assert.deepEqual(floorStatusOptions("WAITER", "READY", false, true), ["DELIVERED"], "dine-in, before paying");
+  assert.deepEqual(floorStatusOptions("WAITER", "READY", false, false), [], "takeaway waits for payment");
+  assert.deepEqual(floorStatusOptions("WAITER", "DELIVERED", true, true), [], "closing is the cashier's");
   assert.deepEqual(floorStatusOptions("RUNNER", "READY", true), []);
 });
 

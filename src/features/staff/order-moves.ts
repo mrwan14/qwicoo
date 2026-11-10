@@ -6,7 +6,7 @@ export type OrderStatus = components["schemas"]["OrderStatus"];
 
 /**
  * Roles that may move an order along the kitchen path.
- * Waiters only confirm or reject a pending order (403 on every other move).
+ * Waiters confirm or reject a pending order, and serve ready food (READY -> DELIVERED); nothing else.
  * Runners only hand a paid order over, and that control lives on Handover.
  */
 const FLOOR_MOVE_ROLES = new Set<UserRole>(rolesFor("orders.move"));
@@ -28,8 +28,10 @@ export function floorStatusOptions(
   isPaid: boolean,
   dineIn = false,
 ): OrderStatus[] {
-  if (!role || !status || !FLOOR_MOVE_ROLES.has(role)) return [];
+  if (!role || !status) return [];
   const gated = dineIn ? PAYMENT_GATED_DINE_IN : PAYMENT_GATED;
+  if (role === "WAITER") return status === "READY" && (isPaid || !gated.has("DELIVERED")) ? ["DELIVERED"] : [];
+  if (!FLOOR_MOVE_ROLES.has(role)) return [];
   const next: OrderStatus[] = [];
   if (status === "SUBMITTED") next.push("PREPARING");
   else if (status === "PREPARING") next.push("READY");

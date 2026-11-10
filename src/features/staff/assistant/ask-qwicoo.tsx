@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, Building2, Clock, MessageCircle, TrendingUp, Utensils, Wallet } from "lucide-react";
+import { Ban, Building2, Clock, MessageCircle, Store, TrendingUp, Utensils, Wallet } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { classifyAssistantError, presentAnswer, type AssistantFailure } from "@/components/assistant/model";
@@ -35,6 +35,7 @@ const STARTER_ICON: Record<StarterKey, ReactNode> = {
   cancelled: <Ban aria-hidden className="size-4" />,
   hours: <Clock aria-hidden className="size-4" />,
   topBranch: <Building2 aria-hidden className="size-4" />,
+  platformWeek: <Store aria-hidden className="size-4" />,
 };
 
 function failureBody(status: number, error: unknown) {

@@ -10,7 +10,7 @@ export type AssistantBranch = { id: string; name: string };
 const BRAND_LEVEL: readonly UserRole[] = ["SUPER_ADMIN", "BRAND_ADMIN", "REGIONAL_MANAGER"];
 
 export const STARTER_KEYS = ["today", "items", "cash", "cancelled", "hours"] as const;
-export type StarterKey = (typeof STARTER_KEYS)[number] | "topBranch";
+export type StarterKey = (typeof STARTER_KEYS)[number] | "topBranch" | "platformWeek";
 
 export function isBrandLevelRole(role: UserRole): boolean {
   return BRAND_LEVEL.includes(role);
@@ -18,6 +18,8 @@ export function isBrandLevelRole(role: UserRole): boolean {
 
 /** Brand-level roles also get the cross-branch starter. A branch admin does not. */
 export function starterKeys(role: UserRole): StarterKey[] {
+  // The platform admin looks across every brand first; restaurant questions come after.
+  if (role === "SUPER_ADMIN") return ["platformWeek", "topBranch", ...STARTER_KEYS];
   return isBrandLevelRole(role) ? [...STARTER_KEYS, "topBranch"] : [...STARTER_KEYS];
 }
 

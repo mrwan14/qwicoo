@@ -116,6 +116,8 @@ const en = {
   },
   audit: {
     title: "Audit",
+    intro: "What people did, newest first. Automatic events from devices are hidden unless you turn them on.",
+    showBackground: "Show background events",
     what: "What happened",
     role: "Role",
     rolePlaceholder: "Cashier, Super admin",
@@ -324,6 +326,8 @@ const ar = {
   },
   audit: {
     title: "السجل",
+    intro: "ما فعله الأشخاص، الأحدث أولًا. الأحداث التلقائية من الأجهزة مخفية ما لم تُظهرها.",
+    showBackground: "إظهار الأحداث التلقائية",
     what: "ماذا حدث",
     role: "الدور",
     rolePlaceholder: "كاشير، مدير المنصة",

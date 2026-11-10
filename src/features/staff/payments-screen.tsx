@@ -1,12 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
 
 import { latestTimestamp, LiveCount } from "@/components/ops/live-fact";
 import { Badge, type Tone } from "@/components/ops/kit/badge";
+import { EmptyState } from "@/components/ops/kit/empty-state";
 import { Button } from "@/components/ops/kit/button";
 import { DataTable, type Column } from "@/components/ops/kit/data-table";
 import { formatAmount } from "@/components/ops/kit/money";
@@ -132,14 +134,18 @@ export function PaymentsScreen() {
           {lastPayment ? <> · {fill(t.lastAt, { time: formatCairoDateTime(lastPayment, locale) })}</> : null}
         </p>
       ) : null}
-      <DataTable
-        caption={t.caption}
-        columns={columns}
-        rows={rows}
-        loading={pending.isLoading}
-        rowKey={(payment) => payment.id}
-        empty={t.empty}
-      />
+      {!pending.isLoading && rows.length === 0 ? (
+        <EmptyState icon={Wallet} title={t.empty} body={t.emptyBody} />
+      ) : (
+        <DataTable
+          caption={t.caption}
+          columns={columns}
+          rows={rows}
+          loading={pending.isLoading}
+          rowKey={(payment) => payment.id}
+          empty={t.empty}
+        />
+      )}
     </div>
   );
 }

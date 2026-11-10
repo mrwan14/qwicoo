@@ -1,10 +1,12 @@
 "use client";
 
+import { ArrowUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const MAX_CHARS = 4000;
 const WARN_AT = 3500;
 
+/** Rounded composer: grows with the question (about five lines), Enter sends, Shift+Enter adds a line. */
 export function Composer({
   label,
   placeholder,
@@ -22,63 +24,71 @@ export function Composer({
   autoFocus?: boolean;
   onSend: (text: string) => void;
 }) {
-  const field = useRef<HTMLInputElement>(null);
-  const [length, setLength] = useState(0);
+  const field = useRef<HTMLTextAreaElement>(null);
+  const [text, setText] = useState("");
 
   useEffect(() => {
     if (autoFocus) field.current?.focus();
   }, [autoFocus]);
 
-  function submit(text: string) {
+  useEffect(() => {
+    const node = field.current;
+    if (!node) return;
+    node.style.height = "auto";
+    node.style.height = `${Math.min(node.scrollHeight, 132)}px`;
+  }, [text]);
+
+  function submit() {
     const trimmed = text.trim();
     if (!trimmed || pending || trimmed.length > MAX_CHARS) return;
     onSend(trimmed);
-    if (field.current) field.current.value = "";
-    setLength(0);
+    setText("");
   }
 
   return (
     <form
-      className="grid gap-2"
+      className="grid gap-1.5"
       onSubmit={(event) => {
         event.preventDefault();
-        submit(field.current?.value ?? "");
+        submit();
       }}
     >
-      <label className="grid gap-1">
-        <span className="sr-only">{label}</span>
-        <div className="flex border-t-2 border-ink">
-          <input
+      <div className="flex items-end gap-2 rounded-[24px] border border-qw-line bg-canvas p-1.5 ps-4 transition-colors focus-within:border-ink/40 focus-within:bg-[var(--chat-surface,#fff)]">
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">{label}</span>
+          <textarea
             ref={field}
+            rows={1}
             name="question"
-            type="text"
             maxLength={MAX_CHARS}
             placeholder={placeholder}
+            value={text}
             disabled={pending}
-            className="min-h-12 min-w-0 flex-1 border-0 bg-white px-4 py-3 text-sm outline-none disabled:opacity-60"
-            onChange={(event) => setLength(event.currentTarget.value.length)}
+            className="block max-h-[132px] w-full resize-none border-0 bg-transparent py-2 text-sm leading-6 text-ink outline-none placeholder:text-quiet disabled:opacity-60"
+            onChange={(event) => setText(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") {
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
                 event.preventDefault();
-                submit(event.currentTarget.value);
+                submit();
               }
             }}
           />
-          <button
-            type="submit"
-            disabled={pending || length === 0}
-            className="inline-flex min-h-12 shrink-0 items-center bg-sage px-5 text-sm font-bold text-white disabled:opacity-50"
-          >
-            {sendLabel}
-          </button>
-        </div>
-      </label>
-      {length >= WARN_AT ? (
-        <p className="text-xs tabular-nums text-muted-foreground" dir="ltr">
-          {length} / {MAX_CHARS}
+        </label>
+        <button
+          type="submit"
+          aria-label={sendLabel}
+          disabled={pending || text.trim().length === 0}
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--orange)] text-white transition-[background-color,transform] hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:scale-100 disabled:bg-qw-line disabled:text-quiet"
+        >
+          <ArrowUp aria-hidden className="size-4" />
+        </button>
+      </div>
+      {text.length >= WARN_AT ? (
+        <p className="px-2 text-xs tabular-nums text-quiet" dir="ltr">
+          {text.length} / {MAX_CHARS}
         </p>
       ) : null}
-      {disclaimer ? <p className="text-xs leading-5 text-muted-foreground">{disclaimer}</p> : null}
+      {disclaimer ? <p className="px-2 text-[11px] leading-4 text-quiet">{disclaimer}</p> : null}
     </form>
   );
 }

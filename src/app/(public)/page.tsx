@@ -1,30 +1,34 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 import { landingCopy } from "@/features/marketing/copy";
+import { pickLandingLocale } from "@/features/marketing/landing-locale";
 import { LandingScreen } from "@/features/marketing/landing-screen";
 import { RememberLocale } from "@/lib/i18n/locale-sync";
-import type { LocaleCode } from "@/lib/i18n/locale-text";
 
 type SearchParams = Promise<{ lang?: string | string[] }>;
 
-function pickLandingLocale(value: string | string[] | undefined): LocaleCode {
-  const candidate = Array.isArray(value) ? value[0] : value;
-  return candidate === "ar" ? "ar" : "en";
+async function landingLocale(searchParams: SearchParams) {
+  const [{ lang }, requestHeaders] = await Promise.all([searchParams, headers()]);
+  return pickLandingLocale(lang, requestHeaders.get("accept-language"));
 }
 
 export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
-  const locale = pickLandingLocale((await searchParams).lang);
+  const locale = await landingLocale(searchParams);
   const { meta } = landingCopy[locale];
 
   return {
     title: { absolute: meta.title },
     description: meta.description,
-    alternates: { canonical: locale === "ar" ? "/?lang=ar" : "/", languages: { en: "/", ar: "/?lang=ar" } },
+    alternates: {
+      canonical: `/?lang=${locale}`,
+      languages: { ar: "/?lang=ar", en: "/?lang=en", "x-default": "/" },
+    },
   };
 }
 
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
-  const locale = pickLandingLocale((await searchParams).lang);
+  const locale = await landingLocale(searchParams);
 
   return (
     <main>

@@ -35,7 +35,7 @@ function AnswerChart({ chart }: { chart: NonNullable<AssistantAnswerView["chart"
         content={({ active, payload, label }) => {
           if (!active || !payload?.length) return null;
           return (
-            <div className="grid gap-0.5 border border-qw-line bg-white px-3 py-2 text-sm text-ink">
+            <div className="grid gap-0.5 border border-qw-line bg-[var(--chat-surface,#fff)] px-3 py-2 text-sm text-ink">
               <p className="font-medium">{label}</p>
               {payload.map((item) => (
                 <p key={String(item.name)}>
@@ -133,7 +133,7 @@ export function AnswerBlock({
                 {table.rows.map((row, index) => (
                   <tr key={`${table.columns[0] ?? "row"}-${index}`} className="border-b border-qw-line">
                     {table.columns.map((column, cell) => (
-                      <td key={column} className="bg-white px-3 py-2 tabular-nums" dir="ltr">
+                      <td key={column} className="bg-[var(--chat-surface,#fff)] px-3 py-2 tabular-nums" dir="ltr">
                         {row[cell] ?? ""}
                       </td>
                     ))}

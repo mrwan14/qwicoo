@@ -11,14 +11,15 @@ type Chip = { label: string; detail: string };
 type Ticket = { heading: string; badge: string; item: string };
 type Dish = { name: string; detail: string; price: string };
 type StoryFrame = { tab: string; kicker: string; title: string; body: string; stat: string; statNote: string };
-type Fact = { title: string; body: string };
 type StartStep = { title: string; body: string; lines: string[] };
 type Priced = { name: string; price: string };
 type KitchenTicket = { code: string; item: string };
+type PriceTier = { name: string; price: string; note: string };
 
-export const SWAP_KEYS = ["tables", "kitchen", "drive", "branches"] as const;
+export const BACK_OFFICE_KEYS = ["stock", "purchasing", "attendance", "reports", "delivery", "brands"] as const;
+export type BackOfficeKey = (typeof BACK_OFFICE_KEYS)[number];
+
 export const FLOW_KEYS = ["guest", "kitchen", "expo", "owner", "floor", "pay", "pos", "drive"] as const;
-export type SwapKey = (typeof SWAP_KEYS)[number];
 export type FlowKey = (typeof FLOW_KEYS)[number];
 
 type LandingCopy = {
@@ -29,29 +30,26 @@ type LandingCopy = {
     start: string;
     partners: string;
     features: string;
+    backOffice: string;
+    pricing: string;
+    faq: string;
     partner: string;
     signIn: string;
     language: string;
     languageLabel: string;
+    menu: string;
+    close: string;
   };
   hero: {
-    titleLead: string;
-    titleNew: string;
-    titleTo: string;
-    titleCooking: string;
-    titleReady: string;
-    titleTail: string;
+    eyebrow: string;
+    title: string;
+    subtitle: string;
     primary: string;
+    whatsapp: string;
     ask: string;
-    signals: { new: string; cooking: string; ready: string; languages: string; prices: string };
+    signals: { devices: string; languages: string; commission: string; setup: string };
     chips: { newOrder: Chip; ready: Chip; paid: Chip; grill: Chip };
     tickets: { drive: Ticket; table7: Ticket; table12: Ticket; qr: Ticket; pos: Ticket; pickup: Ticket; table9: Ticket };
-  };
-  swap: {
-    line1: string;
-    line2: string;
-    words: Record<SwapKey, string>;
-    items: Record<SwapKey, Entry>;
   };
   scan: {
     ghost: string;
@@ -109,16 +107,6 @@ type LandingCopy = {
     ownerOrdersLabel: string;
     ownerOrders: string;
   };
-  facts: {
-    eyebrow: string;
-    title: string;
-    body: string;
-    menu: Fact;
-    languages: Fact;
-    states: Fact;
-    screens: Fact;
-    pay: Fact;
-  };
   start: {
     ghost: string;
     eyebrow: string;
@@ -144,17 +132,50 @@ type LandingCopy = {
     askEyebrow: string;
     askTitle: string;
     askBody: string;
+    askOpen: string;
+    talkTitle: string;
+    talkBody: string;
+    whatsapp: string;
+    call: string;
+    email: string;
+    waMessage: string;
   };
+  backOffice: { eyebrow: string; title: string; body: string; items: Record<BackOfficeKey, Entry & { tag: string }> };
+  pricing: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    currency: string;
+    tiers: PriceTier[];
+    popular: string;
+    includesTitle: string;
+    includes: string[];
+    terms: string[];
+    founding: { badge: string; title: string; body: string; cta: string; limited: string };
+    cta: string;
+  };
+  faq: { eyebrow: string; title: string; items: { q: string; a: string }[] };
   surfaces: { eyebrow: string; items: Record<SurfaceKey, Entry> };
   problems: { eyebrow: string; title: string; fixLabel: string; items: (Entry & { fix: string })[] };
   features: { eyebrow: string; title: string; items: Record<FeatureKey, Entry> };
   steps: { eyebrow: string; title: string; body: string; stepLabel: string; items: Entry[]; cta: string; note: string };
   assistant: {
     launcher: string;
+    launcherShort: string;
+    status: string;
+    greeting: string;
+    greetingBody: string;
+    tryAsking: string;
+    newChat: string;
+    nudge: string;
+    nudgeDismiss: string;
+    demoTitle: string;
+    demoBody: string;
+    moreQuestions: string;
     disclaimer: string;
     becomePartner: string;
     close: string;
-    starters: { capabilities: string; qr: string; arabic: string; start: string; partner: string };
+    starters: { capabilities: string; pricing: string; qr: string; arabic: string; start: string; partner: string };
   };
   lead: {
     name: string;
@@ -163,11 +184,15 @@ type LandingCopy = {
     city: string;
     branches: string;
     message: string;
+    promo: string;
     submit: string;
     sending: string;
     thanksTitle: string;
     thanksBody: string;
     failed: string;
+    privacyNote: string;
+    privacyLink: string;
+    errors: Record<"name" | "restaurant" | "contact" | "city" | "branches" | "message", string>;
   };
   footer: {
     rights: string;
@@ -183,40 +208,48 @@ type LandingCopy = {
     kitchen: string;
     drive: string;
     contact: string;
+    backOffice: string;
+    pricing: string;
+    faq: string;
+    privacy: string;
+    terms: string;
+    whatsapp: string;
   };
 };
 
 const landingEn = {
     meta: {
-      title: "Qwicoo",
-      description: "The restaurant system where every order moves from new to cooking to ready — on one screen for every role.",
+      title: "Qwicoo — Restaurant POS, QR ordering and kitchen screens in Egypt",
+      description: "Qwicoo is one system for table QR ordering, your POS, kitchen screens, stock and reports — in Arabic and English. From EGP 4,000 per branch per month."
     },
     nav: {
-      offer: "What we offer",
+      offer: "Features",
       flow: "How orders flow",
       start: "How to start",
       partners: "Partners",
       features: "Features",
-      partner: "Become a partner",
+      backOffice: "Back office",
+      pricing: "Pricing",
+      faq: "FAQ",
+      partner: "Book a free demo",
       signIn: "Sign in",
       language: "العربية",
       languageLabel: "Switch to Arabic",
+      menu: "Menu",
+      close: "Close menu"
     },
     hero: {
-      titleLead: "The restaurant system where every order moves from",
-      titleNew: "new",
-      titleTo: "to",
-      titleCooking: "cooking",
-      titleReady: "ready",
-      titleTail: "— on one screen for every role.",
-      primary: "Become a partner",
+      eyebrow: "The restaurant system built for Egypt",
+      title: "Take orders faster. Waste less. See every branch from your phone.",
+      subtitle: "Qwicoo is one system for table QR ordering, your POS, kitchen screens, stock and reports — in Arabic and English.",
+      primary: "Book a free demo",
+      whatsapp: "WhatsApp us",
       ask: "Ask Qwicoo a question",
       signals: {
-        new: "New",
-        cooking: "Cooking",
-        ready: "Ready",
+        devices: "Works on the devices you have",
         languages: "English · العربية",
-        prices: "Prices in EGP",
+        commission: "0% commission on card payments",
+        setup: "Free setup"
       },
       chips: {
         newOrder: { label: "New QR order", detail: "Table 7" },
@@ -302,29 +335,6 @@ const landingEn = {
         staff: {
           title: "Staff and attendance",
           body: "Role-based accounts, check-in and check-out logs, and an audit trail.",
-        },
-      },
-    },
-    swap: {
-      line1: "One system",
-      line2: "for your",
-      words: { tables: "Tables.", kitchen: "Kitchen.", drive: "Drive-thru.", branches: "Branches." },
-      items: {
-        tables: {
-          title: "Tables",
-          body: "Guests scan the table QR, order and pay from their phone. Waiters see calls and bills by table.",
-        },
-        kitchen: {
-          title: "Kitchen",
-          body: "Every ticket on a station screen with a timer. Expo sends plates out complete.",
-        },
-        drive: {
-          title: "Drive-thru",
-          body: "Car details and lane on the ticket. Pickup and delivery run on the same flow.",
-        },
-        branches: {
-          title: "Branches",
-          body: "One brand menu with branch prices, and every branch's sales in one dashboard.",
         },
       },
     },
@@ -507,16 +517,6 @@ const landingEn = {
       ownerOrdersLabel: "Orders",
       ownerOrders: "86",
     },
-    facts: {
-      eyebrow: "Qwicoo in numbers",
-      title: "Product facts, step by step.",
-      body: "No made-up customer numbers — just what's inside the product.",
-      menu: { title: "One menu per brand", body: "with branch prices" },
-      languages: { title: "English and Arabic", body: "including RTL" },
-      states: { title: "Order states", body: "new · cooking · ready" },
-      screens: { title: "One order, four screens", body: "guest · cashier · kitchen · owner" },
-      pay: { title: "Cash, card and wallets", body: "drawer sessions and Z reports" },
-    },
     start: {
       ghost: "Start",
       eyebrow: "How to start",
@@ -554,18 +554,154 @@ const landingEn = {
     cta: {
       title: "Bring your restaurant onto Qwicoo.",
       placeholder: "Restaurant name",
-      button: "Start",
+      button: "Book a demo",
       branch: "One branch at a time",
       menu: "Your menu, your prices",
       languages: "English and Arabic",
     },
     partner: {
-      eyebrow: "Become a partner",
-      title: "Tell us about your restaurant.",
-      body: "We reply within one working day and set up a demo branch with your own menu.",
+      eyebrow: "Free demo",
+      title: "Book your free demo.",
+      body: "Tell us about your restaurant. We reply within one working day and set up a demo branch with your own menu.",
       askEyebrow: "Not ready yet?",
       askTitle: "Ask Qwicoo.",
-      askBody: "Features, onboarding, Arabic menus — answered now, only about Qwicoo.",
+      askBody: "Features, prices, onboarding, Arabic menus — answered now, only about Qwicoo.",
+      askOpen: "Start a chat",
+      talkTitle: "Prefer to talk?",
+      talkBody: "Message us on WhatsApp, call, or email. We reply within one working day.",
+      whatsapp: "WhatsApp",
+      call: "Call",
+      email: "Email",
+      waMessage: "Hi Qwicoo, I'd like a free demo for my restaurant."
+    },
+    backOffice: {
+      eyebrow: "Behind the counter",
+      title: "The back office runs on the same system.",
+      body: "Stock, staff, delivery and the numbers share the same menu and the same orders — so you see food cost, cash and hours without spreadsheets.",
+      items: {
+        stock: {
+          tag: "Stock",
+          title: "Stock & food cost",
+          body: "Ingredients, recipes, prep batches, stock counts and waste — plus transfers between branches and a central kitchen."
+        },
+        purchasing: {
+          tag: "Purchasing",
+          title: "Suppliers & purchase orders",
+          body: "Order from your suppliers, receive into stock, and see what each branch used."
+        },
+        attendance: {
+          tag: "Staff",
+          title: "Attendance & shifts",
+          body: "Check in with a PIN on the till, plan each person's usual shift, and correct timesheets as a manager."
+        },
+        reports: {
+          tag: "Reports",
+          title: "Reports that add up",
+          body: "Sales, items, branches, payments, taxes, channels and discounts — compared with last week or last month, and exported to CSV."
+        },
+        delivery: {
+          tag: "Delivery",
+          title: "Your own drivers",
+          body: "A delivery board from “waiting for driver” to “delivered”, with fees by governorate and zone."
+        },
+        brands: {
+          tag: "Owners",
+          title: "Many branches, many brands",
+          body: "Roles for every level — branch, region and brand — and an audit log of who changed what."
+        }
+      }
+    },
+    pricing: {
+      eyebrow: "Pricing",
+      title: "One plan. Every feature. Priced per branch.",
+      body: "Prices in EGP per branch per month, excluding 14% VAT. Setup, menu entry and staff training are free.",
+      currency: "EGP",
+      tiers: [
+        {
+          name: "1 branch",
+          price: "4,000",
+          note: "per branch / month"
+        },
+        {
+          name: "2–4 branches",
+          price: "3,600",
+          note: "per branch / month · save 10%"
+        },
+        {
+          name: "5–9 branches",
+          price: "3,200",
+          note: "per branch / month · save 20%"
+        },
+        {
+          name: "10+ branches",
+          price: "Custom",
+          note: "Talk to us for a group price"
+        }
+      ],
+      popular: "Most chains",
+      includesTitle: "Every plan includes",
+      includes: [
+        "Table QR ordering and guest payments",
+        "POS, offline till and cash drawer",
+        "Kitchen display and expo",
+        "Stock, recipes and purchasing",
+        "Attendance and shifts",
+        "Reports and CSV export",
+        "Ask Qwicoo for managers",
+        "Arabic and English"
+      ],
+      terms: [
+        "Pay yearly and get 2 months free",
+        "No commission on card payments — only Paymob's own fees",
+        "Monthly billing, cancel anytime",
+        "Your data is yours to export"
+      ],
+      founding: {
+        badge: "Founding Partners",
+        title: "The first 20 restaurants get 3 months free.",
+        body: "After that you keep 20% off for life, in return for your feedback and permission to share your story. Have a promo code? Add it to the demo form.",
+        cta: "Claim a founding spot",
+        limited: "Limited to the first 20 restaurants"
+      },
+      cta: "Book a free demo"
+    },
+    faq: {
+      eyebrow: "FAQ",
+      title: "Questions owners ask us.",
+      items: [
+        {
+          q: "What devices do I need?",
+          a: "The tablets, phones and computers you already have, with a modern browser. A receipt printer is optional. We don't sell hardware and don't tie you to a brand."
+        },
+        {
+          q: "What happens if the internet goes down?",
+          a: "The till keeps taking cash orders for takeaway and dine-in. They sync when the connection is back, and a manager reviews anything that needs a second look."
+        },
+        {
+          q: "Do guests need to install an app?",
+          a: "No. Guests scan the table QR and the menu opens in their phone's browser, in Arabic or English."
+        },
+        {
+          q: "How do card payments work?",
+          a: "Guests and cashiers can pay by card or wallet through your own Paymob account. The money goes to you, and Qwicoo takes no commission."
+        },
+        {
+          q: "How long does setup take?",
+          a: "We start with one branch: we enter your menu in both languages, prepare your table QR sheet and train each role in a short session. Then you roll out the other branches."
+        },
+        {
+          q: "Is there a long contract?",
+          a: "No. You pay monthly and can cancel at any time. Paying yearly gives you 2 months free."
+        },
+        {
+          q: "Who owns my data?",
+          a: "You do. Your reports export to CSV whenever you need them."
+        },
+        {
+          q: "Can I run several branches or brands?",
+          a: "Yes. One brand menu with branch prices, reports across branches, and roles for branch managers, regional managers and brand owners."
+        }
+      ]
     },
     steps: {
       eyebrow: "Become a partner",
@@ -588,11 +724,23 @@ const landingEn = {
     },
     assistant: {
       launcher: "Questions about Qwicoo?",
+      launcherShort: "Ask Qwicoo",
+      status: "Answers in English or Arabic, right away",
+      greeting: "Hi! What would you like to know about Qwicoo?",
+      greetingBody: "Ask about table QR ordering, the cashier, kitchen screens, prices or getting started.",
+      tryAsking: "Popular questions",
+      newChat: "New chat",
+      nudge: "Questions? Ask Qwicoo in English or Arabic.",
+      nudgeDismiss: "Dismiss",
+      demoTitle: "See it with your own menu",
+      demoBody: "We reply within one working day and set up a demo branch with your menu.",
+      moreQuestions: "More questions",
       disclaimer: "Answers are about Qwicoo only. Please don't share personal details here.",
       becomePartner: "Become a partner",
       close: "Close",
       starters: {
         capabilities: "What can Qwicoo do for my restaurant?",
+        pricing: "How much does Qwicoo cost?",
         qr: "How does QR ordering work?",
         arabic: "Does it work in Arabic?",
         start: "What do I need to get started?",
@@ -611,6 +759,17 @@ const landingEn = {
       thanksTitle: "Thank you",
       thanksBody: "We received your note and will be in touch about bringing your restaurant onto Qwicoo.",
       failed: "We couldn't send that. Try again.",
+      promo: "Promo code (optional)",
+      privacyNote: "We use these details only to contact you about Qwicoo.",
+      privacyLink: "Privacy policy",
+      errors: {
+        name: "Enter your name.",
+        restaurant: "Enter the restaurant name.",
+        contact: "Enter a phone number or an email.",
+        city: "Enter your city.",
+        branches: "Enter a number from 1 to 500.",
+        message: "Keep the message under 1,000 characters."
+      },
     },
     footer: {
       rights: "All rights reserved",
@@ -626,40 +785,48 @@ const landingEn = {
       kitchen: "Kitchen & expo",
       drive: "Drive-thru",
       contact: "Contact",
+      backOffice: "Back office",
+      pricing: "Pricing",
+      faq: "FAQ",
+      privacy: "Privacy",
+      terms: "Terms",
+      whatsapp: "WhatsApp",
     },
 } satisfies LandingCopy;
 
 const landingAr = {
     meta: {
-      title: "كويكو",
-      description: "نظام المطاعم الذي ينتقل فيه كل طلب من جديد إلى قيد التحضير إلى جاهز — على شاشة واحدة لكل دور.",
+      title: "كويكو — كاشير وطلب QR وشاشات مطبخ للمطاعم في مصر",
+      description: "كويكو نظام واحد لطلب الطاولات بالـQR والكاشير وشاشات المطبخ والمخزون والتقارير — بالعربي والإنجليزي. من 4,000 جنيه للفرع شهريًا."
     },
     nav: {
-      offer: "ما نقدمه",
+      offer: "المزايا",
       flow: "رحلة الطلب",
       start: "كيف تبدأ",
       partners: "الشركاء",
       features: "المزايا",
-      partner: "انضم كشريك",
+      backOffice: "الإدارة",
+      pricing: "الأسعار",
+      faq: "أسئلة شائعة",
+      partner: "احجز عرضًا مجانيًا",
       signIn: "تسجيل الدخول",
       language: "English",
       languageLabel: "التبديل إلى الإنجليزية",
+      menu: "القائمة",
+      close: "إغلاق القائمة"
     },
     hero: {
-      titleLead: "نظام المطاعم الذي ينتقل فيه كل طلب من",
-      titleNew: "جديد",
-      titleTo: "إلى",
-      titleCooking: "قيد التحضير",
-      titleReady: "جاهز",
-      titleTail: "— على شاشة واحدة لكل دور.",
-      primary: "انضم كشريك",
+      eyebrow: "نظام مطاعم مصمم لمصر",
+      title: "طلبات أسرع. هدر أقل. وكل فروعك على موبايلك.",
+      subtitle: "كويكو نظام واحد لطلب الطاولات بالـQR والكاشير وشاشات المطبخ والمخزون والتقارير — بالعربي والإنجليزي.",
+      primary: "احجز عرضًا مجانيًا",
+      whatsapp: "كلمنا واتساب",
       ask: "اسأل كويكو",
       signals: {
-        new: "جديد",
-        cooking: "قيد التحضير",
-        ready: "جاهز",
+        devices: "يعمل على أجهزتك الحالية",
         languages: "العربية · English",
-        prices: "الأسعار بالجنيه",
+        commission: "0% عمولة على الدفع بالبطاقة",
+        setup: "تجهيز مجاني"
       },
       chips: {
         newOrder: { label: "طلب QR جديد", detail: "طاولة 7" },
@@ -688,8 +855,8 @@ const landingAr = {
     },
     problems: {
       eyebrow: "مشكلات المطاعم، وكيف نحلها",
-      title: "المشكلات اليومية التي بنينا Qwicoo من أجلها",
-      fixLabel: "مع Qwicoo",
+      title: "المشكلات اليومية التي بنينا كويكو من أجلها",
+      fixLabel: "مع كويكو",
       items: [
         {
           title: "الضيف ينتظر ليطلب وينتظر ليدفع",
@@ -745,29 +912,6 @@ const landingAr = {
         staff: {
           title: "الفريق والحضور",
           body: "حسابات بصلاحيات محددة، وسجل حضور وانصراف، وسجل تدقيق.",
-        },
-      },
-    },
-    swap: {
-      line1: "نظام واحد",
-      line2: "لكل",
-      words: { tables: "الطاولات.", kitchen: "المطبخ.", drive: "الدرايف ثرو.", branches: "الفروع." },
-      items: {
-        tables: {
-          title: "الطاولات",
-          body: "يمسح الضيف رمز QR على الطاولة، ويطلب ويدفع من هاتفه. يرى النادل النداءات والفواتير لكل طاولة.",
-        },
-        kitchen: {
-          title: "المطبخ",
-          body: "كل تذكرة على شاشة المحطة مع مؤقت. وشاشة التجميع تُخرج الأطباق كاملة.",
-        },
-        drive: {
-          title: "الدرايف ثرو",
-          body: "بيانات السيارة والمسار على التذكرة. والاستلام والتوصيل على نفس المسار.",
-        },
-        branches: {
-          title: "الفروع",
-          body: "منيو واحد للعلامة بأسعار لكل فرع، ومبيعات كل الفروع في لوحة واحدة.",
         },
       },
     },
@@ -950,16 +1094,6 @@ const landingAr = {
       ownerOrdersLabel: "الطلبات",
       ownerOrders: "86",
     },
-    facts: {
-      eyebrow: "كويكو بالأرقام",
-      title: "حقائق المنتج، خطوة بخطوة.",
-      body: "لا أرقام عملاء مختلقة — فقط ما هو داخل المنتج.",
-      menu: { title: "منيو واحد للعلامة", body: "مع أسعار الفروع" },
-      languages: { title: "الإنجليزية والعربية", body: "مع الاتجاه من اليمين" },
-      states: { title: "حالات الطلب", body: "جديد · قيد التحضير · جاهز" },
-      screens: { title: "طلب واحد، أربع شاشات", body: "ضيف · كاشير · مطبخ · مالك" },
-      pay: { title: "نقد وبطاقة ومحافظ", body: "جلسات الدُرج وتقارير الإغلاق" },
-    },
     start: {
       ghost: "ابدأ",
       eyebrow: "كيف تبدأ",
@@ -997,18 +1131,154 @@ const landingAr = {
     cta: {
       title: "انقل مطعمك إلى كويكو.",
       placeholder: "اسم المطعم",
-      button: "ابدأ",
+      button: "احجز عرضًا",
       branch: "فرع واحد في كل مرة",
       menu: "منيوك وأسعارك",
       languages: "الإنجليزية والعربية",
     },
     partner: {
-      eyebrow: "انضم كشريك",
-      title: "أخبرنا عن مطعمك.",
-      body: "نرد خلال يوم عمل واحد ونجهّز فرعاً تجريبياً بمنيوكم.",
-      askEyebrow: "لست مستعداً بعد؟",
+      eyebrow: "عرض مجاني",
+      title: "احجز عرضك المجاني.",
+      body: "احكِ لنا عن مطعمك. نرد خلال يوم عمل واحد ونجهز لك فرعًا تجريبيًا بالمنيو الخاص بك.",
+      askEyebrow: "لست جاهزًا بعد؟",
       askTitle: "اسأل كويكو.",
-      askBody: "المزايا، والانضمام، والمنيو بالعربية — إجابة الآن، وعن كويكو فقط.",
+      askBody: "المزايا والأسعار والتجهيز والمنيو العربي — إجابات فورية عن كويكو فقط.",
+      askOpen: "ابدأ المحادثة",
+      talkTitle: "تفضّل الكلام؟",
+      talkBody: "راسلنا على واتساب أو اتصل أو ابعت إيميل. نرد خلال يوم عمل واحد.",
+      whatsapp: "واتساب",
+      call: "اتصال",
+      email: "البريد",
+      waMessage: "أهلًا كويكو، أريد عرضًا مجانيًا لمطعمي."
+    },
+    backOffice: {
+      eyebrow: "خلف الكاونتر",
+      title: "الإدارة تعمل على نفس النظام.",
+      body: "المخزون والفريق والتوصيل والأرقام تشارك نفس المنيو ونفس الطلبات — فترى تكلفة الأكل والنقدية وساعات العمل بدون جداول.",
+      items: {
+        stock: {
+          tag: "المخزون",
+          title: "المخزون وتكلفة الأكل",
+          body: "الخامات والوصفات والتحضير والجرد والهالك — والتحويل بين الفروع والمطبخ المركزي."
+        },
+        purchasing: {
+          tag: "المشتريات",
+          title: "الموردون وأوامر الشراء",
+          body: "اطلب من مورديك، واستلم في المخزون، واعرف ما استهلكه كل فرع."
+        },
+        attendance: {
+          tag: "الفريق",
+          title: "الحضور والورديات",
+          body: "تسجيل الحضور برمز PIN على الكاشير، وتخطيط وردية كل شخص، وتعديل سجلات الدوام من المدير."
+        },
+        reports: {
+          tag: "التقارير",
+          title: "تقارير أرقامها مضبوطة",
+          body: "المبيعات والأصناف والفروع والمدفوعات والضرائب والقنوات والخصومات — مقارنة بالأسبوع أو الشهر الماضي، مع تصدير CSV."
+        },
+        delivery: {
+          tag: "التوصيل",
+          title: "سائقوك أنت",
+          body: "لوحة توصيل من «في انتظار السائق» حتى «تم التوصيل»، مع رسوم حسب المحافظة والمنطقة."
+        },
+        brands: {
+          tag: "الملاك",
+          title: "فروع كثيرة وعلامات كثيرة",
+          body: "أدوار لكل مستوى — الفرع والمنطقة والعلامة — وسجل يوضح من غيّر ماذا."
+        }
+      }
+    },
+    pricing: {
+      eyebrow: "الأسعار",
+      title: "باقة واحدة. كل المزايا. السعر لكل فرع.",
+      body: "الأسعار بالجنيه المصري لكل فرع شهريًا، ولا تشمل ضريبة القيمة المضافة 14%. التجهيز وإدخال المنيو وتدريب الفريق مجانًا.",
+      currency: "جنيه",
+      tiers: [
+        {
+          name: "فرع واحد",
+          price: "4,000",
+          note: "للفرع / شهريًا"
+        },
+        {
+          name: "2–4 فروع",
+          price: "3,600",
+          note: "للفرع / شهريًا · وفّر 10%"
+        },
+        {
+          name: "5–9 فروع",
+          price: "3,200",
+          note: "للفرع / شهريًا · وفّر 20%"
+        },
+        {
+          name: "10 فروع أو أكثر",
+          price: "سعر خاص",
+          note: "تواصل معنا لسعر المجموعة"
+        }
+      ],
+      popular: "الأنسب للسلاسل",
+      includesTitle: "كل باقة تشمل",
+      includes: [
+        "طلب الطاولات بالـQR ودفع الضيف",
+        "الكاشير والعمل دون اتصال ودرج النقدية",
+        "شاشة المطبخ والتجميع",
+        "المخزون والوصفات والمشتريات",
+        "الحضور والورديات",
+        "التقارير وتصدير CSV",
+        "اسأل كويكو للمديرين",
+        "العربية والإنجليزية"
+      ],
+      terms: [
+        "ادفع سنويًا واحصل على شهرين مجانًا",
+        "بدون عمولة على الدفع بالبطاقة — فقط رسوم Paymob",
+        "اشتراك شهري وإلغاء في أي وقت",
+        "بياناتك ملكك ويمكنك تصديرها"
+      ],
+      founding: {
+        badge: "الشركاء المؤسسون",
+        title: "أول 20 مطعمًا يحصلون على 3 أشهر مجانًا.",
+        body: "بعدها تحتفظ بخصم 20% مدى الحياة، مقابل ملاحظاتك والسماح لنا بمشاركة قصتك. معك كود خصم؟ اكتبه في نموذج العرض.",
+        cta: "احجز مكانك كشريك مؤسس",
+        limited: "متاح لأول 20 مطعمًا فقط"
+      },
+      cta: "احجز عرضًا مجانيًا"
+    },
+    faq: {
+      eyebrow: "أسئلة شائعة",
+      title: "أسئلة يسألها أصحاب المطاعم.",
+      items: [
+        {
+          q: "ما الأجهزة التي أحتاجها؟",
+          a: "التابلت والموبايل والكمبيوتر الموجودة عندك بمتصفح حديث. طابعة الإيصالات اختيارية. نحن لا نبيع أجهزة ولا نربطك بعلامة معينة."
+        },
+        {
+          q: "ماذا يحدث لو انقطع الإنترنت؟",
+          a: "يستمر الكاشير في أخذ الطلبات النقدية للتيك أواي والصالة. تتم مزامنتها عند عودة الاتصال، ويراجع المدير ما يحتاج مراجعة."
+        },
+        {
+          q: "هل يحتاج الضيف لتثبيت تطبيق؟",
+          a: "لا. يمسح الضيف رمز الطاولة فيفتح المنيو في متصفح موبايله بالعربي أو الإنجليزي."
+        },
+        {
+          q: "كيف يعمل الدفع بالبطاقة؟",
+          a: "يدفع الضيف أو الكاشير بالبطاقة أو المحفظة عبر حساب Paymob الخاص بك. الفلوس تذهب لك مباشرة، وكويكو لا يأخذ عمولة."
+        },
+        {
+          q: "كم يستغرق التجهيز؟",
+          a: "نبدأ بفرع واحد: ندخل المنيو باللغتين، ونجهز ورقة رموز QR للطاولات، وندرب كل دور في جلسة قصيرة. بعدها تضيف باقي الفروع."
+        },
+        {
+          q: "هل يوجد عقد طويل؟",
+          a: "لا. تدفع شهريًا ويمكنك الإلغاء في أي وقت. والدفع السنوي يمنحك شهرين مجانًا."
+        },
+        {
+          q: "لمن تعود ملكية بياناتي؟",
+          a: "لك. يمكنك تصدير تقاريرك بصيغة CSV في أي وقت."
+        },
+        {
+          q: "هل أستطيع إدارة عدة فروع أو علامات؟",
+          a: "نعم. منيو واحد للعلامة بأسعار لكل فرع، وتقارير عبر الفروع، وأدوار لمديري الفروع والمناطق وأصحاب العلامات."
+        }
+      ]
     },
     steps: {
       eyebrow: "انضم كشريك",
@@ -1025,11 +1295,23 @@ const landingAr = {
     },
     assistant: {
       launcher: "أسئلة عن كويكو؟",
+      launcherShort: "اسأل كويكو",
+      status: "إجابات فورية بالعربية أو الإنجليزية",
+      greeting: "أهلًا! ماذا تحب أن تعرف عن كويكو؟",
+      greetingBody: "اسأل عن الطلب بالـ QR من الطاولة، والكاشير، وشاشات المطبخ، والأسعار، أو كيف تبدأ.",
+      tryAsking: "أسئلة شائعة",
+      newChat: "محادثة جديدة",
+      nudge: "عندك أسئلة؟ اسأل كويكو بالعربية أو الإنجليزية.",
+      nudgeDismiss: "إغلاق",
+      demoTitle: "شاهده بقائمة مطعمك",
+      demoBody: "نرد خلال يوم عمل واحد ونجهّز لك فرعًا تجريبيًا بقائمتك.",
+      moreQuestions: "أسئلة أخرى",
       disclaimer: "الإجابات عن كويكو فقط. يرجى عدم مشاركة بيانات شخصية هنا.",
       becomePartner: "كن شريكاً",
       close: "إغلاق",
       starters: {
         capabilities: "ماذا يمكن أن يقدمه كويكو لمطعمي؟",
+        pricing: "كم سعر كويكو؟",
         qr: "كيف يعمل الطلب برمز QR؟",
         arabic: "هل يعمل بالعربية؟",
         start: "ماذا أحتاج للبدء؟",
@@ -1048,6 +1330,17 @@ const landingAr = {
       thanksTitle: "شكراً لك",
       thanksBody: "وصلَتنا رسالتك، وسنتواصل معك بشأن انضمام مطعمك إلى كويكو.",
       failed: "تعذّر الإرسال. حاول مرة أخرى.",
+      promo: "كود الخصم (اختياري)",
+      privacyNote: "نستخدم هذه البيانات فقط للتواصل معك بخصوص كويكو.",
+      privacyLink: "سياسة الخصوصية",
+      errors: {
+        name: "اكتب اسمك.",
+        restaurant: "اكتب اسم المطعم.",
+        contact: "اكتب رقم هاتف أو بريدًا إلكترونيًا.",
+        city: "اكتب مدينتك.",
+        branches: "اكتب رقمًا من 1 إلى 500.",
+        message: "اجعل الرسالة أقل من 1,000 حرف."
+      },
     },
     footer: {
       rights: "جميع الحقوق محفوظة",
@@ -1063,6 +1356,12 @@ const landingAr = {
       kitchen: "المطبخ والتجميع",
       drive: "الدرايف ثرو",
       contact: "تواصل",
+      backOffice: "الإدارة",
+      pricing: "الأسعار",
+      faq: "أسئلة شائعة",
+      privacy: "الخصوصية",
+      terms: "الشروط",
+      whatsapp: "واتساب",
     },
 } satisfies LandingCopy;
 

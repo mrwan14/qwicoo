@@ -41,6 +41,7 @@ const en = {
   waitDays: "Waiting {days} days",
   board: {
     columns: { new: "New", preparing: "Preparing", ready: "Ready" },
+    lanesLabel: "Ticket lanes",
     allStations: "All stations",
     stations: "Stations",
     over10: "Over 10 min",
@@ -96,6 +97,7 @@ const ar = {
   waitDays: "انتظار {days} أيام",
   board: {
     columns: { new: "جديد", preparing: "قيد التحضير", ready: "جاهز" },
+    lanesLabel: "مسارات التذاكر",
     allStations: "كل المحطات",
     stations: "المحطات",
     over10: "أكثر من 10 دقائق",

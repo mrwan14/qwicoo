@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
-import { Check, CheckCircle2 } from "lucide-react";
+import { Check, CheckCircle2, KeyRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -11,7 +11,7 @@ import { isDeliveryFulfillment, optionalRecordString, staffOrderStatus } from "@
 
 import { ScreenTitle } from "@/components/ops/page-header";
 import { Badge } from "@/components/ops/kit/badge";
-import { Button } from "@/components/ops/kit/button";
+import { Button, buttonClass } from "@/components/ops/kit/button";
 import { EmptyState } from "@/components/ops/kit/empty-state";
 import { Field, Input, Textarea } from "@/components/ops/kit/field";
 import { useStaffSession } from "@/components/ops/staff-session";
@@ -109,6 +109,7 @@ export function ExpoScreen() {
   const interval = usePollingInterval(7000);
   const branchId = useScope((state) => state.branchId);
   const [token, setToken] = useState("");
+  const [codeOpen, setCodeOpen] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [noteEditor, setNoteEditor] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -217,7 +218,12 @@ export function ExpoScreen() {
       </div>
       <p className="-mt-2 max-w-2xl text-sm text-ink-secondary">{runnerOnly ? t.runnerHint : t.hint}</p>
       <OfflineTickets stage="handover" />
-      {runnerOnly ? null : (
+      {runnerOnly ? null : !codeOpen ? (
+        <button type="button" className={cn(buttonClass({ variant: "secondary", size: "sm" }), "w-fit")} onClick={() => setCodeOpen(true)}>
+          <KeyRound aria-hidden />
+          {t.enterGuestCode}
+        </button>
+      ) : (
         <form
           className="grid grid-cols-1 gap-2 rounded-staff border border-border bg-canvas p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
           onSubmit={(event) => {
@@ -226,7 +232,7 @@ export function ExpoScreen() {
           }}
         >
           <Field label={t.guestCode} hint={t.guestCodeHint}>
-            <Input className="h-12" value={token} onChange={(event) => setToken(event.target.value)} />
+            <Input className="h-12" autoFocus value={token} onChange={(event) => setToken(event.target.value)} />
           </Field>
           <Button type="submit" variant="secondary" className="min-h-12 self-start sm:mt-[22px]" disabled={!token.trim() || verify.isPending}>
             {verify.isPending ? t.checking : t.checkCode}
@@ -244,7 +250,9 @@ export function ExpoScreen() {
         <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {cards.map(({ order, number, lines }) => {
             const ready = order.status === "READY";
-            const unpaid = ready && !order.is_paid;
+            // Dine-in guests eat first and pay at the end: only takeaway waits for payment here.
+            const dineIn = order.fulfillment_type === "DINE_IN";
+            const unpaid = ready && !order.is_paid && !dineIn;
             const handingOver = handOver.isPending && handOver.variables === order.order_id;
             const bumping = bump.isPending && bump.variables === order.order_id;
             const savingNote = saveNotes.isPending && saveNotes.variables === order.order_id;
@@ -372,10 +380,13 @@ export function ExpoScreen() {
                 {unpaid ? (
                   <p className="rounded-staff bg-warning-bg px-3 py-2 text-[13px]">{t.paymentDue}</p>
                 ) : ready ? (
-                  <Button size="touch" className="w-full" disabled={handingOver} onClick={() => handOver.mutate(order.order_id)}>
-                    <Check aria-hidden />
-                    {handingOver ? t.handingOver : runnerOnly ? t.delivered : t.guestHasFood}
-                  </Button>
+                  <div className="grid gap-2">
+                    {!order.is_paid ? <p className="text-[13px] text-ink-secondary">{t.dineInUnpaid}</p> : null}
+                    <Button size="touch" className="w-full" disabled={handingOver} onClick={() => handOver.mutate(order.order_id)}>
+                      <Check aria-hidden />
+                      {handingOver ? t.handingOver : runnerOnly ? t.delivered : t.guestHasFood}
+                    </Button>
+                  </div>
                 ) : runnerOnly ? null : (
                   <Button size="touch" variant="secondary" className="w-full" disabled={bumping} onClick={() => bump.mutate(order.order_id)}>
                     {bumping ? t.marking : t.markReady}

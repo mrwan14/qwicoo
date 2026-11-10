@@ -50,11 +50,11 @@ const en = {
     delivery: "Delivery",
     payments: "Payments",
     stock: "Stock",
+    waste: "Waste",
     attendance: "Attendance",
   },
 } as const;
 
-    waste: "Waste",
 const ar = {
   mainNav: "التنقل الرئيسي",
   openNav: "فتح القائمة",
@@ -66,11 +66,11 @@ const ar = {
     orders: "الطلبات",
     menu: "القائمة",
     stock: "المخزون",
+    attendance: "الحضور",
     reports: "التقارير",
     settings: "الإعدادات",
     brands: "العلامات",
     people: "الأشخاص",
-    attendance: "الحضور",
     features: "المزايا",
     leads: "طلبات الشراكة",
     delivery: "التوصيل",
@@ -105,9 +105,9 @@ const ar = {
     delivery: "التوصيل",
     payments: "المدفوعات",
     stock: "المخزون",
+    waste: "الهدر",
     attendance: "الحضور",
   },
 } as const;
 
 export const shellCopy = defineDictionary(en, ar);
-    waste: "الهدر",

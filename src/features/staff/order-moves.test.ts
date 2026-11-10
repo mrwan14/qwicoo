@@ -30,3 +30,10 @@ test("amount due replaces a blocked handover or close", () => {
   assert.equal(showAmountDue("READY", true), false);
   assert.equal(showAmountDue("SUBMITTED", false), false);
 });
+
+test("a dine-in order can be served before it is paid, but not closed", () => {
+  assert.deepEqual(floorStatusOptions("CASHIER", "READY", false, true), ["DELIVERED"]);
+  assert.deepEqual(floorStatusOptions("CASHIER", "DELIVERED", false, true), []);
+  assert.deepEqual(floorStatusOptions("CASHIER", "DELIVERED", true, true), ["CLOSED"]);
+  assert.deepEqual(floorStatusOptions("CASHIER", "READY", false, false), [], "takeaway still waits for payment");
+});

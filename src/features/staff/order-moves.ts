@@ -11,8 +11,12 @@ export type OrderStatus = components["schemas"]["OrderStatus"];
  */
 const FLOOR_MOVE_ROLES = new Set<UserRole>(rolesFor("orders.move"));
 
-/** DELIVERED and CLOSED are 409 PAYMENT_REQUIRED until the order is paid. SERVED is never a legal target. */
+/**
+ * CLOSED is 409 PAYMENT_REQUIRED until the order is paid; so is DELIVERED, except for dine-in, where guests
+ * eat first and pay at the end. SERVED is never a legal target.
+ */
 const PAYMENT_GATED = new Set<OrderStatus>(["DELIVERED", "CLOSED"]);
+const PAYMENT_GATED_DINE_IN = new Set<OrderStatus>(["CLOSED"]);
 
 /**
  * Statuses the floor dropdown may offer. Edges match the order FSM.
@@ -22,14 +26,16 @@ export function floorStatusOptions(
   role: UserRole | null | undefined,
   status: OrderStatus | null | undefined,
   isPaid: boolean,
+  dineIn = false,
 ): OrderStatus[] {
   if (!role || !status || !FLOOR_MOVE_ROLES.has(role)) return [];
+  const gated = dineIn ? PAYMENT_GATED_DINE_IN : PAYMENT_GATED;
   const next: OrderStatus[] = [];
   if (status === "SUBMITTED") next.push("PREPARING");
   else if (status === "PREPARING") next.push("READY");
   else if (status === "READY") next.push("DELIVERED");
   else if (status === "DELIVERED") next.push("CLOSED");
-  return next.filter((target) => isPaid || !PAYMENT_GATED.has(target));
+  return next.filter((target) => isPaid || !gated.has(target));
 }
 
 /** Unpaid orders that cannot move to Delivered or Closed. The floor shows the amount due instead. */

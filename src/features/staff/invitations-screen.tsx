@@ -39,7 +39,7 @@ const STATUS_TONE: Record<InvitationStatus, "ordered" | "available" | "neutral" 
   REVOKED: "soldout",
 };
 
-const select = "h-11 w-full rounded-staff border border-input bg-background px-3 text-sm";
+const select = "h-11 w-full rounded-[10px] border border-input bg-background px-3 text-sm";
 
 function formatDate(iso: string | null | undefined, locale: string): string {
   if (!iso) return "";
@@ -210,189 +210,198 @@ export function InvitationsScreen({ title }: { title: string }) {
   }
 
   return (
-    <div className="mx-auto grid max-w-4xl gap-6">
+    <div className="grid gap-4">
       <header>
         <ScreenTitle>{title}</ScreenTitle>
         <p className="mt-1 text-sm text-ink-secondary">{t.intro}</p>
       </header>
 
-      {noBrandsYet ? (
-        <EmptyState
-          title={t.createBrandTitle}
-          body={t.createBrandBody}
-          action={
-            <Link href="/app/brands" className="inline-flex min-h-11 items-center rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground">
-              {common.goToBrands}
-            </Link>
-          }
-        />
-      ) : (
-        <form onSubmit={onSubmit} className="grid gap-4 rounded-staff border bg-canvas p-4 border border-border">
-          <h2 className="text-[length:var(--text-20)] font-semibold">{t.sendTitle}</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="invite-email">{t.email}</Label>
-              <Input
-                id="invite-email"
-                type="email"
-                autoComplete="off"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="h-11"
-                placeholder={t.emailPlaceholder}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="invite-role">{t.role}</Label>
-              <select id="invite-role" className={select} value={role} onChange={(event) => onRoleChange(event.target.value as UserRole)}>
-                {roles.map((item) => (
-                  <option key={item} value={item}>
-                    {roleLabel(item)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {isSuper ? (
-              <div className="grid gap-2">
-                <Label htmlFor="invite-brand">{t.brand}</Label>
-                <select
-                  id="invite-brand"
-                  className={select}
-                  required
-                  value={brandId}
-                  onChange={(event) => {
-                    setBrandId(event.target.value);
-                    setBranchId("");
-                  }}
-                >
-                  <option value="">{brands.isFetching ? t.loadingBrands : t.chooseBrand}</option>
-                  {(brands.data ?? []).map((brand) => (
-                    <option key={brand.id} value={brand.id}>
-                      {brand.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-            {branchScoped ? (
-              <div className="grid gap-2">
-                <Label htmlFor="invite-branch">{t.branch}</Label>
-                <select id="invite-branch" className={select} required value={branchId} onChange={(event) => setBranchId(event.target.value)}>
-                  <option value="">
-                    {branchesLoading ? t.loadingBranches : branchOptions.length === 0 ? t.noBranchesYet : t.chooseBranch}
-                  </option>
-                  {branchOptions.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
-                {isSuper && brandId && brandBranches.isSuccess && branchOptions.length === 0 ? (
-                  <p className="text-xs text-ink-secondary">
-                    {t.noBranches}{" "}
-                    <Link href={`/app/brands/${brandId}`} className="underline">
-                      {common.addOne}
-                    </Link>{" "}
-                    {fill(t.beforeInviting, { role: locale === "en" ? roleLabel(role).toLowerCase() : roleLabel(role) })}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-            <div className="grid gap-2">
-              <Label htmlFor="invite-name">{t.fullName}</Label>
-              <Input id="invite-name" autoComplete="off" value={fullName} onChange={(event) => setFullName(event.target.value)} className="h-11" />
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" className="min-h-11 px-5" disabled={!canSubmit}>
-              {create.isPending ? t.sending : t.send}
-            </Button>
-            <p className="text-xs text-ink-secondary">{t.linkHint}</p>
-          </div>
-        </form>
-      )}
-
-      <section className="grid gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[length:var(--text-20)] font-semibold">{t.listTitle}</h2>
-          <div role="tablist" aria-label={t.filterAria} className="flex flex-wrap gap-1">
-            {FILTERS.map((item) => {
-              const active = item === filter;
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setFilter(item)}
-                  className={`min-h-9 rounded-full px-3 text-sm ${active ? "bg-secondary font-medium" : "hover:bg-muted"}`}
-                >
-                  {t.filters[item]}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {invitations.isLoading ? <LoadingState label={t.loading} /> : null}
-        {invitations.isError ? (
-          <ErrorState body={invitations.error.message} onRetry={() => void invitations.refetch()} />
-        ) : null}
-        {invitations.isSuccess && invitations.data.length === 0 ? (
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        {noBrandsYet ? (
           <EmptyState
-            title={filter === "all" ? t.emptyAllTitle : fill(t.emptyFilteredTitle, { status: locale === "en" ? t.filters[filter].toLowerCase() : t.filters[filter] })}
-            body={filter === "all" ? t.emptyAllBody : t.emptyFilteredBody}
+            title={t.createBrandTitle}
+            body={t.createBrandBody}
+            action={
+              <Link href="/app/brands" className="inline-flex min-h-11 items-center rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground">
+                {common.goToBrands}
+              </Link>
+            }
           />
-        ) : null}
-        {invitations.isSuccess && invitations.data.length > 0 ? (
-          <ul className="grid gap-2">
-            {invitations.data.map((invitation) => {
-              const scope = [brandName(invitation.brand_id), branchName(invitation.branch_id)].filter(Boolean).join(" · ");
-              const pending = invitation.status === "PENDING";
-              const when =
-                invitation.status === "ACCEPTED"
-                  ? fill(t.acceptedWhen, { when: formatDate(invitation.accepted_at, locale) })
-                  : invitation.status === "REVOKED"
-                    ? fill(t.revokedWhen, { when: formatDate(invitation.revoked_at, locale) })
-                    : fill(t.expiresWhen, { when: formatDate(invitation.expires_at, locale) });
-              return (
-                <li key={invitation.id} className="grid gap-3 rounded-staff border bg-canvas p-4 border border-border sm:grid-cols-[1fr_auto] sm:items-center">
-                  <div className="grid gap-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium break-all">{invitation.email}</p>
-                      <StatusChip tone={STATUS_TONE[invitation.status]}>{t.status[invitation.status]}</StatusChip>
-                    </div>
-                    <p className="text-sm text-ink-secondary">
-                      {[invitation.full_name, roleLabel(invitation.role), scope].filter(Boolean).join(" · ")}
-                    </p>
+        ) : (
+          <form onSubmit={onSubmit} className="grid gap-4 rounded-[16px] border border-border bg-canvas p-5">
+            <h2 className="text-base font-semibold">{t.sendTitle}</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="invite-email">{t.email}</Label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  autoComplete="off"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="h-11 rounded-[10px]"
+                  placeholder={t.emailPlaceholder}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="invite-role">{t.role}</Label>
+                <select id="invite-role" className={select} value={role} onChange={(event) => onRoleChange(event.target.value as UserRole)}>
+                  {roles.map((item) => (
+                    <option key={item} value={item}>
+                      {roleLabel(item)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {isSuper ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="invite-brand">{t.brand}</Label>
+                  <select
+                    id="invite-brand"
+                    className={select}
+                    required
+                    value={brandId}
+                    onChange={(event) => {
+                      setBrandId(event.target.value);
+                      setBranchId("");
+                    }}
+                  >
+                    <option value="">{brands.isFetching ? t.loadingBrands : t.chooseBrand}</option>
+                    {(brands.data ?? []).map((brand) => (
+                      <option key={brand.id} value={brand.id}>
+                        {brand.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              {branchScoped ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="invite-branch">{t.branch}</Label>
+                  <select id="invite-branch" className={select} required value={branchId} onChange={(event) => setBranchId(event.target.value)}>
+                    <option value="">{branchesLoading ? t.loadingBranches : branchOptions.length === 0 ? t.noBranchesYet : t.chooseBranch}</option>
+                    {branchOptions.map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </select>
+                  {isSuper && brandId && brandBranches.isSuccess && branchOptions.length === 0 ? (
                     <p className="text-xs text-ink-secondary">
-                      {when}
-                      {invitation.send_count > 1 ? fill(t.sentTimes, { count: invitation.send_count }) : ""}
+                      {t.noBranches}{" "}
+                      <Link href={`/app/brands/${brandId}`} className="underline">
+                        {common.addOne}
+                      </Link>{" "}
+                      {fill(t.beforeInviting, { role: locale === "en" ? roleLabel(role).toLowerCase() : roleLabel(role) })}
                     </p>
-                  </div>
-                  {pending ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="min-h-11 px-4"
-                        disabled={resend.isPending && resend.variables?.id === invitation.id}
-                        onClick={() => resend.mutate(invitation)}
-                      >
-                        {resend.isPending && resend.variables?.id === invitation.id ? t.sending : t.resend}
-                      </Button>
-                      <Button type="button" variant="destructive" className="min-h-11 px-4" onClick={() => setRevokeTarget(invitation)}>
-                        {t.revoke}
-                      </Button>
-                    </div>
                   ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
-      </section>
+                </div>
+              ) : null}
+              <div className="grid gap-2">
+                <Label htmlFor="invite-name">{t.fullName}</Label>
+                <Input
+                  id="invite-name"
+                  autoComplete="off"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  className="h-11 rounded-[10px]"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="submit" className="min-h-10 rounded-full px-5" disabled={!canSubmit}>
+                {create.isPending ? t.sending : t.send}
+              </Button>
+              <p className="text-xs text-ink-secondary">{t.linkHint}</p>
+            </div>
+          </form>
+        )}
+
+        <section className="grid gap-3 rounded-[16px] border border-border bg-canvas p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-semibold">{t.listTitle}</h2>
+            <div role="tablist" aria-label={t.filterAria} className="flex flex-wrap gap-1">
+              {FILTERS.map((item) => {
+                const active = item === filter;
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setFilter(item)}
+                    className={`min-h-9 rounded-full px-3 text-sm ${active ? "bg-secondary font-medium" : "hover:bg-muted"}`}
+                  >
+                    {t.filters[item]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {invitations.isLoading ? <LoadingState label={t.loading} /> : null}
+          {invitations.isError ? <ErrorState body={invitations.error.message} onRetry={() => void invitations.refetch()} /> : null}
+          {invitations.isSuccess && invitations.data.length === 0 ? (
+            <EmptyState
+              title={
+                filter === "all"
+                  ? t.emptyAllTitle
+                  : fill(t.emptyFilteredTitle, { status: locale === "en" ? t.filters[filter].toLowerCase() : t.filters[filter] })
+              }
+              body={filter === "all" ? t.emptyAllBody : t.emptyFilteredBody}
+            />
+          ) : null}
+          {invitations.isSuccess && invitations.data.length > 0 ? (
+            <ul className="grid gap-2">
+              {invitations.data.map((invitation) => {
+                const scope = [brandName(invitation.brand_id), branchName(invitation.branch_id)].filter(Boolean).join(" · ");
+                const pending = invitation.status === "PENDING";
+                const when =
+                  invitation.status === "ACCEPTED"
+                    ? fill(t.acceptedWhen, { when: formatDate(invitation.accepted_at, locale) })
+                    : invitation.status === "REVOKED"
+                      ? fill(t.revokedWhen, { when: formatDate(invitation.revoked_at, locale) })
+                      : fill(t.expiresWhen, { when: formatDate(invitation.expires_at, locale) });
+                return (
+                  <li
+                    key={invitation.id}
+                    className="grid gap-2 rounded-[12px] border border-border bg-canvas px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center"
+                  >
+                    <div className="grid gap-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium break-all">{invitation.email}</p>
+                        <StatusChip tone={STATUS_TONE[invitation.status]}>{t.status[invitation.status]}</StatusChip>
+                      </div>
+                      <p className="text-sm text-ink-secondary">{[invitation.full_name, roleLabel(invitation.role), scope].filter(Boolean).join(" · ")}</p>
+                      <p className="text-xs text-ink-secondary">
+                        {when}
+                        {invitation.send_count > 1 ? fill(t.sentTimes, { count: invitation.send_count }) : ""}
+                      </p>
+                    </div>
+                    {pending ? (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-9 rounded-full px-4"
+                          disabled={resend.isPending && resend.variables?.id === invitation.id}
+                          onClick={() => resend.mutate(invitation)}
+                        >
+                          {resend.isPending && resend.variables?.id === invitation.id ? t.sending : t.resend}
+                        </Button>
+                        <Button type="button" variant="destructive" className="min-h-9 rounded-full px-4" onClick={() => setRevokeTarget(invitation)}>
+                          {t.revoke}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </section>
+      </div>
 
       <ConfirmDialog
         open={Boolean(revokeTarget)}

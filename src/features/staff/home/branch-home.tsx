@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { StaffOrderListItem, StaffOrderListResponse } from "@/features/staff/orders/types";
 import { useWarehouses } from "@/features/staff/inventory/chrome";
 import { canOpenInventoryPage } from "@/features/staff/inventory/access";
+import { LiveMenuCard } from "@/features/staff/menu/live-menu-card";
 import { formatQty } from "@/features/staff/inventory/qty";
 import { fetchFloorLive, floorLiveQueryKey } from "@/hooks/use-floor-live";
 import { asApiError } from "@/lib/api/error";
@@ -398,6 +399,7 @@ export function BranchHome() {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
+          <LiveMenuCard canOpen={allowed.has("/app/menu")} />
           <Card
             title={t.branch.staff.title}
             action={allowed.has("/app/settings/staff/attendance") ? <CardLink href="/app/settings/staff/attendance">{t.branch.staff.seeAll}</CardLink> : undefined}

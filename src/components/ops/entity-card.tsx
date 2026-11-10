@@ -31,11 +31,11 @@ export function EntityCard({
         className="flex min-h-28 flex-col gap-3 rounded-staff p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <div className="flex items-start justify-between gap-3">
-          <span className="flex size-10 items-center justify-center overflow-hidden rounded-staff bg-ink font-title text-lg font-semibold text-on-ink">
+          <span className="flex size-10 items-center justify-center overflow-hidden rounded-staff bg-brand font-title text-lg font-semibold text-on-brand">
             {src ? (
               // Stored logos are on the API host, which next/image is not set up to optimise.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={src} alt={imageAlt ?? ""} className="size-full object-cover" onError={() => setFailedUrl(src)} />
+              <img src={src} alt={imageAlt ?? ""} className="block size-full max-w-none object-cover object-center" onError={() => setFailedUrl(src)} />
             ) : (
               mark
             )}

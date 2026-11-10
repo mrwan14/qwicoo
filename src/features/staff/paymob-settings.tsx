@@ -26,7 +26,8 @@ import {
   type SetupCheckState,
 } from "@/lib/paymob/gateway";
 
-const field = "h-11 w-full rounded-none border border-border bg-background px-3 text-sm";
+const field =
+  "h-11 w-full rounded-[10px] border border-border bg-background px-3 text-sm outline-none transition-colors hover:border-ink-secondary/50 focus-visible:border-ink";
 
 type Gateway = components["schemas"]["PaymobGatewayResponse"];
 
@@ -93,8 +94,7 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
     mutationFn: async () => {
       const built = paymobUpsertBody(draft, gateway.data != null);
       if (!built.ok) {
-        const message =
-          built.reason === "currency" ? t.currencyInvalid : built.reason === "secrets" ? t.secretsRequired : t.integrationInvalid;
+        const message = built.reason === "currency" ? t.currencyInvalid : built.reason === "secrets" ? t.secretsRequired : t.integrationInvalid;
         throw new ApiError(0, message, null);
       }
       const result = await browserApi.PUT("/api/v1/brands/{brand_id}/payment-gateways/paymob", {
@@ -152,10 +152,10 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
   };
 
   return (
-    <section className="grid w-full gap-5 border border-border bg-canvas p-4">
+    <section className="grid w-full gap-5 rounded-[16px] border border-border bg-canvas p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
-          <h2 className="text-lg font-semibold">{t.title}</h2>
+          <h2 className="text-base font-semibold">{t.title}</h2>
           <p className="max-w-3xl text-sm leading-6 text-ink-secondary">{t.intro}</p>
         </div>
         <StatusChip tone={tone}>{statusLabel}</StatusChip>
@@ -209,11 +209,11 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
             />
             <fieldset className="grid gap-1 text-sm">
               <legend className="font-medium">{t.mode}</legend>
-              <div className="flex">
+              <div className="flex gap-1 rounded-[12px] bg-subtle p-1 ring-1 ring-border">
                 <button
                   type="button"
                   aria-pressed={!draft.isLive}
-                  className={`min-h-11 flex-1 border border-border px-3 ${draft.isLive ? "bg-background" : "bg-foreground text-background"}`}
+                  className={`min-h-9 flex-1 rounded-[9px] px-3 font-medium transition-colors ${draft.isLive ? "text-ink-secondary hover:text-ink" : "bg-foreground text-background shadow-sm"}`}
                   onClick={() => setDraft((current) => ({ ...current, isLive: false }))}
                 >
                   {t.test}
@@ -221,7 +221,7 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
                 <button
                   type="button"
                   aria-pressed={draft.isLive}
-                  className={`min-h-11 flex-1 border border-s-0 border-border px-3 ${draft.isLive ? "bg-foreground text-background" : "bg-background"}`}
+                  className={`min-h-9 flex-1 rounded-[9px] px-3 font-medium transition-colors ${draft.isLive ? "bg-foreground text-background shadow-sm" : "text-ink-secondary hover:text-ink"}`}
                   onClick={() => setDraft((current) => ({ ...current, isLive: true }))}
                 >
                   {t.live}
@@ -231,7 +231,7 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
             <label className="flex min-h-11 items-center gap-3 text-sm">
               <input
                 type="checkbox"
-                className="size-4 rounded-none"
+                className="size-4"
                 checked={draft.isActive}
                 onChange={(event) => setDraft((current) => ({ ...current, isActive: event.target.checked }))}
               />
@@ -242,17 +242,17 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
             </label>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 border-t border-border pt-4">
             <button
               type="submit"
-              className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              className="min-h-11 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               disabled={save.isPending}
             >
               {save.isPending ? t.saving : t.save}
             </button>
             <button
               type="button"
-              className="min-h-11 border border-border px-4 text-sm font-medium disabled:opacity-50"
+              className="min-h-11 rounded-full border border-border px-5 text-sm font-medium hover:bg-subtle disabled:opacity-50"
               disabled={test.isPending || gateway.data == null}
               onClick={() => test.mutate()}
             >
@@ -262,7 +262,7 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
 
           {checks ? (
             <div className="grid gap-2">
-              <ul className="grid w-full border border-border">
+              <ul className="grid w-full overflow-hidden rounded-[12px] border border-border">
                 {SETUP_CHECKS.map((id) => (
                   <li key={id} className="flex items-center justify-between gap-3 border-b border-border px-3 py-3 text-sm last:border-b-0">
                     <span>{checkLabel[id]}</span>
@@ -276,40 +276,26 @@ export function PaymobSettings({ brandId, apiOrigin }: { brandId: string; apiOri
         </form>
       ) : null}
 
-      <div className="grid w-full gap-3">
-        <div className="grid gap-1">
-          <h3 className="font-medium">{t.urlsHint}</h3>
-          <p className="text-sm leading-6 text-ink-secondary">{t.callbackNote}</p>
+      <div className="grid w-full gap-3 rounded-[12px] bg-subtle/70 p-4">
+        <div className="grid gap-0.5">
+          <h3 className="text-sm font-semibold">{t.urlsHint}</h3>
+          <p className="text-xs leading-5 text-ink-secondary">{t.callbackNote}</p>
         </div>
-        <UrlRow label={t.callback} value={urls.callback} copyLabel={t.copy} copiedLabel={t.copied} failedLabel={t.copyFailed} />
-        <UrlRow label={t.redirect} value={urls.redirect} copyLabel={t.copy} copiedLabel={t.copied} failedLabel={t.copyFailed} />
+        <div className="grid gap-3 xl:grid-cols-2">
+          <UrlRow label={t.callback} value={urls.callback} copyLabel={t.copy} copiedLabel={t.copied} failedLabel={t.copyFailed} />
+          <UrlRow label={t.redirect} value={urls.redirect} copyLabel={t.copy} copiedLabel={t.copied} failedLabel={t.copyFailed} />
+        </div>
       </div>
     </section>
   );
 }
 
-function SecretField({
-  label,
-  hint,
-  value,
-  onChange,
-}: {
-  label: string;
-  hint: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
+function SecretField({ label, hint, value, onChange }: { label: string; hint: string; value: string; onChange: (value: string) => void }) {
   return (
     <label className="grid gap-1 text-sm">
       <span className="font-medium">{label}</span>
       <span className="text-ink-secondary">{hint}</span>
-      <input
-        className={field}
-        type="password"
-        autoComplete="new-password"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <input className={field} type="password" autoComplete="new-password" value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
@@ -330,13 +316,7 @@ function TextField({
   return (
     <label className="grid gap-1 text-sm">
       <span className="font-medium">{label}</span>
-      <input
-        className={field}
-        value={value}
-        inputMode={inputMode}
-        maxLength={maxLength}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <input className={field} value={value} inputMode={inputMode} maxLength={maxLength} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
@@ -357,11 +337,11 @@ function UrlRow({
   return (
     <div className="grid gap-1 text-sm">
       <span className="font-medium">{label}</span>
-      <div className="flex w-full">
+      <div className="flex w-full gap-2">
         <input className={`${field} min-w-0 flex-1 font-mono`} readOnly value={value} dir="ltr" />
         <button
           type="button"
-          className="min-h-11 shrink-0 border border-s-0 border-border px-4"
+          className="min-h-11 shrink-0 rounded-full border border-border px-4 text-sm font-medium hover:bg-subtle"
           onClick={() => {
             void navigator.clipboard.writeText(value).then(
               () => toast.success(copiedLabel),

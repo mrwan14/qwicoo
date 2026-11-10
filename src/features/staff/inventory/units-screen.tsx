@@ -55,24 +55,32 @@ export function UnitsScreen() {
       <PageHeader
         title={t.units.title}
         detail={t.units.detail}
-        action={canWrite ? <button type="button" className={primaryButton} onClick={() => setOpen(true)}>{t.units.add}</button> : null}
+        action={
+          canWrite ? (
+            <button type="button" className={primaryButton} onClick={() => setOpen(true)}>
+              {t.units.add}
+            </button>
+          ) : null
+        }
       />
       {units.isLoading ? <LoadingState label={t.loading} /> : null}
       {units.isError ? <QueryErrorState error={units.error} screen={t.tabs.units} onRetry={() => void units.refetch()} /> : null}
       {units.data && units.data.length === 0 ? <EmptyState title={t.units.empty} body={t.units.detail} /> : null}
       {units.data && units.data.length > 0 ? (
-        <div className="overflow-x-auto bg-canvas">
+        <div className="overflow-x-auto rounded-[16px] border border-border bg-canvas">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
-              <tr className="border-b">
+              <tr className="border-b border-border bg-subtle/60">
                 {[t.units.code, t.ingredient, t.units.dimension, t.units.base].map((label) => (
-                  <th key={label} className="px-3 py-2 text-start font-medium">{label}</th>
+                  <th key={label} className="px-3 py-2 text-start font-medium">
+                    {label}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {units.data.map((unit) => (
-                <tr key={unit.id} className="border-b">
+                <tr key={unit.id} className="border-b border-border last:border-b-0">
                   <td className="px-3 py-2">{unit.code}</td>
                   <td className="px-3 py-2">{pickLocale(unit.name, locale)}</td>
                   <td className="px-3 py-2">{t.units.dimensions[unit.dimension]}</td>
@@ -143,21 +151,41 @@ function BrandConversions({
       {rows.map((row) => (
         <div key={row.id} className="flex items-center justify-between gap-3 border-b py-2 text-sm">
           <span>{fill(t.ingredients.conversionHint, { from: name(row.from_unit_id), factor: row.factor, to: name(row.to_unit_id) })}</span>
-          {canWrite ? <button type="button" className={secondaryButton} onClick={() => remove.mutate(row.id)}>{t.ingredients.remove}</button> : null}
+          {canWrite ? (
+            <button type="button" className={secondaryButton} onClick={() => remove.mutate(row.id)}>
+              {t.ingredients.remove}
+            </button>
+          ) : null}
         </div>
       ))}
       {canWrite ? (
         <div className="grid gap-2 sm:grid-cols-4">
           <select className={control} value={fromUnit} onChange={(event) => setFromUnit(event.target.value)}>
             <option value="">{t.ingredients.fromUnit}</option>
-            {units.map((unit) => <option key={unit.id} value={unit.id}>{unit.code}</option>)}
+            {units.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.code}
+              </option>
+            ))}
           </select>
           <select className={control} value={toUnit} onChange={(event) => setToUnit(event.target.value)}>
             <option value="">{t.ingredients.toUnit}</option>
-            {units.map((unit) => <option key={unit.id} value={unit.id}>{unit.code}</option>)}
+            {units.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.code}
+              </option>
+            ))}
           </select>
-          <input className={control} inputMode="decimal" placeholder={t.ingredients.factor} value={factor} onChange={(event) => setFactor(event.target.value)} />
-          <button type="button" className={primaryButton} disabled={!fromUnit || !toUnit || !factor || add.isPending} onClick={() => add.mutate()}>{t.ingredients.addConversion}</button>
+          <input
+            className={control}
+            inputMode="decimal"
+            placeholder={t.ingredients.factor}
+            value={factor}
+            onChange={(event) => setFactor(event.target.value)}
+          />
+          <button type="button" className={primaryButton} disabled={!fromUnit || !toUnit || !factor || add.isPending} onClick={() => add.mutate()}>
+            {t.ingredients.addConversion}
+          </button>
         </div>
       ) : null}
     </div>
@@ -188,20 +216,48 @@ function UnitDrawer({ brandId, onClose }: { brandId: string; onClose: () => void
     onError: (error) => toast.error(error instanceof Error ? error.message : t.loadFailed),
   });
   return (
-    <Sheet open onOpenChange={(next) => { if (!next) onClose(); }}>
+    <Sheet
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
       <SheetContent side="right" className="w-full overflow-y-auto rounded-none sm:max-w-lg">
-        <SheetHeader><SheetTitle>{t.units.add}</SheetTitle></SheetHeader>
-        <form className="grid gap-3 px-4 pb-6" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
-          <label className="grid gap-1 text-sm"><span>{t.units.code}</span><input className={control} value={code} onChange={(event) => setCode(event.target.value)} required /></label>
-          <label className="grid gap-1 text-sm"><span>{t.units.nameEn}</span><input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required /></label>
-          <label className="grid gap-1 text-sm"><span>{t.units.nameAr}</span><input className={control} value={nameAr} onChange={(event) => setNameAr(event.target.value)} required dir="rtl" /></label>
+        <SheetHeader>
+          <SheetTitle>{t.units.add}</SheetTitle>
+        </SheetHeader>
+        <form
+          className="grid gap-3 px-4 pb-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            save.mutate();
+          }}
+        >
+          <label className="grid gap-1 text-sm">
+            <span>{t.units.code}</span>
+            <input className={control} value={code} onChange={(event) => setCode(event.target.value)} required />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span>{t.units.nameEn}</span>
+            <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span>{t.units.nameAr}</span>
+            <input className={control} value={nameAr} onChange={(event) => setNameAr(event.target.value)} required dir="rtl" />
+          </label>
           <label className="grid gap-1 text-sm">
             <span>{t.units.dimension}</span>
             <select className={control} value={dimension} onChange={(event) => setDimension(event.target.value as Dimension)}>
-              {(["WEIGHT", "VOLUME", "COUNT"] as const).map((item) => <option key={item} value={item}>{t.units.dimensions[item]}</option>)}
+              {(["WEIGHT", "VOLUME", "COUNT"] as const).map((item) => (
+                <option key={item} value={item}>
+                  {t.units.dimensions[item]}
+                </option>
+              ))}
             </select>
           </label>
-          <button type="submit" className={primaryButton} disabled={save.isPending}>{t.save}</button>
+          <button type="submit" className={primaryButton} disabled={save.isPending}>
+            {t.save}
+          </button>
         </form>
       </SheetContent>
     </Sheet>

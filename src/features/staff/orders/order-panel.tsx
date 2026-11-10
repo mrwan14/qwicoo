@@ -156,7 +156,9 @@ export function OrderPanel({
 
   const status = (order?.status ?? summary?.status ?? null) as Order["status"] | null;
   const isPaid = order?.is_paid ?? summary?.is_paid ?? false;
-  const next = floorStatusOptions(me?.role, status, isPaid)[0] ?? null;
+  // Dine-in can be served before it's paid; takeaway waits for payment.
+  const dineIn = order ? order.order_type === "DINE_IN" : Boolean(summary?.table_label);
+  const next = floorStatusOptions(me?.role, status, isPaid, dineIn)[0] ?? null;
   const move = useMutation({
     mutationFn: async (target: Order["status"]) => {
       const result = await browserApi.POST("/api/v1/orders/{order_id}/transition", {
@@ -262,7 +264,7 @@ export function OrderPanel({
                     aria-hidden
                     className={cn(
                       "size-2.5 shrink-0 rounded-full",
-                      step.state === "done" && "bg-ink",
+                      step.state === "done" && "bg-brand",
                       step.state === "current" && "border-2 border-ink bg-canvas",
                       step.state === "todo" && "bg-border",
                       step.state === "cancelled" && "bg-danger",

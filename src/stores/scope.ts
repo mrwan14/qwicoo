@@ -25,6 +25,10 @@ type ScopeState = {
   brandId: string | null;
   brandName: string | null;
   brandLogoUrl: string | null;
+  /** Brand look from /auth/me: preset and/or colours. Null on the platform scope. */
+  brandTheme: { preset?: string | null; brand_color?: string | null; background_color?: string | null } | null;
+  /** Unsaved colours from Brand look, shown on the dashboard while the admin picks them. */
+  previewTheme: { preset?: string | null; brand_color?: string | null; background_color?: string | null } | null;
   branches: ScopeBranch[];
   /** Sent as X-Branch-ID. Always one of `branches`, or an App Admin's focused branch. */
   branchId: string | null;
@@ -48,6 +52,8 @@ const empty = {
   brandId: null,
   brandName: null,
   brandLogoUrl: null,
+  brandTheme: null,
+  previewTheme: null,
   branches: [],
   branchId: null,
   blocked: false,
@@ -101,6 +107,7 @@ export const useScope = create<ScopeState>()((set, get) => ({
       brandId: homeScope === "platform" ? null : (me.brand_id ?? null),
       brandName: me.brand_name ?? null,
       brandLogoUrl: me.brand_logo_url ?? null,
+      brandTheme: (me as { brand_theme?: ScopeState["brandTheme"] }).brand_theme ?? null,
       branches,
       branchId,
       blocked: workspaceProblem(me) !== null,

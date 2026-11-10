@@ -40,7 +40,7 @@ function ShareBar({ value, max }: { value: number; max: number }) {
   const width = max > 0 ? Math.max((value / max) * 100, value > 0 ? 2 : 0) : 0;
   return (
     <span aria-hidden className="block h-1 overflow-hidden rounded-full bg-well">
-      <span className="block h-full rounded-full bg-ink transition-[width] duration-500" style={{ width: `${width}%` }} />
+      <span className="block h-full rounded-full bg-brand transition-[width] duration-500" style={{ width: `${width}%` }} />
     </span>
   );
 }

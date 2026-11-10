@@ -48,3 +48,5 @@ next-env.d.ts
 /dist/
 /qwicoo-mobile.pen
 /store-online-frontend-prompt.md
+.agents/hooks.json
+.cursor/hooks.json

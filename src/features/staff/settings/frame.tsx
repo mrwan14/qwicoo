@@ -36,7 +36,9 @@ function SettingsList({ active }: { active: SettingsItem | null }) {
                 aria-current={link.item === active ? "page" : undefined}
                 className={cn(
                   "flex min-h-10 items-center rounded-staff border px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus",
-                  link.item === active ? "border-border bg-subtle font-semibold text-ink" : "border-transparent text-ink-secondary hover:bg-subtle hover:text-ink",
+                  link.item === active
+                    ? "border-border bg-subtle font-semibold text-ink"
+                    : "border-transparent text-ink-secondary hover:bg-subtle hover:text-ink",
                 )}
               >
                 {t.items[link.item].title}
@@ -72,9 +74,9 @@ export function SettingsFrame<T extends string>({
 }) {
   const t = useStaffSection(settingsCopy);
   return (
-    <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 items-start gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
+    <div className="settings-soft mx-auto grid w-full max-w-[1200px] grid-cols-1 items-start gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
       <SettingsList active={item} />
-      <div className="grid min-w-0 grid-cols-1 gap-5">
+      <div className="grid min-w-0 grid-cols-1 gap-4">
         <PageHeader back={{ href: "/app/settings", label: t.back }} title={title} subtitle={subtitle} actions={actions} />
         {tabs && tab ? <Tabs label={typeof title === "string" ? title : t.listLabel} value={tab} items={tabs} /> : null}
         <NestedHeaders>{children}</NestedHeaders>

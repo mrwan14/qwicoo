@@ -12,7 +12,10 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { guestApi } from "@/lib/api/guest";
 import { useGuest } from "@/stores/guest";
 
+import { markVisitEnded } from "./session";
+
 import { guestCopy } from "./copy";
+import { useGuestThemeProps } from "./theme-style";
 
 /** True when an error means the API (or our proxy to it) is unreachable rather than saying no. */
 export function isGuestUnreachable(error: unknown): boolean {
@@ -23,6 +26,8 @@ export function isGuestUnreachable(error: unknown): boolean {
 
 export function useOrderingPaused(): boolean {
   const branchId = useGuest((state) => state.session?.branchId ?? null);
+  // Before joining, the QR menu says whether phone ordering is paused.
+  const previewPaused = useGuest((state) => state.tablePreview?.orderingPaused === true);
   const status = useQuery({
     queryKey: ["guest-ordering-status", branchId],
     enabled: Boolean(branchId),
@@ -32,6 +37,8 @@ export function useOrderingPaused(): boolean {
       try {
         const result = await guestApi.GET("/api/v1/sessions/ordering-status");
         if ([502, 503, 504].includes(result.response.status)) return { paused: true };
+        // The table visit closed (paid, staff, idle) while the guest was on this page.
+        if ((result.data as { visit_open?: boolean | null } | undefined)?.visit_open === false) markVisitEnded();
         return { paused: Boolean(result.data?.ordering_paused) };
       } catch (error) {
         if (isGuestUnreachable(error)) return { paused: true };
@@ -39,6 +46,7 @@ export function useOrderingPaused(): boolean {
       }
     },
   });
+  if (!branchId) return previewPaused;
   return status.data?.paused ?? false;
 }
 
@@ -47,6 +55,7 @@ export function OrderingPausedNotice({ onRetry, retryLabel }: { onRetry?: () => 
   const t = guestCopy[locale];
   const dir = locale === "ar" ? "rtl" : "ltr";
   const [open, setOpen] = useState(true);
+  const portalTheme = useGuestThemeProps();
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -54,6 +63,7 @@ export function OrderingPausedNotice({ onRetry, retryLabel }: { onRetry?: () => 
           dir={dir}
           lang={locale}
           showCloseButton={false}
+          {...portalTheme}
           className="guest-theme max-w-[22rem] gap-2 rounded-[var(--guest-radius-card)] border-0 bg-[var(--guest-surface)] p-5 pe-14 text-[var(--guest-ink)] shadow-[var(--guest-shadow)] ring-0"
         >
           <DialogClose
@@ -63,9 +73,7 @@ export function OrderingPausedNotice({ onRetry, retryLabel }: { onRetry?: () => 
             <X className="size-5" aria-hidden />
           </DialogClose>
           <DialogTitle className="guest-display text-lg leading-6">{t.orderingPaused}</DialogTitle>
-          <DialogDescription className="guest-body text-start text-[var(--guest-quiet)]">
-            {t.orderingPausedBody}
-          </DialogDescription>
+          <DialogDescription className="guest-body text-start text-[var(--guest-quiet)]">{t.orderingPausedBody}</DialogDescription>
         </DialogContent>
       </Dialog>
       {!open && onRetry ? (

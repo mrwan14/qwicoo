@@ -31,23 +31,31 @@ test("landing and globals keep square radius (no guest pill leak)", () => {
   assert.doesNotMatch(globalsCss, /\.guest-theme/);
 });
 
-test("guest layout loads Fraunces, Inter, and Cairo only", () => {
+test("guest layout loads the Qwicoo IBM Plex family only", () => {
   const layout = readFileSync(new URL("../../app/(guest)/layout.tsx", import.meta.url), "utf8");
   const fonts = readFileSync(new URL("./guest-fonts.ts", import.meta.url), "utf8");
   assert.match(layout, /guestFontClassName/);
   // Self-hosted files (builds no longer fetch Google Fonts).
-  assert.match(fonts, /fraunces\.woff2/);
-  assert.match(fonts, /inter\.woff2/);
-  assert.match(fonts, /cairo\.woff2/);
+  assert.match(fonts, /plex-sans\.woff2/);
+  assert.match(fonts, /plex-sans-arabic-regular\.woff2/);
+  assert.doesNotMatch(fonts, /fraunces|cairo|inter\.woff2/i);
   assert.doesNotMatch(layout, /Nunito/);
   assert.doesNotMatch(layout, /Baloo/);
-  assert.doesNotMatch(fonts, /nunito|baloo/i);
+  assert.doesNotMatch(fonts, /Nunito/);
+  assert.doesNotMatch(fonts, /Baloo/);
 });
 
-test("guest chrome does not repaint buttons with a restaurant accent", () => {
+test("restaurant themes repaint the guest chrome only through the theme engine", () => {
   const shell = readFileSync(new URL("./shell.tsx", import.meta.url), "utf8");
+  const themeStyle = readFileSync(new URL("./theme-style.ts", import.meta.url), "utf8");
+  assert.match(themeStyle, /buildGuestTheme/);
   assert.doesNotMatch(shell, /"--guest-orange": accent/);
-  assert.doesNotMatch(shell, /accentForeground/);
+  // Portaled sheets carry the restaurant's variables, or `.guest-theme` resets them to Qwicoo orange.
+  const sheet = readFileSync(new URL("./bottom-sheet.tsx", import.meta.url), "utf8");
+  assert.match(sheet, /useGuestThemeProps/);
+  // Order-status colours stay Qwicoo's: the engine never sets them.
+  const theme = readFileSync(new URL("../../lib/guest/theme.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(theme, /"--guest-sage"|"--guest-amber"|"--guest-error":/);
 });
 
 test("guest motion stays scoped under features/guest", () => {

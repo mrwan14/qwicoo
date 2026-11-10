@@ -1,5 +1,7 @@
 "use client";
 
+import { latestCartVersion } from "@/features/guest/use-shared-cart";
+import { badgeLabels } from "@/features/guest/menu-parts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -49,6 +51,7 @@ export function ItemSheet({
   branchPrice,
   cartVersion,
   triggerRef,
+  onBeforeAdd,
 }: {
   item: MenuItem | null;
   open: boolean;
@@ -57,10 +60,10 @@ export function ItemSheet({
   branchPrice: string | null;
   cartVersion: number;
   triggerRef?: React.RefObject<HTMLElement | null>;
+  /** Runs `add` once the guest may add: joins the table first if needed and names the guest. */
+  onBeforeAdd?: (add: () => void) => void;
 }) {
   const { t, locale } = useGuestCopy();
-  const session = useGuest((state) => state.session);
-  const guestName = useGuest((state) => state.guestName);
   const queryClient = useQueryClient();
   const paused = useOrderingPaused();
   const [quantity, setQuantity] = useState(1);
@@ -126,10 +129,10 @@ export function ItemSheet({
   const add = useMutation({
     mutationFn: async () => {
       if (!item) throw new Error(t.oops);
-      const name = guestName.trim();
-      let version =
-        queryClient.getQueryData<{ version?: number }>(["guest-cart", session?.sessionId])?.version ??
-        cartVersion;
+      const name = useGuest.getState().guestName.trim();
+      let version = useGuest.getState().session
+        ? await latestCartVersion(queryClient, locale, t.oops)
+        : cartVersion;
       let cart = null as Awaited<ReturnType<typeof addGuestCartItem>> | null;
 
       async function addOne(selection: UnitSelection, qty: number, note: string) {
@@ -139,7 +142,7 @@ export function ItemSheet({
           quantity: qty,
           selected_groups: selectedGroups,
           special_instructions: note || null,
-          table_id: session?.tableId,
+          table_id: useGuest.getState().session?.tableId,
           guest_label: name || null,
         };
         const validated = await guestApi.POST("/api/v1/menu/validate-item-selection", { body: validateBody });
@@ -160,7 +163,7 @@ export function ItemSheet({
             price: modifier.price_delta,
           })),
         };
-        cart = await addGuestCartItem(session?.sessionId ?? "", version, body, locale, t.oops);
+        cart = await addGuestCartItem(useGuest.getState().session?.sessionId ?? "", version, body, locale, t.oops);
         version = cart.version;
       }
 
@@ -174,8 +177,8 @@ export function ItemSheet({
       return cart!;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["guest-cart", session?.sessionId], data);
-      toast.success(t.added);
+      queryClient.setQueryData(["guest-cart", useGuest.getState().session?.sessionId], data);
+      // No toast: the stepper, the count and the order bar already confirm the add.
       onOpenChange(false);
     },
     onError: (error: Error) => {
@@ -216,10 +219,6 @@ export function ItemSheet({
     if (now - addStamp.current < 450) return;
     addStamp.current = now;
     if (!item) return;
-    if (!guestName.trim()) {
-      setChoiceError(t.nicknameTitle);
-      return;
-    }
     const incompleteIndex =
       mode === "same"
         ? unitIsComplete(groups, units[0] ?? emptySelection())
@@ -239,7 +238,8 @@ export function ItemSheet({
     }
     setChoiceError("");
     setHighlightGroupId(null);
-    add.mutate();
+    if (onBeforeAdd) onBeforeAdd(() => add.mutate());
+    else add.mutate();
   }
 
   if (!item) return null;
@@ -252,6 +252,7 @@ export function ItemSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={title}
+      titleHidden
       returnFocusRef={triggerRef}
       footer={
         <div className="flex items-center gap-3">
@@ -285,7 +286,7 @@ export function ItemSheet({
               onPointerUp={tryAdd}
               onClick={tryAdd}
             >
-              {add.isPending ? t.paying : ctaLabel}
+              {add.isPending ? t.adding : ctaLabel}
             </button>
           </div>
         </div>
@@ -294,20 +295,33 @@ export function ItemSheet({
       <div className="grid gap-6">
         {mediaUrl(item.image_url) ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={mediaUrl(item.image_url) ?? ""}
-            alt=""
-            className="guest-thumb max-h-36 w-full object-cover"
-          />
+          <img src={mediaUrl(item.image_url) ?? ""} alt="" className="guest-sheet-photo" />
         ) : null}
-        {description && description !== title ? (
-          <p className="guest-body">{description}</p>
-        ) : null}
-        {branchPrice ? (
-          <p className="guest-price text-base text-[var(--guest-ink)]" dir="ltr">
-            <Money amount={branchPrice} currency={currency} locale={locale} />
-          </p>
-        ) : null}
+        <div className="grid gap-2">
+          <div className="flex items-start justify-between gap-4">
+            <h2 className="guest-sheet-title">{title}</h2>
+            {branchPrice ? (
+              <p className="guest-price shrink-0 pt-1 text-lg" dir="ltr">
+                <Money amount={branchPrice} currency={currency} locale={locale} />
+              </p>
+            ) : null}
+          </div>
+          {description && description !== title ? <p className="guest-body text-[15px] leading-relaxed">{description}</p> : null}
+          {badgeLabels(item.dietary_badges, locale).length > 0 ? (
+            <div className="guest-row-tags">
+              {badgeLabels(item.dietary_badges, locale).map((badge) => (
+                <span key={badge} className="guest-tag">
+                  {badge}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {(item.allergens ?? []).length > 0 ? (
+            <p className="guest-caption text-[13px] text-[var(--guest-quiet)]">
+              <span className="font-semibold">{t.contains}:</span> {(item.allergens ?? []).join(locale === "ar" ? "، " : ", ")}
+            </p>
+          ) : null}
+        </div>
 
         {quantity > 1 ? (
           <div className="grid gap-2">

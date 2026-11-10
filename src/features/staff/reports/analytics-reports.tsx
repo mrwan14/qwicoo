@@ -35,7 +35,7 @@ type Item = components["schemas"]["ItemPerformanceItem"];
 type BranchRow = components["schemas"]["BranchPerformanceRow"];
 
 /** Period and branch, shared by the analytics reports. Brand-level roles can pick one branch or all. */
-function useAnalyticsFilters() {
+export function useAnalyticsFilters() {
   const t = useStaffSection(reportsCopy);
   const branches = useScope((state) => state.branches);
   const { range, setRange, branch: wanted, setBranch } = useReportFilters();
@@ -68,7 +68,7 @@ function usePeriodData<T>(key: string, range: DateFilter, branch: string | null,
   return { current, previous: previous.data, comparison };
 }
 
-function useSubtitle(range: DateFilter, branchName?: string | null) {
+export function useSubtitle(range: DateFilter, branchName?: string | null) {
   const { locale } = useLocale();
   return [rangeLabel(range.from, range.to, locale), branchName].filter(Boolean).join(" · ");
 }

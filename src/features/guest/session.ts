@@ -70,6 +70,23 @@ function dropEndedSession() {
   useGuest.getState().setCashRequestedOrderId(null);
 }
 
+/** The table visit closed (paid, staff, idle). Remember it for the thank-you screen, then drop it. */
+export function markVisitEnded(): void {
+  const { session, setEndedVisit } = useGuest.getState();
+  if (session) setEndedVisit({ sessionId: session.sessionId, tableNumber: session.tableNumber });
+  dropEndedSession();
+}
+
+/** Start over at the same table: a fresh visit, a fresh Guest N, presence again on the first add. */
+export function startNewVisit(): string | null {
+  const state = useGuest.getState();
+  state.setEndedVisit(null);
+  state.setSession(null);
+  state.setCashRequestedOrderId(null);
+  state.setGuestName("");
+  return state.tableToken;
+}
+
 function sessionFromProfile(value: unknown): PresenceResponse | null {
   const data = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
   if (!data || typeof data.session_id !== "string" || typeof data.branch_id !== "string") return null;
@@ -119,6 +136,11 @@ export async function sessionStillValid(): Promise<boolean> {
       credentials: "include",
     });
     if (!response.ok) return false;
+    const status = (await response.json().catch(() => null)) as { visit_open?: boolean | null } | null;
+    if (status?.visit_open === false) {
+      markVisitEnded();
+      return false;
+    }
     if (useGuest.getState().session?.sessionId) return true;
     return restoreGuestSession();
   } catch {

@@ -1,17 +1,10 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useGuestCopy } from "@/features/guest/shell";
+import { useGuestThemeProps } from "@/features/guest/theme-style";
 
 type BottomSheetProps = {
   open: boolean;
@@ -29,16 +22,9 @@ type BottomSheetProps = {
  * Mobile guest bottom sheet — sticky CTA footer, drag handle, blurred dim,
  * swipe / Escape / backdrop / close. Focus trapped by Base UI Sheet.
  */
-export function BottomSheet({
-  open,
-  onOpenChange,
-  title,
-  children,
-  titleHidden = false,
-  footer,
-  returnFocusRef,
-}: BottomSheetProps) {
+export function BottomSheet({ open, onOpenChange, title, children, titleHidden = false, footer, returnFocusRef }: BottomSheetProps) {
   const { t } = useGuestCopy();
+  const { style: themeVars, "data-dark": dark } = useGuestThemeProps();
   const titleId = useId();
   const wasOpen = useRef(false);
   const [dragY, setDragY] = useState(0);
@@ -82,9 +68,11 @@ export function BottomSheet({
         side="bottom"
         showCloseButton={false}
         aria-labelledby={titleId}
-        className="guest-theme guest-sheet guest-phone mx-auto flex h-[min(92dvh,100%)] max-h-[92dvh] w-full flex-col gap-0 overflow-hidden border-0 p-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:h-[min(92dvh,100%)]"
+        data-dark={dark}
+        className="guest-theme guest-sheet guest-phone mx-auto flex h-auto max-h-[92dvh] w-full flex-col gap-0 overflow-hidden border-0 p-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:h-auto"
         style={{
-          height: "min(92dvh, 100%)",
+          ...themeVars,
+          // Hug the content; long sheets stop at 92% of the screen and scroll inside.
           maxHeight: "min(92dvh, 100%)",
           ...(dragY ? { transform: `translateY(${dragY}px)`, transitionDuration: "0ms" } : {}),
         }}
@@ -99,26 +87,15 @@ export function BottomSheet({
           >
             <div className="guest-sheet-handle mb-3" aria-hidden />
             <div className="flex w-full items-center justify-between gap-3">
-              <SheetTitle
-                id={titleId}
-                className={titleHidden ? "sr-only" : "guest-display min-w-0 flex-1 truncate text-[var(--guest-ink)]"}
-              >
+              <SheetTitle id={titleId} className={titleHidden ? "sr-only" : "guest-display min-w-0 flex-1 truncate text-[var(--guest-ink)]"}>
                 {title}
               </SheetTitle>
-              <button
-                type="button"
-                className="guest-icon-btn guest-motion shrink-0 text-xl leading-none"
-                aria-label={t.close}
-                onClick={close}
-              >
+              <button type="button" className="guest-icon-btn guest-motion shrink-0 text-xl leading-none" aria-label={t.close} onClick={close}>
                 ×
               </button>
             </div>
           </div>
-          <div
-            data-guest-sheet-scroll
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3 [-webkit-overflow-scrolling:touch]"
-          >
+          <div data-guest-sheet-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3 [-webkit-overflow-scrolling:touch]">
             {children}
           </div>
           {footer ? <div className="guest-sheet-footer shrink-0">{footer}</div> : null}

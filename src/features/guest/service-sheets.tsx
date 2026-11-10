@@ -6,11 +6,6 @@ import { toast } from "sonner";
 
 import { BottomSheet } from "@/features/guest/bottom-sheet";
 import { guestServiceType } from "@/features/guest/copy";
-import { PayOnlineSheet } from "@/features/guest/pay-online-sheet";
-import { asApiError } from "@/lib/api/error";
-import { guestApi } from "@/lib/api/guest";
-import { paymobOffered, remainingBalance } from "@/lib/paymob/checkout";
-import { useGuest } from "@/stores/guest";
 import {
   createGuestServiceRequest,
   fetchActiveServiceRequests,
@@ -18,7 +13,7 @@ import {
   waiterReasonTypes,
   type ServiceRequestType,
 } from "@/features/guest/service-request";
-import { guestField, guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
+import { guestPrimaryButton, guestSecondaryButton, useGuestCopy } from "@/features/guest/shell";
 
 export function WaiterSheet({
   open,
@@ -37,7 +32,7 @@ export function WaiterSheet({
   const active = useQuery({
     queryKey: ["guest-requests"],
     enabled: open,
-    queryFn: fetchActiveServiceRequests,
+    queryFn: () => fetchActiveServiceRequests(),
   });
 
   useEffect(() => {
@@ -103,133 +98,12 @@ export function WaiterSheet({
       <label className="mt-4 grid gap-1.5 guest-title">
         {t.serviceNote}
         <textarea
-          className={`${guestField} min-h-24 py-3`}
+          className="guest-note-field min-h-24"
           value={note}
           disabled={sent}
           onChange={(event) => setNote(event.target.value)}
         />
       </label>
     </BottomSheet>
-  );
-}
-
-export function BillSheet({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const { t, locale } = useGuestCopy();
-  const session = useGuest((state) => state.session);
-  const offered = paymobOffered(session);
-  const activeOrder = useQuery({
-    queryKey: ["guest-active", session?.sessionId],
-    enabled: open && offered && Boolean(session),
-    queryFn: async () => {
-      const result = await guestApi.GET("/api/v1/orders/active");
-      if (result.response.status === 404) return null;
-      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.oops, locale);
-      return result.data;
-    },
-  });
-  const paidInFull = activeOrder.data != null && remainingBalance(activeOrder.data) === "0.00";
-  const queryClient = useQueryClient();
-  const [method, setMethod] = useState<"cash" | "card">("cash");
-  const [pending, setPending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [payOpen, setPayOpen] = useState(false);
-
-  const active = useQuery({
-    queryKey: ["guest-requests"],
-    enabled: open,
-    queryFn: fetchActiveServiceRequests,
-  });
-
-  useEffect(() => {
-    if (open) {
-      setSent(false);
-      setMethod("cash");
-    }
-  }, [open]);
-
-  const alreadyOpen = hasOpenRequest(active.data ?? [], "BILL_REQUEST");
-
-  async function submit() {
-    if (alreadyOpen) {
-      toast.message(t.requestPending);
-      return;
-    }
-    setPending(true);
-    try {
-      await createGuestServiceRequest(
-        "BILL_REQUEST",
-        method === "cash" ? t.billCash : t.billCard,
-        locale,
-        t.oops,
-      );
-      setSent(true);
-      toast.success(t.requestSent);
-      void queryClient.invalidateQueries({ queryKey: ["guest-requests"] });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t.oops);
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <>
-    <BottomSheet
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t.billTitle}
-      footer={
-        sent || alreadyOpen ? (
-          <button type="button" className={guestSecondaryButton} disabled>
-            {sent ? t.requestSent : t.requestPending}
-          </button>
-        ) : (
-          <button type="button" className={guestPrimaryButton} disabled={pending} onClick={() => void submit()}>
-            {pending ? t.paying : t.sendRequest}
-          </button>
-        )
-      }
-    >
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          data-selected={method === "cash" ? "true" : "false"}
-          className="guest-option-tile guest-motion text-sm font-semibold"
-          onClick={() => setMethod("cash")}
-          disabled={sent}
-        >
-          {t.billCash}
-        </button>
-        <button
-          type="button"
-          data-selected={method === "card" ? "true" : "false"}
-          className="guest-option-tile guest-motion text-sm font-semibold"
-          onClick={() => setMethod("card")}
-          disabled={sent}
-        >
-          {t.billCard}
-        </button>
-      </div>
-      {offered && !paidInFull && !sent && !alreadyOpen ? (
-        <button
-          type="button"
-          className={`${guestSecondaryButton} mt-4`}
-          onClick={() => {
-            onOpenChange(false);
-            setPayOpen(true);
-          }}
-        >
-          {t.payOnlineCard}
-        </button>
-      ) : null}
-    </BottomSheet>
-    <PayOnlineSheet open={payOpen} onOpenChange={setPayOpen} />
-    </>
   );
 }

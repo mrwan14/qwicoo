@@ -40,7 +40,8 @@ test("App Admin sees only the platform list", () => {
 test("brand and branch admins get Home, Orders, Menu, Stock, Reports and Settings", () => {
   const business = ["home", "orders", "menu", "stock", "reports", "settings"];
   assert.deepEqual(keys(person("BRAND_ADMIN", "brand")), business);
-  assert.deepEqual(keys(person("BRANCH_ADMIN")), business);
+  // Branch managers check their team's attendance daily, so it has its own entry.
+  assert.deepEqual(keys(person("BRANCH_ADMIN")), ["home", "orders", "menu", "stock", "attendance", "reports", "settings"]);
 });
 
 test("every sidebar link is a page the role could already open", () => {

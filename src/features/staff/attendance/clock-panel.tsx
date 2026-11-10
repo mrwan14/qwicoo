@@ -2,16 +2,18 @@
 
 import { Popover } from "@base-ui/react/popover";
 import { cn } from "cn";
-import { Clock, LoaderCircle, LogIn, LogOut, MapPinOff, RotateCw, Store, WifiOff } from "lucide-react";
+import { Banknote, Clock, LoaderCircle, LogIn, LogOut, MapPinOff, RotateCw, Store, WifiOff } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ops/kit/badge";
 import { Button, buttonClass } from "@/components/ops/kit/button";
 import { cairoTime } from "@/features/staff/home/numbers";
+import { useDrawer } from "@/features/staff/pos/drawer";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { clockCopy } from "@/lib/i18n/staff/clock";
+import { drawerCopy } from "@/lib/i18n/staff/drawer";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 
 import { useMyAttendance } from "./clock";
@@ -114,6 +116,10 @@ export function ClockBody({ attendance, tillHref, heading = true, footer }: { at
   const now = useMinuteTick();
   const { record, shift, done, away, canPunch } = shiftState(attendance);
   const { clockedIn, checkInAt, phase } = attendance;
+  const d = useStaffSection(drawerCopy);
+  // Leaving with the cash drawer still open: remind, never block (the count belongs on record).
+  const drawer = useDrawer({ enabled: clockedIn });
+  const openDrawer = Boolean(drawer.data);
   const tillOnly = attendance.status.data?.clock_mode === "TILL_ONLY";
   // A till-only branch says so up front, instead of offering a button that can't work.
   const problem: PunchProblem | null = attendance.problem ?? (tillOnly && canPunch ? { kind: "tillOnly" } : null);
@@ -155,6 +161,19 @@ export function ClockBody({ attendance, tillHref, heading = true, footer }: { at
           <p className="text-[13px] text-ink-secondary tabular-nums">{fill(t.worked, { hours: worked.hours, minutes: worked.minutes })}</p>
         ) : null}
       </div>
+
+      {clockedIn && openDrawer && !problem ? (
+        <div role="note" className="grid gap-2 rounded-staff border border-warning/40 bg-warning-bg px-3.5 py-3 text-ink">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Banknote aria-hidden className="size-4 text-warning" />
+            {d.stillOpen}
+          </p>
+          <p className="text-[13px] leading-snug text-ink-secondary">{d.stillOpenBody}</p>
+          <Link href="/app/pos?drawer=close" className={cn(buttonClass({ size: "sm", variant: "secondary" }), "w-fit")}>
+            {d.goClose}
+          </Link>
+        </div>
+      ) : null}
 
       {problem && phase === "idle" ? <ProblemBox problem={problem} t={t} locale={locale} tillHref={tillHref} /> : null}
 

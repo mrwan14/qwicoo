@@ -220,15 +220,18 @@ export function InventoryFrame({ page, children }: { page: InventoryPage; childr
   return (
     <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-5">
       <KitPageHeader title={t.hub.title} />
-      <div className="flex flex-wrap items-end gap-4">
-        <Tabs
-          label={t.hub.tabsLabel}
-          value={place.tab}
-          className="min-w-0 flex-1 basis-full md:basis-auto"
-          items={tabs.map((entry) => ({ value: entry.tab, label: t.hub.tabs[entry.tab], href: INVENTORY_HREFS[entry.views[0]] }))}
-        />
-        <ViewSwitch views={views} page={page} />
-      </div>
+      {/* One tab with one page (a cashier's waste) has nothing to switch to, so no strip. */}
+      {tabs.length === 1 && views.length < 2 ? null : (
+        <div className="flex flex-wrap items-end gap-4">
+          <Tabs
+            label={t.hub.tabsLabel}
+            value={place.tab}
+            className="min-w-0 flex-1 basis-full md:basis-auto"
+            items={tabs.map((entry) => ({ value: entry.tab, label: t.hub.tabs[entry.tab], href: INVENTORY_HREFS[entry.views[0]] }))}
+          />
+          <ViewSwitch views={views} page={page} />
+        </div>
+      )}
       {place.tab === "stock" ? <StockKpis /> : null}
       <NestedHeaders>{children}</NestedHeaders>
     </div>

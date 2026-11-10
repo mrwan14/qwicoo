@@ -14,7 +14,7 @@ import { DataTable, type Column } from "@/components/ops/kit/data-table";
 import { Field, Input, Textarea } from "@/components/ops/kit/field";
 import { SegmentedControl } from "@/components/ops/kit/segmented";
 import { SidePanel } from "@/components/ops/kit/side-panel";
-import { ScreenTitle } from "@/components/ops/page-header";
+import { PageHeader } from "@/components/ops/kit/page-header";
 import { ErrorState } from "@/components/ops/states";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { asApiError } from "@/lib/api/error";
@@ -23,13 +23,14 @@ import type { components } from "@/lib/api/schema";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { attendanceCopy } from "@/lib/i18n/staff/attendance";
+import { clockCopy } from "@/lib/i18n/staff/clock";
 import { commonCopy } from "@/lib/i18n/staff/common";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { roleLabel, isUserRole } from "@/lib/auth/roles";
 import { useScope } from "@/stores/scope";
 
 import { useMyAttendance } from "./clock";
-import { ClockBody } from "./clock-panel";
+import { ClockBody, shiftState } from "./clock-panel";
 import { MyWeek } from "./my-week";
 import { PinPanel } from "./pin-panel";
 import { RotaView } from "./rota-view";
@@ -88,26 +89,23 @@ export function AttendanceScreen() {
   }, [askedTill]);
 
   return (
-    <div className="grid gap-5">
-      <div className="grid gap-1">
-        <ScreenTitle>{t.title}</ScreenTitle>
-        <p className="max-w-2xl text-sm leading-6 text-ink-secondary">
-          {t.intro}
-          {canReview ? ` ${t.introReview}` : ""}
-        </p>
-      </div>
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+    <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-4">
+      <PageHeader
+        title={t.title}
+        subtitle={`${t.intro}${canReview ? ` ${t.introReview}` : ""}`}
+        actions={
+          oneBranch ? (
+            <Button size="field" variant="secondary" onClick={() => setTillOpen(true)}>
+              <Store aria-hidden />
+              {t.till.button}
+            </Button>
+          ) : null
+        }
+      />
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         <MyShift tillHref={oneBranch ? "/app/attendance?till=1" : null} />
         <MyWeek />
       </div>
-      {oneBranch ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="field" variant="secondary" onClick={() => setTillOpen(true)}>
-            <Store aria-hidden />
-            {t.till.button}
-          </Button>
-        </div>
-      ) : null}
       {tillOpen && oneBranch ? <TillClockPanel branchId={oneBranch} canManagePins={canCorrect} onClose={() => setTillOpen(false)} /> : null}
       {canReview ? (
         <>
@@ -138,29 +136,40 @@ export function AttendanceScreen() {
 /** The signed-in person's shift: the same body as the top-bar clock panel, plus the till PIN link. */
 function MyShift({ tillHref }: { tillHref: string | null }) {
   const t = useStaffSection(attendanceCopy);
+  const c = useStaffSection(clockCopy);
   const attendance = useMyAttendance();
   const { status } = attendance;
+  const { record } = shiftState(attendance);
   const [pinOpen, setPinOpen] = useState(false);
 
   if (status.isError) {
     return <ErrorState body={status.error instanceof Error ? status.error.message : t.statusFailed} onRetry={() => void status.refetch()} />;
   }
   return (
-    <Card className="max-w-xl">
-      <ClockBody
-        attendance={attendance}
-        tillHref={tillHref}
-        footer={
-          status.data ? (
-            <button type="button" onClick={() => setPinOpen(true)} className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-ink underline-offset-2 hover:underline">
-              <KeyRound aria-hidden className="size-3.5" />
-              {status.data.has_till_pin ? t.my.changePin : t.my.setPin}
-            </button>
-          ) : null
-        }
-      />
+    <section className="min-w-0 overflow-hidden rounded-staff border border-border bg-canvas shadow-card">
+      <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border bg-well px-4 py-2.5">
+        <h2 className="text-sm font-semibold text-ink">{c.title}</h2>
+        {record?.status === "LATE" || record?.status === "PRESENT" ? (
+          <Badge tone={record.status === "LATE" ? "warning" : "success"}>{record.status === "LATE" ? c.late : c.onTime}</Badge>
+        ) : null}
+      </header>
+      <div className="p-4">
+        <ClockBody
+          attendance={attendance}
+          tillHref={tillHref}
+          heading={false}
+          footer={
+            status.data ? (
+              <button type="button" onClick={() => setPinOpen(true)} className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-ink underline-offset-2 hover:underline">
+                <KeyRound aria-hidden className="size-3.5" />
+                {status.data.has_till_pin ? t.my.changePin : t.my.setPin}
+              </button>
+            ) : null
+          }
+        />
+      </div>
       {pinOpen ? <PinPanel onClose={() => setPinOpen(false)} /> : null}
-    </Card>
+    </section>
   );
 }
 

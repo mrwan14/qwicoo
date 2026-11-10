@@ -596,6 +596,10 @@ const en = {
       OTHER: "Other",
     },
     history: "Recent waste in this store.",
+    recent: "Recent waste",
+    empty: "Nothing logged in this store yet.",
+    today: "Today {amount}",
+    reason: "Reason",
   },
   prep: {
     title: "Prep",
@@ -1263,6 +1267,10 @@ const ar = {
       OTHER: "أخرى",
     },
     history: "الهدر الأخير في هذا المخزن.",
+    recent: "الهدر الأخير",
+    empty: "لم يُسجَّل شيء في هذا المخزن بعد.",
+    today: "اليوم {amount}",
+    reason: "السبب",
   },
   prep: {
     title: "التحضير",

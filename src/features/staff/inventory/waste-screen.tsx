@@ -4,12 +4,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { History, Trash2 } from "lucide-react";
+
+import { DataTable, type Column } from "@/components/ops/kit/data-table";
+import { formatAmount } from "@/components/ops/kit/money";
+import { Panel } from "@/components/ops/kit/panel";
 import { Money } from "@/components/ops/money";
 import { PageHeader } from "@/components/ops/page-header";
 import { LoadingState } from "@/components/ops/states";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
+import type { components } from "@/lib/api/schema";
 import { formatCairoDateTime } from "@/lib/format/time";
+import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
 import { inventoryCopy } from "@/lib/i18n/staff/inventory";
@@ -19,6 +26,7 @@ import { useScope } from "@/stores/scope";
 import { control, InventoryFrame, primaryButton, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
 import { unitsFor, validAmount } from "./easy";
 import { formatQty } from "./qty";
+import { Chip } from "./stock-screen";
 
 const REASONS = ["EXPIRED", "SPOILED", "DROPPED", "OVERPRODUCTION", "STAFF_MEAL", "OTHER"] as const;
 
@@ -88,55 +96,77 @@ export function WasteScreen() {
     onError: (error) => toast.error(error instanceof Error ? error.message : t.loadFailed),
   });
 
+  const field = `${control} h-11 text-base`;
+  const label = "grid gap-1.5 text-sm";
+  const caption = "text-ink-secondary";
+
   return (
     <InventoryFrame page="waste">
       <PageHeader title={t.waste.title} detail={t.waste.detail} />
       {warehouses.isLoading || ingredients.isLoading ? <LoadingState label={t.loading} /> : null}
-      <form
-        className="grid max-w-xl gap-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          save.mutate();
-        }}
-      >
-        {warehouses.data && warehouses.data.length > 0 ? (
-          <WarehouseSelect warehouses={warehouses.data} value={selected} onChange={setWarehouseId} />
-        ) : null}
-        <label className="grid gap-1 text-sm">
-          <span>{t.ingredient}</span>
-          <select className={`${control} h-14 text-base`} value={ingredientId} onChange={(event) => { setIngredientId(event.target.value); setUnitId(""); }} required>
-            <option value="">{t.ingredient}</option>
-            {(ingredients.data ?? []).map((item) => <option key={item.id} value={item.id}>{pickLocale(item.name, locale)}</option>)}
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span>{t.quantity}</span>
-          <input className={`${control} h-14 text-lg`} inputMode="decimal" aria-invalid={qty.trim() && !amountOk ? true : undefined} value={qty} onChange={(event) => setQty(event.target.value.replace(/[^\d.]/g, ""))} required />
-          {qty.trim() && !amountOk ? <span className="text-xs text-danger">{t.easy.enterAmount}</span> : null}
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span>{t.unit}</span>
-          <select className={`${control} h-14 text-base`} value={chosenUnit} disabled={!ingredient} onChange={(event) => setUnitId(event.target.value)} required>
-            {!ingredient ? <option value="">{t.unit}</option> : null}
-            {unitChoices.map((unit) => <option key={unit.id} value={unit.id}>{pickLocale(unit.name, locale)}</option>)}
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span>{t.reason}</span>
-          <select className={`${control} h-14 text-base`} value={reason} onChange={(event) => setReason(event.target.value as (typeof REASONS)[number])}>
-            {REASONS.map((item) => <option key={item} value={item}>{t.waste.reasons[item]}</option>)}
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span>{t.note}</span>
-          <input className={`${control} h-14 text-base`} value={note} onChange={(event) => setNote(event.target.value)} required={reason === "OTHER"} />
-        </label>
-        <button type="submit" className={`${primaryButton} h-14 text-base`} disabled={save.isPending || !ready}>{t.waste.submit}</button>
-      </form>
-      <WasteHistory warehouseId={selected} currency={currency} ingredients={ingredients.data ?? []} />
+      {/* The form stays narrow and close to the hand; what was logged sits beside it to check against. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[400px_minmax(0,1fr)]">
+        <Panel title={t.waste.submit} icon={Trash2} padded>
+          <form
+            className="grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              save.mutate();
+            }}
+          >
+            {warehouses.data && warehouses.data.length > 1 ? (
+              <WarehouseSelect warehouses={warehouses.data} value={selected} onChange={setWarehouseId} />
+            ) : null}
+            <label className={label}>
+              <span className={caption}>{t.ingredient}</span>
+              <select className={field} value={ingredientId} onChange={(event) => { setIngredientId(event.target.value); setUnitId(""); }} required>
+                <option value="">{t.ingredient}</option>
+                {(ingredients.data ?? []).map((item) => <option key={item.id} value={item.id}>{pickLocale(item.name, locale)}</option>)}
+              </select>
+            </label>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+              <label className={label}>
+                <span className={caption}>{t.quantity}</span>
+                <input className={`${field} tabular-nums`} inputMode="decimal" aria-invalid={qty.trim() && !amountOk ? true : undefined} value={qty} onChange={(event) => setQty(event.target.value.replace(/[^\d.]/g, ""))} required />
+              </label>
+              <label className={label}>
+                <span className={caption}>{t.unit}</span>
+                <select className={field} value={chosenUnit} disabled={!ingredient} onChange={(event) => setUnitId(event.target.value)} required>
+                  {!ingredient ? <option value="">{t.unit}</option> : null}
+                  {unitChoices.map((unit) => <option key={unit.id} value={unit.id}>{pickLocale(unit.name, locale)}</option>)}
+                </select>
+              </label>
+              {qty.trim() && !amountOk ? <span className="col-span-2 -mt-2 text-xs text-danger">{t.easy.enterAmount}</span> : null}
+            </div>
+            <fieldset className="grid gap-1.5">
+              <legend className="mb-1.5 text-sm text-ink-secondary">{t.reason}</legend>
+              <div className="flex flex-wrap gap-2">
+                {REASONS.map((item) => (
+                  <Chip key={item} active={reason === item} onClick={() => setReason(item)}>
+                    {t.waste.reasons[item]}
+                  </Chip>
+                ))}
+              </div>
+            </fieldset>
+            <label className={label}>
+              <span className={caption}>{reason === "OTHER" ? t.easy.noteNeeded : t.easy.noteOptional}</span>
+              <input className={field} value={note} onChange={(event) => setNote(event.target.value)} required={reason === "OTHER"} />
+            </label>
+            <button type="submit" className={`${primaryButton} h-12 w-full text-base`} disabled={save.isPending || !ready}>{t.waste.submit}</button>
+          </form>
+        </Panel>
+        <WasteHistory warehouseId={selected} currency={currency} ingredients={ingredients.data ?? []} />
+      </div>
     </InventoryFrame>
   );
 }
+
+/** The Cairo calendar day of an ISO time, as YYYY-MM-DD. */
+function cairoDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
+}
+
+type WasteRow = components["schemas"]["WasteEventResponse"];
 
 function WasteHistory({
   warehouseId,
@@ -161,38 +191,45 @@ function WasteHistory({
     },
   });
   const byId = new Map(ingredients.map((item) => [item.id, item]));
-  if (!history.data || history.data.length === 0) return null;
+  const rows = history.data ?? [];
+  const today = cairoDay(new Date().toISOString());
+  const todayCost = rows.filter((row) => cairoDay(row.created_at) === today).reduce((sum, row) => sum + (Number(row.total_cost) || 0), 0);
+  const columns: Column<WasteRow>[] = [
+    { key: "when", header: t.movements.when, cell: (row) => <span className="whitespace-nowrap tabular-nums">{formatCairoDateTime(row.created_at, locale)}</span> },
+    { key: "item", header: t.ingredient, strong: true, cell: (row) => { const item = byId.get(row.ingredient_id); return item ? pickLocale(item.name, locale) : row.ingredient_sku; } },
+    { key: "qty", header: t.quantity, align: "end", cell: (row) => <span className="tabular-nums">{formatQty(row.qty, locale)}</span> },
+    {
+      key: "reason",
+      header: t.waste.reason,
+      cell: (row) => {
+        const reason = REASONS.find((item) => item === row.reason_code);
+        return (
+          <span className="grid gap-0.5">
+            <span>{reason ? t.waste.reasons[reason] : row.reason_code}</span>
+            {row.note ? <span className="text-xs text-ink-secondary">{row.note}</span> : null}
+          </span>
+        );
+      },
+    },
+    { key: "who", header: t.movements.who, cell: (row) => <span className="text-ink-secondary">{row.created_by_name ?? "—"}</span> },
+    { key: "value", header: t.stock.value, align: "end", cell: (row) => <Money amount={row.total_cost} currency={currency} /> },
+  ];
   return (
-    <section className="grid gap-2">
-      <h2 className="font-medium">{t.waste.history}</h2>
-      <div className="overflow-x-auto bg-canvas">
-        <table className="w-full min-w-[720px] border-collapse text-sm">
-          <thead>
-            <tr className="border-b">
-              {[t.movements.when, t.ingredient, t.quantity, t.reason, t.note, t.movements.who, t.stock.value].map((label) => (
-                <th key={label} className="px-3 py-2 text-start font-medium">{label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {history.data.map((row) => {
-              const ingredient = byId.get(row.ingredient_id);
-              const reason = REASONS.find((item) => item === row.reason_code);
-              return (
-                <tr key={row.id} className="border-b">
-                  <td className="px-3 py-2 whitespace-nowrap">{formatCairoDateTime(row.created_at, locale)}</td>
-                  <td className="px-3 py-2">{ingredient ? pickLocale(ingredient.name, locale) : row.ingredient_sku}</td>
-                  <td className="px-3 py-2 tabular-nums">{formatQty(row.qty, locale)}</td>
-                  <td className="px-3 py-2">{reason ? t.waste.reasons[reason] : row.reason_code}</td>
-                  <td className="px-3 py-2">{row.note ?? ""}</td>
-                  <td className="px-3 py-2">{row.created_by_name ?? ""}</td>
-                  <td className="px-3 py-2"><Money amount={row.total_cost} currency={currency} /></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <Panel
+      title={t.waste.recent}
+      icon={History}
+      action={rows.length > 0 ? <span className="font-medium text-ink tabular-nums">{fill(t.waste.today, { amount: formatAmount(todayCost, currency, locale) })}</span> : undefined}
+    >
+      <DataTable
+        stack
+        flush
+        caption={t.waste.recent}
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.id}
+        loading={history.isLoading}
+        empty={t.waste.empty}
+      />
+    </Panel>
   );
 }

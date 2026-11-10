@@ -55,10 +55,10 @@ export function MyWeek() {
     );
   const onThisWeek = data ? data.today >= data.start && data.today <= data.end : true;
 
-  if (week.isError) return <Card className="max-w-xl text-sm text-ink-secondary">{t.failed}</Card>;
+  if (week.isError) return <Card className="text-sm text-ink-secondary">{t.failed}</Card>;
   return (
-    <Card className="max-w-xl gap-0 p-0">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+    <Card className="gap-0 overflow-hidden p-0 shadow-card">
+      <div className="flex min-h-14 items-center justify-between gap-3 border-b border-border bg-well px-4 py-2">
         <div className="grid gap-0.5">
           <h2 className="text-sm font-semibold text-ink">{t.title}</h2>
           {data ? (
@@ -71,7 +71,7 @@ export function MyWeek() {
         </div>
         <div className="flex items-center gap-1">
           {!onThisWeek ? (
-            <button type="button" onClick={() => setStart(null)} className="rounded-staff px-2 py-1 text-[13px] font-medium text-ink hover:bg-well">
+            <button type="button" onClick={() => setStart(null)} className="rounded-staff px-2 py-1 text-[13px] font-medium text-ink hover:bg-canvas">
               {t.thisWeek}
             </button>
           ) : null}
@@ -86,7 +86,7 @@ export function MyWeek() {
               title={label}
               disabled={!data}
               onClick={() => data && setStart(weeksFrom(data.start, weeks))}
-              className="inline-flex size-9 items-center justify-center rounded-staff text-ink-secondary hover:bg-well hover:text-ink disabled:opacity-40"
+              className="inline-flex size-9 items-center justify-center rounded-staff text-ink-secondary hover:bg-canvas hover:text-ink disabled:opacity-40"
             >
               <Icon aria-hidden className="size-4 rtl:-scale-x-100" />
             </button>

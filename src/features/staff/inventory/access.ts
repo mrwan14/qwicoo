@@ -26,6 +26,7 @@ export const INVENTORY_HREFS: Record<InventoryPage, string> = {
   recipes: "/app/stock/recipes",
   suppliers: "/app/stock/suppliers",
   purchaseOrders: "/app/stock/purchase-orders",
+  bills: "/app/stock/bills",
   counts: "/app/stock/counts",
   transfers: "/app/stock/transfers",
   waste: "/app/stock/waste",
@@ -45,6 +46,7 @@ export type InventoryPage =
   | "recipes"
   | "suppliers"
   | "purchaseOrders"
+  | "bills"
   | "counts"
   | "transfers"
   | "waste"
@@ -62,6 +64,8 @@ const PAGE_ROLES: Record<InventoryPage, readonly UserRole[]> = {
   recipes: READ,
   suppliers: READ,
   purchaseOrders: READ,
+  // Supplier bills and payments: the same roles the API allows (stock managers, not cashiers or kitchen).
+  bills: STOCK_WRITE,
   counts: COUNT,
   transfers: READ,
   import: CATALOGUE_WRITE,

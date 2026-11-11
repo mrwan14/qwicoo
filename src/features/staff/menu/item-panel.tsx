@@ -25,6 +25,7 @@ import {
 } from "@/features/staff/menu-permissions";
 import { comboStationLabel, isCombo } from "@/features/staff/catalog-screen";
 import { ChoicesEditor, ChoicesSummary } from "@/features/staff/menu/choices-editor";
+import { readLabels, sameBadges, withLabels } from "@/features/staff/menu/labels";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
@@ -117,6 +118,8 @@ export function ItemPanel({
   const [descEn, setDescEn] = useState("");
   const [descAr, setDescAr] = useState("");
   const [maxPerOrder, setMaxPerOrder] = useState("");
+  const [chefPick, setChefPick] = useState(false);
+  const [isNew, setIsNew] = useState(false);
   // Only what staff changed per branch; anything left alone follows the brand price.
   const [rows, setRows] = useState<Record<string, Partial<BranchRow>>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -135,6 +138,9 @@ export function ItemPanel({
     setDescEn(item?.description ? localized(item.description, "en") : "");
     setDescAr(item?.description ? localized(item.description, "ar") : "");
     setMaxPerOrder(item?.max_per_order != null ? String(item.max_per_order) : "");
+    const labels = readLabels(item?.dietary_badges);
+    setChefPick(labels.chefPick);
+    setIsNew(labels.isNew);
     setRows({});
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset per item, not per render
   }, [open, itemKey]);
@@ -204,6 +210,14 @@ export function ItemPanel({
         if (result.response.ok) {
           const createdId = (result.data as { id?: string } | undefined)?.id ?? null;
           if (createdId) rememberBrandCatalogId(createdId);
+          const badges = withLabels([], { chefPick, isNew });
+          if (createdId && badges.length > 0) {
+            const labelled = await browserApi.PATCH("/api/v1/menu/catalog-items/{item_id}", {
+              params: { path: { item_id: createdId } },
+              body: { dietary_badges: badges },
+            });
+            if (!labelled.response.ok) toast.error(t.panel.labelsFailed);
+          }
           return createdId;
         }
         if (scope === "ALL_BRANCHES") {
@@ -222,6 +236,7 @@ export function ItemPanel({
         ...(description ? { description } : {}),
         ...(maxPerOrder.trim() ? { max_per_order: Number(maxPerOrder) } : {}),
         ...(imageUrl ? { image_url: imageUrl } : {}),
+        ...(chefPick || isNew ? { dietary_badges: withLabels([], { chefPick, isNew }) } : {}),
       };
       const result = await browserApi.POST("/api/v1/staff/menu/items", { body });
       if (!result.response.ok) throw asApiError(result.error, result.response, t.couldNotCreateItem);
@@ -256,6 +271,8 @@ export function ItemPanel({
         if (descEn !== oldEn || descAr !== oldAr) body.description = names(descEn, descAr || descEn);
         const oldMax = item.max_per_order != null ? String(item.max_per_order) : "";
         if (maxPerOrder !== oldMax) body.max_per_order = maxPerOrder.trim() ? Number(maxPerOrder) : null;
+        const badges = withLabels(item.dietary_badges, { chefPick, isNew });
+        if (!sameBadges(item.dietary_badges, badges)) body.dietary_badges = badges;
         if (image) body.image_url = await uploadMenuImage(image, "items", t);
         if (Object.keys(body).length > 0) {
           const result = await browserApi.PATCH("/api/v1/staff/menu/items/{item_id}", { params: { path: { item_id: item.id } }, body });
@@ -501,6 +518,24 @@ export function ItemPanel({
               <Field label={t.maxPerOrder} hint={t.maxPerOrderHint}>
                 <Input inputMode="numeric" className="w-32" value={maxPerOrder} onChange={(event) => setMaxPerOrder(event.target.value)} />
               </Field>
+              <div className="grid gap-2">
+                <p className="text-xs font-medium text-ink-secondary">{t.panel.guestLabels}</p>
+                <label className="flex items-center justify-between gap-3 text-sm text-ink">
+                  <span className="grid">
+                    {t.panel.chefPick}
+                    <span className="text-xs text-ink-secondary">{t.panel.chefPickHint}</span>
+                  </span>
+                  <Switch checked={chefPick} onCheckedChange={setChefPick} aria-label={t.panel.chefPick} />
+                </label>
+                <label className="flex items-center justify-between gap-3 text-sm text-ink">
+                  <span className="grid">
+                    {t.panel.newLabel}
+                    <span className="text-xs text-ink-secondary">{t.panel.newHint}</span>
+                  </span>
+                  <Switch checked={isNew} onCheckedChange={setIsNew} aria-label={t.panel.newLabel} />
+                </label>
+                <p className="text-xs text-ink-secondary">{t.panel.bestSellerAuto}</p>
+              </div>
             </fieldset>
           </MoreOptions>
         </form>

@@ -10091,6 +10091,9 @@ export interface components {
              * @default 0.00
              */
             unit_price: string;
+            category_id?: string | null;
+            unit_cost?: string | null;
+            profit?: string | null;
         };
         /**
          * ItemSoldOutError
@@ -10906,6 +10909,8 @@ export interface components {
              * Categories
              * @description Active menu categories in display order
              */
+            /** @description This branch's best sellers, most sold first (paid, last 30 days, at least 5). May include sold-out or hidden items. */
+            best_seller_ids?: string[];
             categories?: components["schemas"]["MenuCategoryResponse"][];
         };
         /**
@@ -14854,6 +14859,13 @@ export interface components {
              * Format: uuid
              */
             warehouse_id: string;
+            /** @description Deliveries against the order, each with its live supplier bill. */
+            receipts?: {
+                id: string;
+                received_at: string;
+                bill_id?: string | null;
+                bill_status?: string | null;
+            }[];
         };
         /** PurchaseOrderLineResponse */
         PurchaseOrderLineResponse: {
@@ -17113,6 +17125,10 @@ export interface components {
             name: string;
             /** Phone */
             phone?: string | null;
+            payment_terms_days?: number | null;
+            tax_number?: string | null;
+            address?: string | null;
+            notes?: string | null;
         };
         /** SupplierDetailResponse */
         SupplierDetailResponse: {
@@ -17143,6 +17159,13 @@ export interface components {
             packs: components["schemas"]["SupplierPackResponse"][];
             /** Phone */
             phone: string | null;
+            payment_terms_days?: number | null;
+            tax_number?: string | null;
+            address?: string | null;
+            notes?: string | null;
+            balance_owed?: string;
+            open_bills?: number;
+            overdue_bills?: number;
         };
         /** SupplierIngredientCreate */
         SupplierIngredientCreate: {
@@ -17231,6 +17254,13 @@ export interface components {
             name: string;
             /** Phone */
             phone: string | null;
+            payment_terms_days?: number | null;
+            tax_number?: string | null;
+            address?: string | null;
+            notes?: string | null;
+            balance_owed?: string;
+            open_bills?: number;
+            overdue_bills?: number;
         };
         /** SupplierUpdate */
         SupplierUpdate: {
@@ -17246,6 +17276,10 @@ export interface components {
             name?: string | null;
             /** Phone */
             phone?: string | null;
+            payment_terms_days?: number | null;
+            tax_number?: string | null;
+            address?: string | null;
+            notes?: string | null;
         };
         /**
          * SwitchRestaurantRequest
@@ -20230,6 +20264,8 @@ export interface operations {
                 start_date?: string | null;
                 end_date?: string | null;
                 limit?: number;
+                sort?: "units" | "revenue" | "profit";
+                category_id?: string | null;
             };
             header?: never;
             path?: never;

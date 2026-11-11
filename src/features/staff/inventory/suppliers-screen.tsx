@@ -8,8 +8,9 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ops/kit/badge";
 import { Button } from "@/components/ops/kit/button";
 import { ConfirmDialog } from "@/components/ops/kit/confirm-dialog";
-import { Field, Input, Select } from "@/components/ops/kit/field";
+import { Field, Input, Select, Textarea } from "@/components/ops/kit/field";
 import { PanelSection, SidePanel } from "@/components/ops/kit/side-panel";
+import { Money } from "@/components/ops/money";
 import { PageHeader } from "@/components/ops/page-header";
 import { EmptyState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import { useStaffSession } from "@/components/ops/staff-session";
@@ -33,6 +34,7 @@ type Pack = components["schemas"]["SupplierPackResponse"];
 
 export function SuppliersScreen() {
   const t = useStaffSection(inventoryCopy);
+  const currency = useBranchCurrency();
   const { locale } = useLocale();
   const me = useStaffSession();
   const brandId = useScope((state) => state.brandId) ?? "";
@@ -72,7 +74,7 @@ export function SuppliersScreen() {
           <table className="w-full min-w-[720px] border-collapse text-sm">
             <thead>
               <tr className="border-b">
-                {[t.suppliers.name, t.suppliers.contact, t.suppliers.phone, t.suppliers.leadTime, t.suppliers.active].map((label) => (
+                {[t.suppliers.name, t.suppliers.contact, t.suppliers.phone, t.suppliers.leadTime, t.suppliers.owed, t.suppliers.active].map((label) => (
                   <th key={label} className="px-3 py-2 text-start font-medium">{label}</th>
                 ))}
               </tr>
@@ -84,6 +86,16 @@ export function SuppliersScreen() {
                   <td className="px-3 py-2">{supplier.contact_name ?? ""}</td>
                   <td className="px-3 py-2">{supplier.phone ?? ""}</td>
                   <td className="px-3 py-2 tabular-nums">{formatQty(supplier.lead_time_days, locale)}</td>
+                  <td className="px-3 py-2">
+                    {Number(supplier.balance_owed ?? 0) > 0 ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Money amount={supplier.balance_owed ?? "0"} currency={currency} />
+                        {supplier.overdue_bills ? <Badge tone="danger">{t.bills.statuses.OVERDUE}</Badge> : null}
+                      </span>
+                    ) : (
+                      <span className="text-ink-secondary">—</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2"><Badge tone={supplier.is_active ? "success" : "neutral"}>{supplier.is_active ? t.suppliers.active : t.suppliers.inactive}</Badge></td>
                 </tr>
               ))}
@@ -233,13 +245,18 @@ function SupplierForm({
     phone: current?.phone ?? "",
     email: current?.email ?? "",
     lead: String(current?.lead_time_days ?? 0),
+    terms: current?.payment_terms_days != null ? String(current.payment_terms_days) : "",
+    tax: current?.tax_number ?? "",
+    address: current?.address ?? "",
+    notes: current?.notes ?? "",
   };
   const [values, setValues] = useState(initial);
-  const set = (key: keyof typeof initial) => (event: ChangeEvent<HTMLInputElement>) =>
+  const set = (key: keyof typeof initial) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setValues((prev) => ({ ...prev, [key]: event.target.value }));
 
   const leadValid = WHOLE_DAYS.test(values.lead.trim() || "0");
-  const valid = values.name.trim().length > 0 && leadValid;
+  const termsValid = !values.terms.trim() || (WHOLE_DAYS.test(values.terms.trim()) && Number(values.terms) <= 365);
+  const valid = values.name.trim().length > 0 && leadValid && termsValid;
   const dirty = (Object.keys(initial) as (keyof typeof initial)[]).some((key) => values[key].trim() !== initial[key].trim());
 
   const save = useMutation({
@@ -250,6 +267,10 @@ function SupplierForm({
         phone: values.phone.trim() || null,
         email: values.email.trim() || null,
         lead_time_days: Number(values.lead.trim() || 0),
+        payment_terms_days: values.terms.trim() ? Number(values.terms.trim()) : null,
+        tax_number: values.tax.trim() || null,
+        address: values.address.trim() || null,
+        notes: values.notes.trim() || null,
       };
       if (supplierId === "new") {
         const result = await browserApi.POST("/api/v1/inventory/suppliers", { params: { query: { brand_id: brandId } }, body });
@@ -328,6 +349,25 @@ function SupplierForm({
             <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-ink-secondary">{t.suppliers.days}</span>
           </div>
         </Field>
+      </PanelSection>
+      <PanelSection title={t.suppliers.billingSection}>
+        <div className="grid gap-4">
+          <Field label={t.suppliers.paymentTerms} hint={t.suppliers.paymentTermsHint} error={termsValid ? undefined : t.suppliers.leadTimeInvalid}>
+            <div className="relative w-40">
+              <Input inputMode="numeric" value={values.terms} onChange={set("terms")} aria-invalid={!termsValid} className="pe-14 tabular-nums" disabled={!canWrite} />
+              <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-ink-secondary">{t.suppliers.days}</span>
+            </div>
+          </Field>
+          <Field label={t.suppliers.taxNumber}>
+            <Input value={values.tax} onChange={set("tax")} maxLength={64} dir="ltr" disabled={!canWrite} />
+          </Field>
+          <Field label={t.suppliers.address}>
+            <Input value={values.address} onChange={set("address")} maxLength={255} dir="auto" disabled={!canWrite} />
+          </Field>
+          <Field label={t.suppliers.notes}>
+            <Textarea value={values.notes} onChange={set("notes")} maxLength={2000} dir="auto" disabled={!canWrite} />
+          </Field>
+        </div>
       </PanelSection>
     </form>
   );

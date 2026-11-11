@@ -4,7 +4,8 @@ export const CONTACT = {
   phoneDisplay: "0127 400 5584",
   phoneHref: "tel:+201274005584",
   email: "marwanabdelwahab9@gmail.com",
-  whatsappNumber: "201274005584",
+  whatsappNumber: "15557574533",
+  whatsappDisplay: "+1 (555) 757-4533",
 } as const;
 
 export function whatsappHref(message: string): string {

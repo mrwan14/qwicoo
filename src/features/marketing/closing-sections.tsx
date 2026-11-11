@@ -484,7 +484,7 @@ function ContactCard({ locale }: { locale: LocaleCode }) {
         <MessageCircle aria-hidden className="size-5" />
         {t.whatsapp}
         <span className="ms-auto font-medium" dir="ltr">
-          {CONTACT.phoneDisplay}
+          {CONTACT.whatsappDisplay}
         </span>
       </a>
       <a href={CONTACT.phoneHref} className={row}>
@@ -573,7 +573,7 @@ function SiteFooter({ locale }: { locale: LocaleCode }) {
           <a href={whatsappHref(landingCopy[locale].partner.waMessage)} target="_blank" rel="noopener noreferrer" className="gap-1.5">
             {t.whatsapp}
             <span aria-hidden>·</span>
-            <span dir="ltr">{CONTACT.phoneDisplay}</span>
+            <span dir="ltr">{CONTACT.whatsappDisplay}</span>
           </a>
           <a href={`mailto:${CONTACT.email}`} dir="ltr" className="break-all">
             {CONTACT.email}

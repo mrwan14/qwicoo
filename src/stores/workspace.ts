@@ -11,7 +11,13 @@ type WorkspaceState = {
   adminOrderAlerts: boolean;
   /** This device asked for web push notifications. */
   pushEnabled: boolean;
+  /** The one-time "turn on notifications" suggestion was shown on this device. */
+  pushPrompted: boolean;
+  /** "My tables" per branch: table numbers this person covers on this device. Empty means all. */
+  myTables: Record<string, string[]>;
   setPushEnabled: (on: boolean) => void;
+  setPushPrompted: () => void;
+  setMyTables: (branchId: string, tables: string[]) => void;
   setSoundEnabled: (soundEnabled: boolean) => void;
   setAdminOrderAlerts: (on: boolean) => void;
 };
@@ -23,7 +29,11 @@ export const useWorkspace = create<WorkspaceState>()(
       soundChosen: false,
       adminOrderAlerts: false,
       pushEnabled: false,
+      pushPrompted: false,
+      myTables: {},
       setPushEnabled: (pushEnabled) => set({ pushEnabled }),
+      setPushPrompted: () => set({ pushPrompted: true }),
+      setMyTables: (branchId, tables) => set((state) => ({ myTables: { ...state.myTables, [branchId]: tables } })),
       setSoundEnabled: (soundEnabled) => set({ soundEnabled, soundChosen: true }),
       setAdminOrderAlerts: (adminOrderAlerts) => set({ adminOrderAlerts }),
     }),
@@ -40,6 +50,8 @@ export const useWorkspace = create<WorkspaceState>()(
           soundChosen: fromV1 ? true : (old.soundChosen ?? false),
           adminOrderAlerts: old.adminOrderAlerts ?? false,
           pushEnabled: old.pushEnabled ?? false,
+          pushPrompted: old.pushPrompted ?? false,
+          myTables: old.myTables ?? {},
         } as WorkspaceState;
       },
       partialize: (state) => ({
@@ -47,6 +59,8 @@ export const useWorkspace = create<WorkspaceState>()(
         soundChosen: state.soundChosen,
         adminOrderAlerts: state.adminOrderAlerts,
         pushEnabled: state.pushEnabled,
+        pushPrompted: state.pushPrompted,
+        myTables: state.myTables,
       }),
     },
   ),

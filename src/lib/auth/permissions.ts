@@ -56,11 +56,16 @@ export const PERMISSIONS = {
   "tables.manage": [SA, BA, BRA],
   "tables.add": [SA, BA, RM, BRA],
   "tables.pin": [SA, BA, BRA],
+  // Close a table the guests left. Cashier and waiter only when nothing on it is unpaid.
+  "tables.close": [SA, BA, RM, BRA, CA, WA],
+  "tables.closeUnpaid": [SA, BA, RM, BRA],
   "branches.list": [SA, BA, RM, BRA, CA, WA],
 
   // Reports
   "reports.view": [SA, BA, RM, BRA],
   "reports.sales": [SA, BA, RM, BRA],
+  // Guest ratings and walk-outs, and the sidebar badge for unhandled low ratings.
+  "reports.reviews": [SA, BA, RM, BRA],
   "reports.till": [SA, BA, BRA],
   "reports.payments": [SA, BA, BRA],
   "reports.attendance": [SA, BA, BRA],
@@ -90,7 +95,11 @@ export const PERMISSIONS = {
   "orders.move": [SA, BA, RM, BRA, CA, KS],
   /** Cancel once the kitchen has it. Cashier and waiter see the control locked. */
   "orders.cancel": [SA, BA, RM, BRA],
+  // Guests left without paying: the order leaves revenue and the table frees.
+  "orders.walkout": [SA, BA, RM, BRA, CA],
   "payments.refund": [SA, BA, RM, BRA, CA],
+  /** Confirm cash or a card slip collected at the counter (POST /payments/offline/{id}/verify). */
+  "payments.verify": [SA, BA, RM, BRA, CA],
 
   // Stock
   /** The Stock entry in the nav. Cashier and kitchen land on the pages below that they may use. */

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { ignoreOwnChange } from "@/features/staff/alerts/ignore";
 
+import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Money } from "@/components/ops/money";
 import { Badge, type Tone } from "@/components/ops/kit/badge";
 import { Button } from "@/components/ops/kit/button";
@@ -29,7 +30,8 @@ import {
   needsConfirmation,
   type FloorTable,
 } from "@/hooks/use-floor-live";
-import { asApiError } from "@/lib/api/error";
+import { ApiError, asApiError } from "@/lib/api/error";
+import { markWalkout } from "@/lib/api/visit-reports";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
 import type { UserRole } from "@/lib/auth/roles";
@@ -164,9 +166,24 @@ function modifierNames(modifiers: { [key: string]: unknown }[] | null | undefine
     .filter(Boolean);
 }
 
+type LiveTable = FloorTable & { unpaid_served_minutes?: number | null; unpaid_served_order_id?: string | null };
+
+/** Minutes since this table's food was served while the bill is still open, or null. */
+function unpaidMinutes(table: FloorTable): number | null {
+  const value = (table as LiveTable).unpaid_served_minutes;
+  return typeof value === "number" ? value : null;
+}
+
+const CLOSE_TABLE_ROLES: ReadonlySet<UserRole> = new Set(rolesFor("tables.close"));
+const WALKOUT_ROLES: ReadonlySet<UserRole> = new Set(rolesFor("orders.walkout"));
+const WALKOUT_STATUSES: ReadonlySet<string> = new Set(["READY", "DELIVERED", "SERVED"]);
+
 /** The one coloured badge on a table card. */
-function tableBadge(table: FloorTable, t: (typeof floorCopy)["en"]): { tone: Tone; label: string } {
+function tableBadge(table: FloorTable, t: (typeof floorCopy)["en"], locale: string): { tone: Tone; label: string } {
   if (table.current_state === "BILL_REQUESTED") return { tone: "info", label: t.board.needsBill };
+  const unpaid = unpaidMinutes(table);
+  // Served and still open: a calm reminder with how long, so walk-outs are caught early.
+  if (unpaid !== null) return { tone: "warning", label: fill(t.board.unpaid, { time: seatedShort(unpaid, locale) }) };
   if (table.order_status === "READY") return { tone: "success", label: t.board.foodReady };
   if (table.current_state === "AWAITING_FOOD") return { tone: "warning", label: t.board.waiting };
   if (table.current_state === "FOOD_SERVED") return { tone: "neutral", label: t.board.eating };
@@ -322,7 +339,7 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
             type="button"
             aria-pressed={filter === key}
             onClick={() => setFilter(key)}
-            className={`inline-flex h-11 shrink-0 items-center rounded-staff border px-3.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${filter === key ? "border-ink bg-ink text-on-ink" : "border-border bg-canvas text-ink"}`}
+            className={`inline-flex h-11 shrink-0 items-center rounded-staff border px-3.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${filter === key ? "border-brand bg-brand text-on-brand" : "border-border bg-canvas text-ink"}`}
           >
             {fill(key === "all" ? t.board.all : key === "needs" ? t.board.needsYou : t.board.free, { count: counts[key] })}
           </button>
@@ -340,7 +357,7 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
             const pending = needsConfirmation(table);
             const open = table.table_id === selectedId;
             const free = table.current_state === "AVAILABLE";
-            const badge = tableBadge(table, t);
+            const badge = tableBadge(table, t, locale);
             const calling = table.pending_service_requests_count > 0;
             return (
               <button
@@ -481,10 +498,138 @@ export function FloorScreen({ embedded = false }: { embedded?: boolean } = {}) {
               ) : (
                 <p className={hint}>{t.noOpenOrder}</p>
               )}
+              {me ? <TableActions table={selected} role={me.role} paid={isPaid} amount={amount} onDone={closeDrawer} /> : null}
             </div>
           ) : null}
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+/** Ending a table: close it when the guests left, or record that they left without paying. */
+function TableActions({
+  table,
+  role,
+  paid,
+  amount,
+  onDone,
+}: {
+  table: FloorTable;
+  role: UserRole;
+  paid: boolean;
+  amount: string | null;
+  onDone: () => void;
+}) {
+  const t = useStaffSection(floorCopy);
+  const { locale } = useLocale();
+  const queryClient = useQueryClient();
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [walkoutOpen, setWalkoutOpen] = useState(false);
+  const [walkoutReason, setWalkoutReason] = useState("");
+  const live = table as LiveTable;
+  const unpaid = unpaidMinutes(table);
+  const walkoutOrderId = live.unpaid_served_order_id ?? (WALKOUT_STATUSES.has(table.order_status ?? "") && !paid ? table.active_order_id : null);
+  const canClose = CLOSE_TABLE_ROLES.has(role) && table.current_state !== "AVAILABLE";
+  const canWalkout = WALKOUT_ROLES.has(role) && Boolean(walkoutOrderId);
+
+  const close = useMutation({
+    mutationFn: async () => {
+      const result = await browserApi.POST("/api/v1/tables/{table_id}/close-session", {
+        params: { path: { table_id: table.table_id } },
+      });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.closeFailed, locale);
+    },
+    onSuccess: () => {
+      setConfirmClose(false);
+      toast.success(t.tableClosed);
+      onDone();
+      void queryClient.invalidateQueries({ queryKey: ["floor-live"] });
+    },
+    onError: (error: Error) => {
+      setConfirmClose(false);
+      toast.error(error instanceof ApiError && error.code === "TABLE_HAS_UNPAID_ORDERS" ? t.closeUnpaid : error.message);
+    },
+  });
+
+  const walkout = useMutation({
+    mutationFn: () => markWalkout(walkoutOrderId ?? "", walkoutReason, t.walkoutFailed),
+    onSuccess: () => {
+      setWalkoutOpen(false);
+      setWalkoutReason("");
+      toast.success(t.walkoutDone);
+      onDone();
+      void queryClient.invalidateQueries({ queryKey: ["floor-live"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  if (!canClose && !canWalkout) return null;
+  return (
+    <div className="grid gap-2 border-t border-border pt-4">
+      {unpaid !== null ? (
+        <p className="text-sm text-ink-secondary">{fill(t.unpaidFor, { time: seatedShort(unpaid, locale) })}</p>
+      ) : null}
+      <div className="grid gap-2 sm:grid-cols-2">
+        {canClose ? (
+          <Button variant="secondary" className="min-h-12" disabled={close.isPending} onClick={() => setConfirmClose(true)}>
+            {t.closeTable}
+          </Button>
+        ) : null}
+        {canWalkout ? (
+          <Button variant="dangerGhost" className="min-h-12" disabled={walkout.isPending} onClick={() => setWalkoutOpen(true)}>
+            {t.walkout}
+          </Button>
+        ) : null}
+      </div>
+      <ConfirmDialog
+        open={confirmClose}
+        onOpenChange={setConfirmClose}
+        title={t.closeTableTitle}
+        description={t.closeTableBody}
+        confirmLabel={t.closeTable}
+        cancelLabel={t.cancel}
+        pendingLabel={t.closing}
+        pending={close.isPending}
+        onConfirm={() => close.mutate()}
+      />
+      <Dialog open={walkoutOpen} onOpenChange={setWalkoutOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.walkoutTitle}</DialogTitle>
+            <DialogDescription>
+              {fill(t.walkoutBody, { amount: amount ? formatAmount(amount, undefined, locale) : "" })}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="grid gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (walkoutReason.trim().length >= 2) walkout.mutate();
+            }}
+          >
+            <label className="grid gap-1 text-sm font-medium">
+              {t.walkoutReason}
+              <textarea
+                className="min-h-20 rounded-staff border border-border bg-canvas px-3 py-2"
+                maxLength={300}
+                value={walkoutReason}
+                placeholder={t.walkoutPlaceholder}
+                onChange={(event) => setWalkoutReason(event.target.value)}
+                autoFocus
+              />
+            </label>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" disabled={walkout.isPending} onClick={() => setWalkoutOpen(false)}>
+                {t.cancel}
+              </Button>
+              <Button type="submit" variant="danger" disabled={walkout.isPending || walkoutReason.trim().length < 2}>
+                {walkout.isPending ? t.walkingOut : t.walkoutConfirm}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -584,7 +729,7 @@ function PendingOrder({
             <div className="grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
-                className="min-h-12 rounded-staff bg-danger text-sm font-medium text-white disabled:opacity-50"
+                className="min-h-12 rounded-staff bg-danger-fill text-sm font-medium text-white disabled:opacity-50"
                 disabled={pending || !reason.trim()}
                 onClick={() => onReject(orderId)}
               >

@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import { ApiError } from "@/lib/api/error";
 
-import { groupCartLinesByGuest, isCartConflict } from "./cart-client.ts";
+import { groupCartLinesByGuest, isCartConflict, lineBelongsToGuest, nextGuestName } from "./cart-client.ts";
 
 test("groups cart lines by nickname then guest_name", () => {
   const groups = groupCartLinesByGuest([
@@ -71,4 +71,18 @@ test("anonymous lines group under Guest when nickname and guest_name are blank",
   assert.equal(groups.length, 1);
   assert.equal(groups[0]?.guestName, "Guest");
   assert.equal(groups[0]?.lines[0]?.quantity, 2);
+});
+
+test("a line is only mine by guest id when both sides have one, even if the names match", () => {
+  const line = { guest_id: "g-other", nickname: "Guest 1" } as Parameters<typeof lineBelongsToGuest>[0];
+  assert.equal(lineBelongsToGuest(line, "g-me", "Guest 1"), false);
+  assert.equal(lineBelongsToGuest({ ...line, guest_id: "g-me" }, "g-me", "Someone else"), true);
+  // Older lines without an id still match by name.
+  assert.equal(lineBelongsToGuest({ ...line, guest_id: null } as typeof line, "g-me", "guest 1"), true);
+});
+
+test("default names skip the ones already at the table", () => {
+  const lines = [{ nickname: "Guest 1" }, { nickname: "Guest 3" }, { guest_name: "Mona" }] as Parameters<typeof nextGuestName>[0];
+  assert.equal(nextGuestName(lines, "Guest {n}"), "Guest 2");
+  assert.equal(nextGuestName([], "ضيف {n}"), "ضيف 1");
 });

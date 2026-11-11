@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { PasswordToggle } from "@/components/auth/password-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,7 @@ export function AcceptInviteForm({ token }: { token: string }) {
   const [state, setState] = useState<PreviewState>({ kind: "loading" });
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -198,32 +200,48 @@ export function AcceptInviteForm({ token }: { token: string }) {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="invite-password">{t.shared.password}</Label>
-        <Input
-          id="invite-password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={MIN_PASSWORD}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="h-11"
-        />
+        <div className="relative">
+          <Input
+            id="invite-password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            minLength={MIN_PASSWORD}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="h-11 pe-11"
+          />
+          <PasswordToggle
+            shown={showPassword}
+            onToggle={() => setShowPassword((value) => !value)}
+            showLabel={t.shared.showPassword}
+            hideLabel={t.shared.hidePassword}
+          />
+        </div>
         <p className="text-xs text-muted-foreground">{fill(t.invite.lengthHint, { min: MIN_PASSWORD })}</p>
       </div>
       <div className="grid gap-2">
         <Label htmlFor="invite-confirm">{t.shared.confirmPassword}</Label>
-        <Input
-          id="invite-confirm"
-          name="confirm_password"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={MIN_PASSWORD}
-          value={confirm}
-          onChange={(event) => setConfirm(event.target.value)}
-          className="h-11"
-        />
+        <div className="relative">
+          <Input
+            id="invite-confirm"
+            name="confirm_password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            minLength={MIN_PASSWORD}
+            value={confirm}
+            onChange={(event) => setConfirm(event.target.value)}
+            className="h-11 pe-11"
+          />
+          <PasswordToggle
+            shown={showPassword}
+            onToggle={() => setShowPassword((value) => !value)}
+            showLabel={t.shared.showPassword}
+            hideLabel={t.shared.hidePassword}
+          />
+        </div>
       </div>
       {error ? (
         <p role="alert" className="text-sm text-destructive">

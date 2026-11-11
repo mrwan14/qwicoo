@@ -26,14 +26,22 @@ type GuestState = {
   branding: GuestBranding | null;
   /** QR token from /t/{token}, kept so a dropped session can rejoin. */
   tableToken: string | null;
+  /** What the QR says before the guest joins: the menu is browsable, ordering waits for presence. */
+  tablePreview: { branchId: string; tableNumber: string; branchName: string; orderingPaused?: boolean } | null;
+  /** True once the guest (or their phone language) picked a language, so we stop guessing. */
+  localeChosen: boolean;
   /** Order that already asked for cash collection, so pay buttons stay hidden. */
   cashRequestedOrderId: string | null;
+  /** The visit that just closed (paid, staff, idle): the thank-you screen shows its receipt. */
+  endedVisit: { sessionId: string; tableNumber: string | null } | null;
   setLocale: (locale: LocaleCode) => void;
   setGuestName: (guestName: string) => void;
   setSession: (session: GuestSession | null) => void;
   setBranding: (branding: GuestBranding | null) => void;
   setTableToken: (tableToken: string | null) => void;
+  setTablePreview: (tablePreview: GuestState["tablePreview"]) => void;
   setCashRequestedOrderId: (orderId: string | null) => void;
+  setEndedVisit: (endedVisit: GuestState["endedVisit"]) => void;
   clear: () => void;
 };
 
@@ -45,13 +53,18 @@ export const useGuest = create<GuestState>()(
       session: null,
       branding: null,
       tableToken: null,
+      tablePreview: null,
+      localeChosen: false,
       cashRequestedOrderId: null,
-      setLocale: (locale) => set({ locale }),
+      endedVisit: null,
+      setLocale: (locale) => set({ locale, localeChosen: true }),
       setGuestName: (guestName) => set({ guestName }),
       setSession: (session) => set({ session }),
       setBranding: (branding) => set({ branding }),
       setTableToken: (tableToken) => set({ tableToken }),
+      setTablePreview: (tablePreview) => set({ tablePreview }),
       setCashRequestedOrderId: (cashRequestedOrderId) => set({ cashRequestedOrderId }),
+      setEndedVisit: (endedVisit) => set({ endedVisit }),
       clear: () => set({ session: null, branding: null, tableToken: null, cashRequestedOrderId: null }),
     }),
     {
@@ -64,7 +77,10 @@ export const useGuest = create<GuestState>()(
         session: state.session,
         branding: state.branding,
         tableToken: state.tableToken,
+        tablePreview: state.tablePreview,
+        localeChosen: state.localeChosen,
         cashRequestedOrderId: state.cashRequestedOrderId,
+        endedVisit: state.endedVisit,
       }),
     },
   ),

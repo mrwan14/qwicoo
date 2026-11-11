@@ -1,6 +1,8 @@
 import { inventoryErrorCatalog } from "@/features/staff/inventory/errors";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
+import { invalidFields, withFields } from "./invalid-fields";
+
 type Catalog = {
   en: string;
   /** Guest-facing Arabic copy. Matches the API catalog so a translated reply maps back to its code. */
@@ -361,13 +363,13 @@ const CATALOG: Record<string, Catalog> = {
     en: "Your cart is empty. Take a look at the menu!",
     ar: "سلتك فارغة. ألقِ نظرة على القائمة!",
   },
-  CROSS_TENANT_ACCESS_FORBIDDEN: { en: "That brand is outside your workspace." },
-  BRANCH_ACCESS_FORBIDDEN: { en: "That branch is outside your workspace." },
-  BRANCH_NOT_FOUND: { en: "We couldn't find that branch." },
-  BRAND_SLUG_ALREADY_EXISTS: { en: "A brand with this name already exists. Try a different name." },
-  BRANCH_SLUG_ALREADY_EXISTS: { en: "A branch with this name already exists in this brand. Try a different name." },
-  SLUG_ALREADY_EXISTS: { en: "That name is already taken. Try a different one." },
-  ROLE_FORBIDDEN: { en: "Your role can't do this." },
+  CROSS_TENANT_ACCESS_FORBIDDEN: { en: "That brand is outside your workspace.", ar: "هذه العلامة خارج مساحة عملك." },
+  BRANCH_ACCESS_FORBIDDEN: { en: "That branch is outside your workspace.", ar: "هذا الفرع خارج مساحة عملك." },
+  BRANCH_NOT_FOUND: { en: "We couldn't find that branch.", ar: "لم نجد هذا الفرع." },
+  BRAND_SLUG_ALREADY_EXISTS: { en: "A brand with this name already exists. Try a different name.", ar: "توجد علامة بهذا الاسم بالفعل. جرّب اسماً آخر." },
+  BRANCH_SLUG_ALREADY_EXISTS: { en: "A branch with this name already exists in this brand. Try a different name.", ar: "يوجد فرع بهذا الاسم في هذه العلامة بالفعل. جرّب اسماً آخر." },
+  SLUG_ALREADY_EXISTS: { en: "That name is already taken. Try a different one.", ar: "هذا الاسم مستخدم بالفعل. جرّب اسماً آخر." },
+  ROLE_FORBIDDEN: { en: "Your role can't do this.", ar: "دورك لا يسمح بهذا الإجراء." },
   API_UNREACHABLE: {
     en: "Can't reach the server. Check the connection and try again.",
     aliases: ["API unreachable."],
@@ -537,10 +539,18 @@ export class ApiError extends Error {
   }
 }
 
+/** The API's own machine code (e.g. PROMO_CODE_EXPIRED), even when this file has no copy for it. */
+function apiCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const value = "code" in error ? error.code : null;
+  return typeof value === "string" && /^[A-Z][A-Z0-9_]{2,63}$/.test(value) ? value : null;
+}
+
 export function asApiError(error: unknown, response: Response, fallback: string, locale: LocaleCode = "en"): ApiError {
   const raw = rawDetail(error);
-  const code = errorCode(raw) ?? (response.status === 410 ? "GUEST_SESSION_ENDED" : null);
-  return new ApiError(response.status, friendlyMessage(raw ?? code, fallback, locale), code);
+  const code = errorCode(raw) ?? apiCode(error) ?? (response.status === 410 ? "GUEST_SESSION_ENDED" : null);
+  const message = friendlyMessage(raw ?? code, fallback, locale);
+  return new ApiError(response.status, code === "INPUT_VALIDATION_FAILED" ? withFields(message, invalidFields(error)) : message, code);
 }
 
 /** The API refused this caller's role, as opposed to a scope, network, or data problem. */

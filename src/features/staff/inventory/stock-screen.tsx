@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
-import { ArrowLeftRight, ClipboardList, History, Plus, Search, ShoppingCart } from "lucide-react";
+import { ArrowLeftRight, ClipboardList, Download, History, Plus, Search, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { Button, buttonClass } from "@/components/ops/kit/button";
 import { Card } from "@/components/ops/kit/card";
 import { DataTable, type Column } from "@/components/ops/kit/data-table";
 import { Field, Input, Select, Textarea } from "@/components/ops/kit/field";
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/ops/kit/menu";
 import { SegmentedControl } from "@/components/ops/kit/segmented";
 import { SidePanel } from "@/components/ops/kit/side-panel";
 import { Money } from "@/components/ops/money";
@@ -32,6 +33,7 @@ import { useScope } from "@/stores/scope";
 import { canOpenInventoryPage, canRecordWaste, canWriteCatalogue, canWriteCentralKitchen, canWriteStock } from "./access";
 import { INVENTORY_HREFS, InventoryFrame, useBranchCurrency, useWarehouses, WarehouseSelect } from "./chrome";
 import { needsAttention, suggestedOrder, unitsFor, validAmount } from "./easy";
+import { downloadFromApi } from "./files";
 import { ItemPanel } from "./item-panel";
 import { formatQty, lineValue } from "./qty";
 import { convertQty, type ConversionEdge } from "./units";
@@ -58,6 +60,20 @@ export function StockScreen() {
   const [row, setRow] = useState<StockRow | null>(null);
   const [adding, setAdding] = useState(false);
   const canAddItem = canWriteCatalogue(me?.role);
+  // Matches the API: stock managers export their store; brand admins can export every store at once.
+  const canExport = Boolean(me && canWriteStock(me.role));
+  const canExportAll = canWriteCatalogue(me?.role);
+  const exportStock = useMutation({
+    mutationFn: (input: { format: "xlsx" | "csv"; all: boolean }) =>
+      downloadFromApi(
+        "/inventory/stock/export",
+        { brand_id: brandId ?? "", format: input.format, ...(input.all ? {} : { warehouse_id: selected }) },
+        `stock.${input.format}`,
+        t.loadFailed,
+        locale,
+      ),
+    onError: (error: Error) => toast.error(error.message),
+  });
   const selected = warehouseId || warehouses.data?.[0]?.id || "";
   const warehouse = warehouses.data?.find((item) => item.id === selected);
   const central = warehouse?.kind === "CENTRAL_KITCHEN";
@@ -144,7 +160,9 @@ export function StockScreen() {
     return [...stock.data, ...missing];
   }, [stock.data, ingredients.data]);
   const unstocked = useMemo(() => new Set(all.filter((row) => !stock.data?.some((item) => item.ingredient_id === row.ingredient_id)).map((row) => row.ingredient_id)), [all, stock.data]);
-  const needs = needsAttention(all);
+  // Switched-off items aren't ordered any more, so they don't belong in "need ordering".
+  const inactive = useMemo(() => new Set((ingredients.data ?? []).filter((item) => !item.is_active).map((item) => item.id)), [ingredients.data]);
+  const needs = needsAttention(all.filter((row) => !inactive.has(row.ingredient_id)));
 
   const needle = query.trim().toLowerCase();
   const rows = all.filter((item) => {
@@ -253,8 +271,26 @@ export function StockScreen() {
           <Button variant="ghost" size="sm" aria-expanded={moreFilters} onClick={() => setMoreFilters((value) => !value)}>
             {moreFilters ? t.easy.fewerFilters : t.easy.moreFilters}
           </Button>
+          {canExport ? (
+            <Menu>
+              <MenuTrigger className={cn(buttonClass({ variant: "secondary", size: "field" }), "ms-auto")} disabled={exportStock.isPending || !selected}>
+                <Download aria-hidden />
+                {exportStock.isPending ? t.easy.exporting : t.easy.export}
+              </MenuTrigger>
+              <MenuContent align="end">
+                <MenuItem onClick={() => exportStock.mutate({ format: "xlsx", all: false })}>{t.easy.exportExcel}</MenuItem>
+                <MenuItem onClick={() => exportStock.mutate({ format: "csv", all: false })}>{t.easy.exportCsv}</MenuItem>
+                {canExportAll ? (
+                  <>
+                    <MenuSeparator />
+                    <MenuItem onClick={() => exportStock.mutate({ format: "xlsx", all: true })}>{t.easy.exportAll}</MenuItem>
+                  </>
+                ) : null}
+              </MenuContent>
+            </Menu>
+          ) : null}
           {canAddItem ? (
-            <Button size="field" className="ms-auto" disabled={!units.data} onClick={() => setAdding(true)}>
+            <Button size="field" className={canExport ? undefined : "ms-auto"} disabled={!units.data} onClick={() => setAdding(true)}>
               <Plus aria-hidden />
               {t.easy.addItem}
             </Button>
@@ -668,7 +704,7 @@ export function Chip({ active, onClick, children }: { active: boolean; onClick: 
       onClick={onClick}
       className={cn(
         "inline-flex min-h-9 items-center rounded-full border px-3.5 text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus",
-        active ? "border-ink bg-ink text-on-ink" : "border-border bg-canvas text-ink hover:bg-subtle",
+        active ? "border-brand bg-brand text-on-brand" : "border-border bg-canvas text-ink hover:bg-subtle",
       )}
     >
       {children}

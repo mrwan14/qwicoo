@@ -9,6 +9,7 @@ import { RoleChrome } from "@/components/ops/shells";
 import { StaffSessionProvider } from "@/components/ops/staff-session";
 import { OrderAlerts } from "@/features/staff/alerts/order-alerts";
 import { StaffPushRuntime } from "@/features/staff/alerts/staff-push";
+import { SoundUnlockBanner } from "@/features/staff/alerts/sound-unlock-banner";
 import { OfflineRuntime } from "@/features/staff/offline/offline-runtime";
 import { AccessDeniedToast, NoWorkspace, WorkspaceLoading } from "@/components/ops/workspace-states";
 import { commonCopy } from "@/lib/i18n/staff/common";
@@ -96,6 +97,7 @@ function Runtime({ children }: { children: ReactNode }) {
       </Suspense>
       <OrderAlerts />
       <StaffPushRuntime />
+      <SoundUnlockBanner />
       <OfflineRuntime />
       <RoleChrome>
         {/* Remount screens on branch change so no local state (tickets, filters) crosses branches. */}

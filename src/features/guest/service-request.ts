@@ -33,9 +33,10 @@ export async function createGuestServiceRequest(
   return result.data;
 }
 
-export async function fetchActiveServiceRequests() {
+/** The table's open requests. Fails loudly so the Help screen can offer Retry instead of an empty list. */
+export async function fetchActiveServiceRequests(fallback = "Something went wrong") {
   const result = await guestApi.GET("/api/v1/service-requests/table/active");
-  if (!result.response.ok || !result.data) return [];
+  if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, fallback);
   return result.data;
 }
 

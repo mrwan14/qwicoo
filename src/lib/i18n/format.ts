@@ -15,7 +15,8 @@ function timeLocale(locale: string): string {
 
 /** Display an API decimal string. Do not use this for arithmetic. Digits stay Western in both languages. */
 export function formatMoney(amount: string, currency?: string | null, locale: LocaleCode | string = "en"): string {
-  const code = currency?.trim() || "EGP";
+  // A non-string currency (bad cache data) must never take a page down.
+  const code = (typeof currency === "string" ? currency.trim() : "") || "EGP";
   const value = Number(amount);
   if (!Number.isFinite(value)) return amount;
   try {

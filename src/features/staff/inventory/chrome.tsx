@@ -49,7 +49,7 @@ export type StockTab = "stock" | "recipes" | "buying" | "counts";
 // Most-used first: what's in stock, ordering more, counting and waste, then recipe setup.
 const STOCK_TABS: readonly { tab: StockTab; views: readonly InventoryPage[] }[] = [
   { tab: "stock", views: ["stock", "movements"] },
-  { tab: "buying", views: ["purchaseOrders", "suppliers", "transfers"] },
+  { tab: "buying", views: ["purchaseOrders", "bills", "suppliers", "transfers"] },
   { tab: "counts", views: ["counts", "waste"] },
   { tab: "recipes", views: ["recipes", "ingredients", "prep"] },
 ];
@@ -365,6 +365,9 @@ async function branchNameValue(branchId: string): Promise<unknown> {
 export function useBranchCurrency(enabled = true) {
   const branchId = useScope((state) => state.branchId);
   const brandId = useScope((state) => state.brandId);
+  // Home, Orders and the screen header cache the whole branch under this key, so this one must
+  // store the same object and only read the currency from it. Storing a bare string here once
+  // handed a branch object to the money formatter and crashed the Stock page.
   const query = useQuery({
     queryKey: ["branch", branchId, brandId],
     enabled: enabled && Boolean(branchId),
@@ -372,9 +375,10 @@ export function useBranchCurrency(enabled = true) {
       const result = await browserApi.GET("/api/v1/branches/{branch_id}", {
         params: { path: { branch_id: branchId ?? "" } },
       });
-      if (!result.response.ok || !result.data) return "EGP";
-      return result.data.currency || "EGP";
+      if (!result.response.ok || !result.data) throw new Error(`branch ${result.response.status}`);
+      return result.data;
     },
+    select: (branch) => (typeof branch?.currency === "string" ? branch.currency : ""),
   });
   return query.data || "EGP";
 }

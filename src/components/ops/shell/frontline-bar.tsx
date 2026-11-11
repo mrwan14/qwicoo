@@ -95,7 +95,7 @@ export function FrontlineBar({ screens, badges = {} }: { screens: readonly NavIt
   });
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-border bg-subtle px-4 print:hidden md:h-[60px] md:px-5">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-border bg-side px-4 print:hidden md:h-[60px] md:px-5">
       {/* Phone: who and where on the left, everything else in one menu. */}
       <div className="flex min-w-0 items-center gap-2.5 md:hidden">
         <BrandMark name={identity.name} logoUrl={identity.logoUrl} size="sm" />

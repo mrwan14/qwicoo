@@ -345,10 +345,10 @@ function CategoryPanel({ open, onClose, onSaved }: { open: boolean; onClose: () 
           create.mutate();
         }}
       >
-        <Field label={t.englishName}>
+        <Field label={t.englishName} required>
           <Input value={en} onChange={(event) => setEn(event.target.value)} required />
         </Field>
-        <Field label={t.arabicName}>
+        <Field label={t.arabicName} required hint={!en.trim() || !ar.trim() ? t.bothNamesNeeded : undefined}>
           <Input dir="rtl" value={ar} onChange={(event) => setAr(event.target.value)} required />
         </Field>
         <Field label={t.station} hint={t.stationHint}>

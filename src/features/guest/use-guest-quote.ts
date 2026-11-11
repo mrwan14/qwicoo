@@ -3,9 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useGuestCopy } from "@/features/guest/shell";
-import { asApiError } from "@/lib/api/error";
+import { ApiError, asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
 import type { components } from "@/lib/api/schema";
+import { useGuest } from "@/stores/guest";
 
 export type QuoteItemInput = components["schemas"]["OrderItemInput"];
 
@@ -25,11 +26,15 @@ export function useGuestOrderQuote(
   promoCode?: string | null,
 ) {
   const { locale } = useGuestCopy();
+  // Prices are quoted for a joined table; before that the menu shows list prices.
+  const joined = useGuest((state) => Boolean(state.session));
   const key = JSON.stringify(items ?? []);
   const promo = quotedPromo(promoCode);
   return useQuery({
     queryKey: ["guest-quote", key, promo === undefined ? "omit" : promo],
-    enabled: Boolean(items && items.length > 0),
+    enabled: joined && Boolean(items && items.length > 0),
+    // A refused promo code or item (4xx) won't change on retry; show it now instead of after ~7 s.
+    retry: (failures, error) => !(error instanceof ApiError && error.status < 500) && failures < 3,
     queryFn: async () => {
       const body: components["schemas"]["app__schemas__order__CheckoutRequest"] = {
         items: JSON.parse(key) as QuoteItemInput[],

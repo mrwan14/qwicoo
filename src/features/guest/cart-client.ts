@@ -137,18 +137,45 @@ export async function clearGuestCart(
   return result.data;
 }
 
+/** `promoCode` is the code the quote accepted; the server checks it again and applies the same discount. */
 export async function submitGuestCart(
   sessionId: string,
   version: number,
   locale: LocaleCode,
   fallback: string,
+  promoCode?: string | null,
+  customerNotes?: string | null,
 ): Promise<components["schemas"]["OrderResponse"]> {
   const headers = cartMutationHeaders(version);
+  const code = promoCode?.trim();
+  const notes = customerNotes?.trim().slice(0, 500);
+  // customer_notes is newer than the generated schema; the API accepts it on cart/submit.
+  const body = { ...(code ? { promo_code: code } : {}), ...(notes ? { customer_notes: notes } : {}) };
   const result = await guestApi.POST("/api/v1/sessions/{session_id}/cart/submit", {
     params: { path: { session_id: sessionId }, header: headers },
+    ...(Object.keys(body).length > 0 ? { body: body as { promo_code?: string | null } } : {}),
   });
   if (!result.response.ok || !result.data) {
     throw asApiError(result.error, result.response, fallback, locale);
   }
   return result.data;
+}
+
+/**
+ * Whether a cart line is this diner's. When both sides carry a guest id, only the id decides,
+ * so two diners who happen to share a name never see each other's lines as their own.
+ */
+export function lineBelongsToGuest(line: GuestCartItem, guestId: string | null, guestName: string): boolean {
+  if (guestId && line.guest_id) return line.guest_id === guestId;
+  const name = guestName.trim().toLowerCase();
+  if (!name) return false;
+  return (line.nickname || line.guest_name || "").trim().toLowerCase() === name;
+}
+
+/** The lowest "Guest N" nobody at the table is using yet. */
+export function nextGuestName(lines: readonly GuestCartItem[], template: string): string {
+  const taken = new Set(lines.map((line) => (line.nickname || line.guest_name || "").trim().toLowerCase()));
+  let n = 1;
+  while (taken.has(template.replace("{n}", String(n)).toLowerCase())) n += 1;
+  return template.replace("{n}", String(n));
 }

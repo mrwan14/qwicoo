@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowUp, ChevronRight, RotateCcw, Sparkles, X } from "lucide-react";
+import { ArrowUp, ChevronRight, RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import "@/components/assistant/assistant.css";
 import "./staff-chat.css";
 import { AnswerBlock } from "@/components/assistant/answer-block";
+import { AskQwicooMark } from "@/components/brand/ask-mark";
 import type { ChatMessage } from "@/components/assistant/message-list";
 import type { AssistantFailure } from "@/components/assistant/model";
 import { assistantCopy } from "@/lib/i18n/staff/assistant";
@@ -58,9 +59,7 @@ export function StaffChatPanel({
   return (
     <section aria-label={t.ask} className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas text-ink">
       <header className="flex items-center gap-3 border-b border-border px-5 py-4">
-        <span aria-hidden className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-ink text-on-ink">
-          <Sparkles className="size-4" />
-        </span>
+        <AskQwicooMark size={36} thinking={pending} />
         <div className="grid min-w-0 flex-1 gap-0.5">
           <h2 className="text-base leading-tight font-semibold">{t.ask}</h2>
           {branchPicker ?? <p className="truncate text-[13px] text-ink-secondary">{scopeLabel}</p>}
@@ -124,15 +123,13 @@ export function StaffChatPanel({
           <ol className="grid content-start gap-4">
             {messages.map((message) =>
               message.role === "user" ? (
-                <li key={message.id} className="asst-fade ms-auto max-w-[85%] rounded-2xl rounded-ee-md bg-ink px-4 py-2.5 text-sm text-on-ink">
+                <li key={message.id} className="asst-fade ms-auto max-w-[85%] rounded-2xl rounded-ee-md bg-brand px-4 py-2.5 text-sm text-on-brand">
                   <span className="sr-only">{t.you}: </span>
                   <p className="leading-6 whitespace-pre-wrap">{message.content}</p>
                 </li>
               ) : (
                 <li key={message.id} className="flex items-start gap-2.5">
-                  <span aria-hidden className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-subtle text-ink">
-                    <Sparkles className="size-3.5" />
-                  </span>
+                  <AskQwicooMark size={28} className="mt-0.5" />
                   <div className="staff-answer min-w-0 flex-1 rounded-2xl rounded-ss-md bg-subtle px-4 py-3">
                     <span className="sr-only">{t.qwicoo}: </span>
                     <AnswerBlock
@@ -151,9 +148,7 @@ export function StaffChatPanel({
             )}
             {pending ? (
               <li className="asst-fade flex items-center gap-2.5" role="status">
-                <span aria-hidden className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-subtle text-ink">
-                  <Sparkles className="size-3.5" />
-                </span>
+                <AskQwicooMark size={28} thinking />
                 <span className="inline-flex items-center gap-2 rounded-2xl rounded-ss-md bg-subtle px-4 py-3 text-sm text-ink-secondary">
                   <span className="inline-flex items-center gap-1" aria-hidden>
                     <i className="staff-dot" />
@@ -252,7 +247,7 @@ function Composer({
         type="submit"
         aria-label={t.send}
         disabled={pending || text.trim().length === 0}
-        className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-ink text-on-ink transition-colors hover:bg-ink/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:bg-border disabled:text-disabled"
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-brand text-on-brand transition-colors hover:bg-ink/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:bg-border disabled:text-disabled"
       >
         <ArrowUp aria-hidden className="size-4" />
       </button>

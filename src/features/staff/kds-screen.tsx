@@ -57,6 +57,7 @@ export function KdsScreen() {
   const branchId = useScope((state) => state.branchId);
   const [sound, setSound] = useSoundSetting();
   const [stationFilter, setStationFilter] = useState<string>("ALL");
+  const [laneTab, setLaneTab] = useState<Lane | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -140,7 +141,34 @@ export function KdsScreen() {
   const ticketCount = (tickets.data ?? []).length;
   const lastTicket = latestTimestamp((tickets.data ?? []).map((ticket) => ticket.created_at));
   const lanes: Record<Lane, typeof visible> = { new: [], preparing: [], ready: [] };
-  for (const ticket of visible) lanes[laneOf(ticket)].push(ticket);
+  // Tickets from an earlier shift (over 12 hours) move out of the lanes into a folded group, so a
+  // forgotten order never sits at the top of New. Only the board changes; the order stays as it is.
+  const old = visible.filter((ticket) => isOldTicket(ticket.created_at, now));
+  for (const ticket of visible) if (!isOldTicket(ticket.created_at, now)) lanes[laneOf(ticket)].push(ticket);
+  const renderTicket = (ticket: Ticket, lane: Lane) => (
+    <TicketCard
+      key={ticket.sub_ticket_id}
+      ticket={ticket}
+      lane={lane}
+      now={now}
+      markingItem={markingItem ?? null}
+      marking={marking?.orderId === ticket.order_id && marking.station === ticket.station}
+      starting={start.isPending && start.variables === ticket.order_id}
+      onItem={(id) => {
+        acknowledgeItem(id);
+        bumpItem.mutate(id);
+      }}
+      onStart={() => start.mutate(ticket.order_id)}
+      onReady={() => {
+        const next = asStation(ticket.station);
+        if (next) bumpStation.mutate({ orderId: ticket.order_id, station: next });
+      }}
+    />
+  );
+
+  // Until someone picks a tab, show the busiest lane (New on a tie).
+  const busiest = LANES.reduce((best, lane) => (lanes[lane].length > lanes[best].length ? lane : best), LANES[0]);
+  const shownLane = laneTab ?? busiest;
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -156,7 +184,7 @@ export function KdsScreen() {
                 aria-pressed={active}
                 className={cn(
                   "inline-flex min-h-12 shrink-0 items-center rounded-staff border px-4 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
-                  active ? "border-ink bg-ink text-on-ink" : "border-border bg-canvas text-ink hover:bg-subtle",
+                  active ? "border-brand bg-brand text-on-brand" : "border-border bg-canvas text-ink hover:bg-subtle",
                 )}
                 onClick={() => setStationFilter(station)}
               >
@@ -194,39 +222,57 @@ export function KdsScreen() {
         </div>
       </div>
       <OfflineTickets stage="kitchen" />
-      <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+      {/* Portrait tablets and phones: one lane at a time behind tabs with counts. Landscape keeps three columns. */}
+      <div role="tablist" aria-label={t.board.lanesLabel} className="grid grid-cols-3 gap-1 rounded-staff bg-well p-1 md:landscape:hidden">
         {LANES.map((lane) => (
-          <section key={lane} className="grid content-start gap-3 rounded-staff bg-subtle p-3">
-            <h2 className="flex items-center justify-between px-1 text-base font-semibold text-ink">
+          <button
+            key={lane}
+            type="button"
+            role="tab"
+            aria-selected={lane === shownLane}
+            onClick={() => setLaneTab(lane)}
+            className={cn(
+              "inline-flex min-h-12 items-center justify-center gap-2 rounded-[calc(var(--radius-staff)-2px)] text-[15px] font-medium transition-colors",
+              lane === shownLane ? "bg-canvas text-ink shadow-card" : "text-ink-secondary hover:text-ink",
+            )}
+          >
+            {t.board.columns[lane]}
+            <span className="tabular-nums">{lanes[lane].length}</span>
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 items-start gap-4 md:landscape:grid-cols-3">
+        {LANES.map((lane) => (
+          <section key={lane} className={cn("grid content-start gap-3 rounded-staff bg-subtle p-3", lane !== shownLane && "hidden md:landscape:grid")}>
+            {/* In portrait the tab already names the lane. */}
+            <h2 className="hidden items-center justify-between px-1 text-base font-semibold text-ink md:landscape:flex">
               {t.board.columns[lane]}
               <span className="text-ink-secondary tabular-nums">{lanes[lane].length}</span>
             </h2>
             {lanes[lane].length === 0 ? <p className="px-1 py-6 text-center text-sm text-ink-secondary">{ticketCount === 0 && lane === "new" ? t.empty : t.board.empty}</p> : null}
-            {lanes[lane].map((ticket) => (
-              <TicketCard
-                key={ticket.sub_ticket_id}
-                ticket={ticket}
-                lane={lane}
-                now={now}
-                markingItem={markingItem ?? null}
-                marking={marking?.orderId === ticket.order_id && marking.station === ticket.station}
-                starting={start.isPending && start.variables === ticket.order_id}
-                onItem={(id) => {
-                  acknowledgeItem(id);
-                  bumpItem.mutate(id);
-                }}
-                onStart={() => start.mutate(ticket.order_id)}
-                onReady={() => {
-                  const next = asStation(ticket.station);
-                  if (next) bumpStation.mutate({ orderId: ticket.order_id, station: next });
-                }}
-              />
-            ))}
+            {lanes[lane].map((ticket) => renderTicket(ticket, lane))}
           </section>
         ))}
       </div>
+      {old.length ? (
+        <details className="group rounded-staff border border-border bg-canvas p-3">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-1 text-[15px] font-medium text-ink">
+            <span>{fill(t.board.oldTickets, { count: old.length })}</span>
+            <span className="text-[13px] font-normal text-ink-secondary group-open:hidden">{t.board.show}</span>
+          </summary>
+          <p className="px-1 pb-3 text-[13px] text-ink-secondary">{t.board.oldHint}</p>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">{old.map((ticket) => renderTicket(ticket, laneOf(ticket)))}</div>
+        </details>
+      ) : null}
     </div>
   );
+}
+
+const OLD_TICKET_MS = 12 * 60 * 60 * 1000;
+
+function isOldTicket(createdAt: string, now: number): boolean {
+  const placed = new Date(createdAt).getTime();
+  return Number.isFinite(placed) && now - placed > OLD_TICKET_MS;
 }
 
 type Lane = "new" | "preparing" | "ready";

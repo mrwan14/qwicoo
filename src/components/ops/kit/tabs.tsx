@@ -17,7 +17,7 @@ export type TabItem<T extends string = string> = {
 const tabClass = (active: boolean) =>
   cn(
     "-mb-px inline-flex shrink-0 items-center border-b-2 px-0.5 py-3 text-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:text-disabled",
-    active ? "border-ink font-semibold text-ink" : "border-transparent text-ink-secondary hover:text-ink",
+    active ? "border-brand font-semibold text-ink" : "border-transparent text-ink-secondary hover:text-ink",
   );
 
 /** Underlined page tabs. The design allows four at most. */

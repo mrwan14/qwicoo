@@ -15,6 +15,7 @@ type PublicChat = {
   pending: boolean;
   failure: AssistantFailure | null;
   submit: (text: string | null) => Promise<void>;
+  reset: () => void;
 };
 
 const PublicChatContext = createContext<PublicChat | null>(null);
@@ -74,5 +75,11 @@ function usePublicChat(locale: LocaleCode): PublicChat {
     }
   }
 
-  return { locale, messages, pending, failure, submit };
+  function reset() {
+    if (pending) return;
+    setMessages([]);
+    setFailure(null);
+  }
+
+  return { locale, messages, pending, failure, submit, reset };
 }

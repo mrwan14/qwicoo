@@ -10,6 +10,8 @@ export type LeadDraft = {
   city: string;
   branches: string;
   message: string;
+  /** Optional. The lead API has no promo field, so the code travels inside the message. */
+  promo?: string;
 };
 
 export type LauncherState = { open: boolean; mounted: boolean };
@@ -49,7 +51,10 @@ export function validateLead(
   if (!within(draft.city, 2, 80)) errors.push("city");
   const branches = Number(draft.branches);
   if (!Number.isInteger(branches) || branches < 1 || branches > 500) errors.push("branches");
-  if (draft.message.trim().length > 1000) errors.push("message");
+  const promo = (draft.promo ?? "").trim().slice(0, 40);
+  // Always English so the team can search Partner leads for it in either language.
+  const message = [draft.message.trim(), promo ? `Promo code: ${promo}` : ""].filter(Boolean).join("\n\n");
+  if (message.length > 1000) errors.push("message");
   if (errors.length > 0) return { ok: false, errors };
   return {
     ok: true,
@@ -59,7 +64,7 @@ export function validateLead(
       phone_or_email: draft.contact.trim(),
       city: draft.city.trim(),
       branches_count: Number(draft.branches),
-      message: draft.message.trim(),
+      message,
       locale,
     },
   };

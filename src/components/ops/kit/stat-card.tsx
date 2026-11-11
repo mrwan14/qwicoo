@@ -53,7 +53,7 @@ export function StatCard({
   );
   const surface = cn(
     "grid min-w-0 content-start gap-3 rounded-staff border p-4 shadow-card",
-    ink ? "border-ink bg-ink text-on-ink" : "border-border bg-canvas text-ink",
+    ink ? "border-brand bg-brand text-on-brand" : "border-border bg-canvas text-ink",
     className,
   );
   if (!href) return <div className={surface}>{body}</div>;
@@ -63,7 +63,7 @@ export function StatCard({
       className={cn(
         surface,
         "transition-[background-color,border-color,box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus motion-reduce:hover:translate-y-0",
-        ink ? "hover:bg-[#1f1f1f]" : "hover:border-ink",
+        ink ? "hover:bg-brand/90" : "hover:border-ink",
       )}
     >
       {body}

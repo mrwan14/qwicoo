@@ -11,8 +11,8 @@ const en = {
   },
   items: {
     brand: { title: "Brand", body: "Name, logo, branches and the Qwicoo app listing." },
-    branch: { title: "Branch", body: "Details, opening hours, tables, money and service." },
-    tablesQr: { title: "Tables & QR", body: "Guest PIN, pickup link and table QR codes." },
+    branch: { title: "Branch", body: "Details, opening hours, money and service." },
+    tablesQr: { title: "Tables & QR", body: "Add tables, print their QR codes, the guest PIN and the pickup link." },
     staff: { title: "Staff & roles", body: "Who works here, invites and attendance." },
     customers: { title: "Customers", body: "People who order through the Qwicoo app." },
     payments: { title: "Payments", body: "Card payments through Paymob." },
@@ -24,7 +24,7 @@ const en = {
   back: "Settings",
   listLabel: "Settings",
   staffTabs: { staff: "Staff", invites: "Invites", attendance: "Attendance" },
-  branchTabs: { details: "Details", tables: "Tables", money: "Money", service: "Service" },
+  branchTabs: { details: "Details", money: "Money", service: "Service" },
   branchTabsLabel: "Branch settings",
 } as const;
 
@@ -39,8 +39,8 @@ const ar = {
   },
   items: {
     brand: { title: "العلامة", body: "الاسم والشعار والفروع والظهور في تطبيق كويكو." },
-    branch: { title: "الفرع", body: "البيانات ومواعيد العمل والطاولات والمال والخدمة." },
-    tablesQr: { title: "الطاولات وQR", body: "رمز PIN للضيوف ورابط الاستلام ورموز QR للطاولات." },
+    branch: { title: "الفرع", body: "البيانات ومواعيد العمل والمال والخدمة." },
+    tablesQr: { title: "الطاولات وQR", body: "أضف الطاولات واطبع رموز QR الخاصة بها، ورمز PIN للضيوف ورابط الاستلام." },
     staff: { title: "الفريق والأدوار", body: "من يعمل هنا والدعوات والحضور." },
     customers: { title: "العملاء", body: "من يطلبون عبر تطبيق كويكو." },
     payments: { title: "المدفوعات", body: "الدفع بالبطاقة عبر Paymob." },
@@ -52,7 +52,7 @@ const ar = {
   back: "الإعدادات",
   listLabel: "الإعدادات",
   staffTabs: { staff: "الفريق", invites: "الدعوات", attendance: "الحضور" },
-  branchTabs: { details: "البيانات", tables: "الطاولات", money: "المال", service: "الخدمة" },
+  branchTabs: { details: "البيانات", money: "المال", service: "الخدمة" },
   branchTabsLabel: "إعدادات الفرع",
 } as const;
 

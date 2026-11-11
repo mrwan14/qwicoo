@@ -4,11 +4,19 @@
    tokens also live on body while a staff screen is mounted. */
 
 @theme inline {
+  --color-brand: var(--brand);
+  --color-on-brand: var(--on-brand);
+  --color-brand-tint: var(--brand-tint);
+  --color-brand-ink: var(--brand-ink);
+  --color-page: var(--page);
+  --color-side: var(--side);
   --color-ink-secondary: var(--ink-secondary);
   --color-subtle: var(--subtle);
+  --color-well: var(--well);
   --color-on-ink: var(--on-ink);
   --color-danger: var(--danger);
   --color-danger-bg: var(--danger-bg);
+  --color-danger-fill: var(--danger-fill);
   --color-warning-bg: var(--warning-bg);
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
@@ -19,6 +27,8 @@
   --radius-staff: var(--staff-radius);
   --font-title: var(--staff-font-title);
   --shadow-panel: -12px 0 32px rgb(0 0 0 / 0.08);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 2px 8px rgb(0 0 0 / 0.05);
+  --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.06), 0 8px 20px rgb(0 0 0 / 0.08);
   /* Floating layers (popovers, menus, search results, dialogs) sit above cards, so they get the
      strongest elevation: a hairline edge, a tight contact shadow and a soft wide one. Without it a
      white panel over a white page has no visible edge. */
@@ -32,19 +42,30 @@ body:has(.staff-theme) {
   --ink-secondary: #6b6b6b;
   --canvas: #ffffff;
   --subtle: #fafafa;
+  --well: #f2f2f3;
   --border: #e5e5e5;
   --on-ink: #ffffff;
   --warning: #d97706;
   --warning-bg: #fef3c7;
   --danger: #dc2626;
   --danger-bg: #fee2e2;
+  /* Solid red for filled buttons and badges, with white text in both modes. */
+  --danger-fill: #dc2626;
   --info: #2563eb;
   --info-bg: #dbeafe;
   --success: #16a34a;
   --success-bg: #dcfce7;
   --disabled: #a3a3a3;
-  --focus: #111111;
-  --scrim: rgb(17 17 17 / 0.06);
+  --focus: var(--brand);
+  /* The brand's accent (from Brand look). Ink until a brand picks a colour; set inline by StaffTheme. */
+  --brand: #111111;
+  --on-brand: #ffffff;
+  --brand-tint: #f2f2f3;
+  --brand-ink: #111111;
+  /* Page and sidebar backgrounds. White and light grey until a brand picks a look. */
+  --page: var(--canvas);
+  --side: var(--subtle);
+  --scrim: rgb(17 17 17 / 0.65);
   --staff-radius: 5px;
   --staff-font-title: var(--font-fraunces), Georgia, serif;
 
@@ -55,8 +76,8 @@ body:has(.staff-theme) {
   --card-foreground: var(--ink);
   --popover: var(--canvas);
   --popover-foreground: var(--ink);
-  --primary: var(--ink);
-  --primary-foreground: var(--on-ink);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
   --secondary: var(--subtle);
   --secondary-foreground: var(--ink);
   --muted: var(--subtle);
@@ -99,6 +120,46 @@ body:has(.staff-theme) {
   color: var(--ink);
   background: var(--canvas);
   font-family: var(--font-staff-body), system-ui, sans-serif;
+}
+
+/* Dark mode: each person's own choice (user menu). Same roles, night values. Status colours
+   become lighter tints so they still read on dark surfaces. */
+.staff-theme[data-mode="dark"],
+body[data-staff-mode="dark"]:has(.staff-theme) {
+  color-scheme: dark;
+  --ink: #f1f1f2;
+  --ink-secondary: #a3a3a8;
+  --canvas: #1b1b1e;
+  --subtle: #202024;
+  --well: #26262b;
+  --border: #303036;
+  --on-ink: #111113;
+  --warning: #fbbf24;
+  --warning-bg: #3a2c0b;
+  --danger: #f87171;
+  --danger-bg: #3d1717;
+  --info: #60a5fa;
+  --info-bg: #13254a;
+  --success: #4ade80;
+  --success-bg: #0f2e1d;
+  --disabled: #5c5c63;
+  --scrim: rgb(0 0 0 / 0.72);
+  --brand: #f1f1f2;
+  --on-brand: #111113;
+  --brand-tint: #2a2a30;
+  --brand-ink: #f1f1f2;
+  --page: #111113;
+  --side: #161618;
+  --chart-1: #f1f1f2;
+  --chart-2: #a3a3a8;
+  --chart-3: #6b6b72;
+  --chart-4: #45454b;
+  --chart-5: #303036;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.08), 0 20px 48px -8px rgb(0 0 0 / 0.7);
+  /* The shared Ask Qwicoo chat paints its own surfaces; point them at the night ones. */
+  --chat-surface: var(--canvas);
+  --qw-line: var(--border);
 }
 
 .staff-theme {
@@ -146,4 +207,20 @@ body:has(.staff-theme) [data-sonner-toast][data-type="warning"] [data-icon] {
 
 html[dir="rtl"] body:has(.staff-theme) [data-sonner-toaster] {
   direction: rtl;
+}
+
+/* Settings pages use softer corners: every rounded-staff box, field and button inside rounds a
+   little more, and plain bordered fields and buttons that had no rounding at all get some. */
+.settings-soft {
+  --staff-radius: 10px;
+  --radius: 10px;
+}
+.settings-soft :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), select, textarea, button) {
+  border-radius: var(--staff-radius);
+}
+.settings-soft :where(input[type="file"]) {
+  border-radius: var(--staff-radius);
+}
+.settings-soft :where(button[role="switch"]) {
+  border-radius: 9999px;
 }

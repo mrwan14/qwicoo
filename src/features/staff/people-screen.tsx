@@ -1,18 +1,21 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { ScreenTitle } from "@/components/ops/page-header";
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ops/kit/menu";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
+import { PasswordToggle } from "@/components/auth/password-toggle";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { isUserRole, roleLabel } from "@/lib/auth/roles";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
@@ -25,11 +28,20 @@ import { useScope } from "@/stores/scope";
 
 import { UsualShiftPanel } from "./attendance/usual-shift-panel";
 
-const control = "h-11 w-full rounded-staff border px-3 text-sm";
+const control =
+  "h-11 w-full rounded-[10px] border border-border bg-canvas px-3 text-sm outline-none transition-colors hover:border-ink-secondary/50 focus-visible:border-ink";
 const hint = "text-sm leading-6 text-ink-secondary";
-const sectionCard = "grid max-w-3xl gap-4 rounded-staff bg-canvas p-4 border border-border";
-const primaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
-const secondaryButton = "inline-flex min-h-11 w-fit shrink-0 items-center gap-2 rounded-staff border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+/** Small print under a field label. */
+const fieldHint = "text-xs font-normal leading-5 text-ink-secondary";
+const fieldLabel = "grid gap-1 text-sm font-medium";
+const sectionCard = "grid gap-4 rounded-[16px] border border-border bg-canvas p-5";
+const primaryButton =
+  "inline-flex min-h-10 w-fit shrink-0 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+const secondaryButton =
+  "inline-flex min-h-10 w-fit shrink-0 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+/** Compact actions on a person card. */
+const cardAction =
+  "inline-flex min-h-9 items-center rounded-full border border-border px-3 text-[13px] font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 const ROLES = ["CASHIER", "WAITER", "KITCHEN_STAFF", "RUNNER", "BRANCH_ADMIN"] as const;
 
 function staffRole(role: string): string {
@@ -42,12 +54,16 @@ function clock(value: string | null | undefined): string {
 
 export function StaffScreen() {
   const t = useStaffSection(peopleCopy).staff;
+  const common = useStaffSection(commonCopy);
   const branchId = useScope((state) => state.branchId);
   const brandId = useScope((state) => state.brandId);
   const queryClient = useQueryClient();
+  const { locale } = useLocale();
   const [email, setEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [adding, setAdding] = useState(false);
   const [role, setRole] = useState<(typeof ROLES)[number]>("CASHIER");
   const [shiftStart, setShiftStart] = useState("10:00");
   const [shiftEnd, setShiftEnd] = useState("18:00");
@@ -70,6 +86,7 @@ export function StaffScreen() {
   });
   const create = useMutation({
     mutationFn: async () => {
+      if (password.length < MIN_PASSWORD_LENGTH) throw new Error(fill(t.passwordShort, { n: MIN_PASSWORD_LENGTH }));
       const body: components["schemas"]["StaffCreateRequest"] = {
         email,
         password,
@@ -84,10 +101,11 @@ export function StaffScreen() {
       const result = brandId
         ? await browserApi.POST("/api/v1/brands/{brand_id}/staff", { params: { path: { brand_id: brandId } }, body })
         : await browserApi.POST(path, { params: { path: { branch_id: branchId ?? "" } }, body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.addFailed);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.addFailed, locale);
     },
     onSuccess: () => {
       toast.success(t.added);
+      setAdding(false);
       setFullName("");
       setEmail("");
       setPassword("");
@@ -98,7 +116,7 @@ export function StaffScreen() {
   const remove = useMutation({
     mutationFn: async (staffId: string) => {
       const result = await browserApi.DELETE("/api/v1/staff/{staff_id}", { params: { path: { staff_id: staffId } } });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.deactivateFailed);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.deactivateFailed, locale);
     },
     onSuccess: () => {
       setRemoveId(null);
@@ -110,10 +128,23 @@ export function StaffScreen() {
     mutationFn: async (input: { id: string; full_name: string }) => {
       const body: components["schemas"]["StaffUpdateRequest"] = { full_name: input.full_name };
       const result = await browserApi.PATCH("/api/v1/staff/{staff_id}", { params: { path: { staff_id: input.id } }, body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.updateFailed);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.updateFailed, locale);
     },
     onSuccess: () => {
       toast.success(t.nameSaved);
+      void queryClient.invalidateQueries({ queryKey: ["staff"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  // Deactivating keeps the account (and its email), so it can always come back.
+  const reactivate = useMutation({
+    mutationFn: async (staffId: string) => {
+      const body: components["schemas"]["StaffUpdateRequest"] = { is_active: true };
+      const result = await browserApi.PATCH("/api/v1/staff/{staff_id}", { params: { path: { staff_id: staffId } }, body });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.reactivateFailed, locale);
+    },
+    onSuccess: () => {
+      toast.success(t.reactivated);
       void queryClient.invalidateQueries({ queryKey: ["staff"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -126,9 +157,7 @@ export function StaffScreen() {
   const people = staff.data;
   const staffSearch = staffQuery.trim().toLowerCase();
   const visiblePeople = staffSearch
-    ? people.filter((person) =>
-        [person.full_name, person.email, person.role, staffRole(person.role)].join(" ").toLowerCase().includes(staffSearch),
-      )
+    ? people.filter((person) => [person.full_name, person.email, person.role, staffRole(person.role)].join(" ").toLowerCase().includes(staffSearch))
     : people;
   const personToRemove = people.find((person) => person.id === removeId);
 
@@ -139,58 +168,101 @@ export function StaffScreen() {
         <p className={`mt-1 max-w-2xl ${hint}`}>{t.intro}</p>
       </header>
 
-      <form className={sectionCard} onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-        <div>
-          <h2 className="text-lg font-semibold">{t.addPerson}</h2>
-          <p className={hint}>{t.addHint}</p>
+      <section className={sectionCard}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="grid gap-0.5">
+            <h2 className="text-base font-semibold">{t.addPerson}</h2>
+            <p className="max-w-2xl text-sm leading-6 text-ink-secondary">{t.addHint}</p>
+          </div>
+          {!adding ? (
+            <button type="button" className={primaryButton} onClick={() => setAdding(true)}>
+              <Plus aria-hidden className="size-4" />
+              {t.addStaff}
+            </button>
+          ) : null}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm">
-            {t.fullName}
-            <span className={hint}>{t.fullNameHint}</span>
-            <input className={control} value={fullName} onChange={(event) => setFullName(event.target.value)} required />
-          </label>
-          <label className="grid gap-1 text-sm">
-            {t.email}
-            <span className={hint}>{t.emailHint}</span>
-            <input className={control} type="email" autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} required />
-          </label>
-          <label className="grid gap-1 text-sm">
-            {t.password}
-            <span className={hint}>{t.passwordHint}</span>
-            <input className={control} type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-          </label>
-          <label className="grid gap-1 text-sm">
-            {t.role}
-            <span className={hint}>{t.hints[role]}</span>
-            <select className={control} value={role} onChange={(event) => setRole(event.target.value as typeof role)}>
-              {ROLES.map((item) => <option key={item} value={item}>{roleLabel(item)}</option>)}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            {usualCopy.start}
-            <input className={control} type="time" value={shiftStart} onChange={(event) => setShiftStart(event.target.value)} required />
-          </label>
-          <label className="grid gap-1 text-sm">
-            {usualCopy.end}
-            <input className={control} type="time" value={shiftEnd} onChange={(event) => setShiftEnd(event.target.value)} required />
-            {shiftEnd && shiftStart && shiftEnd < shiftStart ? <span className={hint}>{usualCopy.endHint}</span> : null}
-          </label>
-        </div>
-        <button className={primaryButton} type="submit" disabled={create.isPending}>
-          <Plus aria-hidden className="size-4" />
-          {create.isPending ? t.adding : t.addStaff}
-        </button>
-      </form>
+        {adding ? (
+          <form
+            className="grid gap-4 border-t border-border pt-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
+            }}
+          >
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <label className={fieldLabel}>
+                {t.fullName}
+                <span className={fieldHint}>{t.fullNameHint}</span>
+                <input className={control} value={fullName} onChange={(event) => setFullName(event.target.value)} required />
+              </label>
+              <label className={fieldLabel}>
+                {t.email}
+                <span className={fieldHint}>{t.emailHint}</span>
+                <input className={control} type="email" autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} required />
+              </label>
+              <label className={fieldLabel}>
+                {t.password}
+                <span className={fieldHint}>{fill(t.passwordHint, { n: MIN_PASSWORD_LENGTH })}</span>
+                <span className="relative">
+                  <input
+                    className={`${control} w-full pe-11`}
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    minLength={MIN_PASSWORD_LENGTH}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                  />
+                  <PasswordToggle
+                    shown={showPassword}
+                    onToggle={() => setShowPassword((value) => !value)}
+                    showLabel={t.showPassword}
+                    hideLabel={t.hidePassword}
+                  />
+                </span>
+              </label>
+              <label className={fieldLabel}>
+                {t.role}
+                <span className={fieldHint}>{t.hints[role]}</span>
+                <select className={control} value={role} onChange={(event) => setRole(event.target.value as typeof role)}>
+                  {ROLES.map((item) => (
+                    <option key={item} value={item}>
+                      {roleLabel(item)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={fieldLabel}>
+                {usualCopy.start}
+                <input className={control} type="time" value={shiftStart} onChange={(event) => setShiftStart(event.target.value)} required />
+              </label>
+              <label className={fieldLabel}>
+                {usualCopy.end}
+                <input className={control} type="time" value={shiftEnd} onChange={(event) => setShiftEnd(event.target.value)} required />
+                {shiftEnd && shiftStart && shiftEnd < shiftStart ? <span className={fieldHint}>{usualCopy.endHint}</span> : null}
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button className={primaryButton} type="submit" disabled={create.isPending}>
+                <Plus aria-hidden className="size-4" />
+                {create.isPending ? t.adding : t.addStaff}
+              </button>
+              <button type="button" className={secondaryButton} onClick={() => setAdding(false)}>
+                {common.cancel}
+              </button>
+            </div>
+          </form>
+        ) : null}
+      </section>
 
       <section className="grid gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">{t.peopleHere}</h2>
+            <h2 className="text-base font-semibold">{t.peopleHere}</h2>
             <p className={hint}>{people.length === 1 ? t.onePerson : fill(t.peopleCount, { count: people.length })}</p>
           </div>
           <label className="grid w-full max-w-xs gap-1 text-sm">
-            {t.search}
+            <span className="sr-only">{t.search}</span>
             <input className={control} value={staffQuery} onChange={(event) => setStaffQuery(event.target.value)} placeholder={t.searchPlaceholder} />
           </label>
         </div>
@@ -204,6 +276,8 @@ export function StaffScreen() {
               saving={rename.isPending && rename.variables?.id === person.id}
               onRename={(full_name) => rename.mutate({ id: person.id, full_name })}
               onDeactivate={() => setRemoveId(person.id)}
+              reactivating={reactivate.isPending && reactivate.variables === person.id}
+              onReactivate={() => reactivate.mutate(person.id)}
             />
           ))}
         </ul>
@@ -227,11 +301,15 @@ function StaffCard({
   saving,
   onRename,
   onDeactivate,
+  reactivating,
+  onReactivate,
 }: {
   person: components["schemas"]["StaffResponse"];
   saving: boolean;
   onRename: (fullName: string) => void;
   onDeactivate: () => void;
+  reactivating: boolean;
+  onReactivate: () => void;
 }) {
   const t = useStaffSection(peopleCopy).staff;
   const common = useStaffSection(commonCopy);
@@ -240,23 +318,26 @@ function StaffCard({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(person.full_name);
   const edited = name.trim().length > 0 && name.trim() !== person.full_name.trim();
+  // Close the editor once the saved name comes back from the server. (Comparing the draft with the
+  // saved name closed it the moment it opened, so "Change name" did nothing.)
   useEffect(() => {
-    if (editing && person.full_name.trim() === name.trim()) setEditing(false);
-  }, [editing, name, person.full_name]);
-  const shift = clock(person.shift_start_time) && clock(person.shift_end_time)
-    ? `${clock(person.shift_start_time)}–${clock(person.shift_end_time)}`
-    : "";
+    setEditing(false);
+  }, [person.full_name]);
+  const shift = clock(person.shift_start_time) && clock(person.shift_end_time) ? `${clock(person.shift_start_time)}–${clock(person.shift_end_time)}` : "";
 
   return (
-    <li className="grid content-start gap-3 rounded-staff bg-canvas p-4 border border-border">
+    <li className="grid content-start gap-2.5 rounded-[14px] border border-border bg-canvas p-4 transition-shadow hover:shadow-[0_4px_14px_rgb(0_0_0/0.06)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="grid gap-1">
-          <p className="font-semibold">{person.full_name}</p>
-          <p className="text-sm text-ink-secondary">{person.email}</p>
+        <div className="grid min-w-0 gap-0.5">
+          <p className="truncate font-semibold">{person.full_name}</p>
+          <p className="truncate text-sm text-ink-secondary">{person.email}</p>
         </div>
         <StatusChip tone={person.is_active ? "available" : "soldout"}>{person.is_active ? t.active : t.inactive}</StatusChip>
       </div>
-      <p className="text-sm">{staffRole(person.role)}{shift ? ` · ${shift}` : ""}</p>
+      <p className="w-fit rounded-full bg-subtle px-2.5 py-0.5 text-xs font-medium">
+        {staffRole(person.role)}
+        {shift ? ` · ${shift}` : ""}
+      </p>
       {editing ? (
         <form
           className="grid gap-2"
@@ -271,7 +352,9 @@ function StaffCard({
           </label>
           <div className="flex flex-wrap gap-2">
             {edited ? (
-              <button className={primaryButton} type="submit" disabled={saving}>{saving ? t.saving : t.saveName}</button>
+              <button className={primaryButton} type="submit" disabled={saving}>
+                {saving ? t.saving : t.saveName}
+              </button>
             ) : null}
             <button
               type="button"
@@ -286,22 +369,38 @@ function StaffCard({
           </div>
         </form>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={secondaryButton} onClick={() => { setName(person.full_name); setEditing(true); }}>
+        <div className="flex flex-wrap gap-1.5 border-t border-border pt-3">
+          <button
+            type="button"
+            className={cardAction}
+            onClick={() => {
+              setName(person.full_name);
+              setEditing(true);
+            }}
+          >
             {t.changeName}
           </button>
-          <button type="button" className={secondaryButton} onClick={() => setShiftOpen(true)}>
+          <button type="button" className={cardAction} onClick={() => setShiftOpen(true)}>
             {usualCopy.button}
           </button>
           {person.is_active ? (
             <button
               type="button"
-              className="inline-flex min-h-11 items-center rounded-staff border border-danger/30 px-4 text-sm font-medium text-danger hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="ms-auto inline-flex min-h-9 items-center rounded-full px-3 text-[13px] font-medium text-danger hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               onClick={onDeactivate}
             >
               {t.deactivate}
             </button>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              className="ms-auto inline-flex min-h-9 items-center rounded-full px-3 text-[13px] font-medium text-ink hover:bg-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+              disabled={reactivating}
+              onClick={onReactivate}
+            >
+              {reactivating ? t.reactivating : t.reactivate}
+            </button>
+          )}
         </div>
       )}
       {shiftOpen ? <UsualShiftPanel person={person} onClose={() => setShiftOpen(false)} /> : null}
@@ -310,7 +409,12 @@ function StaffCard({
 }
 
 function normaliseFeatureKey(raw: string): string | null {
-  const key = raw.trim().toUpperCase().replace(/[\s-]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+  const key = raw
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
   return /^[A-Z0-9_]{2,50}$/.test(key) ? key : null;
 }
 
@@ -332,6 +436,10 @@ export function FeaturesScreen() {
       return result.data.items;
     },
   });
+  // One brand: nothing to choose, so pick it.
+  useEffect(() => {
+    if (!brandId && brands.data?.length === 1) focusPlatform({ brandId: brands.data[0].id, branchId: null });
+  }, [brandId, brands.data, focusPlatform]);
   const platform = useQuery({
     queryKey: ["features-platform"],
     queryFn: async () => {
@@ -416,29 +524,6 @@ export function FeaturesScreen() {
         <p className={`mt-1 max-w-2xl ${hint}`}>{t.intro}</p>
       </header>
 
-      <form className="grid max-w-3xl gap-4 rounded-staff bg-canvas p-4 border border-border" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-        <div>
-          <h2 className="text-lg font-semibold">{t.addTitle}</h2>
-          <p className={hint}>{t.addHint}</p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm">
-            {t.key}
-            <span className={hint}>{t.keyHint}</span>
-            <input className={control} value={key} onChange={(event) => setKey(event.target.value)} required />
-          </label>
-          <label className="grid gap-1 text-sm">
-            {t.name}
-            <span className={hint}>{t.nameHint}</span>
-            <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
-          </label>
-        </div>
-        <button className={primaryButton} type="submit" disabled={create.isPending} aria-describedby="add-feature-hint">
-          <Plus aria-hidden className="size-4" />
-          {create.isPending ? t.adding : t.addButton}
-        </button>
-        <p id="add-feature-hint" className={hint}>{t.addDescribed}</p>
-      </form>
 
       <section className="grid max-w-3xl gap-3">
         <div>
@@ -457,7 +542,9 @@ export function FeaturesScreen() {
           >
             <option value="">{brands.isFetching ? t.loadingBrands : t.chooseBrand}</option>
             {(brands.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>{item.name}</option>
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
             ))}
           </select>
         </label>
@@ -471,16 +558,17 @@ export function FeaturesScreen() {
         </div>
         {platform.isLoading ? <LoadingState label={t.loading} /> : null}
         {platform.isError ? <ErrorState body={platform.error.message} onRetry={() => void platform.refetch()} /> : null}
-        {platform.isSuccess && features.length === 0 ? (
-          <EmptyState title={t.emptyTitle} body={t.emptyBody} />
-        ) : null}
+        {platform.isSuccess && features.length === 0 ? <EmptyState title={t.emptyTitle} body={t.emptyBody} /> : null}
         {features.length > 0 ? (
           <ul className="grid gap-3">
             {features.map((feature) => {
               const enabled = enabledKeys.has(feature.id);
               const pending = pendingToggle?.featureKey === feature.id;
               return (
-                <li key={feature.id} className="flex flex-col gap-3 rounded-staff bg-canvas p-4 border border-border sm:flex-row sm:items-center sm:justify-between">
+                <li
+                  key={feature.id}
+                  className="flex flex-col gap-3 rounded-staff bg-canvas p-4 border border-border sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div className="grid gap-1">
                     <p className="font-semibold">{pickLocale({ en: feature.name_en, ar: feature.name_ar }, locale) || feature.name_en}</p>
                     <p className="text-sm text-ink-secondary">{feature.id}</p>
@@ -494,19 +582,32 @@ export function FeaturesScreen() {
                       disabled={!brandId || toggle.isPending}
                       onClick={() => toggle.mutate({ featureKey: feature.id, enabled: !enabled })}
                     >
-                      {pending ? (enabled ? t.disabling : t.enabling) : enabled ? fill(t.disableFor, { name: brandName ?? t.brandFallback }) : fill(t.enableFor, { name: brandName ?? t.brandFallback })}
+                      {pending
+                        ? enabled
+                          ? t.disabling
+                          : t.enabling
+                        : enabled
+                          ? fill(t.disableFor, { name: brandName ?? t.brandFallback })
+                          : fill(t.enableFor, { name: brandName ?? t.brandFallback })}
                     </button>
                     {feature.is_core ? (
                       <span className="text-sm text-ink-secondary">{t.core}</span>
                     ) : (
-                      <button
-                        type="button"
-                        className="inline-flex min-h-11 items-center rounded-staff border border-danger/30 px-4 text-sm font-medium text-danger hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-                        disabled={remove.isPending}
-                        onClick={() => setRemoveKey(feature.id)}
-                      >
-                        {t.delete}
-                      </button>
+                      // Deleting a feature is drastic, so it sits behind a menu (and still asks first).
+                      <Menu>
+                        <MenuTrigger
+                          aria-label={fill(t.moreFor, { name: feature.name_en })}
+                          className="inline-flex size-11 items-center justify-center rounded-staff text-ink-secondary outline-none hover:bg-well hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"
+                        >
+                          <MoreHorizontal aria-hidden className="size-5" />
+                        </MenuTrigger>
+                        <MenuContent align="end">
+                          <MenuItem className="text-danger" disabled={remove.isPending} onClick={() => setRemoveKey(feature.id)}>
+                            <Trash2 aria-hidden />
+                            {t.delete}
+                          </MenuItem>
+                        </MenuContent>
+                      </Menu>
                     )}
                   </div>
                 </li>
@@ -530,12 +631,8 @@ export function FeaturesScreen() {
           <h2 className="text-lg font-semibold">{t.entitlements}</h2>
           <p className={hint}>{brandName ? fill(t.entitlementsFor, { name: brandName }) : t.entitlementsChoose}</p>
         </div>
-        {!brandId ? (
-          <EmptyState title={t.noBrandTitle} body={t.noBrandBody} />
-        ) : null}
-        {brandId && brand.isSuccess && entitlements.length === 0 ? (
-          <EmptyState title={t.noneTitle} body={t.noneBody} />
-        ) : null}
+        {!brandId ? <EmptyState title={t.noBrandTitle} body={t.noBrandBody} /> : null}
+        {brandId && brand.isSuccess && entitlements.length === 0 ? <EmptyState title={t.noneTitle} body={t.noneBody} /> : null}
         {entitlements.length > 0 ? (
           <ul className="grid gap-3 sm:grid-cols-2">
             {entitlements.map((item) => {
@@ -570,6 +667,41 @@ export function FeaturesScreen() {
           </ul>
         ) : null}
       </section>
+      {/* Adding a platform feature is a rare, developer-side job: tucked away below the daily work. */}
+      <details className="group max-w-3xl rounded-staff border border-border bg-canvas">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-ink">
+          <Plus aria-hidden className="size-4 transition-transform group-open:rotate-45" />
+          {t.addTitle}
+        </summary>
+      <form
+        className="grid gap-4 border-t border-border p-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          create.mutate();
+        }}
+      >
+        <p className={hint}>{t.addHint}</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm">
+            {t.key}
+            <span className={hint}>{t.keyHint}</span>
+            <input className={control} value={key} onChange={(event) => setKey(event.target.value)} required />
+          </label>
+          <label className="grid gap-1 text-sm">
+            {t.name}
+            <span className={hint}>{t.nameHint}</span>
+            <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
+          </label>
+        </div>
+        <button className={primaryButton} type="submit" disabled={create.isPending} aria-describedby="add-feature-hint">
+          <Plus aria-hidden className="size-4" />
+          {create.isPending ? t.adding : t.addButton}
+        </button>
+        <p id="add-feature-hint" className={hint}>
+          {t.addDescribed}
+        </p>
+      </form>
+      </details>
     </div>
   );
 }

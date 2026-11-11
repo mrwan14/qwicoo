@@ -64,6 +64,10 @@ export function DeliveryScreen() {
       return result.data.items;
     },
   });
+  // One brand: nothing to choose, so pick it.
+  useEffect(() => {
+    if (!brandId && brands.data?.length === 1) focusPlatform({ brandId: brands.data[0].id, branchId: null });
+  }, [brandId, brands.data, focusPlatform]);
   const govs = useQuery({
     queryKey: ["delivery-govs", brandId],
     enabled: Boolean(brandId),

@@ -20,6 +20,11 @@ export function canOpenMenuAdmin(role: UserRole | null | undefined): boolean {
   return can(role, "menu.manage");
 }
 
+/** Promo codes belong to the brand; the API lets only super and brand admins manage them. */
+export function canManagePromos(role: UserRole | null | undefined): boolean {
+  return role === "SUPER_ADMIN" || role === "BRAND_ADMIN";
+}
+
 export function canManageStations(role: UserRole | null | undefined): boolean {
   return can(role, "menu.manage");
 }

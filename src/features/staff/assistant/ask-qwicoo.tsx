@@ -1,9 +1,10 @@
 "use client";
 
-import { Ban, Building2, Clock, MessageCircle, TrendingUp, Utensils, Wallet } from "lucide-react";
+import { Ban, Building2, Clock, Store, TrendingUp, Utensils, Wallet } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { classifyAssistantError, presentAnswer, type AssistantFailure } from "@/components/assistant/model";
+import { AskQwicooMark } from "@/components/brand/ask-mark";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useStaffSession } from "@/components/ops/staff-session";
 import { cn } from "cn";
@@ -35,6 +36,7 @@ const STARTER_ICON: Record<StarterKey, ReactNode> = {
   cancelled: <Ban aria-hidden className="size-4" />,
   hours: <Clock aria-hidden className="size-4" />,
   topBranch: <Building2 aria-hidden className="size-4" />,
+  platformWeek: <Store aria-hidden className="size-4" />,
 };
 
 function failureBody(status: number, error: unknown) {
@@ -239,7 +241,7 @@ export function AskQwicooButton() {
         aria-label={t.ask}
         onClick={() => setOpen(true)}
       >
-        <MessageCircle aria-hidden className="size-4" />
+        <AskQwicooMark size={20} />
         <span className="hidden xl:inline">{t.ask}</span>
         <kbd dir="ltr" className="ms-1 hidden text-[11px] font-normal text-ink-secondary xl:inline">{mac ? t.shortcut : t.shortcutCtrl}</kbd>
       </button>

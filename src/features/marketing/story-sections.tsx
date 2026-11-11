@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { usePrefersReducedMotion } from "@/components/brand/animated-logo";
-import { FLOW_KEYS, SWAP_KEYS, landingCopy, type FlowKey, type SwapKey } from "@/features/marketing/copy";
+import { BACK_OFFICE_KEYS, FLOW_KEYS, landingCopy, type BackOfficeKey, type FlowKey } from "@/features/marketing/copy";
 import { withoutMotion } from "@/features/marketing/motion";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
@@ -29,18 +29,13 @@ const NODE_POS: Record<FlowKey, { left: string; top: string; color: string }> = 
   drive: { left: "11%", top: "50%", color: "var(--orange)" },
 };
 
-const WORD_COLOR: Record<SwapKey, string> = {
-  tables: "text-signal-new",
-  kitchen: "text-[var(--cooking-text)]",
-  drive: "text-sage-deep",
-  branches: "text-ink",
-};
-
-const KICKER: Record<SwapKey, string> = {
-  tables: "bg-signal-new text-white",
-  kitchen: "bg-signal-wip text-ink",
-  drive: "bg-sage-deep text-white",
-  branches: "bg-ink text-canvas",
+const BACK_OFFICE_TONE: Record<BackOfficeKey, string> = {
+  stock: "var(--orange)",
+  purchasing: "var(--amber)",
+  attendance: "var(--sage)",
+  reports: "var(--orange)",
+  delivery: "var(--amber)",
+  brands: "var(--sage)",
 };
 
 const TABLES = ["o", "", "a", "s", "", "o", "a", "", "s", "", "a", "s"] as const;
@@ -48,50 +43,38 @@ const TABLES = ["o", "", "a", "s", "", "o", "a", "", "s", "", "a", "s"] as const
 export function StorySections({ locale }: { locale: LocaleCode }) {
   return (
     <>
-      <Swap locale={locale} />
+      <Problems locale={locale} />
       <Scan locale={locale} />
       <Bento locale={locale} />
+      <BackOffice locale={locale} />
       <Hub locale={locale} />
     </>
   );
 }
 
-function Swap({ locale }: { locale: LocaleCode }) {
-  const t = landingCopy[locale].swap;
+function Problems({ locale }: { locale: LocaleCode }) {
+  const t = landingCopy[locale].problems;
   const reduced = usePrefersReducedMotion();
-  const { ref, progress } = useScrollProgress(reduced);
-  const index = Math.min(SWAP_KEYS.length - 1, Math.floor(progress * SWAP_KEYS.length * 0.999));
-
   return (
-    <section ref={ref} className="qw-swap relative border-b border-qw-line bg-white">
-      <div className="qw-swap-sticky qw-wrap">
-        <h2 className="qw-display m-0 text-[clamp(46px,6.2vw,104px)] max-[900px]:text-[44px]">
-          <span className="block text-[#b9b0a5]">
-            {t.line1}
-            <br />
-            {t.line2}
-          </span>
-          <span className="qw-words">
-            {SWAP_KEYS.map((key, item) => (
-              <span key={key} className={`${WORD_COLOR[key]} ${item === index ? "qw-on" : item < index ? "qw-out" : ""}`}>
-                {t.words[key]}
-              </span>
-            ))}
-          </span>
-        </h2>
-        <ol className="grid border-t-2 border-ink">
-          {SWAP_KEYS.map((key, item) => (
-            <li key={key} className={`qw-side-item grid grid-cols-[44px_1fr] gap-3 border-b border-qw-line py-[18px] max-[900px]:py-2.5 ${item === index ? "qw-on" : ""}`}>
-              <span className={`qw-display grid size-11 place-items-center text-sm ${KICKER[key]}`}>{String(item + 1).padStart(2, "0")}</span>
-              <span>
-                <b className="block text-lg">{t.items[key].title}</b>
-                <p className="m-0 mt-0.5 text-[15px] text-quiet max-[900px]:text-[13px]">{t.items[key].body}</p>
-              </span>
-            </li>
+    <section className="border-b border-qw-line bg-white py-[100px] max-[900px]:py-16">
+      <div className="qw-wrap">
+        <Reveal reduced={reduced} className="max-w-3xl">
+          <span className="text-xs font-bold tracking-[0.14em] text-sage-deep uppercase">{t.eyebrow}</span>
+          <h2 className="qw-display mt-3.5 text-[clamp(34px,4.4vw,64px)]">{t.title}</h2>
+        </Reveal>
+        <div className="mt-12 grid gap-4 lg:grid-cols-2">
+          {t.items.map((item, index) => (
+            <Reveal key={item.title} reduced={reduced} delay={index % 2 ? "qw-d1" : undefined} className="qw-bx grid content-start gap-3 border border-qw-line bg-canvas p-6">
+              <h3 className="text-xl font-semibold">{item.title}</h3>
+              <p className="m-0 text-[15px] leading-relaxed text-quiet">{item.body}</p>
+              <p className="m-0 border-s-4 border-s-sage ps-3 text-[15px] leading-relaxed">
+                <b className="block text-xs font-bold tracking-[0.12em] text-sage-deep uppercase">{t.fixLabel}</b>
+                {item.fix}
+              </p>
+            </Reveal>
           ))}
-        </ol>
+        </div>
       </div>
-      <div className={withoutMotion(reduced, "qw-bar")} style={{ width: `${(reduced ? 1 : progress) * 100}%` }} />
     </section>
   );
 }
@@ -308,6 +291,43 @@ function Bento({ locale }: { locale: LocaleCode }) {
   );
 }
 
+function BackOffice({ locale }: { locale: LocaleCode }) {
+  const t = landingCopy[locale].backOffice;
+  const reduced = usePrefersReducedMotion();
+  return (
+    <section id="back-office" className="scroll-mt-20 border-y border-qw-line bg-canvas py-[100px] max-[900px]:py-16">
+      <div className="qw-wrap">
+        <div className="grid items-end gap-6 lg:grid-cols-2 lg:gap-12">
+          <Reveal reduced={reduced}>
+            <span className="text-xs font-bold tracking-[0.14em] text-sage-deep uppercase">{t.eyebrow}</span>
+            <h2 className="qw-display mt-3.5 text-[clamp(34px,4.4vw,64px)]">{t.title}</h2>
+          </Reveal>
+          <Reveal reduced={reduced} delay="qw-d1">
+            <p className="m-0 max-w-[520px] text-lg text-quiet">{t.body}</p>
+          </Reveal>
+        </div>
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {BACK_OFFICE_KEYS.map((key, index) => (
+            <Reveal
+              key={key}
+              reduced={reduced}
+              delay={index % 3 === 1 ? "qw-d1" : index % 3 === 2 ? "qw-d2" : undefined}
+              className="qw-bx grid content-start gap-2 border border-ink bg-white p-6"
+            >
+              <span className="flex items-center gap-2 text-[11px] font-bold tracking-[0.12em] text-quiet uppercase">
+                <i aria-hidden className="inline-block size-2.5" style={{ background: BACK_OFFICE_TONE[key] }} />
+                {t.items[key].tag}
+              </span>
+              <h3 className="qw-display text-[22px]">{t.items[key].title}</h3>
+              <p className="m-0 text-[15px] leading-relaxed text-quiet">{t.items[key].body}</p>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Hub({ locale }: { locale: LocaleCode }) {
   const t = landingCopy[locale].flowHub;
   const reduced = usePrefersReducedMotion();
@@ -476,23 +496,4 @@ function Rings() {
       <circle cx="46" cy="16" r="11" fill="none" stroke="#6DA290" strokeWidth="5" />
     </svg>
   );
-}
-
-function useScrollProgress(reduced: boolean): { ref: RefObject<HTMLElement | null>; progress: number } {
-  const ref = useRef<HTMLElement>(null);
-  const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    if (reduced) return;
-    const el = ref.current;
-    if (!el) return;
-    const onScroll = () => {
-      const rect = el.getBoundingClientRect();
-      const total = el.offsetHeight - window.innerHeight;
-      setProgress(Math.max(0, Math.min(1, -rect.top / Math.max(1, total))));
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [reduced]);
-  return { ref, progress };
 }

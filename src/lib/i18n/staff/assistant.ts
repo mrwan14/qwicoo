@@ -37,6 +37,7 @@ const en = {
     cancelled: "Cancelled orders today",
     hours: "Busiest hours this month",
     topBranch: "Which branch sold the most this month?",
+    platformWeek: "Sales across all brands this week",
   },
   usage: "{questions} of {limit} questions this month",
   leads: {
@@ -90,6 +91,7 @@ const ar = {
     cancelled: "الطلبات الملغاة اليوم",
     hours: "أكثر الساعات ازدحاماً هذا الشهر",
     topBranch: "أي فرع باع أكثر هذا الشهر؟",
+    platformWeek: "المبيعات في كل العلامات هذا الأسبوع",
   },
   usage: "{questions} من {limit} سؤالاً هذا الشهر",
   leads: {

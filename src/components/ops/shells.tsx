@@ -18,7 +18,9 @@ import { HeaderClock } from "@/features/staff/attendance/header-clock";
 import { AskQwicooButton } from "@/features/staff/assistant/ask-qwicoo";
 import { StaffConnectionBanner } from "@/features/staff/offline/staff-connection-banner";
 import { useSidebarSubnav } from "@/features/staff/sidebar-subnav";
+import { useLowRatingsCount } from "@/features/staff/reports/low-ratings";
 import { usePendingConfirmationCount } from "@/hooks/use-floor-live";
+import { fill } from "@/lib/i18n/dictionary";
 import { commonCopy } from "@/lib/i18n/staff/common";
 import { kitCopy } from "@/lib/i18n/staff/kit";
 import { shellCopy } from "@/lib/i18n/staff/shell";
@@ -63,6 +65,7 @@ function NavDrawer({
   items,
   activeKey,
   badges,
+  badgeLabels,
   subnav,
 }: {
   open: boolean;
@@ -71,6 +74,7 @@ function NavDrawer({
   items: readonly NavItem[];
   activeKey: SidebarKey | null;
   badges: Partial<Record<SidebarKey, number>>;
+  badgeLabels: Partial<Record<SidebarKey, string>>;
   subnav: Partial<Record<SidebarKey, readonly SidebarSubLink[]>>;
 }) {
   const t = useStaffSection(shellCopy);
@@ -82,12 +86,13 @@ function NavDrawer({
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-scrim backdrop-blur-[2px] transition-opacity duration-300 ease-out data-ending-style:duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 lg:hidden" />
         <Dialog.Popup
           aria-label={t.mainNav}
-          className="fixed inset-y-0 start-0 z-50 flex w-[280px] max-w-[85vw] flex-col overflow-y-auto border-e border-border bg-subtle shadow-panel outline-none will-change-transform transition-transform duration-[380ms] ease-drawer data-ending-style:duration-[240ms] data-ending-style:ease-in data-ending-style:-translate-x-full data-starting-style:-translate-x-full rtl:data-ending-style:translate-x-full rtl:data-starting-style:translate-x-full lg:hidden"
+          className="fixed inset-y-0 start-0 z-50 flex w-[280px] max-w-[85vw] flex-col overflow-y-auto border-e border-border bg-side shadow-panel outline-none will-change-transform transition-transform duration-[380ms] ease-drawer data-ending-style:duration-[240ms] data-ending-style:ease-in data-ending-style:-translate-x-full data-starting-style:-translate-x-full rtl:data-ending-style:translate-x-full rtl:data-starting-style:translate-x-full lg:hidden"
         >
           <SidebarContent
             entries={entries}
             activeKey={activeKey}
             badges={badges}
+            badgeLabels={badgeLabels}
             subnav={subnav}
             onNavigate={close}
             headerEnd={
@@ -151,6 +156,7 @@ function AdminShell({ children }: { children: ReactNode }) {
   const me = useStaffSession();
   const activeBranchId = useScope((state) => state.branchId);
   const pending = usePendingConfirmationCount();
+  const lowRatings = useLowRatingsCount();
   const [navOpen, setNavOpen] = useState(false);
   const [collapsed, toggleCollapsed] = useCollapsedSidebar();
   const subnav = useSidebarSubnav(me, pathname);
@@ -159,22 +165,36 @@ function AdminShell({ children }: { children: ReactNode }) {
   const items = navForUser(me, activeBranchId);
   const entries = sidebarForUser(me, activeBranchId);
   const activeKey = activeSidebarKey(pathname, entries, items);
-  const badges: Partial<Record<SidebarKey, number>> = pending ? { orders: pending } : {};
+  const badges: Partial<Record<SidebarKey, number>> = {
+    ...(pending ? { orders: pending } : {}),
+    ...(lowRatings ? { reports: lowRatings } : {}),
+  };
+  const badgeLabels: Partial<Record<SidebarKey, string>> = lowRatings
+    ? { reports: fill(t.lowRatings, { count: lowRatings }) }
+    : {};
 
   return (
-    <div className="flex min-h-dvh bg-canvas text-ink">
+    <div className="flex min-h-dvh bg-page text-ink">
       <SkipLink />
       <aside
         className={cn(
-          "sticky top-0 hidden h-dvh shrink-0 overflow-x-hidden overflow-y-auto border-e border-border bg-subtle transition-[width] duration-200 ease-out print:hidden lg:block motion-reduce:transition-none",
+          "sticky top-0 hidden h-dvh shrink-0 overflow-x-hidden overflow-y-auto border-e border-border bg-side transition-[width] duration-200 ease-out print:hidden lg:block motion-reduce:transition-none",
           collapsed ? "w-16" : "w-[232px]",
         )}
       >
-        <SidebarContent entries={entries} activeKey={activeKey} badges={badges} subnav={subnav} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
+        <SidebarContent
+          entries={entries}
+          activeKey={activeKey}
+          badges={badges}
+          badgeLabels={badgeLabels}
+          subnav={subnav}
+          collapsed={collapsed}
+          onToggleCollapsed={toggleCollapsed}
+        />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <ConnectionBanner items={items} />
-        <header className="sticky top-0 z-30 flex h-[60px] items-center gap-3 border-b border-border bg-canvas px-4 print:hidden sm:px-6">
+        <header className="sticky top-0 z-30 flex h-[60px] items-center gap-3 border-b border-border bg-page px-4 print:hidden sm:px-6">
           <button
             type="button"
             aria-label={t.openNav}
@@ -206,6 +226,7 @@ function AdminShell({ children }: { children: ReactNode }) {
         items={items}
         activeKey={activeKey}
         badges={badges}
+        badgeLabels={badgeLabels}
         subnav={subnav}
       />
     </div>

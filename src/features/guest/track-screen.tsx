@@ -1,39 +1,50 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, BellRing, CircleCheck, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Money } from "@/components/ops/money";
-import { guestStatus, PAYABLE_STATUSES } from "@/features/guest/copy";
-import { GuestReveal, GuestTrackSteps, OrderWaitingScene } from "@/features/guest/guest-motion";
+import { guestServiceStatus, guestServiceType, guestStatus } from "@/features/guest/copy";
+import { GuestReveal, OrderWaitingScene } from "@/features/guest/guest-motion";
 import { GuestSkeleton } from "@/features/guest/ordering-status";
-import { PayOnlineSheet } from "@/features/guest/pay-online-sheet";
-import { isGuestSessionGone, rememberPaymobOffer, resumeIfSessionGone } from "@/features/guest/session";
-import { BillSheet, WaiterSheet } from "@/features/guest/service-sheets";
+import { BILL_QUERY_KEY, PayBillSheet, useTableBill } from "@/features/guest/pay-bill-sheet";
+import { useOrderReadyAlert } from "@/features/guest/ready-alert";
+import { fetchActiveServiceRequests } from "@/features/guest/service-request";
+import { WaiterSheet } from "@/features/guest/service-sheets";
+import { isGuestSessionGone, markVisitEnded, resumeIfSessionGone } from "@/features/guest/session";
 import {
   GuestQueryError,
-  LineDetails,
   PresenceNote,
   guestPrimaryButton,
   guestSecondaryButton,
   useGuestCopy,
 } from "@/features/guest/shell";
-import { usePollingInterval } from "@/hooks/use-page-visible";
-import { ApiError, asApiError } from "@/lib/api/error";
+import { VisitEnded, methodLabel, payerLabel } from "@/features/guest/visit-ended";
+import type { BillRound, TableBill } from "@/features/guest/visit-api";
+import { usePageVisible } from "@/hooks/use-page-visible";
+import { asApiError } from "@/lib/api/error";
 import { guestApi } from "@/lib/api/guest";
-import { getPickupOrder } from "@/lib/guest/pickup-orders";
 import type { components } from "@/lib/api/schema";
-import { paymobOffered } from "@/lib/paymob/checkout";
+import { toCents } from "@/lib/guest/bill-split";
 import { useGuest } from "@/stores/guest";
 
 type OrderStatus = components["schemas"]["OrderStatus"];
-type GuestOrder = components["schemas"]["OrderResponse"] & { display_number?: string | null };
 
 const STEPS: readonly OrderStatus[] = ["SUBMITTED", "PREPARING", "READY", "DELIVERED"];
 const GUEST_CANCELLABLE: ReadonlySet<OrderStatus> = new Set(["DRAFT", "PENDING_STAFF_CONFIRMATION"]);
+const IN_KITCHEN: ReadonlySet<OrderStatus> = new Set(["SUBMITTED", "PREPARING", "READY"]);
+
+/** Request status colours: amber while waiting, brand once seen, sage when done. */
+const REQUEST_TONE: Record<string, string> = {
+  PENDING: "var(--guest-amber)",
+  ACKNOWLEDGED: "var(--guest-orange)",
+  COMPLETED: "var(--guest-sage)",
+  DISMISSED: "var(--guest-faint)",
+};
 
 function stepIndex(status: OrderStatus): number {
   if (status === "SERVED") return STEPS.indexOf("DELIVERED");
@@ -41,99 +52,90 @@ function stepIndex(status: OrderStatus): number {
   return STEPS.indexOf(status);
 }
 
-function shouldFetchHandover(order: GuestOrder): boolean {
-  if (order.status === "CANCELLED") return false;
-  const fulfillment = (order.fulfillment_type ?? "").toUpperCase();
-  return (
-    order.order_type === "TAKEAWAY" ||
-    fulfillment === "DRIVE_THRU" ||
-    fulfillment === "CURBSIDE" ||
-    fulfillment === "CURBSIDE_PICKUP" ||
-    fulfillment === "PICKUP"
-  );
+function statusTone(value: OrderStatus): string {
+  if (value === "PREPARING") return "var(--guest-amber)";
+  if (value === "CANCELLED") return "var(--guest-faint)";
+  if (value === "READY" || value === "SERVED" || value === "DELIVERED" || value === "PAID" || value === "CLOSED") {
+    return "var(--guest-sage)";
+  }
+  return "var(--guest-orange)";
 }
 
-function modifierNames(item: components["schemas"]["OrderItemResponse"]): string[] {
-  return (item.selected_modifiers ?? []).map((modifier) => {
-    const name = modifier.name ?? modifier.option_name;
-    return typeof name === "string" ? name : "";
-  });
+function shortStatus(status: OrderStatus, t: ReturnType<typeof useGuestCopy>["t"]): string {
+  if (status === "SUBMITTED") return t.stepSent;
+  if (status === "PREPARING") return t.stepCooking;
+  if (status === "READY") return t.stepReady;
+  if (status === "DELIVERED" || status === "SERVED") return t.stepServed;
+  if (status === "PAID" || status === "CLOSED") return t.paid;
+  if (status === "CANCELLED") return t.rejectedShort;
+  return t.waitingShort;
+}
+
+function clock(iso: string, locale: "en" | "ar"): string {
+  try {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-GB", { hour: "numeric", minute: "2-digit" }).format(
+      new Date(iso),
+    );
+  } catch {
+    return "";
+  }
+}
+
+/** The round the guest is waiting on: the newest one still with the kitchen or waiting for staff. */
+function liveRound(rounds: BillRound[]): BillRound | null {
+  for (let index = rounds.length - 1; index >= 0; index -= 1) {
+    const round = rounds[index];
+    if (IN_KITCHEN.has(round.status) || GUEST_CANCELLABLE.has(round.status)) return round;
+  }
+  return null;
 }
 
 export function TrackScreen() {
+  const { t } = useGuestCopy();
+  const session = useGuest((state) => state.session);
+  const endedVisit = useGuest((state) => state.endedVisit);
+  if (!session && endedVisit) return <VisitEnded />;
+  if (!session) return null;
+  return <TableScreen key={session.sessionId} fallbackTitle={t.yourTable} />;
+}
+
+function TableScreen({ fallbackTitle }: { fallbackTitle: string }) {
   const { t, locale } = useGuestCopy();
   const session = useGuest((state) => state.session);
-  const cashRequestedOrderId = useGuest((state) => state.cashRequestedOrderId);
-  const setCashRequestedOrderId = useGuest((state) => state.setCashRequestedOrderId);
-  const interval = usePollingInterval(7000);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState(false);
+  const queryClient = useQueryClient();
+  const visible = usePageVisible();
+  const bill = useTableBill({ refetchInterval: visible ? 7000 : 15_000 });
+  const [justSent, setJustSent] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("sent") === "1",
+  );
+  const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
   const [waiterOpen, setWaiterOpen] = useState(false);
-  const [billOpen, setBillOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
 
-  function statusTone(value: OrderStatus): string {
-    if (value === "PREPARING") return "var(--guest-amber)";
-    if (value === "READY" || value === "SERVED" || value === "DELIVERED" || value === "PAID" || value === "CLOSED") {
-      return "var(--guest-sage)";
-    }
-    return "var(--guest-orange)";
-  }
-
-  const order = useQuery({
-    queryKey: ["guest-active", session?.sessionId],
-    enabled: Boolean(session),
-    refetchInterval: interval,
-    queryFn: async (): Promise<GuestOrder | null> => {
-      const result = await guestApi.GET("/api/v1/orders/active");
-      if (result.response.status === 404) {
-        const error = asApiError(result.error, result.response, t.oops, locale);
-        if (isGuestSessionGone(error)) throw error;
-        return null;
-      }
-      if (!result.response.ok || !result.data) {
-        const error = asApiError(result.error, result.response, t.oops, locale);
-        throw error;
-      }
-      return result.data;
-    },
+  const requests = useQuery({
+    queryKey: ["guest-requests"],
+    refetchInterval: visible ? 10_000 : false,
+    queryFn: () => fetchActiveServiceRequests(),
+    retry: false,
   });
 
-  const pay = useMutation({
-    mutationFn: async (activeOrder: GuestOrder) => {
-      const body: components["schemas"]["OfflinePaymentRequest"] = {
-        order_id: activeOrder.id,
-        amount: activeOrder.total_amount,
-        method: "CASH",
-      };
-      const result = await guestApi.POST("/api/v1/payments/offline/request", { body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
-    },
-    onMutate: () => setNotice(null),
-    onSuccess: (_data, paidOrder) => {
-      setCashRequestedOrderId(paidOrder.id);
-      setNotice(t.paymentRequested);
-      void order.refetch();
-    },
-    onError: (error: Error, paidOrder) => {
-      if (error instanceof ApiError && error.code === "PRESENCE_VERIFICATION_REQUIRED") {
-        setNotice(t.confirmTable);
-        return;
-      }
-      if (error instanceof ApiError && error.code === "ACTIVE_OFFLINE_PAYMENT_EXISTS") {
-        setCashRequestedOrderId(paidOrder.id);
-        setNotice(t.paymentRequested);
-        return;
-      }
-      void resumeIfSessionGone(error).then((gone) => {
-        if (gone) {
-          if (useGuest.getState().session) void order.refetch();
-          return;
-        }
-        toast.error(error.message);
-      });
-    },
-  });
+  // The visit closed (paid and served, staff, idle): switch to the thank-you screen.
+  useEffect(() => {
+    if (bill.data && bill.data.visit_open === false) markVisitEnded();
+  }, [bill.data]);
+  useEffect(() => {
+    if (bill.error && isGuestSessionGone(bill.error) && !bill.data) markVisitEnded();
+  }, [bill.error, bill.data]);
+
+  useEffect(() => {
+    if (!justSent) return;
+    const timer = window.setTimeout(() => setJustSent(false), 6000);
+    window.history.replaceState(null, "", "/order/track");
+    return () => window.clearTimeout(timer);
+  }, [justSent]);
+
+  const live = bill.data ? liveRound(bill.data.rounds) : null;
+  useOrderReadyAlert(live?.status, guestStatus[locale].READY);
 
   const cancel = useMutation({
     mutationFn: async (orderId: string) => {
@@ -147,316 +149,328 @@ export function TrackScreen() {
       if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
     },
     onSuccess: () => {
-      setConfirmCancel(false);
+      setConfirmCancel(null);
       toast.success(t.cancelled);
-      void order.refetch();
+      void queryClient.invalidateQueries({ queryKey: [BILL_QUERY_KEY] });
     },
     onError: (error: Error) => {
-      setConfirmCancel(false);
+      setConfirmCancel(null);
       void resumeIfSessionGone(error).then((gone) => {
-        if (gone) {
-          if (useGuest.getState().session) void order.refetch();
-          return;
-        }
-        toast.error(error.message);
+        if (!gone) toast.error(error.message);
       });
-    },
-  });
-
-  const here = useMutation({
-    mutationFn: async () => {
-      const result = await guestApi.POST("/api/v1/sessions/verified-action");
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.oops, locale);
-    },
-    onSuccess: () => toast.success(t.hereThanks),
-    onError: (error: Error) => {
-      if (error instanceof ApiError && error.code === "PRESENCE_VERIFICATION_REQUIRED") {
-        setNotice(t.confirmTable);
-        return;
-      }
-      void resumeIfSessionGone(error).then((gone) => {
-        if (gone) {
-          if (useGuest.getState().session) void order.refetch();
-          return;
-        }
-        toast.error(error.message);
-      });
-    },
-  });
-
-  useEffect(() => {
-    const current = order.data;
-    if (!current) return;
-    rememberPaymobOffer(current);
-    if (current.is_paid || current.status === "PAID" || current.status === "CLOSED") {
-      if (cashRequestedOrderId === current.id) setCashRequestedOrderId(null);
-    }
-  }, [order.data, cashRequestedOrderId, setCashRequestedOrderId]);
-
-  const storedPickup = order.data && shouldFetchHandover(order.data) ? getPickupOrder(order.data.id) : null;
-  const handover = useQuery({
-    queryKey: ["handover", order.data?.id, order.data?.status],
-    enabled: Boolean(order.data && shouldFetchHandover(order.data) && storedPickup),
-    queryFn: async () => {
-      const current = order.data;
-      const pickup = current ? getPickupOrder(current.id) : null;
-      if (!current || !pickup) return null;
-      const result = await guestApi.GET("/api/v1/orders/{order_id}/handover-token", {
-        params: {
-          path: { order_id: current.id },
-          header: { "X-Order-Access-Token": pickup.accessToken },
-        },
-      });
-      if (!result.response.ok || !result.data) return null;
-      return result.data;
     },
   });
 
   const heldError = useRef<unknown>(null);
-  if (order.error) heldError.current = order.error;
-  // A refetch of a failed order clears the error and marks the query pending. Keep the
-  // error on screen so that check does not mount a fresh one and retry forever.
-  const showError = order.isError || (order.isFetched && order.isPending && !order.data && heldError.current);
+  if (bill.error) heldError.current = bill.error;
+  const showError = bill.isError || (bill.isFetched && bill.isPending && !bill.data && heldError.current);
 
   if (!session) return null;
-  if (order.isPending && !order.isFetched) return <GuestSkeleton label={t.loading} />;
-  if (showError) {
-    return <GuestQueryError error={order.error ?? heldError.current} onRetry={() => void order.refetch()} />;
+  if (bill.isPending && !bill.isFetched) return <GuestSkeleton label={t.loading} />;
+  if (showError && !bill.data) {
+    return <GuestQueryError error={bill.error ?? heldError.current} onRetry={() => void bill.refetch()} />;
   }
-  if (!order.data) {
+  const data = bill.data;
+  if (!data) return null;
+
+  const rounds = data.rounds;
+  const tableLabel = session.tableNumber ? `${t.table} ${session.tableNumber}` : null;
+
+  if (rounds.length === 0) {
     return (
-      <div className="grid gap-4">
-        <h1 className="guest-display text-3xl">{t.myTableOrders}</h1>
-        <p className="text-sm text-[var(--guest-quiet)]">{t.noOrder}</p>
-        <Link href="/order" className={guestPrimaryButton}>
-          {t.menu}
+      <div className="grid justify-items-center gap-4 py-16 text-center">
+        <span className="guest-join-icon">
+          <ReceiptText className="size-7" aria-hidden />
+        </span>
+        <div className="grid gap-1.5">
+          <h1 className="guest-sheet-title">{fallbackTitle}</h1>
+          <p className="guest-body text-[15px]">{t.noOrder}</p>
+        </div>
+        <Link href="/order" className={`${guestPrimaryButton} w-full`}>
+          {t.backMenu}
         </Link>
       </div>
     );
   }
 
-  const activeOrder = order.data;
-  const status = activeOrder.status;
-  const pending = status === "PENDING_STAFF_CONFIRMATION" || status === "DRAFT";
-  const rejected = status === "CANCELLED";
-  const handedOver = status === "DELIVERED" || status === "SERVED";
-  const paid = activeOrder.is_paid || status === "PAID" || status === "CLOSED";
-  const payAtCounter = handedOver && !paid;
-  const finished = status === "CLOSED" || (handedOver && paid);
-  const cashRequested = !paid && (cashRequestedOrderId === activeOrder.id || notice === t.paymentRequested);
-  const canPay = PAYABLE_STATUSES.has(status) && !paid && !cashRequested && !finished && !payAtCounter;
-  const offerPaymob = canPay && (paymobOffered(session) || paymobOffered(activeOrder));
-  const current = stepIndex(status);
-  const showKitchen = !rejected && !pending && !finished && !payAtCounter;
-  const reference =
-    activeOrder.display_number?.trim() ||
-    (activeOrder.pickup_number != null ? `#${activeOrder.pickup_number}` : null) ||
-    (session.tableNumber ? `${t.table} ${session.tableNumber}` : null);
-
-  const waitingMode =
-    status === "READY" || status === "SERVED" || status === "DELIVERED"
-      ? "ready"
-      : status === "PREPARING" || status === "SUBMITTED"
-        ? "preparing"
-        : null;
+  const openRequests = (requests.data ?? []).filter(
+    (request) => request.status === "PENDING" || request.status === "ACKNOWLEDGED",
+  );
 
   return (
-    <GuestReveal className="grid gap-4">
-      <div data-guest-reveal>
-        <h1 className="guest-display guest-display-lg">{t.myTableOrders}</h1>
-        {reference ? (
-          <p className="guest-body">
-            {t.orderRef} · <span className="font-medium text-[var(--guest-ink)]">{reference}</span>
-          </p>
-        ) : null}
+    <GuestReveal className="grid gap-4 pb-8">
+      <div data-guest-reveal className="flex items-start gap-2.5 pt-1">
+        <Link href="/order" className="guest-hero-btn mt-0.5 shrink-0" aria-label={t.backMenu}>
+          <ArrowLeft className="size-5 rtl:-scale-x-100" aria-hidden />
+        </Link>
+        <div className="min-w-0">
+          <h1 className="guest-sheet-title">{t.yourTable}</h1>
+          {tableLabel ? <p className="guest-body">{tableLabel}</p> : null}
+        </div>
       </div>
 
-      {showKitchen && waitingMode ? (
-        <div data-guest-reveal>
-          <OrderWaitingScene
-            mode={waitingMode}
-            title={guestStatus[locale][status === "PAID" ? "DELIVERED" : status]}
-            body={waitingMode === "preparing" ? t.preparing : undefined}
+      {justSent ? (
+        <p role="status" data-guest-reveal className="guest-alert guest-alert-ok flex items-center gap-2 text-sm font-semibold">
+          <CircleCheck className="size-4" aria-hidden />
+          {t.sentBanner}
+        </p>
+      ) : null}
+
+      <LiveStatus round={live} rounds={rounds} />
+
+      <BillCard bill={data} onPay={() => setPayOpen(true)} />
+
+      <section data-guest-reveal className="guest-list" aria-label={t.roundsTitle}>
+        <p className="pt-4 pb-1 text-[15px] font-semibold">{t.roundsTitle}</p>
+        {[...rounds].reverse().map((round) => (
+          <RoundBlock
+            key={round.order_id}
+            round={round}
+            currency={data.currency}
+            showNumber={rounds.length > 1}
+            onCancel={GUEST_CANCELLABLE.has(round.status) ? () => setConfirmCancel(round.order_id) : undefined}
           />
+        ))}
+      </section>
+
+      <Link data-guest-reveal href="/order" className={`${guestSecondaryButton} w-full`}>
+        {t.orderMore}
+      </Link>
+
+      {openRequests.length > 0 ? (
+        <section data-guest-reveal className="guest-list" aria-label={t.yourRequests}>
+          <p className="pt-4 pb-1 text-[15px] font-semibold">{t.yourRequests}</p>
+          {openRequests.map((request) => (
+            <div key={request.id} className="guest-row" style={{ alignItems: "center" }}>
+              <p className="guest-row-name flex-1">{guestServiceType[locale][request.request_type]}</p>
+              <span
+                className="guest-status-pill"
+                style={{ ["--tone" as string]: REQUEST_TONE[request.status] ?? "var(--guest-faint)" }}
+              >
+                <i aria-hidden />
+                {guestServiceStatus[locale][request.status]}
+              </span>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      <section data-guest-reveal className="grid gap-2">
+        <p className="px-1 text-[13px] font-semibold text-[var(--guest-quiet)]">{t.needSomething}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" className="guest-help-tile guest-motion" onClick={() => setWaiterOpen(true)}>
+            <BellRing className="size-5" aria-hidden />
+            {t.callWaiterShort}
+          </button>
+          <button type="button" className="guest-help-tile guest-motion" onClick={() => setPayOpen(true)}>
+            <ReceiptText className="size-5" aria-hidden />
+            {t.askBillShort}
+          </button>
         </div>
+      </section>
+
+      <ConfirmDialog
+        open={confirmCancel !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmCancel(null);
+        }}
+        title={t.cancelTitle}
+        description={t.cancelBody}
+        confirmLabel={t.cancelOrder}
+        cancelLabel={t.keepOrder}
+        pendingLabel={t.sending}
+        destructive
+        pending={cancel.isPending}
+        onConfirm={() => {
+          if (confirmCancel) cancel.mutate(confirmCancel);
+        }}
+      />
+      <WaiterSheet open={waiterOpen} onOpenChange={setWaiterOpen} />
+      <PayBillSheet open={payOpen} onOpenChange={setPayOpen} />
+    </GuestReveal>
+  );
+}
+
+function LiveStatus({ round, rounds }: { round: BillRound | null; rounds: BillRound[] }) {
+  const { t, locale } = useGuestCopy();
+  if (!round) {
+    const newest = rounds[rounds.length - 1];
+    if (newest?.status === "CANCELLED" && rounds.every((item) => item.status === "CANCELLED")) {
+      return (
+        <section data-guest-reveal className="grid gap-1.5 pt-2">
+          <p className="guest-sheet-title">{t.orderRejected}</p>
+          {newest.cancellation_reason ? <p className="guest-body">{newest.cancellation_reason}</p> : null}
+        </section>
+      );
+    }
+    return (
+      <section data-guest-reveal className="pt-2">
+        <p className="guest-sheet-title">{t.enjoyMeal}</p>
+      </section>
+    );
+  }
+  const status = round.status;
+  const pending = GUEST_CANCELLABLE.has(status);
+  const waitingMode = status === "READY" ? "ready" : status === "PREPARING" || status === "SUBMITTED" ? "preparing" : null;
+  const current = stepIndex(status);
+  return (
+    <section data-guest-reveal className="guest-list grid gap-1 pb-4">
+      {waitingMode ? (
+        <OrderWaitingScene mode={waitingMode} title={guestStatus[locale][status]} />
       ) : (
-        <div data-guest-reveal className="guest-card px-4 py-4">
-          {rejected ? (
-            <div className="grid gap-2">
-              <p className="guest-display text-2xl">{t.orderRejected}</p>
-              {activeOrder.cancellation_reason ? (
-                <p className="guest-body">{activeOrder.cancellation_reason}</p>
-              ) : null}
-            </div>
-          ) : finished ? (
-            <p className="guest-display text-2xl">{t.enjoyMeal}</p>
-          ) : payAtCounter ? (
-            <div className="grid gap-2">
-              <p className="guest-display text-2xl">
-                {t.amountDue}{" "}
-                <span className="guest-price" dir="ltr">
-                  <Money amount={activeOrder.total_amount} locale={locale} />
-                </span>
-              </p>
-              <p className="guest-body">{t.payAtCounter}</p>
-            </div>
-          ) : (
-            <p className="guest-display text-2xl">
-              {guestStatus[locale][status === "PAID" ? "DELIVERED" : status]}
-            </p>
-          )}
-          <p className="mt-2 text-sm font-medium" style={{ color: statusTone(status) }}>
-            {paid ? t.paid : t.amountDue}
-          </p>
+        <p className="guest-sheet-title pt-4">{guestStatus[locale][status]}</p>
+      )}
+      {!pending ? (
+        <ol className="guest-progress" aria-label={t.track}>
+          {[t.stepSent, t.stepCooking, t.stepReady, t.stepServed].map((label, index) => (
+            <li
+              key={label}
+              data-state={index < current ? "done" : index === current ? "now" : "next"}
+              aria-current={index === current ? "step" : undefined}
+              style={{ ["--step" as string]: statusTone(STEPS[index] ?? "SUBMITTED") }}
+            >
+              <span className="guest-progress-bar" aria-hidden />
+              <span className="guest-progress-label">{label}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <div className="grid gap-2 pt-2">
+          <PresenceNote />
+          <p className="guest-body">{t.payAfterConfirm}</p>
         </div>
       )}
+    </section>
+  );
+}
 
-      {pending ? (
-        <div data-guest-reveal>
-          <PresenceNote />
+function BillCard({ bill, onPay }: { bill: TableBill; onPay: () => void }) {
+  const { t, locale } = useGuestCopy();
+  if (toCents(bill.total) <= 0) return null;
+  const money = (amount: string) => <Money amount={amount} currency={bill.currency} locale={locale} />;
+  const left = toCents(bill.remaining);
+  const held = toCents(bill.held);
+  return (
+    <section data-guest-reveal className="guest-pay-card" aria-label={t.tableBill}>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-[15px] font-semibold">{left > 0 ? t.leftToPay : t.tableBill}</p>
+        <span className="guest-price text-[22px]" dir="ltr">
+          {money(left > 0 ? bill.remaining : bill.total)}
+        </span>
+      </div>
+      <dl className="grid gap-1 text-[14px]">
+        <div className="flex justify-between gap-3">
+          <dt className="guest-body">{t.total}</dt>
+          <dd className="guest-price" dir="ltr">
+            {money(bill.total)}
+          </dd>
         </div>
-      ) : null}
-
-      {showKitchen ? (
-        <div data-guest-reveal>
-          <GuestTrackSteps
-            steps={STEPS}
-            current={current}
-            labelFor={(step) => guestStatus[locale][step as OrderStatus]}
-            toneFor={(step) => statusTone(step as OrderStatus)}
-          />
-        </div>
-      ) : null}
-
-      {(activeOrder.items ?? []).length > 0 ? (
-        <ul data-guest-reveal className="grid gap-3">
-          {(activeOrder.items ?? []).map((item) => (
-            <li key={item.id} className="guest-card flex items-start justify-between gap-3 p-4">
-              <div className="min-w-0">
-                <p className="font-medium">
-                  <span className="tabular-nums" dir="ltr">
-                    {item.quantity} ×
-                  </span>{" "}
-                  {item.item_name}
-                </p>
-                <LineDetails modifiers={modifierNames(item)} note={item.special_instructions} />
-              </div>
+        {toCents(bill.paid) > 0 ? (
+          <div className="flex justify-between gap-3">
+            <dt className="guest-body">{t.billPaid}</dt>
+            <dd className="guest-price" dir="ltr">
+              {money(bill.paid)}
+            </dd>
+          </div>
+        ) : null}
+        {held > 0 ? (
+          <div className="flex justify-between gap-3">
+            <dt className="guest-body">{t.billBeingPaid}</dt>
+            <dd className="guest-price" dir="ltr">
+              {money(bill.held)}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      {bill.payments.length ? (
+        <ul className="grid gap-1 border-t border-[var(--guest-line)] pt-2 text-[13.5px]">
+          {bill.payments.map((payment) => (
+            <li key={payment.id} className="flex items-baseline justify-between gap-3">
+              <span className="guest-body min-w-0">
+                <bdi>{payerLabel(payment, t)}</bdi> · {methodLabel(payment.method, t)}
+              </span>
               <span className="guest-price shrink-0" dir="ltr">
-                <Money amount={item.subtotal} locale={locale} />
+                {money(payment.amount)}
               </span>
             </li>
           ))}
         </ul>
       ) : null}
-
-      {activeOrder.customer_notes ? (
-        <div data-guest-reveal>
-          <LineDetails modifiers={[]} note={activeOrder.customer_notes} />
-        </div>
-      ) : null}
-
-      <p data-guest-reveal className="guest-display text-2xl">
-        {t.total}{" "}
-        <span className="guest-price" dir="ltr">
-          <Money amount={activeOrder.total_amount} locale={locale} />
-        </span>
-      </p>
-
-      {handover.data ? (
-        <p data-guest-reveal className="guest-card p-4 text-lg">
-          {t.handover}: {handover.data.token}
+      {left > 0 ? (
+        <button type="button" className={`${guestPrimaryButton} mt-1 w-full`} onClick={onPay}>
+          {t.payBill}
+        </button>
+      ) : (
+        <p role="status" className="guest-alert guest-alert-ok flex items-center gap-2 text-sm font-semibold">
+          <CircleCheck className="size-4" aria-hidden />
+          {held > 0 ? t.waitingStaffConfirm : t.allPaidTitle}
         </p>
-      ) : null}
-
-      {rejected || finished || payAtCounter ? null : paid ? (
-        <p role="status" data-guest-reveal className="guest-card px-4 py-3 text-sm font-medium">
-          {t.paid}
-        </p>
-      ) : cashRequested || notice === t.paymentRequested ? (
-        <p role="status" data-guest-reveal className="guest-card px-4 py-3 text-sm">
-          {t.paymentRequested}
-        </p>
-      ) : notice ? (
-        <p role="status" data-guest-reveal className="guest-card px-4 py-3 text-sm">
-          {notice}
-        </p>
-      ) : null}
-
-      {finished || rejected ? (
-        <Link data-guest-reveal href="/order" className={guestPrimaryButton}>
-          {rejected ? t.startNewOrder : t.orderElse}
-        </Link>
-      ) : null}
-
-      {rejected || finished || payAtCounter ? null : (
-        <div data-guest-reveal className="grid gap-2">
-          {canPay ? (
-            <>
-              <button
-                type="button"
-                className={guestPrimaryButton}
-                disabled={pay.isPending}
-                onClick={() => pay.mutate(activeOrder)}
-              >
-                {pay.isPending ? t.paying : t.payCash}
-              </button>
-              {offerPaymob ? (
-                <button type="button" className={guestSecondaryButton} onClick={() => setPayOpen(true)}>
-                  {t.payOnlineCard}
-                </button>
-              ) : null}
-            </>
-          ) : null}
-          <button type="button" className={guestSecondaryButton} onClick={() => setWaiterOpen(true)}>
-            {t.callWaiterTitle}
-          </button>
-          <button type="button" className={guestSecondaryButton} onClick={() => setBillOpen(true)}>
-            {t.askBill}
-          </button>
-          <button
-            type="button"
-            className={guestSecondaryButton}
-            disabled={here.isPending}
-            onClick={() => here.mutate()}
-          >
-            {here.isPending ? t.paying : t.here}
-          </button>
-        </div>
       )}
+    </section>
+  );
+}
 
-      {pending ? (
-        <p data-guest-reveal className="guest-body">
-          {t.payAfterConfirm}
+function RoundBlock({
+  round,
+  currency,
+  showNumber,
+  onCancel,
+}: {
+  round: BillRound;
+  currency: string;
+  showNumber: boolean;
+  onCancel?: () => void;
+}) {
+  const { t, locale } = useGuestCopy();
+  const cancelled = round.status === "CANCELLED";
+  return (
+    <div className="grid gap-0.5 pb-2" data-cancelled={cancelled ? "true" : undefined}>
+      <div className="flex items-center justify-between gap-3 pt-3">
+        <p className="text-[13px] font-semibold text-[var(--guest-quiet)]">
+          {showNumber ? `${t.roundN.replace("{n}", String(round.number))} · ` : ""}
+          <span dir="ltr">{clock(round.created_at, locale)}</span>
         </p>
-      ) : null}
-
-      {GUEST_CANCELLABLE.has(status) ? (
-        <div data-guest-reveal className="mt-2 border-t border-[var(--guest-line)] pt-4">
-          <button
-            type="button"
-            className="guest-btn guest-btn-ghost guest-motion !text-[var(--guest-quiet)]"
-            onClick={() => setConfirmCancel(true)}
-          >
-            {t.cancelOrder}
-          </button>
+        <span className="guest-status-pill" style={{ ["--tone" as string]: statusTone(round.status) }}>
+          <i aria-hidden />
+          {shortStatus(round.status, t)}
+        </span>
+      </div>
+      {round.lines.map((line, index) => (
+        <div
+          key={index}
+          className="guest-row"
+          style={{ alignItems: "flex-start", opacity: cancelled ? 0.55 : undefined }}
+        >
+          <div className="guest-row-text">
+            <p className="guest-row-name">
+              <span className="text-[var(--guest-quiet)]" dir="ltr">
+                {line.quantity}×
+              </span>{" "}
+              <bdi>{line.name}</bdi>
+            </p>
+            {line.modifiers.length ? <p className="guest-row-desc">{line.modifiers.join(" · ")}</p> : null}
+            {line.notes ? <p className="guest-row-desc italic">“{line.notes}”</p> : null}
+            {line.is_mine || line.guest_name ? (
+              <p className="guest-caption" dir="auto">
+                {line.is_mine ? t.you : line.guest_name}
+              </p>
+            ) : null}
+          </div>
+          <span className="guest-price shrink-0 text-[14px]" dir="ltr">
+            <Money amount={line.subtotal} currency={currency} locale={locale} />
+          </span>
         </div>
+      ))}
+      {cancelled && round.cancellation_reason ? <p className="guest-row-desc">{round.cancellation_reason}</p> : null}
+      {onCancel ? (
+        <button
+          type="button"
+          className="justify-self-start min-h-11 text-sm font-semibold text-[var(--guest-quiet)] underline-offset-4 hover:underline"
+          onClick={onCancel}
+        >
+          {t.cancelOrder}
+        </button>
       ) : null}
-
-      <ConfirmDialog
-        open={confirmCancel}
-        onOpenChange={setConfirmCancel}
-        title={t.cancelTitle}
-        description={t.cancelBody}
-        confirmLabel={t.cancelOrder}
-        cancelLabel={t.keepOrder}
-        pendingLabel={t.paying}
-        destructive
-        pending={cancel.isPending}
-        onConfirm={() => cancel.mutate(activeOrder.id)}
-      />
-      <WaiterSheet open={waiterOpen} onOpenChange={setWaiterOpen} />
-      <BillSheet open={billOpen} onOpenChange={setBillOpen} />
-      <PayOnlineSheet open={payOpen} onOpenChange={setPayOpen} order={activeOrder} />
-    </GuestReveal>
+    </div>
   );
 }

@@ -51,6 +51,9 @@ async function proxy(
     const responseHeaders = new Headers();
     const upstreamType = upstream.headers.get("content-type");
     if (upstreamType) responseHeaders.set("content-type", upstreamType);
+    // File downloads (Excel, CSV, QR images) keep their name.
+    const disposition = upstream.headers.get("content-disposition");
+    if (disposition) responseHeaders.set("content-disposition", disposition);
     return new NextResponse(upstream.body, {
       status: upstream.status,
       headers: responseHeaders,

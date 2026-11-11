@@ -69,3 +69,11 @@ test("launcher geometry does not overlap the hero or the form at 390px", () => {
   };
   assert.equal(tab.bottom <= form.top && tab.top >= hero.bottom, true);
 });
+
+test("a promo code travels inside the lead message", () => {
+  const withPromo = validateLead({ ...draft, promo: " FOUNDER20 " }, "en");
+  assert.equal(withPromo.ok, true);
+  if (withPromo.ok) assert.equal(withPromo.body.message, "We have three branches.\n\nPromo code: FOUNDER20");
+  const tooLong = validateLead({ ...draft, message: "x".repeat(990), promo: "FOUNDER20" }, "en");
+  assert.equal(tooLong.ok, false);
+});

@@ -52,6 +52,8 @@ test("the branch picker keeps only accessible branches", () => {
   assert.equal(starterKeys("BRANCH_ADMIN").includes("topBranch"), false);
   assert.equal(starterKeys("REGIONAL_MANAGER").includes("topBranch"), true);
   assert.equal(starterKeys("BRAND_ADMIN").at(-1), "topBranch");
+  // The platform home starts with questions across every brand.
+  assert.deepEqual(starterKeys("SUPER_ADMIN").slice(0, 2), ["platformWeek", "topBranch"]);
   assert.equal(assistantSheetSide(true, "rtl"), "bottom");
   assert.equal(assistantSheetSide(false, "rtl"), "left");
   assert.equal(assistantSheetSide(false, "ltr"), "right");

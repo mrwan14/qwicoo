@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { EntityCard } from "@/components/ops/entity-card";
+import { RequiredMark } from "@/components/ops/kit/field";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -18,22 +19,19 @@ import { LocationPickerDialog, type PickedLocation } from "@/components/ops/loca
 import { LiveCount } from "@/components/ops/live-fact";
 import { PageHeader } from "@/components/ops/page-header";
 import { StatusChip } from "@/components/ops/status-chip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AnalyticsScreen } from "@/features/staff/backoffice-screen";
 import { PaymobSettings } from "@/features/staff/paymob-settings";
+import { GuestLookPanel } from "@/features/staff/settings/guest-look-panel";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
 import { mediaUrl, presignedUploadUrl } from "@/lib/media";
 import { useDenyWhenMissing } from "@/lib/auth/session-client";
 import { useScope } from "@/stores/scope";
+import { GEOFENCE_MAX, GEOFENCE_MIN, clampGeofence } from "@/lib/geofence";
 
 const control = "h-11 w-full rounded-staff border px-3 text-sm";
 const cardGrid = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3";
@@ -53,17 +51,7 @@ function BrandMeta({ brand }: { brand: components["schemas"]["BrandResponse"] })
   );
 }
 
-function BrandMenu({
-  active,
-  pending,
-  onDeactivate,
-  onActivate,
-}: {
-  active: boolean;
-  pending: boolean;
-  onDeactivate: () => void;
-  onActivate: () => void;
-}) {
+function BrandMenu({ active, pending, onDeactivate, onActivate }: { active: boolean; pending: boolean; onDeactivate: () => void; onActivate: () => void }) {
   const t = useStaffSection(brandsCopy);
   return (
     <DropdownMenu>
@@ -163,13 +151,29 @@ export function BrandsScreen() {
           ) : undefined
         }
         action={
-          <button type="button" className="min-h-11 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>
+          <button
+            type="button"
+            className="min-h-11 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground"
+            onClick={() => setCreateOpen(true)}
+          >
             {t.create}
           </button>
         }
       />
       {list.length === 0 ? (
-        <EmptyState title={t.emptyTitle} body={t.emptyBody} action={<button type="button" className="min-h-11 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setCreateOpen(true)}>{t.create}</button>} />
+        <EmptyState
+          title={t.emptyTitle}
+          body={t.emptyBody}
+          action={
+            <button
+              type="button"
+              className="min-h-11 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground"
+              onClick={() => setCreateOpen(true)}
+            >
+              {t.create}
+            </button>
+          }
+        />
       ) : (
         <ul className={cardGrid}>
           {list.map((brand) => (
@@ -202,13 +206,29 @@ export function BrandsScreen() {
           <DialogHeader>
             <DialogTitle>{t.create}</DialogTitle>
           </DialogHeader>
-          <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
+          <form
+            className="grid gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
+            }}
+          >
             <input className={control} placeholder={t.namePlaceholder} value={name} onChange={(event) => setName(event.target.value)} required />
-            <button className="min-h-11 rounded-staff bg-primary text-sm font-medium text-primary-foreground" type="submit" disabled={create.isPending}>{t.create}</button>
+            <button className="min-h-11 rounded-staff bg-primary text-sm font-medium text-primary-foreground" type="submit" disabled={create.isPending}>
+              {t.create}
+            </button>
           </form>
         </DialogContent>
       </Dialog>
-      <ConfirmDialog open={Boolean(removeId)} onOpenChange={(open) => !open && setRemoveId(null)} title={t.deactivateTitle} description={t.deactivateBody} confirmLabel={t.deactivate} destructive onConfirm={() => removeId && remove.mutate(removeId)} />
+      <ConfirmDialog
+        open={Boolean(removeId)}
+        onOpenChange={(open) => !open && setRemoveId(null)}
+        title={t.deactivateTitle}
+        description={t.deactivateBody}
+        confirmLabel={t.deactivate}
+        destructive
+        onConfirm={() => removeId && remove.mutate(removeId)}
+      />
     </div>
   );
 }
@@ -255,17 +275,7 @@ function BrandOwnerDashboard({ brandId }: { brandId: string }) {
   );
 }
 
-function BrandSetup({
-  brandId,
-  apiOrigin,
-  backHref,
-  backLabel,
-}: {
-  brandId: string;
-  apiOrigin: string;
-  backHref: string | null;
-  backLabel: string;
-}) {
+function BrandSetup({ brandId, apiOrigin, backHref, backLabel }: { brandId: string; apiOrigin: string; backHref: string | null; backLabel: string }) {
   const t = useStaffSection(brandsCopy);
   const me = useStaffSession();
   const { locale } = useLocale();
@@ -302,14 +312,20 @@ function BrandSetup({
     },
   });
   const logo = useMutation({
-    mutationFn: async (file: File) => uploadLogo(file, "brands", async (publicUrl) => {
-      const result = await browserApi.POST("/api/v1/brands/{brand_id}/logo", {
-        params: { path: { brand_id: brandId } },
-        body: { logo_url: publicUrl },
-        headers: { "Content-Type": "application/json" },
-      } as never);
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.logoFailed);
-    }, { url: t.uploadUrlFailed, upload: t.uploadFailed }),
+    mutationFn: async (file: File) =>
+      uploadLogo(
+        file,
+        "brands",
+        async (publicUrl) => {
+          const result = await browserApi.POST("/api/v1/brands/{brand_id}/logo", {
+            params: { path: { brand_id: brandId } },
+            body: { logo_url: publicUrl },
+            headers: { "Content-Type": "application/json" },
+          } as never);
+          if (!result.response.ok) throw asApiError(result.error, result.response, t.logoFailed);
+        },
+        { url: t.uploadUrlFailed, upload: t.uploadFailed },
+      ),
     onSuccess: () => {
       toast.success(t.logoSaved);
       void queryClient.invalidateQueries({ queryKey: ["brand", brandId] });
@@ -360,36 +376,54 @@ function BrandSetup({
           logo.mutate(file);
         }}
       />
+      {me?.role === "SUPER_ADMIN" || me?.role === "BRAND_ADMIN" ? (
+        <GuestLookPanel
+          key={brand.data.updated_at}
+          brand={brand.data}
+          uploadImage={(file) =>
+            new Promise<string>((resolve, reject) => {
+              uploadLogo(file, "brands", async (publicUrl) => resolve(publicUrl), { url: t.uploadUrlFailed, upload: t.uploadFailed }).catch(reject);
+            })
+          }
+        />
+      ) : null}
       {me?.role === "SUPER_ADMIN" ? <QwicooAppPanel brandId={brandId} brand={brand.data} /> : null}
-      <PaymobSettings brandId={brandId} apiOrigin={apiOrigin} />
-      <div className="flex items-center justify-between gap-3">
-        <div className="grid gap-0.5">
-          <h2 className="text-lg font-semibold">{t.branchesTitle}</h2>
-          {branches.isSuccess ? (
-            <p className="text-sm text-ink-secondary">
-              <LiveCount value={branches.data.length} /> {branches.data.length === 1 ? t.branch : t.branches}
-            </p>
-          ) : null}
+      {/* In Settings the brand admin has its own Payments page, so Paymob is not repeated here. */}
+      {backHref ? <PaymobSettings brandId={brandId} apiOrigin={apiOrigin} /> : null}
+      <section className="grid gap-4 rounded-[16px] border border-border bg-canvas p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="grid gap-0.5">
+            <h2 className="text-base font-semibold">{t.branchesTitle}</h2>
+            {branches.isSuccess ? (
+              <p className="text-sm text-ink-secondary">
+                <LiveCount value={branches.data.length} /> {branches.data.length === 1 ? t.branch : t.branches}
+              </p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="min-h-10 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            onClick={() => setBranchOpen(true)}
+          >
+            {t.addBranch}
+          </button>
         </div>
-        <button type="button" className="min-h-11 rounded-staff bg-primary px-4 text-sm font-medium text-primary-foreground" onClick={() => setBranchOpen(true)}>
-          {t.addBranch}
-        </button>
-      </div>
-      <CreateBranchDialog brandId={brandId} open={branchOpen} onOpenChange={setBranchOpen} />
-      <ul className={cardGrid}>
-        {(branches.data ?? []).map((branch) => (
-          <li key={branch.id}>
-            <EntityCard
-              href={`/app/branches/${branch.id}`}
-              title={pickLocale(branch.name, locale)}
-              meta={branch.slug}
-              imageUrl={mediaUrl(logoPreview ?? brand.data.logo_url)}
-              imageAlt={fill(t.logoAlt, { name: brand.data.name })}
-              badge={<StatusChip tone={branch.is_active ? "available" : "soldout"}>{branch.is_active ? t.active : t.inactive}</StatusChip>}
-            />
-          </li>
-        ))}
-      </ul>
+        <CreateBranchDialog brandId={brandId} open={branchOpen} onOpenChange={setBranchOpen} />
+        <ul className={cardGrid}>
+          {(branches.data ?? []).map((branch) => (
+            <li key={branch.id}>
+              <EntityCard
+                href={`/app/branches/${branch.id}`}
+                title={pickLocale(branch.name, locale)}
+                meta={branch.slug}
+                imageUrl={mediaUrl(logoPreview ?? brand.data.logo_url)}
+                imageAlt={fill(t.logoAlt, { name: brand.data.name })}
+                badge={<StatusChip tone={branch.is_active ? "available" : "soldout"}>{branch.is_active ? t.active : t.inactive}</StatusChip>}
+              />
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }
@@ -484,15 +518,20 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
     onError: (error: Error) => toast.error(error.message),
   });
   async function pickAppImage(file: File, kind: "logo" | "cover") {
-    await uploadLogo(file, "brands", async (publicUrl) => {
-      if (kind === "logo") {
-        setLogoUrl(publicUrl);
-        setLogoTouched(true);
-      } else {
-        setCoverUrl(publicUrl);
-        setCoverTouched(true);
-      }
-    }, { url: t.uploadUrlFailed, upload: t.uploadFailed });
+    await uploadLogo(
+      file,
+      "brands",
+      async (publicUrl) => {
+        if (kind === "logo") {
+          setLogoUrl(publicUrl);
+          setLogoTouched(true);
+        } else {
+          setCoverUrl(publicUrl);
+          setCoverTouched(true);
+        }
+      },
+      { url: t.uploadUrlFailed, upload: t.uploadFailed },
+    );
   }
 
   return (
@@ -525,7 +564,9 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
           </li>
         ))}
       </ul>
-      <Link href="/app/features" className="text-sm underline-offset-2 hover:underline">{t.featuresLink}</Link>
+      <Link href="/app/features" className="text-sm underline-offset-2 hover:underline">
+        {t.featuresLink}
+      </Link>
       <form
         className="grid gap-3 border p-3"
         onSubmit={(event) => {
@@ -540,25 +581,62 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
         </label>
         <label className="grid gap-1 text-sm">
           {t.sortOrder}
-          <input className="h-11 border bg-background px-3 text-sm" inputMode="numeric" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} />
+          <input
+            className="h-11 border bg-background px-3 text-sm"
+            inputMode="numeric"
+            value={sortOrder}
+            onChange={(event) => setSortOrder(event.target.value)}
+          />
         </label>
         <label className="grid gap-1 text-sm">
           {t.appLogo}
-          <input className="h-11 border bg-background px-3 text-sm" type="file" accept="image/*" onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (!file) return;
-            void pickAppImage(file, "logo").catch((error: unknown) => toast.error(error instanceof Error ? error.message : t.uploadFailed));
-          }} />
-          {logoUrl ? <button type="button" className="min-h-11 w-fit border px-3 text-sm" onClick={() => { setLogoUrl(null); setLogoTouched(true); }}>{t.clearImage}</button> : null}
+          <input
+            className="h-11 border bg-background px-3 text-sm"
+            type="file"
+            accept="image/*"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              void pickAppImage(file, "logo").catch((error: unknown) => toast.error(error instanceof Error ? error.message : t.uploadFailed));
+            }}
+          />
+          {logoUrl ? (
+            <button
+              type="button"
+              className="min-h-11 w-fit border px-3 text-sm"
+              onClick={() => {
+                setLogoUrl(null);
+                setLogoTouched(true);
+              }}
+            >
+              {t.clearImage}
+            </button>
+          ) : null}
         </label>
         <label className="grid gap-1 text-sm">
           {t.appCover}
-          <input className="h-11 border bg-background px-3 text-sm" type="file" accept="image/*" onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (!file) return;
-            void pickAppImage(file, "cover").catch((error: unknown) => toast.error(error instanceof Error ? error.message : t.uploadFailed));
-          }} />
-          {coverUrl ? <button type="button" className="min-h-11 w-fit border px-3 text-sm" onClick={() => { setCoverUrl(null); setCoverTouched(true); }}>{t.clearImage}</button> : null}
+          <input
+            className="h-11 border bg-background px-3 text-sm"
+            type="file"
+            accept="image/*"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              void pickAppImage(file, "cover").catch((error: unknown) => toast.error(error instanceof Error ? error.message : t.uploadFailed));
+            }}
+          />
+          {coverUrl ? (
+            <button
+              type="button"
+              className="min-h-11 w-fit border px-3 text-sm"
+              onClick={() => {
+                setCoverUrl(null);
+                setCoverTouched(true);
+              }}
+            >
+              {t.clearImage}
+            </button>
+          ) : null}
         </label>
         {logoUrl ? (
           // App images are stored on the upload host, which next/image is not set up to optimise.
@@ -569,34 +647,30 @@ function QwicooAppPanel({ brandId, brand }: { brandId: string; brand: components
           // eslint-disable-next-line @next/next/no-img-element
           <img src={mediaUrl(coverUrl) ?? coverUrl} alt="" className="h-16 w-full object-cover" />
         ) : null}
-        <button type="submit" className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50" disabled={!directoryReady || directory.isPending}>{t.saveDirectory}</button>
+        <button
+          type="submit"
+          className="min-h-11 bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          disabled={!directoryReady || directory.isPending}
+        >
+          {t.saveDirectory}
+        </button>
       </form>
     </section>
   );
 }
 
-function BrandLogo({
-  name,
-  logoUrl,
-  pending,
-  onFile,
-}: {
-  name: string;
-  logoUrl?: string | null;
-  pending: boolean;
-  onFile: (file: File) => void;
-}) {
+function BrandLogo({ name, logoUrl, pending, onFile }: { name: string; logoUrl?: string | null; pending: boolean; onFile: (file: File) => void }) {
   const t = useStaffSection(brandsCopy);
   const inputRef = useRef<HTMLInputElement>(null);
   const mark = name.trim().charAt(0).toUpperCase() || "B";
   const shown = mediaUrl(logoUrl?.trim() ? logoUrl : null);
   return (
-    <section className="flex flex-col gap-4 bg-canvas p-4 sm:flex-row sm:items-center">
-      <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-staff bg-secondary">
+    <section className="flex flex-col gap-4 rounded-[16px] border border-border bg-canvas p-5 sm:flex-row sm:items-center">
+      <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-border bg-secondary">
         {shown ? (
           // Logo files are stored on the upload host, which next/image is not set up to optimise.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={shown} alt={fill(t.logoAlt, { name })} className="size-full object-cover" />
+          <img src={shown} alt={fill(t.logoAlt, { name })} className="block size-full max-w-none object-cover object-center" />
         ) : (
           <span className="text-2xl font-semibold text-primary">{mark}</span>
         )}
@@ -604,7 +678,9 @@ function BrandLogo({
       <div className="grid gap-2">
         <div>
           <h2 className="font-semibold">{t.logo}</h2>
-          <p id="brand-logo-hint" className="text-sm leading-6 text-ink-secondary">{t.logoHint}</p>
+          <p id="brand-logo-hint" className="text-sm leading-6 text-ink-secondary">
+            {t.logoHint}
+          </p>
         </div>
         <input
           ref={inputRef}
@@ -666,7 +742,7 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
         longitude: location.longitude,
         currency: "EGP",
         timezone: "Africa/Cairo",
-        geofence_radius_meters: radius,
+        geofence_radius_meters: clampGeofence(radius),
         sla_prep_time_minutes: prepMinutes,
         is_geofence_enabled: true,
         tax_rate: "0",
@@ -694,10 +770,19 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
         <DialogHeader>
           <DialogTitle>{t.addBranch}</DialogTitle>
         </DialogHeader>
-        <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
+        <form
+          className="grid gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            create.mutate();
+          }}
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              {t.nameEn}
+              <span>
+                {t.nameEn}
+                <RequiredMark />
+              </span>
               <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
             </label>
             <label className="grid gap-1 text-sm">
@@ -711,7 +796,10 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
           </label>
 
           <div className="grid gap-1 text-sm">
-            <span>{t.location}</span>
+            <span>
+              {t.location}
+              <RequiredMark />
+            </span>
             <button
               type="button"
               className="flex min-h-11 items-center gap-3 rounded-staff border px-3 py-2 text-start hover:border-primary/40"
@@ -721,7 +809,9 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
               {location ? (
                 <span className="grid gap-0.5">
                   <span className="line-clamp-2">{location.address || t.pinned}</span>
-                  <span className="text-xs text-ink-secondary tabular-nums">{location.latitude}, {location.longitude}</span>
+                  <span className="text-xs text-ink-secondary tabular-nums">
+                    {location.latitude}, {location.longitude}
+                  </span>
                 </span>
               ) : (
                 <span className="text-ink-secondary">{t.chooseOnMap}</span>
@@ -736,24 +826,44 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              {t.geofence}
-              <input className={control} type="number" min={5} max={5000} value={radius} onChange={(event) => setRadius(Number(event.target.value))} required />
+              <span>
+                {t.geofence}
+                <RequiredMark />
+              </span>
+              <input
+                className={control}
+                type="number"
+                min={GEOFENCE_MIN}
+                max={GEOFENCE_MAX}
+                value={radius}
+                onChange={(event) => setRadius(Number(event.target.value))}
+                onBlur={() => setRadius(clampGeofence(radius))}
+                required
+              />
             </label>
             <label className="grid gap-1 text-sm">
-              {t.prepTime}
+              <span>
+                {t.prepTime}
+                <RequiredMark />
+              </span>
               <input className={control} type="number" min={1} value={prepMinutes} onChange={(event) => setPrepMinutes(Number(event.target.value))} required />
             </label>
           </div>
 
-          <button className="min-h-11 rounded-staff bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50" type="submit" disabled={create.isPending || !location}>
+          <button
+            className="min-h-11 rounded-staff bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
+            type="submit"
+            disabled={create.isPending || !location}
+          >
             {create.isPending ? t.creating : t.createBranch}
           </button>
+          {!location ? <p className="text-xs text-ink-secondary">{t.pinToCreate}</p> : null}
         </form>
         <LocationPickerDialog
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           value={location}
-          radiusMeters={radius}
+          radiusMeters={clampGeofence(radius)}
           onConfirm={(picked) => {
             setLocation(picked);
             setAddress(picked.address);

@@ -4,13 +4,15 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
+import { Check, Mail, MessageCircle, Phone, Plus } from "lucide-react";
+
 import { LOGO_ASPECT, LOGO_VIDEO } from "@/components/brand/logo-assets";
 import { usePrefersReducedMotion } from "@/components/brand/animated-logo";
+import { CONTACT, OPEN_ASSISTANT_EVENT, whatsappHref } from "@/features/marketing/contact";
 import { landingCopy } from "@/features/marketing/copy";
 import { PartnerForm } from "@/features/marketing/partner-form";
 import { PublicAssistantLauncher } from "@/features/marketing/public-assistant-launcher";
 import { PublicAssistantProvider } from "@/features/marketing/public-assistant-session";
-import { formatCount } from "@/lib/i18n/format";
 import type { LocaleCode } from "@/lib/i18n/locale-text";
 
 const PublicChatPanel = dynamic(() => import("@/features/marketing/public-chat-panel").then((mod) => mod.PublicChatPanel), {
@@ -19,14 +21,6 @@ const PublicChatPanel = dynamic(() => import("@/features/marketing/public-chat-p
 
 const STORY_KEYS = ["guest", "cashier", "kitchen", "owner"] as const;
 const START_KEYS = ["talk", "setup", "print", "live"] as const;
-const FACT_KEYS = [
-  { key: "menu", count: 1, height: "46%" },
-  { key: "languages", count: 2, height: "62%" },
-  { key: "states", count: 3, height: "74%" },
-  { key: "screens", count: 4, height: "88%" },
-  { key: "pay", count: null, height: "100%" },
-] as const;
-
 const ROLE_COLOR = {
   guest: "var(--orange)",
   cashier: "var(--amber)",
@@ -42,8 +36,9 @@ export function ClosingSections({ locale }: { locale: LocaleCode }) {
   return (
     <PublicAssistantProvider locale={locale}>
       <RoleStory locale={locale} />
-      <Facts locale={locale} />
+      <Pricing locale={locale} />
       <StartAccordion locale={locale} />
+      <Faq locale={locale} />
       <CallToAction locale={locale} onRestaurant={setRestaurant} />
       <PartnerBand locale={locale} restaurant={restaurant} />
       <SiteFooter locale={locale} />
@@ -205,105 +200,6 @@ function RoleScreen({
   );
 }
 
-function Facts({ locale }: { locale: LocaleCode }) {
-  const t = landingCopy[locale].facts;
-  const ref = useRef<HTMLElement>(null);
-  const [active, setActive] = useState(false);
-  const reduced = usePrefersReducedMotion();
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) setActive(true);
-      },
-      { threshold: 0.35 },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <section ref={ref} className={`qw-stairs border-b border-qw-line bg-canvas px-[clamp(20px,5vw,72px)] py-20 ${active ? "qw-in" : ""}`}>
-      <div className="mb-10 grid max-w-3xl gap-3">
-        <p className="text-sm font-medium text-quiet">{t.eyebrow}</p>
-        <h2 className="qw-display text-[clamp(36px,5vw,68px)]">{t.title}</h2>
-        <p className="text-lg leading-relaxed text-quiet">{t.body}</p>
-      </div>
-      <div className="qw-stair">
-        {FACT_KEYS.map((fact) => (
-          <FactBar
-            key={fact.key}
-            locale={locale}
-            count={fact.count}
-            height={fact.height}
-            title={t[fact.key].title}
-            body={t[fact.key].body}
-            active={active}
-            reduced={reduced}
-            mark={fact.key === "pay" ? "EGP" : null}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function FactBar({
-  locale,
-  count,
-  height,
-  title,
-  body,
-  active,
-  reduced,
-  mark,
-}: {
-  locale: LocaleCode;
-  count: number | null;
-  height: string;
-  title: string;
-  body: string;
-  active: boolean;
-  reduced: boolean;
-  mark: string | null;
-}) {
-  const shown = useCount(count, active, reduced);
-  return (
-    <div className="qw-stp border border-ink bg-canvas" style={{ ["--h" as string]: height }}>
-      <p className="qw-display text-4xl" dir="ltr">
-        {mark ?? formatCount(shown, locale)}
-      </p>
-      <p className="mt-3 font-semibold">{title}</p>
-      <p className="text-sm text-quiet">{body}</p>
-    </div>
-  );
-}
-
-function useCount(target: number | null, active: boolean, reduced: boolean): number {
-  const [value, setValue] = useState(target ?? 0);
-  useEffect(() => {
-    if (target == null || !active) return;
-    if (reduced) {
-      setValue(target);
-      return;
-    }
-    setValue(0);
-    let start: number | null = null;
-    let frame = 0;
-    const tick = (now: number) => {
-      if (start == null) start = now;
-      const progress = Math.min(1, (now - start) / 900);
-      setValue(Math.round(target * (1 - Math.pow(1 - progress, 3))));
-      if (progress < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [active, reduced, target]);
-  return value;
-}
-
 function StartAccordion({ locale }: { locale: LocaleCode }) {
   const t = landingCopy[locale].start;
   const reduced = usePrefersReducedMotion();
@@ -418,6 +314,102 @@ function StartVisual({ kind, lines }: { kind: (typeof START_KEYS)[number]; lines
   );
 }
 
+function Pricing({ locale }: { locale: LocaleCode }) {
+  const t = landingCopy[locale].pricing;
+  return (
+    <section id="pricing" className="scroll-mt-20 border-b border-qw-line bg-white px-[clamp(20px,5vw,72px)] py-20">
+      <div className="grid max-w-3xl gap-3">
+        <p className="text-xs font-bold tracking-[0.14em] text-sage-deep uppercase">{t.eyebrow}</p>
+        <h2 className="qw-display text-[clamp(34px,4.4vw,64px)]">{t.title}</h2>
+        <p className="text-lg leading-relaxed text-quiet">{t.body}</p>
+      </div>
+
+      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {t.tiers.map((tier, index) => {
+          const featured = index === 1;
+          const custom = !/\d/.test(tier.price);
+          return (
+            <div
+              key={tier.name}
+              className={`relative grid content-start gap-3 border-2 p-6 pt-7 ${featured ? "border-ink bg-ink text-canvas" : "border-qw-line bg-canvas"}`}
+            >
+              {featured ? (
+                <span className="absolute -top-3 start-5 inline-flex bg-[var(--orange)] px-3 py-1 text-[11px] font-bold tracking-wide text-white uppercase">
+                  {t.popular}
+                </span>
+              ) : null}
+              <p className="text-sm font-semibold">{tier.name}</p>
+              <p className="flex items-baseline gap-2">
+                <span className="qw-display text-[44px] leading-none" dir={custom ? undefined : "ltr"}>
+                  {tier.price}
+                </span>
+                {custom ? null : <span className={`text-sm font-semibold ${featured ? "text-canvas/70" : "text-quiet"}`}>{t.currency}</span>}
+              </p>
+              <p className={`text-sm ${featured ? "text-canvas/75" : "text-quiet"}`}>{tier.note}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+        <div className="qw-bx border border-qw-line bg-canvas p-6">
+          <p className="font-semibold">{t.includesTitle}</p>
+          <ul className="mt-4 grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
+            {t.includes.map((line) => (
+              <li key={line} className="flex items-start gap-2 text-[15px]">
+                <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-sage-deep" />
+                {line}
+              </li>
+            ))}
+          </ul>
+          <ul className="mt-5 grid gap-2 border-t border-qw-line pt-5 text-sm text-quiet">
+            {t.terms.map((line) => (
+              <li key={line} className="flex items-start gap-2">
+                <Check aria-hidden className="mt-0.5 size-4 shrink-0" />
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="qw-bx grid content-start gap-3 bg-[var(--orange)] p-6 text-white">
+          <span className="inline-flex w-fit bg-white px-3 py-1 text-[11px] font-bold tracking-wide text-ink uppercase">{t.founding.badge}</span>
+          <h3 className="qw-display text-[clamp(26px,2.6vw,36px)] leading-tight">{t.founding.title}</h3>
+          <p className="text-[15px] leading-relaxed text-white/90">{t.founding.body}</p>
+          <p className="text-sm font-semibold">{t.founding.limited}</p>
+          <a href="#partner" className={`mt-2 inline-flex min-h-12 w-fit items-center bg-ink px-5 text-sm font-semibold text-canvas ${FOCUS}`}>
+            {t.founding.cta}
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Faq({ locale }: { locale: LocaleCode }) {
+  const t = landingCopy[locale].faq;
+  return (
+    <section id="faq" className="scroll-mt-20 border-b border-qw-line bg-canvas px-[clamp(20px,5vw,72px)] py-20">
+      <div className="grid gap-10 min-[900px]:grid-cols-[0.8fr_1.2fr]">
+        <div className="grid content-start gap-3">
+          <p className="text-xs font-bold tracking-[0.14em] text-sage-deep uppercase">{t.eyebrow}</p>
+          <h2 className="qw-display text-[clamp(34px,4.4vw,64px)]">{t.title}</h2>
+        </div>
+        <div className="border-t border-ink">
+          {t.items.map((item) => (
+            <details key={item.q} className="group border-b border-ink">
+              <summary className={`flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden ${FOCUS}`}>
+                {item.q}
+                <Plus aria-hidden className="size-5 shrink-0 transition-transform group-open:rotate-45" />
+              </summary>
+              <p className="max-w-2xl pb-5 text-[15px] leading-relaxed text-quiet">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function CallToAction({ locale, onRestaurant }: { locale: LocaleCode; onRestaurant: (value: string) => void }) {
   const t = landingCopy[locale].cta;
   const reduced = usePrefersReducedMotion();
@@ -457,26 +449,96 @@ function PartnerBand({ locale, restaurant }: { locale: LocaleCode; restaurant: s
   return (
     <section id="partner" className="scroll-mt-20 border-b border-qw-line bg-white px-[clamp(20px,5vw,72px)] py-20">
       <div className="grid items-start gap-12 min-[900px]:grid-cols-2">
-        <div className="grid gap-6">
+        <div className="grid min-w-0 gap-6">
           <div className="grid gap-2">
             <p className="text-sm font-medium text-quiet">{t.eyebrow}</p>
             <h2 className="qw-display text-[clamp(36px,5vw,64px)]">{t.title}</h2>
             <p className="max-w-xl text-lg leading-relaxed text-quiet">{t.body}</p>
           </div>
           <PartnerForm locale={locale} restaurantSeed={restaurant} />
+          <ContactCard locale={locale} />
         </div>
-        <div className="grid gap-4">
+        <div className="grid min-w-0 gap-4">
           <div className="grid gap-2">
             <p className="text-sm font-medium text-quiet">{t.askEyebrow}</p>
             <h2 className="qw-display text-[clamp(36px,5vw,64px)]">{t.askTitle}</h2>
             <p className="text-lg leading-relaxed text-quiet">{t.askBody}</p>
           </div>
-          <div className="min-h-[36rem] border border-ink">
-            <PublicChatPanel showClose={false} />
-          </div>
+          <InlineChat label={t.askOpen} />
         </div>
       </div>
     </section>
+  );
+}
+
+function ContactCard({ locale }: { locale: LocaleCode }) {
+  const t = landingCopy[locale].partner;
+  const row = `flex min-h-12 items-center gap-3 border border-qw-line bg-white px-4 text-[15px] font-semibold ${FOCUS}`;
+  return (
+    <div className="grid gap-3 border-2 border-ink bg-canvas p-6">
+      <div>
+        <h3 className="text-lg font-semibold">{t.talkTitle}</h3>
+        <p className="mt-1 text-sm text-quiet">{t.talkBody}</p>
+      </div>
+      <a href={whatsappHref(t.waMessage)} target="_blank" rel="noopener noreferrer" className={`${row} border-[#1f7a4d] bg-[#1f7a4d] text-white`}>
+        <MessageCircle aria-hidden className="size-5" />
+        {t.whatsapp}
+        <span className="ms-auto font-medium" dir="ltr">
+          {CONTACT.whatsappDisplay}
+        </span>
+      </a>
+      <a href={CONTACT.phoneHref} className={row}>
+        <Phone aria-hidden className="size-5" />
+        {t.call}
+        <span className="ms-auto font-medium" dir="ltr">
+          {CONTACT.phoneDisplay}
+        </span>
+      </a>
+      <a href={`mailto:${CONTACT.email}`} className={`${row} min-w-0`}>
+        <Mail aria-hidden className="size-5 shrink-0" />
+        <span className="shrink-0">{t.email}</span>
+        <span className="ms-auto min-w-0 truncate font-medium" dir="ltr">
+          {CONTACT.email}
+        </span>
+      </a>
+    </div>
+  );
+}
+
+/** The chat bundle loads when the panel comes near the screen, not with the page. */
+function InlineChat({ label }: { label: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || near) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) setNear(true);
+      },
+      { rootMargin: "300px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [near]);
+
+  return (
+    <div ref={ref} className="qw-chat h-[36rem] overflow-hidden rounded-[24px] shadow-[0_18px_50px_rgb(0_0_0/0.10)] ring-1 ring-qw-line">
+      {near ? (
+        <PublicChatPanel showClose={false} />
+      ) : (
+        <div className="grid h-full place-items-center bg-white">
+          <button
+            type="button"
+            className="rounded-full bg-ink px-5 py-3 text-sm font-semibold text-canvas"
+            onClick={() => window.dispatchEvent(new Event(OPEN_ASSISTANT_EVENT))}
+          >
+            {label}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -484,37 +546,52 @@ function SiteFooter({ locale }: { locale: LocaleCode }) {
   const t = landingCopy[locale].footer;
   const year = new Date().getFullYear();
   return (
-    <footer className="bg-ink px-[clamp(20px,5vw,72px)] py-14 text-canvas">
+    <footer className="bg-ink px-[clamp(20px,5vw,72px)] pt-14 pb-28 text-canvas">
       <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div className="grid content-start gap-4">
-          <span className="inline-block w-40 bg-canvas">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={LOGO_VIDEO.poster} alt="Qwicoo" className="block w-full mix-blend-darken" style={{ aspectRatio: LOGO_ASPECT }} />
-          </span>
+          {/* The only logo file sits on a light canvas. Inverting it (and turning the hue back) makes
+              the canvas near-black and the letters light; `lighten` then lets the footer show through. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={LOGO_VIDEO.poster}
+            alt="Qwicoo"
+            className="qw-footer-logo block w-40 invert hue-rotate-180 mix-blend-lighten"
+            style={{ aspectRatio: LOGO_ASPECT }}
+          />
           <p className="max-w-sm text-sm leading-6 text-canvas/80">{t.blurb}</p>
           <p className="text-sm text-canvas/70">{t.made}</p>
         </div>
         <FooterColumn title={t.product}>
           <a href="#offer">{t.qr}</a>
-          <a href="#offer">{t.pos}</a>
           <a href="#flow">{t.kitchen}</a>
-          <a href="#flow">{t.drive}</a>
+          <a href="#back-office">{t.backOffice}</a>
+          <a href="#pricing">{t.pricing}</a>
+          <a href="#faq">{t.faq}</a>
         </FooterColumn>
         <FooterColumn title={t.company}>
           <a href="#partner">{landingCopy[locale].nav.partner}</a>
-          <a href="#partner">{t.contact}</a>
+          <a href={whatsappHref(landingCopy[locale].partner.waMessage)} target="_blank" rel="noopener noreferrer" className="gap-1.5">
+            {t.whatsapp}
+            <span aria-hidden>·</span>
+            <span dir="ltr">{CONTACT.whatsappDisplay}</span>
+          </a>
+          <a href={`mailto:${CONTACT.email}`} dir="ltr" className="break-all">
+            {CONTACT.email}
+          </a>
           <Link href="/login">{t.dashboard}</Link>
         </FooterColumn>
         <FooterColumn title={t.language}>
-          <Link href="/" hrefLang="en">
+          <Link href="/?lang=en" hrefLang="en">
             English
           </Link>
           <Link href="/?lang=ar" hrefLang="ar">
             العربية
           </Link>
+          <Link href={`/privacy?lang=${locale}`}>{t.privacy}</Link>
+          <Link href={`/terms?lang=${locale}`}>{t.terms}</Link>
         </FooterColumn>
       </div>
-      <p className="mt-10 text-sm text-canvas/60" dir="ltr">
+      <p className="mt-10 text-sm text-canvas/60">
         © {year} Qwicoo · {t.rights}
       </p>
     </footer>

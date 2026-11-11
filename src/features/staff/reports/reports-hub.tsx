@@ -14,7 +14,9 @@ import {
   Receipt,
   Repeat,
   Smartphone,
+  Star,
   Timer,
+  UserX,
   UtensilsCrossed,
   Wallet,
   type LucideIcon,
@@ -63,6 +65,8 @@ const ENTRIES: readonly Entry[] = [
   { kind: "ready", key: "payments", group: "money", href: "/app/reports/payments", icon: CreditCard, nav: "/app/reports/payments" },
   { kind: "ready", key: "taxes", group: "money", href: "/app/reports/taxes", icon: Receipt, nav: "/app/reports/till" },
   { kind: "ready", key: "discounts", group: "money", href: "/app/reports/discounts", icon: BadgePercent, nav: "/app/reports/till" },
+  { kind: "ready", key: "walkouts", group: "money", href: "/app/reports/walkouts", icon: UserX, nav: "/app/reports/sales" },
+  { kind: "ready", key: "reviews", group: "guests", href: "/app/reports/reviews", icon: Star, nav: "/app/reports/sales" },
   { kind: "soon", key: "speed", group: "service", icon: Gauge },
 ];
 
@@ -70,7 +74,7 @@ const ENTRIES: readonly Entry[] = [
  * The panels flow down into columns, so this order also balances them: Sales and Menu share the
  * first column, Payments & taxes (the longest) takes the middle, Stock and Staff the last.
  */
-const GROUPS: readonly Group[] = ["sales", "menu", "money", "stock", "staff", "service"];
+const GROUPS: readonly Group[] = ["sales", "menu", "money", "guests", "stock", "staff", "service"];
 
 const GROUP_ICONS: Record<Group, LucideIcon> = {
   sales: BarChart3,
@@ -79,6 +83,7 @@ const GROUP_ICONS: Record<Group, LucideIcon> = {
   stock: Package,
   staff: ClipboardList,
   service: Gauge,
+  guests: Star,
 };
 
 function ReportRow({ entry, t }: { entry: Extract<Entry, { kind: "ready" }>; t: Copy }) {
@@ -90,7 +95,7 @@ function ReportRow({ entry, t }: { entry: Extract<Entry, { kind: "ready" }>; t: 
         href={entry.href}
         className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-subtle focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-staff bg-well text-ink transition-colors group-hover:bg-ink group-hover:text-on-ink group-focus-visible:bg-ink group-focus-visible:text-on-ink">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-staff bg-well text-ink transition-colors group-hover:bg-brand group-hover:text-on-brand group-focus-visible:bg-ink group-focus-visible:text-on-ink">
           <Icon aria-hidden className="size-[18px]" />
         </span>
         <span className="grid min-w-0 flex-1 gap-0.5">

@@ -46,24 +46,39 @@ export function Select({
   );
 }
 
+/** The visual "*" after a required field's label. The control itself carries `required` for screen readers. */
+export function RequiredMark() {
+  return (
+    <span aria-hidden className="ms-0.5 text-danger">
+      *
+    </span>
+  );
+}
+
 /** Label above a control. The label wraps the control, so no ids are needed. */
 export function Field({
   label,
   hint,
   error,
+  required,
   className,
   children,
 }: {
   label: ReactNode;
   hint?: ReactNode;
   error?: ReactNode;
+  /** Shows a "*" after the label. Also put `required` on the control. */
+  required?: boolean;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <div className={cn("grid content-start gap-1.5", className)}>
       <label className="grid gap-1.5">
-        <span className="text-xs font-medium text-ink-secondary">{label}</span>
+        <span className="text-xs font-medium text-ink-secondary">
+          {label}
+          {required ? <RequiredMark /> : null}
+        </span>
         {children}
       </label>
       {error ? (
@@ -94,7 +109,7 @@ export function Switch({
       onClick={() => onCheckedChange(!checked)}
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors after:absolute after:-inset-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-40",
-        checked ? "justify-end bg-ink" : "justify-start bg-ink-secondary/35",
+        checked ? "justify-end bg-brand" : "justify-start bg-ink-secondary/35",
         className,
       )}
       {...props}

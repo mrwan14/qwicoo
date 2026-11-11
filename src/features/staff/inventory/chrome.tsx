@@ -49,7 +49,7 @@ export type StockTab = "stock" | "recipes" | "buying" | "counts";
 // Most-used first: what's in stock, ordering more, counting and waste, then recipe setup.
 const STOCK_TABS: readonly { tab: StockTab; views: readonly InventoryPage[] }[] = [
   { tab: "stock", views: ["stock", "movements"] },
-  { tab: "buying", views: ["purchaseOrders", "suppliers", "transfers"] },
+  { tab: "buying", views: ["purchaseOrders", "bills", "suppliers", "transfers"] },
   { tab: "counts", views: ["counts", "waste"] },
   { tab: "recipes", views: ["recipes", "ingredients", "prep"] },
 ];

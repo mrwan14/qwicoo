@@ -21,7 +21,8 @@ import { inventoryCopy } from "@/lib/i18n/staff/inventory";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
-import { canWriteStock } from "./access";
+import { canOpenInventoryPage, canWriteStock } from "./access";
+import { BillSheet, NewBillSheet } from "./bills-screen";
 import { control, InventoryFrame, primaryButton, secondaryButton, useBranchCurrency, useClearLink } from "./chrome";
 import { purchaseCancel } from "./purchasing";
 import { NewOrderPanel, type OrderPrefill } from "./order-panel";
@@ -204,7 +205,13 @@ function OrderDetail({
 }) {
   const t = useStaffSection(inventoryCopy);
   const { locale } = useLocale();
+  const me = useStaffSession();
+  const canBill = canOpenInventoryPage(me?.role, "bills");
   const [receive, setReceive] = useState<Record<string, { qty: string; price: string }>>({});
+  // The delivery just received, offered for its supplier bill.
+  const [receiptId, setReceiptId] = useState<string | null>(null);
+  const [billing, setBilling] = useState(false);
+  const [openBill, setOpenBill] = useState<string | null>(null);
   const receivedQty = order.lines.reduce((sum, line) => sum + Number(line.qty_received), 0);
   const cancel = purchaseCancel(order.status, receivedQty);
   const canReceive = canWrite && (order.status === "SENT" || order.status === "PARTIALLY_RECEIVED");
@@ -230,9 +237,10 @@ function OrderDetail({
         params: { path: { order_id: order.id } },
         body: { lines },
       });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed, locale);
+      return result.data.receipt_id;
     },
-    onSuccess: async () => { toast.success(t.saved); setReceive({}); await onChanged(); },
+    onSuccess: async (receipt) => { toast.success(t.saved); setReceive({}); setReceiptId(receipt); await onChanged(); },
     onError: (error) => toast.error(error instanceof Error ? error.message : t.loadFailed),
   });
   const cancelOrder = useMutation({
@@ -273,6 +281,54 @@ function OrderDetail({
           </tbody>
         </table>
       </div>
+      {receiptId && canBill ? (
+        <div className="grid gap-3 rounded-[12px] border border-border bg-subtle/60 p-4">
+          <p className="text-sm">{t.bills.received}</p>
+          <button type="button" className={primaryButton} onClick={() => setBilling(true)}>
+            {t.bills.add}
+          </button>
+        </div>
+      ) : null}
+      {canBill && (order.receipts ?? []).length > 0 ? (
+        <section className="grid gap-2">
+          <h2 className="font-medium">{t.bills.deliveries}</h2>
+          <ul className="grid gap-1">
+            {(order.receipts ?? []).map((receipt) => (
+              <li key={receipt.id} className="flex flex-wrap items-center justify-between gap-2 border-b py-2 text-sm last:border-b-0">
+                <span>{formatCairoDateTime(receipt.received_at, locale)}</span>
+                {receipt.bill_id ? (
+                  <button type="button" className={secondaryButton} onClick={() => setOpenBill(receipt.bill_id ?? null)}>
+                    {t.bills.openBill}
+                    {receipt.bill_status ? ` · ${t.bills.statuses[receipt.bill_status as keyof typeof t.bills.statuses] ?? receipt.bill_status}` : ""}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={secondaryButton}
+                    onClick={() => {
+                      setReceiptId(receipt.id);
+                      setBilling(true);
+                    }}
+                  >
+                    {t.bills.add}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {openBill ? <BillSheet billId={openBill} onClose={() => setOpenBill(null)} /> : null}
+      {billing && receiptId ? (
+        <NewBillSheet
+          receiptId={receiptId}
+          onClose={() => setBilling(false)}
+          onSaved={() => {
+            setReceiptId(null);
+            void onChanged();
+          }}
+        />
+      ) : null}
       {canWrite && order.status === "DRAFT" ? <button type="button" className={primaryButton} disabled={send.isPending} onClick={() => send.mutate()}>{t.purchaseOrders.send}</button> : null}
       {canReceive ? (
         <div className="grid gap-2">

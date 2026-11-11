@@ -67,7 +67,7 @@ const ENTRIES: readonly Entry[] = [
   { kind: "ready", key: "discounts", group: "money", href: "/app/reports/discounts", icon: BadgePercent, nav: "/app/reports/till" },
   { kind: "ready", key: "walkouts", group: "money", href: "/app/reports/walkouts", icon: UserX, nav: "/app/reports/sales" },
   { kind: "ready", key: "reviews", group: "guests", href: "/app/reports/reviews", icon: Star, nav: "/app/reports/sales" },
-  { kind: "soon", key: "speed", group: "service", icon: Gauge },
+  { kind: "ready", key: "speed", group: "service", href: "/app/reports/speed", icon: Gauge, nav: "/app/reports/sales" },
 ];
 
 /**

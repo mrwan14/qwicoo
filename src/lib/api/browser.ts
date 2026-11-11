@@ -1,5 +1,6 @@
 import createClient from "openapi-fetch";
 
+import { branchFromPath } from "@/lib/api/branch-path";
 import type { paths } from "@/lib/api/schema";
 import { SCOPE_DENIALS, denyAccess, endStaffSession } from "@/lib/auth/session-client";
 import { currentLocale } from "@/lib/i18n/locale-store";
@@ -16,7 +17,10 @@ browserApi.use({
     request.headers.set("accept-language", currentLocale());
     const { brandId, branchId } = useScope.getState();
     if (brandId) request.headers.set("x-brand-id", brandId);
-    if (branchId) request.headers.set("x-branch-id", branchId);
+    // A URL that names a branch wins over the top-bar branch: the server refuses a request whose
+    // path and header disagree, which broke opening another branch's settings page.
+    const target = branchFromPath(request.url) ?? branchId;
+    if (target) request.headers.set("x-branch-id", target);
     return request;
   },
   async onResponse({ response }) {

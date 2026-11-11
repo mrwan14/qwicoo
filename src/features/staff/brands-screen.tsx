@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { EntityCard } from "@/components/ops/entity-card";
+import { RequiredMark } from "@/components/ops/kit/field";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
 import { pickLocale } from "@/lib/i18n/locale-text";
@@ -30,6 +31,7 @@ import type { components } from "@/lib/api/schema";
 import { mediaUrl, presignedUploadUrl } from "@/lib/media";
 import { useDenyWhenMissing } from "@/lib/auth/session-client";
 import { useScope } from "@/stores/scope";
+import { GEOFENCE_MAX, GEOFENCE_MIN, clampGeofence } from "@/lib/geofence";
 
 const control = "h-11 w-full rounded-staff border px-3 text-sm";
 const cardGrid = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3";
@@ -740,7 +742,7 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
         longitude: location.longitude,
         currency: "EGP",
         timezone: "Africa/Cairo",
-        geofence_radius_meters: radius,
+        geofence_radius_meters: clampGeofence(radius),
         sla_prep_time_minutes: prepMinutes,
         is_geofence_enabled: true,
         tax_rate: "0",
@@ -777,7 +779,10 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              {t.nameEn}
+              <span>
+                {t.nameEn}
+                <RequiredMark />
+              </span>
               <input className={control} value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
             </label>
             <label className="grid gap-1 text-sm">
@@ -791,7 +796,10 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
           </label>
 
           <div className="grid gap-1 text-sm">
-            <span>{t.location}</span>
+            <span>
+              {t.location}
+              <RequiredMark />
+            </span>
             <button
               type="button"
               className="flex min-h-11 items-center gap-3 rounded-staff border px-3 py-2 text-start hover:border-primary/40"
@@ -818,11 +826,26 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              {t.geofence}
-              <input className={control} type="number" min={5} max={5000} value={radius} onChange={(event) => setRadius(Number(event.target.value))} required />
+              <span>
+                {t.geofence}
+                <RequiredMark />
+              </span>
+              <input
+                className={control}
+                type="number"
+                min={GEOFENCE_MIN}
+                max={GEOFENCE_MAX}
+                value={radius}
+                onChange={(event) => setRadius(Number(event.target.value))}
+                onBlur={() => setRadius(clampGeofence(radius))}
+                required
+              />
             </label>
             <label className="grid gap-1 text-sm">
-              {t.prepTime}
+              <span>
+                {t.prepTime}
+                <RequiredMark />
+              </span>
               <input className={control} type="number" min={1} value={prepMinutes} onChange={(event) => setPrepMinutes(Number(event.target.value))} required />
             </label>
           </div>
@@ -834,12 +857,13 @@ function CreateBranchDialog({ brandId, open, onOpenChange }: { brandId: string; 
           >
             {create.isPending ? t.creating : t.createBranch}
           </button>
+          {!location ? <p className="text-xs text-ink-secondary">{t.pinToCreate}</p> : null}
         </form>
         <LocationPickerDialog
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           value={location}
-          radiusMeters={radius}
+          radiusMeters={clampGeofence(radius)}
           onConfirm={(picked) => {
             setLocation(picked);
             setAddress(picked.address);

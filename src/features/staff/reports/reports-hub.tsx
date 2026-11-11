@@ -60,7 +60,7 @@ const ENTRIES: readonly Entry[] = [
   { kind: "ready", key: "stock", group: "stock", href: "/app/reports/stock", icon: Package, nav: "/app/stock" },
   { kind: "ready", key: "stockFlow", group: "stock", href: "/app/reports/stock-flow", icon: Repeat, nav: "/app/stock" },
   { kind: "ready", key: "attendance", group: "staff", href: "/app/reports/attendance", icon: ClipboardList, nav: "/app/reports/attendance" },
-  { kind: "soon", key: "shifts", group: "staff", icon: Timer },
+  { kind: "ready", key: "shifts", group: "staff", href: "/app/reports/shifts", icon: Timer, nav: "/app/reports/till" },
   { kind: "ready", key: "till", group: "money", href: "/app/reports/till", icon: Wallet, nav: "/app/reports/till" },
   { kind: "ready", key: "payments", group: "money", href: "/app/reports/payments", icon: CreditCard, nav: "/app/reports/payments" },
   { kind: "ready", key: "taxes", group: "money", href: "/app/reports/taxes", icon: Receipt, nav: "/app/reports/till" },

@@ -58,7 +58,7 @@ const ENTRIES: readonly Entry[] = [
   { kind: "ready", key: "menu", group: "menu", href: "/app/reports/menu", icon: UtensilsCrossed, nav: "/app/reports/sales" },
   { kind: "ready", key: "engineering", group: "menu", href: "/app/reports/menu-engineering", icon: Percent, nav: "/app/reports/sales" },
   { kind: "ready", key: "stock", group: "stock", href: "/app/reports/stock", icon: Package, nav: "/app/stock" },
-  { kind: "soon", key: "stockFlow", group: "stock", icon: Repeat },
+  { kind: "ready", key: "stockFlow", group: "stock", href: "/app/reports/stock-flow", icon: Repeat, nav: "/app/stock" },
   { kind: "ready", key: "attendance", group: "staff", href: "/app/reports/attendance", icon: ClipboardList, nav: "/app/reports/attendance" },
   { kind: "soon", key: "shifts", group: "staff", icon: Timer },
   { kind: "ready", key: "till", group: "money", href: "/app/reports/till", icon: Wallet, nav: "/app/reports/till" },
@@ -136,7 +136,7 @@ export function readyReports(me: UserProfile, branchId: string | null, branchCou
   const order = new Map(GROUPS.map((group, index) => [group, index]));
   return ENTRIES.filter((entry): entry is ReadyEntry => {
     if (entry.kind !== "ready" || !allowed.has(entry.nav)) return false;
-    if (entry.key === "stock") return canOpenInventoryPage(me.role, "reports");
+    if (entry.key === "stock" || entry.key === "stockFlow") return canOpenInventoryPage(me.role, "reports");
     // Comparing branches needs more than one; a Branch Admin would get a one-row table.
     if (entry.key === "branches") return branchCount > 1 || me.role === "SUPER_ADMIN";
     return true;

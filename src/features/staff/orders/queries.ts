@@ -32,6 +32,24 @@ export function liveOrdersQuery(branchId: string | null, today: string, failed: 
         cursor = data.next_cursor ?? null;
         if (!cursor) break;
       }
+      // Every order still open, however old: an unpaid table from last week must still show here,
+      // not only hold its table on the floor.
+      const seen = new Set(items.map((item) => item.id));
+      cursor = null;
+      for (let page = 0; page < MAX_PAGES; page += 1) {
+        const result = await browserApi.GET("/api/v1/orders", { params: { query: { open_only: true, limit: PAGE, cursor } } });
+        // An older server ignores open_only and lists today again; duplicates are skipped below.
+        if (!result.response.ok || !result.data) break;
+        const data = result.data as StaffOrderListResponse;
+        for (const item of data.items) {
+          if (!seen.has(item.id)) {
+            seen.add(item.id);
+            items.push(item);
+          }
+        }
+        cursor = data.next_cursor ?? null;
+        if (!cursor) break;
+      }
       // Yesterday's orders only while still open: a table seated at 23:30 is still live after midnight.
       return items.filter((item) => cairoDate(new Date(item.created_at)) === today || isOpenOrder(item));
     },

@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/ops/kit/empty-state";
 import { FilterBar } from "@/components/ops/kit/filter-bar";
 import { formatAmount } from "@/components/ops/kit/money";
 import { useStaffSession } from "@/components/ops/staff-session";
-import { isOpenOrder, minutesSince } from "@/features/staff/home/numbers";
+import { cairoDate, isOpenOrder, minutesSince } from "@/features/staff/home/numbers";
 import type { OfflineOrder } from "@/features/staff/offline/queue-core";
 import { isWaiting } from "@/features/staff/offline/queue-core";
 import { useOfflineQueue } from "@/features/staff/offline/queue";
@@ -123,7 +123,24 @@ export function LiveOrders() {
       header: t.order,
       strong: true,
       width: 130,
-      cell: (row) => (row.kind === "local" ? row.order.offlineNumber : orderLabel(row.order)),
+      cell: (row) => {
+        if (row.kind === "local") return row.order.offlineNumber;
+        const placed = new Date(row.order.created_at);
+        // Still open from an earlier day: say since when, so a forgotten order stands out.
+        if (cairoDate(placed) === today) return orderLabel(row.order);
+        const day = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", {
+          timeZone: "Africa/Cairo",
+          day: "numeric",
+          month: "short",
+          numberingSystem: "latn",
+        }).format(placed);
+        return (
+          <span className="grid">
+            {orderLabel(row.order)}
+            <span className="text-xs font-normal text-danger">{fill(t.live.since, { date: day })}</span>
+          </span>
+        );
+      },
     },
     {
       key: "where",

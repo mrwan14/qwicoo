@@ -18,7 +18,7 @@ import { useStaffSession } from "@/components/ops/staff-session";
 import { useDenyWhenMissing } from "@/lib/auth/session-client";
 import { useScope } from "@/stores/scope";
 import { LocationPickerDialog, type PickedLocation } from "@/components/ops/location-picker";
-import { asApiError } from "@/lib/api/error";
+import { ApiError, asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import { fill } from "@/lib/i18n/dictionary";
 import { formatMoney } from "@/lib/format/money";
@@ -26,6 +26,8 @@ import { useLocale } from "@/lib/i18n/locale-store";
 import { branchCopy } from "@/lib/i18n/staff/branch";
 import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { mediaUrl } from "@/lib/media";
+import { GEOFENCE_MAX, GEOFENCE_MIN, clampGeofence } from "@/lib/geofence";
+import { asBranch } from "@/features/staff/menu/shared";
 import { Switch } from "@/components/ops/kit/field";
 import { ErrorState, LoadingState, QueryErrorState } from "@/components/ops/states";
 import type { components } from "@/lib/api/schema";
@@ -222,9 +224,10 @@ function QwicooTab({ branchId }: { branchId: string }) {
   const [amount, setAmount] = useState("0.00");
   const [result, setResult] = useState<components["schemas"]["CalculateDeliveryFeeResponse"] | null>(null);
   const governorates = useQuery({
-    queryKey: ["delivery-governorates"],
+    queryKey: ["delivery-governorates", branchId],
+    retry: (count, error) => !(error instanceof ApiError && error.status === 403) && count < 2,
     queryFn: async () => {
-      const response = await browserApi.GET("/api/v1/delivery/governorates");
+      const response = await browserApi.GET("/api/v1/delivery/governorates", { middleware: [asBranch(branchId)] });
       if (!response.response.ok || !response.data) throw asApiError(response.error, response.response, t.feeFailed);
       return response.data;
     },
@@ -235,6 +238,7 @@ function QwicooTab({ branchId }: { branchId: string }) {
     queryFn: async () => {
       const response = await browserApi.GET("/api/v1/delivery/governorates/{governorate_id}/zones", {
         params: { path: { governorate_id: govId } },
+        middleware: [asBranch(branchId)],
       });
       if (!response.response.ok || !response.data) throw asApiError(response.error, response.response, t.feeFailed);
       return response.data;
@@ -244,6 +248,7 @@ function QwicooTab({ branchId }: { branchId: string }) {
     mutationFn: async () => {
       if (!govId) throw new Error(t.chooseGovernorate);
       const response = await browserApi.POST("/api/v1/delivery/calculate-fee", {
+        middleware: [asBranch(branchId)],
         body: {
           branch_id: branchId,
           governorate_id: govId,
@@ -258,6 +263,20 @@ function QwicooTab({ branchId }: { branchId: string }) {
     onError: (error: Error) => toast.error(error.message),
   });
   const nameOf = (row: { name_en: string; name_ar: string }) => (locale === "ar" ? row.name_ar || row.name_en : row.name_en);
+  // Delivery switched off for the brand: say so instead of a fee checker with nothing to pick.
+  const deliveryOff =
+    governorates.error instanceof ApiError &&
+    (governorates.error.code === "FEATURE_LOCKED_BY_PLATFORM" || governorates.error.status === 403);
+
+  if (deliveryOff) {
+    return (
+      <div className="grid gap-4">
+        <p className={hint}>{t.qwicooHint}</p>
+        <BranchMobileSwitches branchId={branchId} />
+        <p className="rounded-[12px] bg-subtle/60 p-4 text-sm text-ink-secondary">{t.deliveryOff}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-4">
@@ -267,6 +286,11 @@ function QwicooTab({ branchId }: { branchId: string }) {
         {t.zones}
         <ArrowUpRight aria-hidden className="size-4 rtl:-scale-x-100" />
       </Link>
+      {governorates.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {governorates.error.message}
+        </p>
+      ) : null}
       <form
         className="grid gap-3 rounded-[12px] bg-subtle/60 p-4"
         onSubmit={(event) => {
@@ -532,7 +556,7 @@ function LocationTab({ branch }: { branch: components["schemas"]["BranchResponse
       const body: components["schemas"]["UpdateBranchLocationRequest"] = {
         latitude: location.latitude,
         longitude: location.longitude,
-        geofence_radius_meters: radius,
+        geofence_radius_meters: clampGeofence(radius),
       };
       const result = await browserApi.PUT("/api/v1/branches/{branch_id}/location", {
         params: { path: { branch_id: branch.id } },
@@ -587,7 +611,15 @@ function LocationTab({ branch }: { branch: components["schemas"]["BranchResponse
       <label className={fieldLabel}>
         {t.geofence}
         <span className={cn(note, "font-normal")}>{t.geofenceHint}</span>
-        <input className={control} type="number" min={5} max={5000} value={radius} onChange={(event) => setRadius(Number(event.target.value))} />
+        <input
+          className={control}
+          type="number"
+          min={GEOFENCE_MIN}
+          max={GEOFENCE_MAX}
+          value={radius}
+          onChange={(event) => setRadius(Number(event.target.value))}
+          onBlur={() => setRadius(clampGeofence(radius))}
+        />
       </label>
       <div className={saveRow}>
         <p id="save-location-hint" className={note}>
@@ -597,7 +629,7 @@ function LocationTab({ branch }: { branch: components["schemas"]["BranchResponse
           {t.saveLocation}
         </button>
       </div>
-      <LocationPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} value={location} radiusMeters={radius} onConfirm={setLocation} />
+      <LocationPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} value={location} radiusMeters={clampGeofence(radius)} onConfirm={setLocation} />
     </form>
   );
 }

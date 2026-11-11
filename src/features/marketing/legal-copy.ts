@@ -52,7 +52,7 @@ export const privacyCopy: Record<LocaleCode, LegalDoc> = {
         heading: "Your rights",
         body: [
           "You can ask to see, correct or delete the personal data we hold about you, or object to how we use it.",
-          `Contact us at ${CONTACT.email} or on WhatsApp ${CONTACT.phoneDisplay}. We reply within one working day.`,
+          `Contact us at ${CONTACT.email} or on WhatsApp ${CONTACT.whatsappDisplay}. We reply within one working day.`,
         ],
       },
     ],
@@ -98,7 +98,7 @@ export const privacyCopy: Record<LocaleCode, LegalDoc> = {
         heading: "حقوقك",
         body: [
           "يمكنك أن تطلب الاطلاع على بياناتك الشخصية لدينا أو تصحيحها أو حذفها، أو الاعتراض على طريقة استخدامها.",
-          `تواصل معنا على ${CONTACT.email} أو واتساب ${CONTACT.phoneDisplay}. نرد خلال يوم عمل واحد.`,
+          `تواصل معنا على ${CONTACT.email} أو واتساب \u2066${CONTACT.whatsappDisplay}\u2069. نرد خلال يوم عمل واحد.`,
         ],
       },
     ],
@@ -151,7 +151,7 @@ export const termsCopy: Record<LocaleCode, LegalDoc> = {
         heading: "Law and contact",
         body: [
           "These terms are governed by the laws of the Arab Republic of Egypt.",
-          `Questions: ${CONTACT.email} or WhatsApp ${CONTACT.phoneDisplay}.`,
+          `Questions: ${CONTACT.email} or WhatsApp ${CONTACT.whatsappDisplay}.`,
         ],
       },
     ],
@@ -199,7 +199,7 @@ export const termsCopy: Record<LocaleCode, LegalDoc> = {
       },
       {
         heading: "القانون والتواصل",
-        body: ["تخضع هذه الشروط لقوانين جمهورية مصر العربية.", `للاستفسار: ${CONTACT.email} أو واتساب ${CONTACT.phoneDisplay}.`],
+        body: ["تخضع هذه الشروط لقوانين جمهورية مصر العربية.", `للاستفسار: ${CONTACT.email} أو واتساب \u2066${CONTACT.whatsappDisplay}\u2069.`],
       },
     ],
   },

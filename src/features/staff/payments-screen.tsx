@@ -26,6 +26,8 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { paymentMethodLabel, paymentStatusLabel } from "@/lib/status-labels";
 import { paymentPlaceLabel } from "@/features/staff/place-labels";
 import { useScope } from "@/stores/scope";
+import { useStaffSession } from "@/components/ops/staff-session";
+import { can } from "@/lib/auth/permissions";
 
 function paymentTone(status: string): Tone {
   if (status === "COMPLETED") return "success";
@@ -56,6 +58,8 @@ export function PaymentsScreen() {
     refetchInterval: pollUnlessRoleDenied(interval),
   });
 
+  const me = useStaffSession();
+  const canVerify = can(me?.role, "payments.verify");
   const verify = useMutation({
     mutationFn: async (paymentId: string) => {
       const result = await browserApi.POST("/api/v1/payments/offline/{payment_id}/verify", {
@@ -116,6 +120,8 @@ export function PaymentsScreen() {
       align: "end",
       width: 140,
       cell: (payment) => {
+        // A role the server would refuse never sees the button.
+        if (!canVerify) return null;
         const confirming = verify.isPending && verify.variables === payment.id;
         return (
           <Button size="sm" disabled={confirming} onClick={() => verify.mutate(payment.id)}>

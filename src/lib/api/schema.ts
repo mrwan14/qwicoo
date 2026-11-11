@@ -38453,6 +38453,7 @@ export interface operations {
                 search?: string | null;
                 cursor?: string | null;
                 limit?: number;
+                open_only?: boolean;
             };
             header?: never;
             path?: never;

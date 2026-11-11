@@ -98,6 +98,8 @@ export const PERMISSIONS = {
   // Guests left without paying: the order leaves revenue and the table frees.
   "orders.walkout": [SA, BA, RM, BRA, CA],
   "payments.refund": [SA, BA, RM, BRA, CA],
+  /** Confirm cash or a card slip collected at the counter (POST /payments/offline/{id}/verify). */
+  "payments.verify": [SA, BA, RM, BRA, CA],
 
   // Stock
   /** The Stock entry in the nav. Cashier and kitchen land on the pages below that they may use. */

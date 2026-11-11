@@ -52,6 +52,9 @@ const en = {
     started: "Started",
     waitingRunner: "Waiting for the runner",
     empty: "Nothing here.",
+    oldTickets: "Older than 12 hours ({count})",
+    oldHint: "Left open from an earlier shift. Finish them here, or ask a manager to close the order.",
+    show: "Show",
     elapsed: "Waiting {time}",
   },
 } as const;
@@ -108,6 +111,9 @@ const ar = {
     started: "بدأ التحضير",
     waitingRunner: "بانتظار المقدّم",
     empty: "لا شيء هنا.",
+    oldTickets: "أقدم من 12 ساعة ({count})",
+    oldHint: "تُركت مفتوحة من وردية سابقة. أنهِها من هنا أو اطلب من المدير إغلاق الطلب.",
+    show: "عرض",
     elapsed: "ينتظر منذ {time}",
   },
 } as const;

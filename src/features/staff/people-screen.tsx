@@ -11,9 +11,11 @@ import { ConfirmDialog } from "@/components/ops/confirm-dialog";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ops/kit/menu";
 import { StatusChip } from "@/components/ops/status-chip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ops/states";
+import { PasswordToggle } from "@/components/auth/password-toggle";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
 import type { components } from "@/lib/api/schema";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { isUserRole, roleLabel } from "@/lib/auth/roles";
 import { fill } from "@/lib/i18n/dictionary";
 import { useLocale } from "@/lib/i18n/locale-store";
@@ -56,7 +58,9 @@ export function StaffScreen() {
   const branchId = useScope((state) => state.branchId);
   const brandId = useScope((state) => state.brandId);
   const queryClient = useQueryClient();
+  const { locale } = useLocale();
   const [email, setEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [adding, setAdding] = useState(false);
@@ -82,6 +86,7 @@ export function StaffScreen() {
   });
   const create = useMutation({
     mutationFn: async () => {
+      if (password.length < MIN_PASSWORD_LENGTH) throw new Error(fill(t.passwordShort, { n: MIN_PASSWORD_LENGTH }));
       const body: components["schemas"]["StaffCreateRequest"] = {
         email,
         password,
@@ -96,7 +101,7 @@ export function StaffScreen() {
       const result = brandId
         ? await browserApi.POST("/api/v1/brands/{brand_id}/staff", { params: { path: { brand_id: brandId } }, body })
         : await browserApi.POST(path, { params: { path: { branch_id: branchId ?? "" } }, body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.addFailed);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.addFailed, locale);
     },
     onSuccess: () => {
       toast.success(t.added);
@@ -111,7 +116,7 @@ export function StaffScreen() {
   const remove = useMutation({
     mutationFn: async (staffId: string) => {
       const result = await browserApi.DELETE("/api/v1/staff/{staff_id}", { params: { path: { staff_id: staffId } } });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.deactivateFailed);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.deactivateFailed, locale);
     },
     onSuccess: () => {
       setRemoveId(null);
@@ -123,10 +128,23 @@ export function StaffScreen() {
     mutationFn: async (input: { id: string; full_name: string }) => {
       const body: components["schemas"]["StaffUpdateRequest"] = { full_name: input.full_name };
       const result = await browserApi.PATCH("/api/v1/staff/{staff_id}", { params: { path: { staff_id: input.id } }, body });
-      if (!result.response.ok) throw asApiError(result.error, result.response, t.updateFailed);
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.updateFailed, locale);
     },
     onSuccess: () => {
       toast.success(t.nameSaved);
+      void queryClient.invalidateQueries({ queryKey: ["staff"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  // Deactivating keeps the account (and its email), so it can always come back.
+  const reactivate = useMutation({
+    mutationFn: async (staffId: string) => {
+      const body: components["schemas"]["StaffUpdateRequest"] = { is_active: true };
+      const result = await browserApi.PATCH("/api/v1/staff/{staff_id}", { params: { path: { staff_id: staffId } }, body });
+      if (!result.response.ok) throw asApiError(result.error, result.response, t.reactivateFailed, locale);
+    },
+    onSuccess: () => {
+      toast.success(t.reactivated);
       void queryClient.invalidateQueries({ queryKey: ["staff"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -184,15 +202,24 @@ export function StaffScreen() {
               </label>
               <label className={fieldLabel}>
                 {t.password}
-                <span className={fieldHint}>{t.passwordHint}</span>
-                <input
-                  className={control}
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                />
+                <span className={fieldHint}>{fill(t.passwordHint, { n: MIN_PASSWORD_LENGTH })}</span>
+                <span className="relative">
+                  <input
+                    className={`${control} w-full pe-11`}
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    minLength={MIN_PASSWORD_LENGTH}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                  />
+                  <PasswordToggle
+                    shown={showPassword}
+                    onToggle={() => setShowPassword((value) => !value)}
+                    showLabel={t.showPassword}
+                    hideLabel={t.hidePassword}
+                  />
+                </span>
               </label>
               <label className={fieldLabel}>
                 {t.role}
@@ -249,6 +276,8 @@ export function StaffScreen() {
               saving={rename.isPending && rename.variables?.id === person.id}
               onRename={(full_name) => rename.mutate({ id: person.id, full_name })}
               onDeactivate={() => setRemoveId(person.id)}
+              reactivating={reactivate.isPending && reactivate.variables === person.id}
+              onReactivate={() => reactivate.mutate(person.id)}
             />
           ))}
         </ul>
@@ -272,11 +301,15 @@ function StaffCard({
   saving,
   onRename,
   onDeactivate,
+  reactivating,
+  onReactivate,
 }: {
   person: components["schemas"]["StaffResponse"];
   saving: boolean;
   onRename: (fullName: string) => void;
   onDeactivate: () => void;
+  reactivating: boolean;
+  onReactivate: () => void;
 }) {
   const t = useStaffSection(peopleCopy).staff;
   const common = useStaffSection(commonCopy);
@@ -285,9 +318,11 @@ function StaffCard({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(person.full_name);
   const edited = name.trim().length > 0 && name.trim() !== person.full_name.trim();
+  // Close the editor once the saved name comes back from the server. (Comparing the draft with the
+  // saved name closed it the moment it opened, so "Change name" did nothing.)
   useEffect(() => {
-    if (editing && person.full_name.trim() === name.trim()) setEditing(false);
-  }, [editing, name, person.full_name]);
+    setEditing(false);
+  }, [person.full_name]);
   const shift = clock(person.shift_start_time) && clock(person.shift_end_time) ? `${clock(person.shift_start_time)}–${clock(person.shift_end_time)}` : "";
 
   return (
@@ -356,7 +391,16 @@ function StaffCard({
             >
               {t.deactivate}
             </button>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              className="ms-auto inline-flex min-h-9 items-center rounded-full px-3 text-[13px] font-medium text-ink hover:bg-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+              disabled={reactivating}
+              onClick={onReactivate}
+            >
+              {reactivating ? t.reactivating : t.reactivate}
+            </button>
+          )}
         </div>
       )}
       {shiftOpen ? <UsualShiftPanel person={person} onClose={() => setShiftOpen(false)} /> : null}

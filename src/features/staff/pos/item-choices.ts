@@ -5,6 +5,22 @@ type ModifierGroup = components["schemas"]["ModifierGroupResponse"];
 
 /** The till's "All" category pill. */
 export const ALL_CATEGORIES = "all";
+/** The till's "Popular" pill: this branch's best sellers (last 30 days), up to POPULAR_MAX. */
+export const POPULAR_CATEGORY = "popular";
+export const POPULAR_MAX = 12;
+
+/** Best sellers the cashier can sell now, most sold first. Works from the saved menu when offline. */
+export function popularItems<I extends { id: string; is_available?: boolean | null }>(
+  categories: readonly { items?: I[] | null }[],
+  bestSellerIds: readonly string[] | null | undefined,
+): I[] {
+  const byId = new Map<string, I>();
+  for (const category of categories) for (const item of category.items ?? []) byId.set(item.id, item);
+  return (bestSellerIds ?? [])
+    .map((id) => byId.get(id))
+    .filter((item): item is I => Boolean(item && item.is_available !== false))
+    .slice(0, POPULAR_MAX);
+}
 
 export function groupMin(group: Pick<ModifierGroup, "is_required" | "min_choices">): number {
   if (group.is_required) return Math.max(1, group.min_choices);

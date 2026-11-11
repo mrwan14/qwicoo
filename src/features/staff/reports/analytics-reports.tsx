@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { BarChart, MeterList } from "@/components/ops/kit/bar-chart";
@@ -9,7 +10,9 @@ import { Badge } from "@/components/ops/kit/badge";
 import { KpiCard } from "@/components/ops/kit/card";
 import { DataTable, type Column } from "@/components/ops/kit/data-table";
 import type { DateFilter } from "@/components/ops/kit/date-range";
+import { Select } from "@/components/ops/kit/field";
 import { FilterBar } from "@/components/ops/kit/filter-bar";
+import { SegmentedControl } from "@/components/ops/kit/segmented";
 import { formatAmount } from "@/components/ops/kit/money";
 import { asApiError } from "@/lib/api/error";
 import { browserApi } from "@/lib/api/browser";
@@ -238,13 +241,23 @@ export function BranchesReport() {
   );
 }
 
+type MenuSort = "units" | "revenue" | "profit";
+
 export function MenuReport() {
   const t = useStaffSection(reportsCopy);
   const { locale } = useLocale();
   const filters = useAnalyticsFilters();
   const subtitle = useSubtitle(filters.range, filters.branchName);
-  const { current: data, previous, comparison } = usePeriodData("menu", filters.range, filters.branch, async (query) => {
-    const result = await browserApi.GET("/api/v1/analytics/menu-performance", { params: { query } });
+  const branches = useScope((state) => state.branches);
+  // Profit uses one branch's recipe costs. Someone with a single branch always has one.
+  const branch = filters.branch ?? (branches.length === 1 ? (branches[0]?.id ?? null) : null);
+  const [wantedSort, setSort] = useState<MenuSort>("units");
+  const [category, setCategory] = useState("");
+  const sort: MenuSort = wantedSort === "profit" && !branch ? "units" : wantedSort;
+  const { current: data, previous, comparison } = usePeriodData(`menu-${sort}-${category}`, filters.range, branch, async (query) => {
+    const result = await browserApi.GET("/api/v1/analytics/menu-performance", {
+      params: { query: { ...query, sort, ...(category ? { category_id: category } : {}) } },
+    });
     if (!result.response.ok || !result.data) throw asApiError(result.error, result.response, t.loadFailed);
     return result.data;
   });
@@ -259,13 +272,32 @@ export function MenuReport() {
   const revenueBefore = previous?.category_breakdown.reduce((sum, category) => sum + (Number(category.total_revenue) || 0), 0);
   const trend = (change: number | null) => (data.data && previous ? <Trend change={change} comparison={comparison} /> : null);
   const rows = [...top.map((item) => ({ item, slow: false })), ...bottom.filter((item) => !top.some((entry) => entry.item_id === item.item_id)).map((item) => ({ item, slow: true }))];
+  // "Best seller" always means most units sold, whichever way the table is ranked.
+  const mostSold = [...top].sort((a, b) => b.total_quantity_sold - a.total_quantity_sold)[0];
+  const showProfit = Boolean(branch);
+  const profitText = (item: (typeof top)[number]) => (item.profit != null ? money(item.profit) : t.menu.noRecipe);
   const columns: Column<(typeof rows)[number]>[] = [
     { key: "item", header: t.sales.item, strong: true, cell: ({ item }) => pickLocale(item.item_name, locale) },
     { key: "category", header: t.sales.category, cell: ({ item }) => pickLocale(item.category_name, locale) || "—" },
     { key: "sold", header: t.sales.sold, align: "end", cell: ({ item }) => formatCount(item.total_quantity_sold, locale) },
     { key: "revenue", header: t.sales.revenue, align: "end", cell: ({ item }) => money(item.gross_revenue) },
+    ...(showProfit
+      ? [
+          {
+            key: "profit",
+            header: t.menu.profit,
+            align: "end" as const,
+            cell: ({ item }: (typeof rows)[number]) =>
+              item.profit != null ? money(item.profit) : <span className="text-ink-secondary">{t.menu.noRecipe}</span>,
+          },
+        ]
+      : []),
     { key: "tag", header: "", width: 140, cell: ({ slow }) => <Badge tone={slow ? "warning" : "success"}>{slow ? t.menu.slowList : t.menu.best}</Badge> },
   ];
+  const categoryOptions = (data.data?.category_breakdown ?? previous?.category_breakdown ?? []).map((entry) => ({
+    value: entry.category_id,
+    label: pickLocale(entry.category_name, locale),
+  }));
   return (
     <ReportShell
       group="menu"
@@ -275,7 +307,7 @@ export function MenuReport() {
       kpis={
         <>
           <KpiCard label={t.menu.sold} value={data.data ? formatCount(sold, locale) : "—"} loading={data.isLoading} trend={trend(percentChange(sold, soldBefore))} />
-          <KpiCard label={t.menu.top} value={top[0] ? pickLocale(top[0].item_name, locale) : "—"} loading={data.isLoading} note={top[0] ? money(top[0].gross_revenue) : undefined} />
+          <KpiCard label={t.menu.top} value={mostSold ? pickLocale(mostSold.item_name, locale) : "—"} loading={data.isLoading} note={mostSold ? money(mostSold.gross_revenue) : undefined} />
           <KpiCard label={t.menu.categories} value={data.data ? formatCount(categories.length, locale) : "—"} loading={data.isLoading} />
           <KpiCard label={t.menu.avgPrice} value={data.data && sold > 0 ? formatAmount(revenue / sold, undefined, locale) : "—"} loading={data.isLoading} trend={trend(soldBefore ? percentChange(sold > 0 ? revenue / sold : null, (revenueBefore ?? 0) / soldBefore) : null)} note={data.data ? fill(t.menu.avgPriceNote, { amount: formatAmount(revenue, undefined, locale) }) : undefined} />
         </>
@@ -296,13 +328,45 @@ export function MenuReport() {
           <p className="py-6 text-sm text-ink-secondary">{data.isError ? t.loadFailed : t.empty}</p>
         )
       }
-      table={<DataTable stack caption={t.items.menu.title} columns={columns} rows={rows} loading={data.isLoading} rowKey={({ item, slow }) => `${slow ? "slow" : "top"}-${item.item_id}`} empty={t.empty} />}
+      table={
+        <div className="grid gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <SegmentedControl<MenuSort>
+              label={t.menu.sortBy}
+              value={sort}
+              onValueChange={setSort}
+              items={[
+                { value: "units", label: t.menu.byUnits },
+                { value: "revenue", label: t.menu.byRevenue },
+                ...(branch ? [{ value: "profit" as const, label: t.menu.byProfit }] : []),
+              ]}
+            />
+            <Select aria-label={t.sales.category} className="w-auto min-w-48" value={category} onChange={(event) => setCategory(event.target.value)}>
+              <option value="">{t.menu.allCategories}</option>
+              {categoryOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+            {!branch ? <p className="text-xs text-ink-secondary">{t.menu.profitNeedsBranch}</p> : null}
+          </div>
+          <DataTable stack caption={t.items.menu.title} columns={columns} rows={rows} loading={data.isLoading} rowKey={({ item, slow }) => `${slow ? "slow" : "top"}-${item.item_id}`} empty={t.empty} />
+        </div>
+      }
       canExport={rows.length > 0}
       onExport={() => {
         downloadCsv(
           `menu-${filters.range.from}-${filters.range.to}.csv`,
-          [t.sales.item, t.sales.category, t.sales.sold, t.sales.revenue, ""],
-          rows.map(({ item, slow }) => [pickLocale(item.item_name, locale), pickLocale(item.category_name, locale), item.total_quantity_sold, item.gross_revenue, slow ? t.menu.slowList : t.menu.best]),
+          [t.sales.item, t.sales.category, t.sales.sold, t.sales.revenue, ...(showProfit ? [t.menu.profit] : []), ""],
+          rows.map(({ item, slow }) => [
+            pickLocale(item.item_name, locale),
+            pickLocale(item.category_name, locale),
+            item.total_quantity_sold,
+            item.gross_revenue,
+            ...(showProfit ? [profitText(item)] : []),
+            slow ? t.menu.slowList : t.menu.best,
+          ]),
         );
         toast.success(t.exported);
       }}

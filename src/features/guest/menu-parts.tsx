@@ -16,6 +16,9 @@ const BADGE_LABELS: Record<string, { en: string; ar: string }> = {
   halal: { en: "Halal", ar: "حلال" },
 };
 
+/** Best seller is worked out from real sales now; a hand-typed one would no longer be true. */
+const RETIRED_BADGES = new Set(["popular", "bestseller", "best_seller"]);
+
 /** A restaurant marks the hero item of a category with one of these badges. */
 const FEATURE_BADGES = new Set(["signature", "featured", "chef", "chef_pick", "chefs_pick"]);
 
@@ -27,12 +30,12 @@ export function isFeaturedItem(badges: readonly string[] | null | undefined): bo
   return (badges ?? []).some((badge) => FEATURE_BADGES.has(key(badge)));
 }
 
-export function badgeLabels(badges: readonly string[] | null | undefined, locale: "en" | "ar"): string[] {
-  return (badges ?? [])
-    .filter((badge) => !FEATURE_BADGES.has(key(badge)))
+export function badgeLabels(badges: readonly string[] | null | undefined, locale: "en" | "ar", bestSeller = false): string[] {
+  const own = (badges ?? [])
+    .filter((badge) => !FEATURE_BADGES.has(key(badge)) && !RETIRED_BADGES.has(key(badge)))
     .map((badge) => BADGE_LABELS[key(badge)]?.[locale] ?? badge.replace(/_/g, " "))
-    .filter(Boolean)
-    .slice(0, 3);
+    .filter(Boolean);
+  return (bestSeller ? [BADGE_LABELS.bestseller[locale], ...own] : own).slice(0, 3);
 }
 
 type TapHandlers = {

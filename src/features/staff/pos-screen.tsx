@@ -31,17 +31,7 @@ import { useSlashFocus } from "@/hooks/use-slash-focus";
 import { storeOnlineAvailable } from "@/features/staff/pos/store-online-api";
 import { StoreOnlineTab } from "@/features/staff/pos/store-online-tab";
 import { TicketPromo, useTicketPromo } from "@/features/staff/pos/ticket-promo";
-import {
-  ALL_CATEGORIES,
-  choiceRule,
-  firstMissing,
-  groupMax,
-  groupMin,
-  groupRequired,
-  menuSections,
-  needsChoices,
-  toggleChoice,
-} from "@/features/staff/pos/item-choices";
+import { ALL_CATEGORIES, choiceRule, firstMissing, groupMax, groupMin, groupRequired, menuSections, needsChoices, POPULAR_CATEGORY, popularItems, toggleChoice } from "@/features/staff/pos/item-choices";
 import { PaymobPosCheckout } from "@/features/staff/paymob-pos";
 import type { StaffOrderReceipt } from "@/features/staff/orders/types";
 import { asApiError } from "@/lib/api/error";
@@ -370,12 +360,31 @@ export function PosScreen() {
   const needsDrawer = online && effectiveTender === "CASH" && drawer.isSuccess && drawer.data === null;
 
   const categories = useMemo(() => menu.data?.categories ?? [], [menu.data]);
+  const popular = useMemo(
+    () => popularItems(categories, (menu.data as { best_seller_ids?: string[] } | undefined)?.best_seller_ids),
+    [categories, menu.data],
+  );
+  const popularCategory = useMemo(
+    () => (popular.length > 0 && categories[0] ? { ...categories[0], id: POPULAR_CATEGORY, items: popular } : null),
+    [categories, popular],
+  );
   // A category that left the menu (branch switch, menu edit) falls back to All.
-  const selectedCategory = categories.some((category) => category.id === categoryId) ? categoryId : ALL_CATEGORIES;
+  const selectedCategory =
+    categoryId === POPULAR_CATEGORY && popularCategory
+      ? POPULAR_CATEGORY
+      : categories.some((category) => category.id === categoryId)
+        ? categoryId
+        : ALL_CATEGORIES;
   const itemSearch = query.trim().toLowerCase();
   const sections = useMemo(
-    () => menuSections(categories, selectedCategory, itemSearch, (item) => pickLocale(item.name, locale)),
-    [categories, selectedCategory, itemSearch, locale],
+    () =>
+      menuSections(
+        selectedCategory === POPULAR_CATEGORY && popularCategory && !itemSearch ? [popularCategory] : categories,
+        selectedCategory,
+        itemSearch,
+        (item) => pickLocale(item.name, locale),
+      ),
+    [categories, popularCategory, selectedCategory, itemSearch, locale],
   );
   const grouped = Boolean(itemSearch) || selectedCategory === ALL_CATEGORIES;
 
@@ -709,7 +718,11 @@ export function PosScreen() {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
       <div className="grid min-w-0 content-start gap-3 rounded-staff bg-well p-3 sm:p-4">
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {[{ id: ALL_CATEGORIES, name: t.allItems }, ...categories.map((category) => ({ id: category.id, name: pickLocale(category.name, locale) }))].map(
+          {[
+            { id: ALL_CATEGORIES, name: t.allItems },
+            ...(popularCategory ? [{ id: POPULAR_CATEGORY, name: t.popular }] : []),
+            ...categories.map((category) => ({ id: category.id, name: pickLocale(category.name, locale) })),
+          ].map(
             (category) => {
               const active = !itemSearch && category.id === selectedCategory;
               return (

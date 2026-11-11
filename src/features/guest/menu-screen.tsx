@@ -48,6 +48,10 @@ type MenuItem = components["schemas"]["MenuItemResponse"];
 
 /** Id of the Offers section the guest menu builds from every combo. Not a real category id. */
 const OFFERS_SECTION_ID = "offers";
+const BEST_SECTION_ID = "best-sellers";
+/** The guest row shows up to this many best sellers, and only when at least BEST_MIN are on sale. */
+const BEST_MAX = 6;
+const BEST_MIN = 3;
 
 const isComboItem = (item: MenuItem) => item.item_type.toUpperCase() === "COMBO";
 
@@ -188,6 +192,17 @@ export function MenuScreen() {
   }, [menuData]);
   const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
 
+  // This branch's best sellers that guests can order right now, most sold first.
+  const bestSellers = useMemo(
+    () =>
+      ((menuData as { best_seller_ids?: string[] } | undefined)?.best_seller_ids ?? [])
+        .map((id) => itemsById.get(id))
+        .filter((item): item is MenuItem => Boolean(item && item.is_available))
+        .slice(0, BEST_MAX),
+    [itemsById, menuData],
+  );
+  const bestIds = useMemo(() => new Set(bestSellers.map((item) => item.id)), [bestSellers]);
+
   const query = search.trim().toLowerCase();
   const filteredCategories = useMemo(() => {
     // Every combo is pulled into one Offers section at the top, whatever category staff filed it under.
@@ -207,8 +222,12 @@ export function MenuScreen() {
       offers.length > 0 && menuData
         ? [{ ...regular[0], id: OFFERS_SECTION_ID, branch_id: menuData.branch_id, name: t.offers, display_order: -1, image_url: null, items: offers }]
         : [];
-    return [...offersSection, ...regular.filter((category) => (category.items?.length ?? 0) > 0)];
-  }, [locale, menuData, query, t.offers]);
+    const bestSection =
+      !query && bestSellers.length >= BEST_MIN && menuData
+        ? [{ ...regular[0], id: BEST_SECTION_ID, branch_id: menuData.branch_id, name: t.bestSellers, display_order: -2, image_url: null, items: bestSellers }]
+        : [];
+    return [...bestSection, ...offersSection, ...regular.filter((category) => (category.items?.length ?? 0) > 0)];
+  }, [bestSellers, locale, menuData, query, t.bestSellers, t.offers]);
 
   const categoryIds = useMemo(() => filteredCategories.map((category) => category.id), [filteredCategories]);
   const { activeId: activeCategoryId, registerTab, scrollToCategory } = useCategoryScrollSpy(categoryIds);
@@ -434,7 +453,8 @@ export function MenuScreen() {
           {filteredCategories.map((category) => {
             // Sold-out items sink to the end of their section; a "signature" item leads it.
             const list = [...(category.items ?? [])].sort((a, b) => Number(!a.is_available) - Number(!b.is_available));
-            const hero = query ? null : list.find((item) => item.is_available && isFeaturedItem(item.dietary_badges));
+            const hero =
+              query || category.id === BEST_SECTION_ID ? null : list.find((item) => item.is_available && isFeaturedItem(item.dietary_badges));
             const rows = hero ? list.filter((item) => item !== hero) : list;
 
             const render = (item: MenuItem) => {
@@ -530,7 +550,7 @@ export function MenuScreen() {
                           title={view.title}
                           description={view.description}
                           image={view.image}
-                          badges={badgeLabels(item.dietary_badges, locale)}
+                          badges={badgeLabels(item.dietary_badges, locale, category.id !== BEST_SECTION_ID && bestIds.has(item.id))}
                           price={view.price}
                           note={view.note}
                           deal={view.deal}

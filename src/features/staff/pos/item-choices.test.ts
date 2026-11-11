@@ -56,3 +56,15 @@ test("All lists every category in menu order and skips empty ones", () => {
     ["cold", ["iced"]],
   ]);
 });
+
+test("Popular keeps the best-seller order, skips sold-out and unknown items, and stops at 12", async () => {
+  const { popularItems, POPULAR_MAX } = await import("./item-choices.ts");
+  const items = Array.from({ length: 20 }, (_, index) => ({ id: `i${index}`, is_available: index !== 3 }));
+  const categories = [{ items: items.slice(0, 10) }, { items: items.slice(10) }];
+  const ranked = ["i3", "gone", ...items.map((item) => item.id).reverse()];
+  const result = popularItems(categories, ranked);
+  assert.equal(result.length, POPULAR_MAX);
+  assert.equal(result[0].id, "i19");
+  assert.ok(!result.some((item) => item.id === "i3"));
+  assert.deepEqual(popularItems(categories, undefined), []);
+});

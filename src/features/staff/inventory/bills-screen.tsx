@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, FileText, Paperclip } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, FileText, Paperclip } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -42,6 +42,7 @@ import { useStaffSection } from "@/lib/i18n/staff/use-copy";
 import { useScope } from "@/stores/scope";
 
 import { canWriteStock } from "./access";
+import { downloadFromApi } from "./files";
 import { InventoryFrame, useBranchCurrency } from "./chrome";
 import { billTotalsMatch, cairoDay, moneyInput, priceChange } from "./bills";
 import { formatQty } from "./qty";
@@ -79,6 +80,14 @@ export function BillsScreen() {
   const [filter, setFilter] = useState<Filter>("open");
   const [supplierId, setSupplierId] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [from, setFrom] = useState(() => cairoDay().slice(0, 8) + "01");
+  const [to, setTo] = useState(() => cairoDay());
+  const exportBills = useMutation({
+    mutationFn: (format: "xlsx" | "csv") =>
+      downloadFromApi("/inventory/supplier-bills/export", { brand_id: brandId, start: from, end: to, format }, `supplier-bills.${format}`, t.loadFailed, locale),
+    onError: (error: Error) => toast.error(error.message),
+  });
   const bills = useQuery({
     queryKey: ["inventory", "bills", brandId, supplierId],
     enabled: Boolean(brandId),
@@ -103,7 +112,33 @@ export function BillsScreen() {
 
   return (
     <InventoryFrame page="bills">
-      <PageHeader title={b.title} detail={b.detail} />
+      <PageHeader
+        title={b.title}
+        detail={b.detail}
+        action={
+          <Button variant="secondary" onClick={() => setExporting((open) => !open)} aria-expanded={exporting}>
+            <Download aria-hidden />
+            {b.export}
+          </Button>
+        }
+      />
+      {exporting ? (
+        <div className="flex flex-wrap items-end gap-3 rounded-[12px] border border-border bg-subtle/60 p-4">
+          <Field label={b.exportFrom}>
+            <Input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} />
+          </Field>
+          <Field label={b.exportTo}>
+            <Input type="date" value={to} min={from} onChange={(event) => setTo(event.target.value)} />
+          </Field>
+          <Button disabled={exportBills.isPending || !from || !to || to < from} onClick={() => exportBills.mutate("xlsx")}>
+            {b.exportExcel}
+          </Button>
+          <Button variant="secondary" disabled={exportBills.isPending || !from || !to || to < from} onClick={() => exportBills.mutate("csv")}>
+            {b.exportCsv}
+          </Button>
+          <p className="basis-full text-xs text-ink-secondary">{b.exportHint}</p>
+        </div>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <KpiCard
           label={b.owed}
@@ -339,6 +374,7 @@ export function BillSheet({ billId, onClose }: { billId: string; onClose: () => 
   const [paidOn, setPaidOn] = useState(cairoDay());
   const [method, setMethod] = useState<BillPaymentMethod>("CASH");
   const [note, setNote] = useState("");
+  const [fromDrawer, setFromDrawer] = useState(false);
   const [voiding, setVoiding] = useState<{ kind: "bill" } | { kind: "payment"; id: string } | null>(null);
   const [reason, setReason] = useState("");
   const bill = useQuery({ queryKey: ["inventory", "bill", billId], queryFn: () => fetchBill(billId, t.loadFailed) });
@@ -351,11 +387,17 @@ export function BillSheet({ billId, onClose }: { billId: string; onClose: () => 
   };
   const fail = (error: unknown) => toast.error(billError(error, b.errors, t.loadFailed));
   const pay = useMutation({
-    mutationFn: () => payBill(billId, { paid_on: paidOn, amount: moneyInput(amount), method, note: note.trim() || null }, t.loadFailed),
+    mutationFn: () =>
+      payBill(
+        billId,
+        { paid_on: paidOn, amount: moneyInput(amount), method, note: note.trim() || null, from_drawer: method === "CASH" && fromDrawer },
+        t.loadFailed,
+      ),
     onSuccess: (next) => {
       toast.success(b.paymentSaved);
       setAmount("");
       setNote("");
+      setFromDrawer(false);
       settle(next);
     },
     onError: fail,
@@ -457,6 +499,7 @@ export function BillSheet({ billId, onClose }: { billId: string; onClose: () => 
                     <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2 border-b py-2 text-sm last:border-b-0">
                       <span className={payment.voided_at ? "text-ink-secondary line-through" : ""}>
                         {dayLabel(payment.paid_on, locale)} · {payment.created_by_name ? fill(b.paidBy, { method: b.methods[payment.method], name: payment.created_by_name }) : b.methods[payment.method]}
+                        {payment.from_drawer ? <> · {b.fromDrawerShort}</> : null}
                         {payment.note ? <span dir="auto"> · {payment.note}</span> : null}
                       </span>
                       <span className="flex items-center gap-2">
@@ -502,6 +545,15 @@ export function BillSheet({ billId, onClose }: { billId: string; onClose: () => 
                   <Field label={b.payNote}>
                     <Input value={note} onChange={(event) => setNote(event.target.value)} maxLength={255} dir="auto" />
                   </Field>
+                  {method === "CASH" ? (
+                    <label className="flex items-start gap-2 text-sm">
+                      <input type="checkbox" className="mt-0.5 size-4 accent-[var(--brand)]" checked={fromDrawer} onChange={(event) => setFromDrawer(event.target.checked)} />
+                      <span className="grid">
+                        {b.fromDrawer}
+                        <span className="text-xs text-ink-secondary">{b.fromDrawerHint}</span>
+                      </span>
+                    </label>
+                  ) : null}
                   <div className="flex flex-wrap gap-2">
                     <Button type="submit" disabled={pay.isPending || !(Number(amount) > 0)}>
                       {pay.isPending ? b.paying : b.pay}

@@ -39,6 +39,7 @@ export type BillPayment = {
   created_at: string;
   voided_at: string | null;
   void_reason: string | null;
+  from_drawer?: boolean;
 };
 
 export type BillSummary = {
@@ -105,7 +106,11 @@ export function createBill(body: BillCreate, failed: string) {
   return staffJson<BillDetail>(`${BASE}/supplier-bills`, json(body), failed);
 }
 
-export function payBill(id: string, body: { paid_on: string; amount: string; method: BillPaymentMethod; note?: string | null }, failed: string) {
+export function payBill(
+  id: string,
+  body: { paid_on: string; amount: string; method: BillPaymentMethod; note?: string | null; from_drawer?: boolean },
+  failed: string,
+) {
   return staffJson<BillDetail>(`${BASE}/supplier-bills/${id}/payments`, json(body), failed);
 }
 

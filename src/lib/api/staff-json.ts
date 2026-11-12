@@ -10,8 +10,9 @@ export async function staffJson<T>(path: string, init: RequestInit, fallback: st
   const headers = new Headers(init.headers);
   headers.set("accept", "application/json");
   headers.set("accept-language", locale);
-  if (brandId) headers.set("x-brand-id", brandId);
-  if (branchId) headers.set("x-branch-id", branchId);
+  if (brandId && !headers.has("x-brand-id")) headers.set("x-brand-id", brandId);
+  // A report can ask about a branch other than the one in the top bar.
+  if (branchId && !headers.has("x-branch-id")) headers.set("x-branch-id", branchId);
   const response = await fetch(path, { ...init, headers, credentials: "include", cache: "no-store" });
   if (response.status === 401) void endStaffSession();
   const payload = (await response.json().catch(() => null)) as unknown;

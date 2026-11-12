@@ -1,12 +1,14 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Menu, Search, Users, X } from "lucide-react";
+import { ChevronRight, Menu, Search, Users, X } from "lucide-react";
+import Link from "next/link";
 import { Logo } from "@/components/ops/logo";
+import { Money } from "@/components/ops/money";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { guestCopy } from "@/features/guest/copy";
 import { GuestAboutPanel, GuestDrawer, type GuestDrawerAction } from "@/features/guest/guest-drawer";
-import { PayBillSheet } from "@/features/guest/pay-bill-sheet";
+import { PayBillSheet, useTableBill } from "@/features/guest/pay-bill-sheet";
 import { refreshGuestToken } from "@/features/guest/visit-api";
 import { WaiterSheet } from "@/features/guest/service-sheets";
 import { GuestSkeleton, OrderingPausedNotice, isGuestUnreachable, useOrderingPaused } from "@/features/guest/ordering-status";
@@ -46,6 +48,10 @@ function MenuTopBar() {
   const brandName = useBrandName();
   const branchName = useGuest((state) => state.session?.branchName ?? state.tablePreview?.branchName ?? null);
   const tableNumber = useGuest((state) => state.session?.tableNumber ?? state.tablePreview?.tableNumber);
+  const sessionId = useGuest((state) => state.session?.sessionId ?? null);
+  // Once the table has ordered, the table chip leads back to the table: rounds, bill and paying.
+  const bill = useTableBill({ enabled: Boolean(sessionId && tableNumber), refetchInterval: 30_000 });
+  const ordered = Boolean(bill.data?.rounds.some((round) => round.status !== "CANCELLED"));
   const [logoFailed, setLogoFailed] = useState(false);
   const [coverFailed, setCoverFailed] = useState(false);
   const logo = branding?.logoUrl && !logoFailed ? mediaUrl(branding.logoUrl) : null;
@@ -99,7 +105,24 @@ function MenuTopBar() {
           </h1>
           <p className="guest-hero-meta">
             {branchName && branchName !== name ? <span className="truncate">{branchName}</span> : null}
-            {tableNumber ? (
+            {tableNumber && ordered && bill.data ? (
+              <Link href="/order/track" className="guest-hero-table guest-motion" aria-label={t.openTable}>
+                <Users className="size-3.5" aria-hidden />
+                {placeLabel}
+                <span aria-hidden>·</span>
+                {Number(bill.data.remaining) > 0 ? (
+                  <span className="inline-flex items-center gap-1">
+                    {t.billChip}
+                    <span dir="ltr">
+                      <Money amount={bill.data.remaining} currency={bill.data.currency} locale={locale} />
+                    </span>
+                  </span>
+                ) : (
+                  <span>{t.billChipPaid}</span>
+                )}
+                <ChevronRight className="size-3.5 rtl:-scale-x-100" aria-hidden />
+              </Link>
+            ) : tableNumber ? (
               <span className="guest-hero-table">
                 <Users className="size-3.5" aria-hidden />
                 {placeLabel}
